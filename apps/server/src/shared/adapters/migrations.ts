@@ -24,6 +24,27 @@ export const migrations: readonly Migration[] = [
       last_opened_at INTEGER NOT NULL
     )`,
   },
+  {
+    version: 2,
+    sql: `CREATE TABLE sessions (
+      id TEXT PRIMARY KEY,
+      project_path TEXT NOT NULL,
+      title TEXT NOT NULL,
+      title_locked INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      last_activity_at INTEGER NOT NULL
+    );
+    CREATE INDEX sessions_by_project ON sessions (project_path, last_activity_at DESC);
+    CREATE TABLE transcript_events (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES sessions (id),
+      sequence INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      at INTEGER NOT NULL,
+      payload TEXT NOT NULL,
+      UNIQUE (session_id, sequence)
+    )`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

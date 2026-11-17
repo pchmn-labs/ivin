@@ -2,6 +2,14 @@ import { defineConfig } from "vitest/config"
 
 export default defineConfig({
   test: {
-    include: ["apps/*/src/**/*.test.ts", "packages/*/src/**/*.test.ts", "tools/**/*.test.ts"],
+    projects: [
+      {
+        test: {
+          name: "node",
+          include: ["apps/*/src/**/*.test.ts", "packages/*/src/**/*.test.ts", "tools/**/*.test.ts"],
+        },
+      },
+      "packages/ui/vitest.browser.config.ts",
+    ],
   },
 })

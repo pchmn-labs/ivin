@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@ivin/contracts": "workspace:*",
+    "@ivin/harness": "workspace:*",
     "effect": "4.1.4"
   }
 }

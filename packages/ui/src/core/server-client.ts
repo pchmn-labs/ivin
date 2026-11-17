@@ -39,4 +39,7 @@ const serverClientLayer = Layer.unwrap(
   ),
 )
 
-export const serverRuntime = Atom.runtime(serverClientLayer)
+// Tests replace this layer through the registry's initial values.
+export const serverClientLayerAtom = Atom.make(serverClientLayer)
+
+export const serverRuntime = Atom.runtime((get) => get(serverClientLayerAtom))

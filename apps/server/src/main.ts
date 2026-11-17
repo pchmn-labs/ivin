@@ -1,3 +1,4 @@
+import { demoScript, layerScripted } from "@ivin/harness"
 import { Cause, Effect, Layer } from "effect"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
@@ -26,6 +27,11 @@ const fail = (message: string): never => {
 if (typeof databasePath !== "string") fail("Missing --database <path>")
 const path = databasePath as string
 
+// Until the Claude provider lands, unset means scripted.
+const harnessId = process.env["IVIN_HARNESS"] ?? "scripted"
+if (harnessId !== "scripted") fail(`Unknown IVIN_HARNESS "${harnessId}": only "scripted" exists.`)
+const layerHarness = layerScripted(demoScript, { cycle: true })
+
 // Ports main posts before the database is ready wait here.
 let serve: ((port: MainPort) => void) | undefined
 const waiting: MainPort[] = []
@@ -39,7 +45,7 @@ parentPort.on("message", ({ ports: [port] }) => {
 
 // One connection for the whole process, shared by every port.
 const startup = Effect.gen(function* () {
-  const context = yield* Layer.build(layerDatabase(path))
+  const context = yield* Layer.build(Layer.mergeAll(layerDatabase(path), layerHarness))
   serve = (port) => {
     const server = serveOverPort(
       {
