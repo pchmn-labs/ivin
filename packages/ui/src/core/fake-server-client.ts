@@ -1,6 +1,6 @@
 import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
 import type { Session } from "@ivin/contracts/session"
-import type { TranscriptItem } from "@ivin/contracts/transcript"
+import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -8,6 +8,8 @@ export interface FakeServer {
   readonly sessions: Map<string, Session>
   // Adds an item to a transcript as the server would, and streams it to watchers.
   readonly pushItem: (item: TranscriptItem) => void
+  // Streams any change (a delta, say) to watchers without storing it.
+  readonly pushChange: (change: TranscriptItemChange) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
   readonly holdNextSend: () => { readonly release: () => void; readonly fail: () => void }
@@ -16,7 +18,7 @@ export interface FakeServer {
 export const makeFakeServer = (): FakeServer => {
   const sessions = new Map<string, Session>()
   const transcripts = new Map<string, Array<TranscriptItem>>()
-  const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItem>())
+  const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
   let clock = 1_000
   let nextId = 1
   let hold: { readonly wait: Promise<boolean> } | null = null
@@ -29,7 +31,7 @@ export const makeFakeServer = (): FakeServer => {
   }
   const publish = (item: TranscriptItem) => {
     itemsOf(item.sessionId).push(item)
-    Effect.runSync(PubSub.publish(pubsub, item))
+    Effect.runSync(PubSub.publish(pubsub, { type: "upsert", item }))
   }
 
   const getItems = ({
@@ -57,12 +59,13 @@ export const makeFakeServer = (): FakeServer => {
     })
 
   const client = {
-    "session.create": ({ projectPath }: { projectPath: string }) =>
+    "session.create": ({ projectPath, model }: { projectPath: string; model: string }) =>
       Effect.sync(() => {
         const at = tick()
         const session: Session = {
           id: `session-${nextId++}`,
           projectPath,
+          model,
           title: "New session",
           createdAt: at,
           lastActivityAt: at,
@@ -113,8 +116,14 @@ export const makeFakeServer = (): FakeServer => {
           return Stream.make({ type: "page" as const, page }).pipe(
             Stream.concat(
               Stream.fromSubscription(subscription).pipe(
-                Stream.filter((item) => item.sessionId === sessionId),
-                Stream.map((item) => ({ type: "upsert" as const, item })),
+                Stream.filter(
+                  (change) =>
+                    (change.type === "upsert"
+                      ? change.item.sessionId
+                      : change.type === "delta"
+                        ? change.sessionId
+                        : sessionId) === sessionId,
+                ),
               ),
             ),
           )
@@ -126,6 +135,7 @@ export const makeFakeServer = (): FakeServer => {
     layer: Layer.succeed(ServerClient)(client as unknown as ServerClient["Service"]),
     sessions,
     pushItem: publish,
+    pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
     holdNextSend: () => {
       let settle!: (ok: boolean) => void

@@ -1,4 +1,4 @@
-import type { HarnessEvent } from "@ivin/contracts/transcript"
+import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Context, Data, type Effect, type Scope, type Stream } from "effect"
 
 export class HarnessError extends Data.TaggedError("HarnessError")<{
@@ -9,6 +9,7 @@ export class HarnessError extends Data.TaggedError("HarnessError")<{
 export interface StartInput {
   readonly sessionId: string
   readonly cwd: string
+  readonly model: string
 }
 
 export interface UserMessage {
@@ -21,7 +22,7 @@ export interface ApprovalDecision {
 }
 
 export interface HarnessRun {
-  readonly events: Stream.Stream<HarnessEvent, HarnessError>
+  readonly events: Stream.Stream<HarnessOutput, HarnessError>
   readonly send: (message: UserMessage) => Effect.Effect<void, HarnessError>
   readonly respond: (decision: ApprovalDecision) => Effect.Effect<void, HarnessError>
   readonly interrupt: Effect.Effect<void>

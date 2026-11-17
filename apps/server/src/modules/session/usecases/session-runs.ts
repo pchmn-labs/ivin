@@ -1,8 +1,14 @@
 import type { Session } from "@ivin/contracts/session"
-import type { HarnessEvent } from "@ivin/contracts/transcript"
+import type { HarnessDelta, HarnessEvent } from "@ivin/contracts/transcript"
 import { HarnessProvider, type HarnessError } from "@ivin/harness"
 import { Context, DateTime, Effect, Exit, Layer, Scope, Semaphore, Stream } from "effect"
 import { applyEvent, emptyItemState } from "../../transcript/rules/derive-items.ts"
+import {
+  applyDelta,
+  blockAfterEvent,
+  finishedEventId,
+  type StreamedBlock,
+} from "../../transcript/rules/streamed-block.ts"
 import { ItemFeed } from "../../transcript/usecases/item-feed.ts"
 import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
 import { SessionStore } from "./session-store.ts"
@@ -36,13 +42,14 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
       Effect.gen(function* () {
         const scope = yield* Scope.fork(serverScope)
         const harness = yield* provider
-          .start({ sessionId: session.id, cwd: session.projectPath })
+          .start({ sessionId: session.id, cwd: session.projectPath, model: session.model })
           .pipe(
             Scope.provide(scope),
             Effect.tapError((error) => Scope.close(scope, Exit.fail(error))),
           )
         let sequence = yield* transcript.lastSequence(session.id)
         let itemState = emptyItemState
+        let streamed: StreamedBlock | null = null
         const writing = yield* Semaphore.make(1)
 
         const record = (event: HarnessEvent, id?: string) =>
@@ -50,9 +57,14 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             Effect.gen(function* () {
               const at = yield* DateTime.now
               sequence += 1
+              const reserved =
+                event.type === "assistant_text" || event.type === "thinking"
+                  ? finishedEventId(streamed, event.type)
+                  : undefined
+              streamed = blockAfterEvent(streamed, event)
               const stored = {
                 ...event,
-                id: id ?? crypto.randomUUID(),
+                id: id ?? reserved ?? crypto.randomUUID(),
                 sessionId: session.id,
                 sequence,
                 at,
@@ -61,11 +73,24 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
               yield* sessions.touch(session.id, at)
               const next = applyEvent(itemState, stored)
               itemState = next.state
-              if (next.item) yield* feed.publish(next.item)
+              if (next.item) yield* feed.publish({ type: "upsert", item: next.item })
             }),
           )
 
-        yield* Stream.runForEach(harness.events, (event) => record(event)).pipe(
+        const stream = (delta: HarnessDelta) =>
+          writing.withPermits(1)(
+            Effect.suspend(() => {
+              const next = applyDelta(streamed, itemState, sequence, delta, () =>
+                crypto.randomUUID(),
+              )
+              streamed = next.block
+              return feed.publish({ type: "delta", sessionId: session.id, ...next.change })
+            }),
+          )
+
+        yield* Stream.runForEach(harness.events, (output) =>
+          output.type === "delta" ? stream(output) : record(output),
+        ).pipe(
           Effect.catchTag("HarnessError", (error) => Effect.logError(error.message)),
           Effect.ensuring(
             Effect.suspend(() => {

@@ -1,4 +1,4 @@
-import type { HarnessEvent } from "@ivin/contracts/transcript"
+import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Cause, Effect, Layer, Queue, Stream } from "effect"
 import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/harness-provider.ts"
 
@@ -10,7 +10,7 @@ export interface ScriptedSend {
 const EVENT_BUFFER = 64
 
 export const layerScripted = (
-  turns: readonly (readonly HarnessEvent[])[],
+  turns: readonly (readonly HarnessOutput[])[],
   { sent = [], cycle = false }: { sent?: ScriptedSend[]; cycle?: boolean } = {},
 ) =>
   Layer.succeed(HarnessProvider)({
@@ -18,7 +18,7 @@ export const layerScripted = (
     start: ({ sessionId }) =>
       Effect.gen(function* () {
         const queue = yield* Effect.acquireRelease(
-          Queue.bounded<HarnessEvent, HarnessError | Cause.Done>(EVENT_BUFFER),
+          Queue.bounded<HarnessOutput, HarnessError | Cause.Done>(EVENT_BUFFER),
           Queue.shutdown,
         )
         let next = 0

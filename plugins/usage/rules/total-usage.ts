@@ -10,7 +10,7 @@ export const totalUsage = (items: ReadonlyArray<TranscriptItem>): UsageTotal | n
   if (usages.length === 0) return null
   return {
     tokens: usages.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0),
-    costUsd: usages.reduce((sum, u) => sum + u.costUsd, 0),
+    costUsd: usages.reduce((sum, u) => sum + (u.costUsd ?? 0), 0),
   }
 }
 

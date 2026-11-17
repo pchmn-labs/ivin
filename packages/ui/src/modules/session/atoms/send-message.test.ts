@@ -14,6 +14,7 @@ const setup = async () => {
     id: "s1",
     projectPath: project,
     title: "New session",
+    model: "sonnet",
     createdAt: at,
     lastActivityAt: at,
   })

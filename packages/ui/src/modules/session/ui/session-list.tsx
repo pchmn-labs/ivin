@@ -4,6 +4,7 @@ import { DateTime } from "effect"
 import { useState } from "react"
 import { createSessionAtom } from "../atoms/create-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
+import { DEFAULT_MODEL, MODELS, type Model } from "../rules/models.ts"
 import { renameSessionAtom } from "../atoms/rename-session.ts"
 import { selectedSessionIdAtom } from "../atoms/selected-session.ts"
 
@@ -64,10 +65,22 @@ export function SessionList({ projectPath }: { projectPath: string }) {
   const sessions = sessionsOf(projectPath)
   const ids = useAtomValue(sessions.ids)
   const [created, createSession] = useAtom(createSessionAtom)
+  const [model, setModel] = useState<Model>(DEFAULT_MODEL)
 
   return (
     <nav aria-label="Sessions">
-      <button type="button" onClick={() => createSession(projectPath)}>
+      <select
+        aria-label="Model"
+        value={model}
+        onChange={(event) => setModel(event.target.value as Model)}
+      >
+        {MODELS.map((name) => (
+          <option key={name} value={name}>
+            {name}
+          </option>
+        ))}
+      </select>{" "}
+      <button type="button" onClick={() => createSession({ projectPath, model })}>
         New session
       </button>
       {AsyncResult.isFailure(created) && <p role="alert">Could not create the session</p>}

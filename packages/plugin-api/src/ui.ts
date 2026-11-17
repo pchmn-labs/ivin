@@ -7,7 +7,8 @@ export type { Session, TranscriptItem }
 export type MessageItem = Extract<TranscriptItem, { type: "message" }>
 export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
-export type MessageSlotItem = MessageItem | ThinkingItem
+export type ErrorItem = Extract<TranscriptItem, { type: "error" }>
+export type MessageSlotItem = MessageItem | ThinkingItem | ErrorItem
 
 export interface SlotProps {
   "transcript.message": { readonly item: MessageSlotItem; readonly sessionId: string }
@@ -42,6 +43,7 @@ export interface UiHost {
   readonly useSession: (sessionId: string) => Session | undefined
   readonly useSessions: () => ReadonlyArray<Session>
   readonly useTranscript: (sessionId: string) => ReadonlyArray<TranscriptItem>
+  readonly Markdown: ComponentType<{ text: string }>
 }
 
 const HostContext = createContext<UiHost | null>(null)
@@ -58,3 +60,8 @@ const useHost = (): UiHost => {
 export const useSession = (sessionId: string) => useHost().useSession(sessionId)
 export const useSessions = () => useHost().useSessions()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
+
+export const Markdown = ({ text }: { text: string }) => {
+  const HostMarkdown = useHost().Markdown
+  return createElement(HostMarkdown, { text })
+}

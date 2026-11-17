@@ -4,7 +4,7 @@ import { SessionStore } from "./session-store.ts"
 
 export const defaultTitle = "New session"
 
-export const createSession = (projectPath: string) =>
+export const createSession = (projectPath: string, model: string) =>
   Effect.gen(function* () {
     const store = yield* SessionStore
     const now = yield* DateTime.now
@@ -12,6 +12,7 @@ export const createSession = (projectPath: string) =>
       id: crypto.randomUUID(),
       projectPath,
       title: defaultTitle,
+      model,
       createdAt: now,
       lastActivityAt: now,
     }

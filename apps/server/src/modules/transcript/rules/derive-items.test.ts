@@ -115,7 +115,14 @@ test("applyEvent gives the changed item for each event, so a watcher sees one up
 })
 
 test("a usage event is a usage item at its own position and leaves the open message alone", () => {
-  const usage: Body = { type: "usage", inputTokens: 10, outputTokens: 5, costUsd: 0.01 }
+  const usage: Body = {
+    type: "usage",
+    inputTokens: 10,
+    outputTokens: 5,
+    cacheReadTokens: 0,
+    cacheWriteTokens: 0,
+    costUsd: 0.01,
+  }
   const items = deriveItems(events(assistant("one"), usage, assistant("two")))
 
   expect(items).toEqual([
@@ -137,4 +144,14 @@ test("a usage event is a usage item at its own position and leaves the open mess
       costUsd: 0.01,
     },
   ])
+})
+
+test("an error event is an error item", () => {
+  expect(deriveItems(events(user("hi"), { type: "error", message: "boom" }))[1]).toEqual({
+    id: "e2",
+    sessionId: "s1",
+    position: 2,
+    type: "error",
+    message: "boom",
+  })
 })

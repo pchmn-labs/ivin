@@ -33,6 +33,7 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
     id: "s1",
     projectPath: "/p",
     title: "New session",
+    model: "sonnet",
     createdAt: at,
     lastActivityAt: at,
   })
