@@ -184,7 +184,7 @@ Targets, checked in CI on every PR: idle memory of all processes, cold start to 
 - **Atoms die with their readers.** No `keepAlive` by default; per-session atom families are released when no component reads them.
 - **Everything long-lived is scoped.** Child processes, watchers, subscriptions and timers live in an Effect `Scope` (server) or in the plugin's `ctx` (plugins), closed with their session, tab or plugin.
 - **Bounded streams.** Harness and RPC streams have bounded buffers with backpressure; a slow renderer drops to snapshots instead of queuing events.
-- **Shared, paused polling.** GitHub and git polling go through one deduplicating scheduler per resource, paused while the window is hidden and stopped for merged PRs.
+- **Shared, paused polling.** Polling goes through one scheduler, `ctx.poll` for plugins: deduplicated per key and paused while the window is hidden. A plugin stops polling what can no longer change, such as a merged PR.
 - **Lazy plugins.** A plugin's UI half is imported when one of its slots first renders; its server half when its first event or command fires, unless it declares `"activation": "startup"`.
 - **One renderer.** No extra `BrowserWindow` or `WebContentsView` per tab; Vite code-splits views so unused ones are never parsed.
 - **Leak test.** A Playwright scenario opens and closes 50 sessions, switches tabs and reloads a plugin 20 times, forces GC, and fails if heap or open handles grow past a threshold.
@@ -292,7 +292,8 @@ export const activate: ServerPlugin = (ctx) => {
   ctx.commands.register("prs.refresh", async (args) => {})   // also exposed as `ivin run prs.refresh`
   await ctx.exec("gh", ["pr", "view", url, "--json", "state"], { cwd })
   await ctx.settings.get("foldThreshold")
-  ctx.setInterval(refresh, 60_000)                           // cleared on deactivate
+  ctx.poll(`pr:${url}`, refresh, { every: 60_000 })          // one run per key, paused while the window is hidden
+  ctx.setInterval(tick, 60_000)                              // cleared on deactivate
 }
 ```
 
@@ -390,7 +391,7 @@ The feature that started this design, as a plugin:
 
 - `server.ts` watches `transcript.onEvent` for a `gh pr create` or GitHub MCP `create_pull_request` result holding a PR URL, and adds a `pr` annotation with `relation: "created"`. Deterministic, free, no agent cooperation needed.
 - The agent adds what detection can't see with `ivin pr link <url> --as referenced`; the `ivin-customize` skill tells it when.
-- The plugin polls each open PR's state, CI and mergeability with `ctx.exec("gh", …)` and stores it.
+- The plugin polls each open PR's state, CI and mergeability with `ctx.poll` and `ctx.exec("gh", …)`, and stores it.
 - `ui.tsx` fills `session.badge` (state icon, CI chip, `+n`), `session.card` (folded PR list) and `tab.decoration`.
 
 In the fork this took hooks in 10 upstream files; here it touches no core file.
@@ -433,3 +434,5 @@ Layout features (stacked or swapped panels, sub-tabs) are where the slot model i
 
 - Terminal emulator, to settle at milestone 2: xterm.js, or `libghostty-vt` compiled to WASM (e.g. `ghostty-web`, which keeps the xterm.js API, so the swap is cheap either way). The PTY lives in the server (`node-pty`) and only speaks bytes over RPC, so the choice stays local to one UI component. The full libghostty with its native renderer is out: a Metal surface doesn't compose inside a Chromium window.
 - Plugin dependencies: may a plugin have its own `node_modules` (Rolldown would bundle them), or only the plugin API and Node built-ins?
+- Plugins building on plugins, to settle at milestone 2, before the API freezes. Today two plugins share only annotations and commands, yet several fork features want the same GitHub access (session PRs, `#` issue mentions, the account per project). Either such services live in the core behind `ctx` (`ctx.github`), or a plugin may export an API and slots of its own and declare the plugins it depends on.
+- Evolving stored data. Owning the transcript means a change to an event's shape meets events already stored, and nothing here says how the SQLite schema migrates, nor how a transcript event or an annotation's `data` is versioned. Numbered, forward-only migrations run at server start are needed from milestone 1; still to settle: a version on events and annotations, and whether old ones are rewritten or upcast on read.
