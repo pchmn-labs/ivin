@@ -1,0 +1,14 @@
+{
+  "name": "@ivin/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vp pack",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ivin/contracts": "workspace:*",
+    "effect": "4.1.4"
+  }
+}

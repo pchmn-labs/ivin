@@ -1,2 +1,11 @@
 # Agent tooling: .agents/ is shared and .claude is a symlink to it; per-machine settings stay local.
 .agents/settings.local.json
+
+node_modules/
+dist/
+out/
+release/
+*.tsbuildinfo
+test-results/
+playwright-report/
+.DS_Store
