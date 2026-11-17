@@ -19,6 +19,7 @@ real(
           sessionId: "s1",
           cwd,
           model: "haiku",
+          providerSessionId: null,
         })
         yield* harness.send({ text: "Reply with exactly: pong" })
         return yield* Stream.runCollect(
@@ -41,6 +42,7 @@ test("a process that fails to start ends the stream with a HarnessError", async 
         sessionId: "s1",
         cwd: "/does/not/exist",
         model: "haiku",
+        providerSessionId: null,
       })
       return yield* Stream.runCollect(harness.events)
     }).pipe(Effect.provide(layerClaude), Effect.scoped),

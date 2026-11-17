@@ -1,6 +1,6 @@
 import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { layerScripted, type ScriptedSend } from "@ivin/harness"
+import { layerScripted, type ScriptedSend, type StartInput } from "@ivin/harness"
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { DatabaseSync } from "node:sqlite"
@@ -33,6 +33,7 @@ const withServer = <A, E>(
   turns: readonly (readonly HarnessOutput[])[],
   sent: ScriptedSend[],
   use: (client: Client) => Effect.Effect<A, E>,
+  starts: StartInput[] = [],
 ) =>
   Effect.runPromise(
     makeClient().pipe(
@@ -41,7 +42,7 @@ const withServer = <A, E>(
         handlers.pipe(
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerScripted(turns, { sent })),
+          Layer.provide(layerScripted(turns, { sent, starts, reportSession: true })),
         ),
       ),
       Effect.scoped,
@@ -417,4 +418,47 @@ test("a status between a block's deltas and its finished event keeps the reserve
   )
 
   expect(upsert).toMatchObject({ type: "upsert", item: { id: deltas[0]!.itemId } })
+})
+
+test("a session resumes with the provider session id stored by an earlier server, and its events append", async () => {
+  const db = newDatabase()
+  const starts: StartInput[] = []
+  const sessionId = await withServer(
+    db,
+    [turn],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* untilItems(client, session.id, 4)
+        return session.id
+      }),
+    starts,
+  )
+  expect(starts.map((s) => s.providerSessionId)).toEqual([null])
+
+  const page = await withServer(
+    db,
+    [turn],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        yield* client["session.sendMessage"]({ sessionId, messageId: "m2", text: "again" })
+        for (let attempt = 0; attempt < 200; attempt++) {
+          const page = yield* endOfTranscript(client, sessionId)
+          const last = page.items.at(-1)
+          if (page.items.length >= 8 && last?.type === "message" && last.text.endsWith("a.txt."))
+            return page
+          yield* Effect.sleep("5 millis")
+        }
+        return yield* Effect.die("The second turn never reached the transcript")
+      }),
+    starts,
+  )
+
+  expect(starts.map((s) => s.providerSessionId)).toEqual([null, `scripted-${sessionId}`])
+  expect(page.items.map((i) => i.position)).toEqual([1, 3, 4, 6, 8, 10, 11, 13])
+  expect(page.items[0]).toMatchObject({ id: "m1", text: "go" })
+  expect(page.items[4]).toMatchObject({ id: "m2", text: "again" })
 })

@@ -10,6 +10,7 @@ export interface StartInput {
   readonly sessionId: string
   readonly cwd: string
   readonly model: string
+  readonly providerSessionId: string | null
 }
 
 export interface UserMessage {

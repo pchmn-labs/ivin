@@ -69,6 +69,20 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             "UPDATE sessions SET title = ?, title_locked = 1 WHERE id = ? AND title_locked = 0",
           ).run(title, id)
         }),
+      providerSessionId: (id) =>
+        Effect.sync(() => {
+          const row = db
+            .prepare("SELECT provider_session_id FROM sessions WHERE id = ?")
+            .get(id) as { provider_session_id: string | null } | undefined
+          return row?.provider_session_id ?? null
+        }),
+      setProviderSessionId: (id, providerSessionId) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET provider_session_id = ? WHERE id = ?").run(
+            providerSessionId,
+            id,
+          )
+        }),
       touch: (id, at) =>
         Effect.sync(() => {
           db.prepare("UPDATE sessions SET last_activity_at = ? WHERE id = ?").run(

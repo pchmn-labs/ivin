@@ -21,7 +21,12 @@ test("each send replays the next turn on the events stream and records what was 
   const sent: ScriptedSend[] = []
   const events = await run([[text("one"), text("two")], [text("three")]], sent, (provider) =>
     Effect.gen(function* () {
-      const harness = yield* provider.start({ sessionId: "s1", cwd: "/p", model: "m" })
+      const harness = yield* provider.start({
+        sessionId: "s1",
+        cwd: "/p",
+        model: "m",
+        providerSessionId: null,
+      })
       yield* harness.send({ text: "hello" })
       yield* harness.send({ text: "again" })
       return yield* Stream.runCollect(Stream.take(harness.events, 3))
@@ -42,7 +47,12 @@ test("each send replays the next turn on the events stream and records what was 
 test("sending with no turn left fails", async () => {
   const error = await run([], [], (provider) =>
     Effect.gen(function* () {
-      const harness = yield* provider.start({ sessionId: "s1", cwd: "/p", model: "m" })
+      const harness = yield* provider.start({
+        sessionId: "s1",
+        cwd: "/p",
+        model: "m",
+        providerSessionId: null,
+      })
       return yield* Effect.flip(harness.send({ text: "hello" }))
     }),
   )
@@ -57,6 +67,7 @@ test("with cycle, the turns start over once they are used up", async () => {
         sessionId: "s1",
         cwd: "/p",
         model: "m",
+        providerSessionId: null,
       })
       yield* harness.send({ text: "a" })
       yield* harness.send({ text: "b" })

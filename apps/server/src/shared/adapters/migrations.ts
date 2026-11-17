@@ -49,6 +49,10 @@ export const migrations: readonly Migration[] = [
     version: 3,
     sql: "ALTER TABLE sessions ADD COLUMN model TEXT NOT NULL DEFAULT 'sonnet'",
   },
+  {
+    version: 4,
+    sql: "ALTER TABLE sessions ADD COLUMN provider_session_id TEXT",
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

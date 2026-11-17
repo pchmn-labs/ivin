@@ -4,6 +4,7 @@ import { decodeClaudeLine } from "./decode-claude-line.ts"
 import apiError from "./fixtures/api-error.jsonl?raw"
 import failedToolCall from "./fixtures/failed-tool-call.jsonl?raw"
 import plainAnswer from "./fixtures/plain-answer.jsonl?raw"
+import resumedSession from "./fixtures/resumed-session.jsonl?raw"
 import thinking from "./fixtures/thinking.jsonl?raw"
 import toolCall from "./fixtures/tool-call.jsonl?raw"
 
@@ -11,6 +12,7 @@ const fixtures = {
   "api-error": apiError,
   "failed-tool-call": failedToolCall,
   "plain-answer": plainAnswer,
+  "resumed-session": resumedSession,
   thinking: thinking,
   "tool-call": toolCall,
 }
@@ -21,7 +23,8 @@ const fixture = (name: keyof typeof fixtures): HarnessOutput[] =>
     .filter((line) => line !== "")
     .flatMap(decodeClaudeLine)
 
-const stored = (outputs: HarnessOutput[]) => outputs.filter((o) => o.type !== "delta")
+const stored = (outputs: HarnessOutput[]) =>
+  outputs.filter((o) => o.type !== "delta" && o.type !== "provider_session")
 const types = (outputs: HarnessOutput[]) => stored(outputs).map((o) => o.type)
 
 test("a plain answer streams text deltas, then stores one assistant_text, usage and idle", () => {
@@ -131,10 +134,20 @@ test("an API error stores one error event, not the synthetic assistant text", ()
 
 test("lines it does not handle, and text that is not JSON, produce nothing", () => {
   expect(decodeClaudeLine('{"type":"rate_limit_event"}')).toEqual([])
-  expect(decodeClaudeLine('{"type":"system","subtype":"init"}')).toEqual([])
+  expect(decodeClaudeLine('{"type":"system","subtype":"hook_started"}')).toEqual([])
   expect(decodeClaudeLine("not json")).toEqual([])
 })
 
 test("a handled line with an unexpected shape gives an error event", () => {
   expect(decodeClaudeLine('{"type":"assistant","message":{}}')).toMatchObject([{ type: "error" }])
+})
+
+test("a resumed run reports the provider session id and decodes the new turn", () => {
+  const outputs = fixture("resumed-session")
+
+  expect(outputs.filter((o) => o.type === "provider_session")).toEqual([
+    { type: "provider_session", providerSessionId: "2c6e6b1f-9c18-49db-9cdb-6a97574180c9" },
+  ])
+  expect(types(outputs)).toEqual(["status", "assistant_text", "usage", "status"])
+  expect(stored(outputs)[1]).toMatchObject({ type: "assistant_text", text: "walrus" })
 })
