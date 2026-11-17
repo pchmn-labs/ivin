@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./rpc-client-protocol": "./src/rpc-client-protocol.ts",
+    "./frame-batch": "./src/frame-batch.ts",
     "./entity-list": "./src/entity-list.ts",
     "./optimistic": "./src/optimistic.ts",
     "./strong-family": "./src/strong-family.ts"

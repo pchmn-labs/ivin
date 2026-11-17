@@ -1,11 +1,13 @@
-import type { HarnessEvent } from "@ivin/contracts/transcript"
+import type { HarnessOutput } from "@ivin/contracts/transcript"
 
 export const demoAnswer = "The scripted answer: this project has 3 files and every test passes."
 
-export const demoUsage = { inputTokens: 1200, outputTokens: 340, costUsd: 0.0123 }
+export const demoUsage = { inputTokens: 1200, outputTokens: 340, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0.0123 }
 
-export const demoTurn: readonly HarnessEvent[] = [
+export const demoTurn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: null },
+  { type: "delta", kind: "assistant_text", text: "Let me look at " },
+  { type: "delta", kind: "assistant_text", text: "the project first." },
   { type: "assistant_text", text: "Let me look at the project first.", raw: null },
   {
     type: "tool_call",
@@ -21,9 +23,11 @@ export const demoTurn: readonly HarnessEvent[] = [
     isError: false,
     raw: null,
   },
+  { type: "delta", kind: "assistant_text", text: "The scripted answer: this project has 3 files" },
+  { type: "delta", kind: "assistant_text", text: " and every test passes." },
   { type: "assistant_text", text: demoAnswer, raw: null },
   { type: "usage", ...demoUsage, raw: null },
   { type: "status", status: "idle", raw: null },
 ]
 
-export const demoScript: readonly (readonly HarnessEvent[])[] = [demoTurn]
+export const demoScript: readonly (readonly HarnessOutput[])[] = [demoTurn]

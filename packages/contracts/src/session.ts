@@ -5,6 +5,7 @@ export const Session = Schema.Struct({
   id: Schema.String,
   projectPath: Schema.String,
   title: Schema.String,
+  model: Schema.String,
   createdAt: Schema.DateTimeUtcFromMillis,
   lastActivityAt: Schema.DateTimeUtcFromMillis,
 })
@@ -15,7 +16,10 @@ export class SessionNotFound extends Schema.TaggedError<SessionNotFound>()("Sess
 }) {}
 
 export const SessionRpcs = RpcGroup.make(
-  Rpc.make("session.create", { payload: { projectPath: Schema.String }, success: Session }),
+  Rpc.make("session.create", {
+    payload: { projectPath: Schema.String, model: Schema.String },
+    success: Session,
+  }),
   Rpc.make("session.list", {
     payload: { projectPath: Schema.String },
     success: Schema.Array(Session),

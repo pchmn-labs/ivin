@@ -65,6 +65,10 @@ export const applyEvent = (
       }
       return { state, item }
     }
+    case "error": {
+      const item: TranscriptItem = { ...base, type: "error", message: event.message }
+      return { state: { ...state, openMessage: null }, item }
+    }
     case "status":
       return {
         state: event.status === "idle" ? { ...state, openMessage: null } : state,

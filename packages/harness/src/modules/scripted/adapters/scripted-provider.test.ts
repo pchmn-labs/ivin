@@ -1,13 +1,13 @@
-import type { HarnessEvent } from "@ivin/contracts/transcript"
+import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Effect, type Scope, Stream } from "effect"
 import { expect, test } from "vitest"
 import { HarnessProvider } from "../../../shared/harness-provider.ts"
 import { layerScripted, type ScriptedSend } from "./scripted-provider.ts"
 
-const text = (value: string): HarnessEvent => ({ type: "assistant_text", text: value, raw: null })
+const text = (value: string): HarnessOutput => ({ type: "assistant_text", text: value, raw: null })
 
 const run = <A, E>(
-  turns: readonly (readonly HarnessEvent[])[],
+  turns: readonly (readonly HarnessOutput[])[],
   sent: ScriptedSend[],
   use: (provider: HarnessProvider["Service"]) => Effect.Effect<A, E, Scope.Scope>,
 ) =>
@@ -21,7 +21,7 @@ test("each send replays the next turn on the events stream and records what was 
   const sent: ScriptedSend[] = []
   const events = await run([[text("one"), text("two")], [text("three")]], sent, (provider) =>
     Effect.gen(function* () {
-      const harness = yield* provider.start({ sessionId: "s1", cwd: "/p" })
+      const harness = yield* provider.start({ sessionId: "s1", cwd: "/p", model: "m" })
       yield* harness.send({ text: "hello" })
       yield* harness.send({ text: "again" })
       return yield* Stream.runCollect(Stream.take(harness.events, 3))
@@ -42,7 +42,7 @@ test("each send replays the next turn on the events stream and records what was 
 test("sending with no turn left fails", async () => {
   const error = await run([], [], (provider) =>
     Effect.gen(function* () {
-      const harness = yield* provider.start({ sessionId: "s1", cwd: "/p" })
+      const harness = yield* provider.start({ sessionId: "s1", cwd: "/p", model: "m" })
       return yield* Effect.flip(harness.send({ text: "hello" }))
     }),
   )
@@ -53,7 +53,11 @@ test("sending with no turn left fails", async () => {
 test("with cycle, the turns start over once they are used up", async () => {
   const events = await Effect.runPromise(
     Effect.gen(function* () {
-      const harness = yield* (yield* HarnessProvider).start({ sessionId: "s1", cwd: "/p" })
+      const harness = yield* (yield* HarnessProvider).start({
+        sessionId: "s1",
+        cwd: "/p",
+        model: "m",
+      })
       yield* harness.send({ text: "a" })
       yield* harness.send({ text: "b" })
       return yield* Stream.runCollect(Stream.take(harness.events, 2))

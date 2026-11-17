@@ -45,6 +45,10 @@ export const migrations: readonly Migration[] = [
       UNIQUE (session_id, sequence)
     )`,
   },
+  {
+    version: 3,
+    sql: "ALTER TABLE sessions ADD COLUMN model TEXT NOT NULL DEFAULT 'sonnet'",
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

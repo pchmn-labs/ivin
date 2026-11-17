@@ -1,4 +1,4 @@
-import { demoScript, layerScripted } from "@ivin/harness"
+import { demoScript, layerClaude, layerScripted } from "@ivin/harness"
 import { Cause, Effect, Layer } from "effect"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
@@ -27,10 +27,19 @@ const fail = (message: string): never => {
 if (typeof databasePath !== "string") fail("Missing --database <path>")
 const path = databasePath as string
 
-// Until the Claude provider lands, unset means scripted.
-const harnessId = process.env["IVIN_HARNESS"] ?? "scripted"
-if (harnessId !== "scripted") fail(`Unknown IVIN_HARNESS "${harnessId}": only "scripted" exists.`)
-const layerHarness = layerScripted(demoScript, { cycle: true })
+const harnessId = process.env["IVIN_HARNESS"] ?? "claude"
+const layerHarnesses = {
+  claude: layerClaude,
+  scripted: layerScripted(demoScript, { cycle: true }),
+} as const
+if (!(harnessId in layerHarnesses)) {
+  fail(
+    `Unknown IVIN_HARNESS "${harnessId}": expected ${Object.keys(layerHarnesses)
+      .map((id) => `"${id}"`)
+      .join(" or ")}.`,
+  )
+}
+const layerHarness = layerHarnesses[harnessId as keyof typeof layerHarnesses]
 
 // Ports main posts before the database is ready wait here.
 let serve: ((port: MainPort) => void) | undefined

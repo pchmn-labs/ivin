@@ -127,7 +127,7 @@ Tests sit beside the file they test, at three levels:
 
 - **Project**: a folder or a `.code-workspace` (several folders), with its settings.
 - **Session**: one agent conversation, bound to a project folder, a cwd (checkout or worktree), a branch, a harness and a model. Owns a transcript.
-- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `usage`, `status`…), each with a stable id, **owned by ivin**: every event is written to SQLite as it streams, never re-read from the provider's files. Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
+- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `usage`, `status`, `error`…), each with a stable id, **owned by ivin**: every event is written to SQLite as it streams, never re-read from the provider's files. Token deltas are not events: they go to the renderer and are never stored, and the finished block is stored once, under the id its streamed copy had. Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
 - **Transcript items**: the read model derived from the events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled. Plugins render items; they don't re-derive them from events.
 - **Annotation**: typed, namespaced metadata attached to a session (or project), written by plugins, the CLI or the agent. Example: `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
 - **Tab / pane layout**: workspace tabs holding session, file and plugin views.
@@ -182,16 +182,16 @@ interface HarnessProvider {
   readonly start: (input: StartInput) => Effect<HarnessRun, HarnessError, Scope>
 }
 interface HarnessRun {
-  readonly events: Stream<HarnessEvent, HarnessError>
+  readonly events: Stream<HarnessEvent | HarnessDelta, HarnessError>
   readonly send: (message: UserMessage) => Effect<void, HarnessError>
   readonly respond: (approval: ApprovalDecision) => Effect<void, HarnessError>
   readonly interrupt: Effect<void>
 }
 ```
 
-- Claude: `--output-format stream-json --input-format stream-json`, permission prompts over stdio. Codex: `app-server` JSON-RPC. ACP: one generic client for Cursor, Devin, Grok, Hermes and others.
+- Claude: `-p --output-format stream-json --input-format stream-json --verbose --include-partial-messages --thinking-display summarized --model <model>`, permission prompts over stdio. Without `--thinking-display summarized`, thinking arrives empty. Codex: `app-server` JSON-RPC. ACP: one generic client for Cursor, Devin, Grok, Hermes and others.
 - Reference implementations: T3 Code's provider layer and MonoCode's `src/integrations/harness`. Both are read before writing a provider, for the protocol details and edge cases they already solved (flags, message shapes, approval flow, resume, interrupts). Code is copied or adapted where it fits ivin's interfaces, with attribution; neither is a dependency, and nothing requires matching their structure or their Effect version.
-- The server picks the provider from `IVIN_HARNESS`; tests and the CI smoke run set it to `scripted`, which replays a recorded transcript and never spawns an agent.
+- The server picks the provider from `IVIN_HARNESS`, `claude` when unset; tests and the CI smoke run set it to `scripted`, which replays a recorded transcript and never spawns an agent.
 - Every spawned agent gets `IVIN_SESSION_ID` and `IVIN_SOCKET` in its environment, so `ivin` commands run by the agent apply to its own session with no argument.
 - Plugins can amend a spawn (`harness.beforeSpawn`: extra args, env, MCP servers, appended system prompt) and observe every event (`transcript.onEvent`).
 - `transcript.onEvent` is an observer: events are forwarded to the plugin host after they are persisted, and a slow plugin only delays itself.

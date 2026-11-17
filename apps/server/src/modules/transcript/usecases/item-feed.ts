@@ -1,16 +1,18 @@
-import type { TranscriptItem } from "@ivin/contracts/transcript"
+import type { TranscriptItemChange } from "@ivin/contracts/transcript"
 import { Context, Effect, Layer, PubSub, type Scope, Stream } from "effect"
 
 const FEED_CAPACITY = 1024
 
+export type FeedChange = Exclude<TranscriptItemChange, { type: "page" }>
+
 export class ItemFeed extends Context.Service<
   ItemFeed,
   {
-    readonly publish: (item: TranscriptItem) => Effect.Effect<void>
+    readonly publish: (change: FeedChange) => Effect.Effect<void>
     // Subscribed on return: nothing published afterwards is missed.
     readonly watch: (
       sessionId: string,
-    ) => Effect.Effect<Stream.Stream<TranscriptItem>, never, Scope.Scope>
+    ) => Effect.Effect<Stream.Stream<FeedChange>, never, Scope.Scope>
   }
 >()("ivin/server/ItemFeed") {}
 
@@ -18,16 +20,20 @@ export const layerItemFeed = Layer.effect(ItemFeed)(
   Effect.gen(function* () {
     // Sliding: a slow watcher loses the oldest upserts rather than stalling the writer.
     const pubsub = yield* Effect.acquireRelease(
-      PubSub.sliding<TranscriptItem>(FEED_CAPACITY),
+      PubSub.sliding<FeedChange>(FEED_CAPACITY),
       PubSub.shutdown,
     )
     return {
-      publish: (item) => PubSub.publish(pubsub, item).pipe(Effect.asVoid),
+      publish: (change) => PubSub.publish(pubsub, change).pipe(Effect.asVoid),
       watch: (sessionId) =>
         PubSub.subscribe(pubsub).pipe(
           Effect.map((subscription) =>
             Stream.fromSubscription(subscription).pipe(
-              Stream.filter((item) => item.sessionId === sessionId),
+              Stream.filter(
+                (change) =>
+                  (change.type === "upsert" ? change.item.sessionId : change.sessionId) ===
+                  sessionId,
+              ),
             ),
           ),
         ),

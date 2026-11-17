@@ -25,16 +25,22 @@ const ToolResultBody = Schema.Struct({
   output: Schema.String,
   isError: Schema.Boolean,
 })
+const StatusBody = Schema.Struct({
+  type: Schema.Literal("status"),
+  status: Schema.Literals(["running", "idle"]),
+})
 // One turn's consumption; a session's total is the sum of its usage events.
 const UsageBody = Schema.Struct({
   type: Schema.Literal("usage"),
   inputTokens: Schema.Int,
   outputTokens: Schema.Int,
-  costUsd: Schema.Number,
+  cacheReadTokens: Schema.Int,
+  cacheWriteTokens: Schema.Int,
+  costUsd: Schema.NullOr(Schema.Number),
 })
-const StatusBody = Schema.Struct({
-  type: Schema.Literal("status"),
-  status: Schema.Literals(["running", "idle"]),
+const ErrorBody = Schema.Struct({
+  type: Schema.Literal("error"),
+  message: Schema.String,
 })
 
 const eventBodies = [
@@ -45,6 +51,7 @@ const eventBodies = [
   ToolResultBody,
   UsageBody,
   StatusBody,
+  ErrorBody,
 ] as const
 
 const raw = { raw: Schema.Unknown }
@@ -61,6 +68,17 @@ export const HarnessEvent = Schema.Union(
   eventBodies.map((body) => body.mapFields((f) => ({ ...f, ...raw }))),
 )
 export type HarnessEvent = typeof HarnessEvent.Type
+
+// Streamed text of the block being written; never stored, the finished block arrives as an event.
+export const HarnessDelta = Schema.Struct({
+  type: Schema.Literal("delta"),
+  kind: Schema.Literals(["assistant_text", "thinking"]),
+  text: Schema.String,
+})
+export type HarnessDelta = typeof HarnessDelta.Type
+
+export const HarnessOutput = Schema.Union([HarnessEvent, HarnessDelta])
+export type HarnessOutput = typeof HarnessOutput.Type
 
 export const TranscriptEvent = Schema.Union(
   eventBodies.map((body) => body.mapFields((f) => ({ ...f, ...stored }))),
@@ -99,10 +117,22 @@ export const UsageItem = Schema.Struct({
   type: Schema.Literal("usage"),
   inputTokens: Schema.Int,
   outputTokens: Schema.Int,
-  costUsd: Schema.Number,
+  costUsd: Schema.NullOr(Schema.Number),
 })
 
-export const TranscriptItem = Schema.Union([MessageItem, ThinkingItem, ToolCallItem, UsageItem])
+export const ErrorItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("error"),
+  message: Schema.String,
+})
+
+export const TranscriptItem = Schema.Union([
+  MessageItem,
+  ThinkingItem,
+  ToolCallItem,
+  UsageItem,
+  ErrorItem,
+])
 export type TranscriptItem = typeof TranscriptItem.Type
 
 export const TranscriptPage = Schema.Struct({
@@ -115,8 +145,18 @@ export type TranscriptPage = typeof TranscriptPage.Type
 export const TranscriptItemChange = Schema.Union([
   Schema.Struct({ type: Schema.Literal("page"), page: TranscriptPage }),
   Schema.Struct({ type: Schema.Literal("upsert"), item: TranscriptItem }),
+  // Text to append to item `itemId`, created at `position` if the renderer doesn't hold it yet.
+  Schema.Struct({
+    type: Schema.Literal("delta"),
+    sessionId: Schema.String,
+    itemId: Schema.String,
+    position: Schema.Int,
+    kind: Schema.Literals(["message", "thinking"]),
+    text: Schema.String,
+  }),
 ])
 export type TranscriptItemChange = typeof TranscriptItemChange.Type
+export type TranscriptDelta = Extract<TranscriptItemChange, { type: "delta" }>
 
 export const TranscriptRpcs = RpcGroup.make(
   // `position: null` anchors the page at the end of the transcript.

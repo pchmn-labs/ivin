@@ -21,9 +21,9 @@ const setup = async () => {
 test("the session list shows the newest activity first, after create and after send", async () => {
   const { registry, sessions } = await setup()
 
-  registry.set(createSessionAtom, project)
+  registry.set(createSessionAtom, { projectPath: project, model: "sonnet" })
   await vi.waitFor(() => expect(registry.get(sessions.ids)).toHaveLength(1))
-  registry.set(createSessionAtom, project)
+  registry.set(createSessionAtom, { projectPath: project, model: "sonnet" })
   await vi.waitFor(() => expect(registry.get(sessions.ids)).toHaveLength(2))
 
   const [newest, oldest] = registry.get(sessions.ids)
@@ -36,7 +36,7 @@ test("the session list shows the newest activity first, after create and after s
 
 test("a rename shows at once and is kept once the server answers", async () => {
   const { registry, server, sessions } = await setup()
-  registry.set(createSessionAtom, project)
+  registry.set(createSessionAtom, { projectPath: project, model: "sonnet" })
   await vi.waitFor(() => expect(registry.get(sessions.ids)).toHaveLength(1))
   const id = registry.get(sessions.ids)[0]!
 
