@@ -3,9 +3,9 @@ import { AsyncResult } from "effect/reactivity"
 import { useContext, useEffect, useState, type ReactNode } from "react"
 import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
 import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
-import { sessionArrayOf } from "../modules/session/atoms/list-sessions.ts"
+import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
-import { activatePlugin, type UiPluginEntry } from "./plugin-registry.ts"
+import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
 
 const NO_PROJECT = ""
 
@@ -15,10 +15,10 @@ const useProjectPath = () => {
 }
 
 const host: UiHost = {
-  useSessions: () => useAtomValue(sessionArrayOf(useProjectPath())),
+  useSessions: () => useAtomValue(sessionsOf(useProjectPath()).items),
   useSession: (sessionId) =>
-    useAtomValue(sessionArrayOf(useProjectPath())).find((s) => s.id === sessionId),
-  useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).items),
+    useAtomValue(sessionsOf(useProjectPath()).items).find((s) => s.id === sessionId),
+  useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).list.items),
 }
 
 export function PluginsProvider({

@@ -292,10 +292,10 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 
 | Slot | Props | Used for |
 |---|---|---|
-| `transcript.message` | item, session | custom message rendering, skill highlights |
-| `transcript.toolCall` | tool call item (call, result, status), session; matched by tool name | expandable commands, logs pill, subagent details |
+| `transcript.message` | item, session id | custom message rendering, skill highlights |
+| `transcript.toolCall` | tool call item (call, result, status), session id; matched by tool name | expandable commands, logs pill, subagent details |
 | `transcript.inline` | markdown node | inline code links, issue mentions |
-| `composer.status` | session | tokens, cost, branch PR |
+| `composer.status` | session id | tokens, cost, branch PR |
 | `composer.above` | session | approval sheet, queued messages, detail sheets |
 | `composer.suggest` | trigger char, query | `#` issues, `@../` paths, `/` commands |
 | `session.badge` | session | linked PR/issue icon in the sidebar and tabs |

@@ -1,5 +1,4 @@
 import { DateTime, Effect } from "effect"
-import { Atom } from "effect/reactivity"
 import type { Session } from "@ivin/contracts/session"
 import { makeEntityList } from "@ivin/state/entity-list"
 import { strongFamily } from "@ivin/state/strong-family"
@@ -22,13 +21,3 @@ export const sessionsOf = strongFamily((projectPath: string) =>
     },
   }),
 )
-
-export const sessionArrayOf = strongFamily((projectPath: string) => {
-  const sessions = sessionsOf(projectPath)
-  return Atom.readable((get) =>
-    get(sessions.ids).flatMap((id) => {
-      const session = get(sessions.item(id))
-      return session ? [session] : []
-    }),
-  )
-})

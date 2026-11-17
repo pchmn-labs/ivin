@@ -6,7 +6,7 @@ import { defineUi } from "@ivin/plugin-api/ui"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { PluginsProvider } from "./plugin-host.tsx"
-import type { UiPluginEntry } from "./plugin-registry.ts"
+import type { UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
 import { Slot } from "./slot-renderer.tsx"
 
 const plugin = (id: string, text: string, options = {}): UiPluginEntry => ({

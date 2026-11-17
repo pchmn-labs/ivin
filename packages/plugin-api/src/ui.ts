@@ -7,11 +7,6 @@ export type { Session, TranscriptItem }
 export type MessageItem = Extract<TranscriptItem, { type: "message" }>
 export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
-export type UsageItem = Extract<TranscriptItem, { type: "usage" }>
-
-export const API_VERSION = 0
-
-// Thinking has no slot of its own: it goes through `transcript.message`.
 export type MessageSlotItem = MessageItem | ThinkingItem
 
 export interface SlotProps {
@@ -22,13 +17,9 @@ export interface SlotProps {
 export type SlotName = keyof SlotProps
 
 export interface SlotOptions {
-  // Contributions render by ascending order; ties keep registration order.
   readonly order?: number
-  // Its id is `<pluginId>/<name>`; defaults to the slot name.
   readonly name?: string
-  // Id (`<pluginId>/<name>`) of the contribution to take over in the same slot.
   readonly replaces?: string
-  // `transcript.toolCall` only: the tool name it renders; absent = every tool.
   readonly tool?: string
 }
 
@@ -47,7 +38,6 @@ export type UiPlugin = (ctx: UiContext) => void
 
 export const defineUi = (activate: UiPlugin): UiPlugin => activate
 
-// What the hooks read from the host, which owns the state behind them.
 export interface UiHost {
   readonly useSession: (sessionId: string) => Session | undefined
   readonly useSessions: () => ReadonlyArray<Session>

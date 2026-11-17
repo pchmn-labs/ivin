@@ -1,7 +1,8 @@
 import { useAtomValue } from "@effect/atom-react"
 import { Component, type ComponentType, type ReactNode } from "react"
 import type { SlotName, SlotProps } from "@ivin/plugin-api/ui"
-import { contributionsAtom, visibleContributions } from "./plugin-registry.ts"
+import { contributionsAtom } from "../modules/plugin/atoms/contributions.ts"
+import { visibleContributions } from "../modules/plugin/rules/visible-contributions.ts"
 
 class ContributionBoundary extends Component<
   { pluginId: string; children: ReactNode },

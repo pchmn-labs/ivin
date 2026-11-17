@@ -43,12 +43,6 @@ export const transcriptOf = strongFamily((sessionId: string) => {
     },
   })
   // Reading `paging` first keeps it alive before the feed, which sets it, starts.
-  const items = Atom.readable((get) =>
-    get(list.ids).flatMap((id) => {
-      const item = get(list.item(id))
-      return item ? [item] : []
-    }),
-  )
   // Usage items feed the status line and have no row; the same array while the ids are the same keeps the list from re-rendering.
   let rowIds: ReadonlyArray<string> = []
   const visibleIds = Atom.readable((get) => {
@@ -58,5 +52,5 @@ export const transcriptOf = strongFamily((sessionId: string) => {
     return next
   })
   const view = Atom.readable((get) => ({ ...get(paging), ids: get(visibleIds) }))
-  return { list, paging, view, items }
+  return { list, paging, view }
 })

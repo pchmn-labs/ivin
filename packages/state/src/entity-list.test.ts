@@ -43,3 +43,11 @@ test("an upsert of one item leaves the other item atoms untouched", async () => 
   await run(registry, list.upsert([row("b", 2, "changed")]))
   expect(seen).toEqual(["b:changed"])
 })
+
+test("items lists the items in order", async () => {
+  const registry = AtomRegistry.make()
+  const list = make()
+  registry.mount(list.ids)
+  await run(registry, list.upsert([row("b", 2), row("a", 1)]))
+  expect(registry.get(list.items).map((r) => r.id)).toEqual(["a", "b"])
+})
