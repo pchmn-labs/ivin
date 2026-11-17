@@ -436,15 +436,7 @@ test("a session resumes with the provider session id stored by an earlier server
       }),
     starts,
   )
-  const stored = () =>
-    db.prepare("SELECT provider_session_id AS id FROM sessions WHERE id = ?").get(sessionId) as {
-      id: string | null
-    }
-  for (let attempt = 0; attempt < 200 && stored().id === null; attempt++)
-    await new Promise((resolve) => setTimeout(resolve, 5))
-
-  expect(starts.map((s) => s.resume)).toEqual([null])
-  expect(stored().id).toBe(`scripted-${sessionId}`)
+  expect(starts.map((s) => s.providerSessionId)).toEqual([null])
 
   const page = await withServer(
     db,
@@ -465,7 +457,7 @@ test("a session resumes with the provider session id stored by an earlier server
     starts,
   )
 
-  expect(starts.map((s) => s.resume)).toEqual([null, `scripted-${sessionId}`])
+  expect(starts.map((s) => s.providerSessionId)).toEqual([null, `scripted-${sessionId}`])
   expect(page.items.map((i) => i.position)).toEqual([1, 3, 4, 6, 8, 10, 11, 13])
   expect(page.items[0]).toMatchObject({ id: "m1", text: "go" })
   expect(page.items[4]).toMatchObject({ id: "m2", text: "again" })

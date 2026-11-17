@@ -32,7 +32,6 @@ export const layerScripted = (
     id: "scripted",
     start: (input) =>
       Effect.gen(function* () {
-        const { sessionId } = input
         starts.push(input)
         const queue = yield* Effect.acquireRelease(
           Queue.bounded<HarnessOutput, HarnessError | Cause.Done>(EVENT_BUFFER),
@@ -41,14 +40,14 @@ export const layerScripted = (
         if (reportSession)
           yield* Queue.offer(queue, {
             type: "provider_session",
-            providerSessionId: input.resume ?? `scripted-${sessionId}`,
+            providerSessionId: input.providerSessionId ?? `scripted-${input.sessionId}`,
           })
         let next = 0
         const run: HarnessRun = {
           events: Stream.fromQueue(queue),
           send: ({ text }) =>
             Effect.suspend(() => {
-              sent.push({ sessionId, text })
+              sent.push({ sessionId: input.sessionId, text })
               const turn = turns[cycle ? next++ % turns.length : next++]
               return turn
                 ? Queue.offerAll(queue, turn).pipe(Effect.asVoid)

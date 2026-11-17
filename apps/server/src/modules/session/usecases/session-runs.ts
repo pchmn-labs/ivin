@@ -41,9 +41,14 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
     const startRun = (session: Session) =>
       Effect.gen(function* () {
         const scope = yield* Scope.fork(serverScope)
-        const resume = yield* sessions.providerSessionId(session.id)
+        const storedProviderSessionId = yield* sessions.providerSessionId(session.id)
         const harness = yield* provider
-          .start({ sessionId: session.id, cwd: session.projectPath, model: session.model, resume })
+          .start({
+            sessionId: session.id,
+            cwd: session.projectPath,
+            model: session.model,
+            providerSessionId: storedProviderSessionId,
+          })
           .pipe(
             Scope.provide(scope),
             Effect.tapError((error) => Scope.close(scope, Exit.fail(error))),
@@ -89,7 +94,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             }),
           )
 
-        let providerSessionId = resume
+        let providerSessionId = storedProviderSessionId
         const handle = (output: HarnessOutput) => {
           if (output.type === "delta") return stream(output)
           if (output.type !== "provider_session") return record(output)

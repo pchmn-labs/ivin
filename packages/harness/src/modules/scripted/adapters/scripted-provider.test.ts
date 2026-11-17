@@ -25,7 +25,7 @@ test("each send replays the next turn on the events stream and records what was 
         sessionId: "s1",
         cwd: "/p",
         model: "m",
-        resume: null,
+        providerSessionId: null,
       })
       yield* harness.send({ text: "hello" })
       yield* harness.send({ text: "again" })
@@ -51,7 +51,7 @@ test("sending with no turn left fails", async () => {
         sessionId: "s1",
         cwd: "/p",
         model: "m",
-        resume: null,
+        providerSessionId: null,
       })
       return yield* Effect.flip(harness.send({ text: "hello" }))
     }),
@@ -67,7 +67,7 @@ test("with cycle, the turns start over once they are used up", async () => {
         sessionId: "s1",
         cwd: "/p",
         model: "m",
-        resume: null,
+        providerSessionId: null,
       })
       yield* harness.send({ text: "a" })
       yield* harness.send({ text: "b" })

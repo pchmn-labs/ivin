@@ -3,37 +3,23 @@ import { createInterface } from "node:readline"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Effect, Layer, Stream } from "effect"
 import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/harness-provider.ts"
+import { claudeArgs } from "../rules/claude-args.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
 
 const EVENT_BUFFER = 64
 const STDERR_LIMIT = 8_192
 
-const ARGS = [
-  "-p",
-  "--output-format",
-  "stream-json",
-  "--input-format",
-  "stream-json",
-  "--verbose",
-  "--include-partial-messages",
-  // Without it the thinking blocks come back empty.
-  "--thinking-display",
-  "summarized",
-]
-
 type Exit =
   | { readonly error: Error }
   | { readonly code: number | null; readonly signal: string | null }
 
-export const claudeArgs = (model: string, resume: string | null) => [
-  ...ARGS,
-  "--model",
-  model,
-  ...(resume === null ? [] : ["--resume", resume]),
-]
-
-const spawnClaude = (sessionId: string, cwd: string, model: string, resume: string | null) => {
-  const child = spawn("claude", claudeArgs(model, resume), {
+const spawnClaude = (
+  sessionId: string,
+  cwd: string,
+  model: string,
+  providerSessionId: string | null,
+) => {
+  const child = spawn("claude", claudeArgs(model, providerSessionId), {
     cwd,
     env: { ...process.env, IVIN_SESSION_ID: sessionId },
     stdio: ["pipe", "pipe", "pipe"],
@@ -70,10 +56,10 @@ const describeExit = (exit: Exit, stderr: string) => {
 
 export const layerClaude = Layer.succeed(HarnessProvider)({
   id: "claude",
-  start: ({ sessionId, cwd, model, resume }) =>
+  start: ({ sessionId, cwd, model, providerSessionId }) =>
     Effect.gen(function* () {
       const { child, lines, exited, stderr } = yield* Effect.acquireRelease(
-        Effect.sync(() => spawnClaude(sessionId, cwd, model, resume)),
+        Effect.sync(() => spawnClaude(sessionId, cwd, model, providerSessionId)),
         ({ child }) =>
           Effect.sync(() => {
             child.stdin.destroy()
