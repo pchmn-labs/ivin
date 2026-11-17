@@ -1,6 +1,6 @@
 import type { HarnessEvent } from "@ivin/contracts/transcript"
 import { Cause, Effect, Layer, Queue, Stream } from "effect"
-import { HarnessError, HarnessProvider, type HarnessRun } from "../../shared/harness-provider.ts"
+import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/harness-provider.ts"
 
 export interface ScriptedSend {
   readonly sessionId: string
@@ -11,7 +11,7 @@ const EVENT_BUFFER = 64
 
 export const layerScripted = (
   turns: readonly (readonly HarnessEvent[])[],
-  sent: ScriptedSend[] = [],
+  { sent = [], cycle = false }: { sent?: ScriptedSend[]; cycle?: boolean } = {},
 ) =>
   Layer.succeed(HarnessProvider)({
     id: "scripted",
@@ -27,7 +27,7 @@ export const layerScripted = (
           send: ({ text }) =>
             Effect.suspend(() => {
               sent.push({ sessionId, text })
-              const turn = turns[next++]
+              const turn = turns[cycle ? next++ % turns.length : next++]
               return turn
                 ? Queue.offerAll(queue, turn).pipe(Effect.asVoid)
                 : Effect.fail(

@@ -6,8 +6,8 @@
   "exports": {
     "./rpc-client-protocol": "./src/rpc-client-protocol.ts",
     "./entity-list": "./src/entity-list.ts",
-    "./stream-feed": "./src/stream-feed.ts",
-    "./optimistic": "./src/optimistic.ts"
+    "./optimistic": "./src/optimistic.ts",
+    "./strong-family": "./src/strong-family.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

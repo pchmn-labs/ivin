@@ -96,6 +96,12 @@ export const TranscriptPage = Schema.Struct({
 })
 export type TranscriptPage = typeof TranscriptPage.Type
 
+export const TranscriptItemChange = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("page"), page: TranscriptPage }),
+  Schema.Struct({ type: Schema.Literal("upsert"), item: TranscriptItem }),
+])
+export type TranscriptItemChange = typeof TranscriptItemChange.Type
+
 export const TranscriptRpcs = RpcGroup.make(
   // `position: null` anchors the page at the end of the transcript.
   Rpc.make("transcript.getItems", {
@@ -107,9 +113,10 @@ export const TranscriptRpcs = RpcGroup.make(
     },
     success: TranscriptPage,
   }),
+  // First element: the last `before` items, read after the server subscribed; then upserts.
   Rpc.make("transcript.watchItems", {
-    payload: { sessionId: Schema.String },
-    success: TranscriptItem,
+    payload: { sessionId: Schema.String, before: Schema.Int },
+    success: TranscriptItemChange,
     stream: true,
   }),
 )

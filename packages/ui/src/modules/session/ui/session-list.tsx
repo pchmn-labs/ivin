@@ -34,7 +34,7 @@ function SessionRow({ projectPath, id }: { projectPath: string; id: string }) {
             onClick={() => select(id)}
             style={{ textAlign: "left" }}
           >
-            <span data-testid="session-title">{session.title || "Untitled session"}</span>{" "}
+            <span data-testid="session-title">{session.title}</span>{" "}
             <time dateTime={DateTime.formatIso(session.lastActivityAt)}>
               {formatter.format(DateTime.toEpochMillis(session.lastActivityAt))}
             </time>

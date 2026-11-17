@@ -25,10 +25,15 @@ export interface EntityList<A> extends EntityWriter<A> {
 
 const empty = { ids: [], byId: new Map() } as const
 
-export const makeEntityList = <A>(options: {
+export const makeEntityList = <A, R = never, E = never, ER = never>(options: {
   readonly id: (item: A) => string
   readonly compare: (a: A, b: A) => number
-  readonly feed?: (writer: EntityWriter<A>) => Atom.Atom<AsyncResult.AsyncResult<unknown, unknown>>
+  readonly feed?: {
+    readonly runtime: Atom.AtomRuntime<R, ER>
+    readonly run: (
+      writer: EntityWriter<A>,
+    ) => Effect.Effect<unknown, E, R | AtomRegistry.AtomRegistry>
+  }
 }): EntityList<A> => {
   const state = Atom.make<EntityState<A>>(empty)
 
@@ -86,7 +91,10 @@ export const makeEntityList = <A>(options: {
       }),
   }
 
-  const feed = options.feed?.(writer)
+  const feed = options.feed?.runtime.atom(
+    // Writing while the feed atom is still being built makes it rebuild itself.
+    Effect.yieldNow.pipe(Effect.andThen(options.feed.run(writer))),
+  )
   // Its own atom, so rebuilding `ids` on every upsert does not unmount and restart the feed.
   const live = Atom.readable((get) => {
     if (feed) get(feed)

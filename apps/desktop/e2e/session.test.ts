@@ -1,9 +1,8 @@
+import { demoAnswer as scriptedAnswer } from "@ivin/harness"
 import { expect, test } from "@playwright/test"
 import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { launchPackagedApp, makeTempDir } from "./launch-app.ts"
-
-const scriptedAnswer = "The scripted answer: this project has 3 files and every test passes."
 
 test("a message sent in a new session gets the scripted answer, and both are back after a relaunch", async () => {
   const userDataDir = makeTempDir("user-data")
@@ -26,6 +25,10 @@ test("a message sent in a new session gets the scripted answer, and both are bac
     const items = window.getByTestId("transcript-item")
     await expect(items.filter({ hasText: "How many files are there?" })).toHaveCount(1)
     await expect(items.filter({ hasText: scriptedAnswer })).toHaveCount(1)
+
+    await window.getByRole("textbox", { name: "Message" }).fill("And now?")
+    await window.getByRole("textbox", { name: "Message" }).press("Enter")
+    await expect(items.filter({ hasText: scriptedAnswer })).toHaveCount(2)
   } finally {
     await first.close()
   }
@@ -33,11 +36,16 @@ test("a message sent in a new session gets the scripted answer, and both are bac
   const second = await launchPackagedApp(userDataDir)
   try {
     const window = await second.firstWindow()
-    await window.getByText("How many files are there?").first().click()
+    await window
+      .getByTestId("session-item")
+      .filter({ hasText: "How many files are there?" })
+      .getByTestId("session-title")
+      .click()
 
+    // The list opens at the bottom, so only the last turn is rendered.
     const items = window.getByTestId("transcript-item")
-    await expect(items.filter({ hasText: "How many files are there?" })).toHaveCount(1)
-    await expect(items.filter({ hasText: scriptedAnswer })).toHaveCount(1)
+    await expect(items.filter({ hasText: "And now?" })).toHaveCount(1)
+    await expect(items.filter({ hasText: scriptedAnswer }).last()).toBeVisible()
   } finally {
     await second.close()
   }

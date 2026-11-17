@@ -1,6 +1,5 @@
 import type { TranscriptItem, TranscriptPage } from "@ivin/contracts/transcript"
 
-// `before` items come from the anchor backwards, `after` from the anchor onwards, the anchor included.
 export const pageAround = (
   items: readonly TranscriptItem[],
   position: number | null,

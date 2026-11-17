@@ -32,6 +32,30 @@ export const makeFakeServer = (): FakeServer => {
     Effect.runSync(PubSub.publish(pubsub, item))
   }
 
+  const getItems = ({
+    sessionId,
+    position,
+    before,
+    after,
+  }: {
+    sessionId: string
+    position: number | null
+    before: number
+    after: number
+  }) =>
+    Effect.sync(() => {
+      const items = itemsOf(sessionId)
+      const anchor =
+        position === null ? items.length : items.findIndex((i) => i.position >= position)
+      const start = Math.max(0, anchor - before)
+      const end = position === null ? items.length : Math.min(items.length, anchor + after)
+      return {
+        items: items.slice(start, end),
+        hasBefore: start > 0,
+        hasAfter: end < items.length,
+      }
+    })
+
   const client = {
     "session.create": ({ projectPath }: { projectPath: string }) =>
       Effect.sync(() => {
@@ -39,7 +63,7 @@ export const makeFakeServer = (): FakeServer => {
         const session: Session = {
           id: `session-${nextId++}`,
           projectPath,
-          title: "",
+          title: "New session",
           createdAt: at,
           lastActivityAt: at,
         }
@@ -63,6 +87,7 @@ export const makeFakeServer = (): FakeServer => {
         }
         const session = sessions.get(input.sessionId)!
         const items = itemsOf(input.sessionId)
+        const isFirstMessage = items.length === 0
         publish({
           id: input.messageId,
           sessionId: input.sessionId,
@@ -73,37 +98,28 @@ export const makeFakeServer = (): FakeServer => {
         })
         const updated = {
           ...session,
-          title: session.title === "" ? input.text : session.title,
+          title: isFirstMessage ? input.text : session.title,
           lastActivityAt: tick(),
         }
         sessions.set(session.id, updated)
         return updated
       }),
-    "transcript.getItems": ({
-      sessionId,
-      position,
-      before,
-      after,
-    }: {
-      sessionId: string
-      position: number | null
-      before: number
-      after: number
-    }) =>
-      Effect.sync(() => {
-        const items = itemsOf(sessionId)
-        const anchor =
-          position === null ? items.length : items.findIndex((i) => i.position >= position)
-        const start = Math.max(0, anchor - before)
-        const end = position === null ? items.length : Math.min(items.length, anchor + after)
-        return {
-          items: items.slice(start, end),
-          hasBefore: start > 0,
-          hasAfter: end < items.length,
-        }
-      }),
-    "transcript.watchItems": ({ sessionId }: { sessionId: string }) =>
-      Stream.fromPubSub(pubsub).pipe(Stream.filter((item) => item.sessionId === sessionId)),
+    "transcript.getItems": getItems,
+    "transcript.watchItems": ({ sessionId, before }: { sessionId: string; before: number }) =>
+      Stream.unwrap(
+        Effect.gen(function* () {
+          const subscription = yield* PubSub.subscribe(pubsub)
+          const page = yield* getItems({ sessionId, position: null, before, after: 0 })
+          return Stream.make({ type: "page" as const, page }).pipe(
+            Stream.concat(
+              Stream.fromSubscription(subscription).pipe(
+                Stream.filter((item) => item.sessionId === sessionId),
+                Stream.map((item) => ({ type: "upsert" as const, item })),
+              ),
+            ),
+          )
+        }),
+      ),
   }
 
   return {

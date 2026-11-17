@@ -37,5 +37,5 @@ export const handlers = Rpcs.toLayer({
     sendMessage(sessionId, messageId, text),
   "transcript.getItems": ({ sessionId, position, before, after }) =>
     getItems(sessionId, position, before, after),
-  "transcript.watchItems": ({ sessionId }) => watchItems(sessionId),
+  "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),
 }).pipe(Layer.provide(layerServices))

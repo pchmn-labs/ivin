@@ -12,7 +12,6 @@ interface EventRow {
   payload: string
 }
 
-// The payload holds the event body, `raw` included; the other fields have their own columns.
 const toEvent = (row: EventRow): TranscriptEvent =>
   ({
     ...JSON.parse(row.payload),

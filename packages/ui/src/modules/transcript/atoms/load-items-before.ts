@@ -6,7 +6,7 @@ import { PAGE_SIZE, transcriptOf } from "./get-items.ts"
 export const loadItemsBeforeAtom = serverRuntime.fn<string>()(
   Effect.fnUntraced(function* (sessionId, get) {
     const client = yield* ServerClient
-    const { list, window } = transcriptOf(sessionId)
+    const { list, paging } = transcriptOf(sessionId)
     const firstId = get.registry.get(list.ids)[0]
     const first = firstId === undefined ? undefined : yield* list.get(firstId)
     if (first === undefined) return
@@ -20,7 +20,7 @@ export const loadItemsBeforeAtom = serverRuntime.fn<string>()(
     const known = new Set(get.registry.get(list.ids))
     const added = page.items.filter((item) => !known.has(item.id)).length
     yield* list.upsert(page.items, { keepExisting: true })
-    yield* Atom.update(window, (w) => ({
+    yield* Atom.update(paging, (w) => ({
       ...w,
       hasBefore: page.hasBefore,
       prepended: w.prepended + added,

@@ -30,7 +30,7 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
-    title: "",
+    title: "New session",
     createdAt: at,
     lastActivityAt: at,
   })

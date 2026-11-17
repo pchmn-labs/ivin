@@ -1,21 +1,23 @@
-import { useAtom } from "@effect/atom-react"
-import { AsyncResult } from "effect/reactivity"
+import { useAtomSet } from "@effect/atom-react"
+import { Exit } from "effect"
 import { useState } from "react"
 import { sendMessageAtom } from "../atoms/send-message.ts"
 
 export function Composer({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
   const [text, setText] = useState("")
-  const [sent, send] = useAtom(sendMessageAtom)
+  const [failed, setFailed] = useState(false)
+  const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
 
   const submit = () => {
     if (text.trim() === "") return
-    send({ projectPath, sessionId, text })
+    setFailed(false)
+    void send({ projectPath, sessionId, text }).then((exit) => setFailed(Exit.isFailure(exit)))
     setText("")
   }
 
   return (
     <div>
-      {AsyncResult.isFailure(sent) && <p role="alert">The message was not sent</p>}
+      {failed && <p role="alert">The message was not sent</p>}
       <textarea
         aria-label="Message"
         rows={3}

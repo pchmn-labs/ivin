@@ -10,7 +10,6 @@ export interface ItemState {
 
 export const emptyItemState: ItemState = { openMessage: null, openToolCalls: new Map() }
 
-// `item` is the new or changed item the event led to, if any.
 export const applyEvent = (
   state: ItemState,
   event: TranscriptEvent,

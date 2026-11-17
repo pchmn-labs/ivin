@@ -3,7 +3,6 @@ import type { AtomRegistry } from "effect/reactivity"
 
 type Step<R = never> = Effect.Effect<void, never, AtomRegistry.AtomRegistry | R>
 
-// Applies `apply` at once, runs the server call, then `reconcile`s with its answer or `rollback`s on failure or interruption.
 export const optimistic =
   <A>(update: {
     readonly apply: Step

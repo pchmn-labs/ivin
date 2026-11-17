@@ -30,7 +30,7 @@ const path = databasePath as string
 // Until the Claude provider lands, unset means scripted.
 const harnessId = process.env["IVIN_HARNESS"] ?? "scripted"
 if (harnessId !== "scripted") fail(`Unknown IVIN_HARNESS "${harnessId}": only "scripted" exists.`)
-const layerHarness = layerScripted(demoScript)
+const layerHarness = layerScripted(demoScript, { cycle: true })
 
 // Ports main posts before the database is ready wait here.
 let serve: ((port: MainPort) => void) | undefined

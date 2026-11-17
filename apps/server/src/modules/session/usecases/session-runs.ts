@@ -10,7 +10,6 @@ import { SessionStore } from "./session-store.ts"
 export class SessionRuns extends Context.Service<
   SessionRuns,
   {
-    // Stores the user message, then hands it to the session's run, started on the first call.
     readonly send: (
       session: Session,
       message: { readonly id: string; readonly text: string },
@@ -68,8 +67,13 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
 
         yield* Stream.runForEach(harness.events, (event) => record(event)).pipe(
           Effect.catchTag("HarnessError", (error) => Effect.logError(error.message)),
-          Effect.ensuring(Effect.sync(() => runs.delete(session.id))),
-          Effect.forkIn(scope),
+          Effect.ensuring(
+            Effect.suspend(() => {
+              runs.delete(session.id)
+              return Scope.close(scope, Exit.void)
+            }),
+          ),
+          Effect.forkIn(serverScope),
         )
 
         const run: ActiveRun = { record, send: (text) => harness.send({ text }) }

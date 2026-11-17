@@ -13,7 +13,7 @@ const setup = async () => {
   server.sessions.set("s1", {
     id: "s1",
     projectPath: project,
-    title: "",
+    title: "New session",
     createdAt: at,
     lastActivityAt: at,
   })
@@ -34,7 +34,7 @@ test("a sent message appears at once and is reconciled by the server's item with
   await vi.waitFor(() => expect(registry.get(transcript.list.ids)).toHaveLength(1))
   const [id] = registry.get(transcript.list.ids)
   expect(registry.get(transcript.list.item(id!))).toMatchObject({ role: "user", text: "hello" })
-  expect(registry.get(sessions.item("s1"))?.title).toBe("")
+  expect(registry.get(sessions.item("s1"))?.title).toBe("New session")
 
   send.release()
   await vi.waitFor(() => expect(registry.get(sessions.item("s1"))?.title).toBe("hello"))

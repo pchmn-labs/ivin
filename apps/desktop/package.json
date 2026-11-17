@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@ivin/contracts": "workspace:*",
+    "@ivin/harness": "workspace:*",
     "@ivin/server": "workspace:*",
     "@ivin/ui": "workspace:*",
     "@playwright/test": "1.65.1",

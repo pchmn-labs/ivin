@@ -41,7 +41,7 @@ const withServer = <A, E>(
         handlers.pipe(
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerScripted(turns, sent)),
+          Layer.provide(layerScripted(turns, { sent })),
         ),
       ),
       Effect.scoped,
@@ -202,31 +202,84 @@ test("items are paged around a position", async () => {
   expect(page).toMatchObject({ hasBefore: true, hasAfter: true })
 })
 
-test("watching a session streams each new or changed item as the events are stored", async () => {
-  const items = await withServer(newDatabase(), [turn], [], (client) =>
+test("watching a session starts with the last items as a page, then streams upserts", async () => {
+  const changes = await withServer(newDatabase(), [turn, turn], [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.create"]({ projectPath: "/p" })
-      const watching = yield* client["transcript.watchItems"]({ sessionId: session.id }).pipe(
-        Stream.take(5),
-        Stream.runCollect,
-        Effect.forkChild,
-      )
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      yield* untilItems(client, session.id, 4)
+      const watching = yield* client["transcript.watchItems"]({
+        sessionId: session.id,
+        before: 2,
+      }).pipe(Stream.take(6), Stream.runCollect, Effect.forkChild)
       yield* Effect.sleep("20 millis")
       yield* client["session.sendMessage"]({
         sessionId: session.id,
-        messageId: "msg-1",
-        text: "go",
+        messageId: "m2",
+        text: "again",
       })
       return yield* Fiber.join(watching)
     }),
   )
 
-  expect(items.map((item) => [item.type, item.type === "tool_call" ? item.status : null])).toEqual([
-    ["message", null],
-    ["message", null],
-    ["tool_call", "running"],
-    ["tool_call", "done"],
-    ["message", null],
+  const [first, ...upserts] = changes
+  expect(first?.type === "page" && first.page.items.map((i) => i.type)).toEqual([
+    "tool_call",
+    "message",
   ])
+  expect(first).toMatchObject({ page: { hasBefore: true, hasAfter: false } })
+  expect(upserts.map((c) => c.type)).toEqual(["upsert", "upsert", "upsert", "upsert", "upsert"])
+  expect(upserts[0]).toMatchObject({ item: { id: "m2", role: "user", text: "again" } })
+})
+
+test("an item reaches a watcher only after its events are in the database", async () => {
+  const db = newDatabase()
+  const checks = await withServer(db, [turn], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p" })
+      const stored = (sql: string, ...args: string[]) => db.prepare(sql).get(...args) !== undefined
+      const watching = yield* client["transcript.watchItems"]({
+        sessionId: session.id,
+        before: 10,
+      }).pipe(
+        Stream.drop(1),
+        Stream.take(5),
+        Stream.map((change) => {
+          if (change.type !== "upsert") return false
+          const { item } = change
+          const row = stored("SELECT 1 FROM transcript_events WHERE id = ?", item.id)
+          return item.type === "tool_call" && item.status === "done"
+            ? row &&
+                stored(
+                  "SELECT 1 FROM transcript_events WHERE session_id = ? AND type = 'tool_result'",
+                  session.id,
+                )
+            : row
+        }),
+        Stream.runCollect,
+        Effect.forkChild,
+      )
+      yield* Effect.sleep("20 millis")
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      return yield* Fiber.join(watching)
+    }),
+  )
+
+  expect(checks).toEqual([true, true, true, true, true])
+})
+
+test("when the harness fails after the user message was stored, the message stays whole", async () => {
+  const db = newDatabase()
+  const outcome = await withServer(db, [], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p" })
+      const exit = yield* Effect.exit(
+        client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" }),
+      )
+      return { exit, page: yield* endOfTranscript(client, session.id) }
+    }),
+  )
+
+  expect(outcome.exit._tag).toBe("Failure")
+  expect(outcome.page.items).toMatchObject([{ id: "m1", role: "user", text: "go" }])
 })

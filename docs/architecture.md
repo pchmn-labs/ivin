@@ -182,7 +182,7 @@ interface HarnessProvider {
   readonly start: (input: StartInput) => Effect<HarnessRun, HarnessError, Scope>
 }
 interface HarnessRun {
-  readonly events: Stream<TranscriptEvent, HarnessError>
+  readonly events: Stream<HarnessEvent, HarnessError>
   readonly send: (message: UserMessage) => Effect<void, HarnessError>
   readonly respond: (approval: ApprovalDecision) => Effect<void, HarnessError>
   readonly interrupt: Effect<void>
