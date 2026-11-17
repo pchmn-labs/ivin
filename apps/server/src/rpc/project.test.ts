@@ -15,7 +15,7 @@ const newDatabase = () => {
   return db
 }
 
-const session = <A, E>(
+const withServer = <A, E>(
   db: DatabaseSync,
   use: (client: Effect.Success<ReturnType<typeof makeClient>>) => Effect.Effect<A, E>,
 ) =>
@@ -34,11 +34,11 @@ const session = <A, E>(
 const makeClient = () => RpcTest.makeClient(Rpcs)
 
 test("project.getCurrent is null before any project was opened", async () => {
-  expect(await session(newDatabase(), (client) => client["project.getCurrent"]())).toBeNull()
+  expect(await withServer(newDatabase(), (client) => client["project.getCurrent"]())).toBeNull()
 })
 
 test("project.open returns the project and project.getCurrent gives it back", async () => {
-  const { opened, current } = await session(newDatabase(), (client) =>
+  const { opened, current } = await withServer(newDatabase(), (client) =>
     Effect.gen(function* () {
       const opened = yield* client["project.open"]({ path: "/Users/paul/Dev/ivin/" })
       return { opened, current: yield* client["project.getCurrent"]() }
@@ -52,7 +52,7 @@ test("project.open returns the project and project.getCurrent gives it back", as
 
 test("the last opened project is current again after the server restarts on the same database", async () => {
   const db = newDatabase()
-  await session(db, (client) =>
+  await withServer(db, (client) =>
     Effect.gen(function* () {
       yield* client["project.open"]({ path: "/a/first" })
       yield* TestClock.adjust(1000)
@@ -60,13 +60,13 @@ test("the last opened project is current again after the server restarts on the 
     }).pipe(Effect.provide(TestClock.layer())),
   )
 
-  const current = await session(db, (client) => client["project.getCurrent"]())
+  const current = await withServer(db, (client) => client["project.getCurrent"]())
 
   expect(current?.path).toBe("/a/second")
 })
 
 test("reopening a known project makes it current again with a later time", async () => {
-  const { first, current } = await session(newDatabase(), (client) =>
+  const { first, current } = await withServer(newDatabase(), (client) =>
     Effect.gen(function* () {
       const first = yield* client["project.open"]({ path: "/a/first" })
       yield* TestClock.adjust(1000)

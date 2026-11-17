@@ -4,7 +4,7 @@ import { migrations, runMigrations, type Migration } from "./migrations.ts"
 
 export class Database extends Context.Service<Database, DatabaseSync>()("ivin/server/Database") {}
 
-export const layerDatabase = (path: string, list: readonly Migration[] = migrations) =>
+export const layerDatabase = (path: string, known: readonly Migration[] = migrations) =>
   Layer.effect(Database)(
     Effect.acquireRelease(
       Effect.sync(() => {
@@ -13,5 +13,5 @@ export const layerDatabase = (path: string, list: readonly Migration[] = migrati
         return db
       }),
       (db) => Effect.sync(() => db.close()),
-    ).pipe(Effect.tap((db) => runMigrations(db, list))),
+    ).pipe(Effect.tap((db) => runMigrations(db, known))),
   )

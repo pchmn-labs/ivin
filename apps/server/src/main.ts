@@ -24,14 +24,23 @@ const fail = (message: string): never => {
   process.exit(1)
 }
 if (typeof databasePath !== "string") fail("Missing --database <path>")
+const path = databasePath as string
+
+// Ports main posts before the database is ready wait here.
+let serve: ((port: MainPort) => void) | undefined
+const waiting: MainPort[] = []
+
+// Each port main hands over is one client; a window reload brings a new one.
+parentPort.on("message", ({ ports: [port] }) => {
+  if (!port) return
+  if (serve) serve(port)
+  else waiting.push(port)
+})
 
 // One connection for the whole process, shared by every port.
 const startup = Effect.gen(function* () {
-  const context = yield* Layer.build(layerDatabase(databasePath as string))
-
-  // Each port main hands over is one client; a window reload brings a new one.
-  parentPort.on("message", ({ ports: [port] }) => {
-    if (!port) return
+  const context = yield* Layer.build(layerDatabase(path))
+  serve = (port) => {
     const server = serveOverPort(
       {
         onMessage: (handler) => port.on("message", (event) => handler(event.data)),
@@ -41,7 +50,8 @@ const startup = Effect.gen(function* () {
     ).pipe(Layer.provide(Layer.succeedContext(context)))
     Effect.runFork(Layer.launch(server))
     port.start()
-  })
+  }
+  waiting.splice(0).forEach(serve)
   return yield* Effect.never
 }).pipe(Effect.scoped)
 

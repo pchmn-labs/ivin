@@ -1,4 +1,4 @@
-import { Data, Effect } from "effect"
+import { Data, Effect, Exit } from "effect"
 import type { DatabaseSync } from "node:sqlite"
 
 export interface Migration {
@@ -26,36 +26,36 @@ export const migrations: readonly Migration[] = [
   },
 ]
 
-export const runMigrations = (db: DatabaseSync, list: readonly Migration[] = migrations) =>
-  Effect.try({
-    try: () => {
+const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>
+  Effect.sync(() => db.exec("BEGIN IMMEDIATE")).pipe(
+    Effect.andThen(
+      body.pipe(
+        Effect.onExit((exit) =>
+          Effect.sync(() => db.exec(Exit.isSuccess(exit) ? "COMMIT" : "ROLLBACK")),
+        ),
+      ),
+    ),
+  )
+
+export const runMigrations = (db: DatabaseSync, known: readonly Migration[] = migrations) =>
+  inTransaction(
+    db,
+    Effect.gen(function* () {
       db.exec("CREATE TABLE IF NOT EXISTS migrations (version INTEGER PRIMARY KEY)")
       const row = db.prepare("SELECT MAX(version) AS version FROM migrations").get() as {
         version: number | null
       }
       const databaseVersion = row.version ?? 0
-      const knownVersion = Math.max(0, ...list.map((m) => m.version))
+      const knownVersion = Math.max(0, ...known.map((migration) => migration.version))
       if (databaseVersion > knownVersion) {
-        return new DatabaseSchemaTooNew({ databaseVersion, knownVersion })
+        return yield* new DatabaseSchemaTooNew({ databaseVersion, knownVersion })
       }
-      const pending = list
-        .filter((m) => m.version > databaseVersion)
+      const pending = known
+        .filter((migration) => migration.version > databaseVersion)
         .toSorted((a, b) => a.version - b.version)
-      db.exec("BEGIN")
-      try {
-        for (const m of pending) {
-          db.exec(m.sql)
-          db.prepare("INSERT INTO migrations (version) VALUES (?)").run(m.version)
-        }
-        db.exec("COMMIT")
-      } catch (error) {
-        db.exec("ROLLBACK")
-        throw error
+      for (const migration of pending) {
+        db.exec(migration.sql)
+        db.prepare("INSERT INTO migrations (version) VALUES (?)").run(migration.version)
       }
-      return undefined
-    },
-    catch: (error) => error,
-  }).pipe(
-    Effect.orDie,
-    Effect.flatMap((tooNew) => (tooNew ? Effect.fail(tooNew) : Effect.void)),
+    }),
   )
