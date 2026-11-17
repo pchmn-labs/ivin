@@ -10,7 +10,8 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 2. **Files and a CLI before tools.** Settings, themes, keybindings and session annotations live in watched files and are reachable through the `ivin` CLI. Agents already master files and shells, on every harness, with no injection. MCP comes later, only as an optimisation.
 3. **A broken plugin must not take the app down, and the app always recovers.** Agents write most plugins. Server halves run in their own process, which can be killed without touching running sessions; UI errors are contained to the plugin's slot where React allows it, and safe mode covers the rest. Errors are reported where the agent can read them.
 4. **Don't reinvent the harness layer.** Provider protocols come from T3 Code and MonoCode (both MIT, attribution kept in `NOTICE`).
-5. **Effect inside, plain TypeScript at the edge.** The core is written with Effect v4; the plugin API is functions, promises and React hooks.
+5. **Light and leak-free by default.** Every feature is measured against a memory and startup budget (see [Performance and memory](#performance-and-memory)).
+6. **Effect inside, plain TypeScript at the edge.** The core is written with Effect v4; the plugin API is functions, promises and React hooks.
 
 ## Stack
 
@@ -18,16 +19,33 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 |---|---|---|
 | Shell | Electron | Node in the backend, so plugins have a backend half in TS; one Chromium everywhere; most mature desktop runtime |
 | UI | React + TypeScript | What agents write best; plugin UI is just React components |
+| UI state | Effect `Atom` (`effect/unstable/reactivity`) + `@effect/atom-react` | One model from server to screen: RPC streams feed atoms, components read atoms |
 | Core | Effect v4 (stable since 2026-09-30) | Long-lived processes, streams, cancellation and scoped resources are the harness layer's daily work |
 | Contracts | Effect `Schema` | One definition for RPC payloads, persisted data and transcript parsing |
 | Storage | SQLite (`node:sqlite`) | Sessions, transcript events, plugin storage; files stay files. No native module to rebuild; checked in a `utilityProcess` on Electron 45 (WAL, JSON operators, FTS5) |
-| App build | Vite | Renderer build and dev HMR |
-| Plugin build | Rolldown, in process | Plugins are `.ts` sources compiled on load; no build step for the author. Same bundler as Vite, so app and plugins resolve and transform code the same way |
-| Monorepo | pnpm workspaces, Vitest, Playwright, Biome | Biome also enforces the import rules of the [code layout](#code-layout) |
+| Plugin build | Rolldown (Oxc transform), in process | Plugins are `.ts` sources compiled on load; no build step for the author. Same bundler as Vite, so app and plugins resolve and transform code the same way |
+| Toolchain | VoidZero stack, through Vite+ (`vp`) | One CLI and one parser (Oxc) for dev server, build, tests, lint and format |
+| Monorepo | pnpm workspaces, `vp` task runner | |
+
+### Toolchain
+
+All build and quality tools come from the VoidZero open-source stack (MIT):
+
+| Tool | Used for |
+|---|---|
+| Vite (Rolldown-based) | renderer dev server with HMR, renderer build |
+| tsdown | `main`, `preload`, `server`, `cli` and the publishable packages (`contracts`, `plugin-api`) |
+| Rolldown | plugin compilation at runtime (its JS API, with host modules as externals) |
+| Vitest | unit and component tests; Vitest browser mode for UI tests |
+| Oxlint | lint, with type-aware rules; it also enforces the import rules of the [code layout](#code-layout) |
+| Oxfmt | format |
+| Vite+ (`vp`) | single entry point for the above, cached monorepo tasks, Node and pnpm versions |
+
+Vite+ is still in beta: the repo keeps a plain config per tool (`vite.config.ts`, `tsdown.config.ts`, `.oxlintrc.json`), so dropping `vp` for direct tool calls stays a script change. Electron packaging (electron-builder) and end-to-end tests (Playwright driving Electron) are outside this stack.
 
 GPUI (or any native Rust UI) was considered and rejected: UI plugins in Rust mean WASM or dynamic libraries with no stable ABI, and Zed itself can't offer UI extensions on it. Tauri was rejected because its backend is Rust, which would confine plugins to the webview.
 
-Effect v4 is recent, so agents will often write v3 idioms in the core. That cost is accepted and kept away from plugin authors by principle 5; the core's `AGENTS.md` must point at the v4 docs and at in-repo examples.
+Effect v4 is recent, so agents will often write v3 idioms in the core. That cost is accepted and kept away from plugin authors by principle 6; the core's `AGENTS.md` must point at the v4 docs and at in-repo examples.
 
 ## Processes
 
@@ -80,10 +98,11 @@ packages/             what is imported
     app/              window shell, layout, slot renderer
     modules/<subject>/
       rules/          pure
-      adapters/       RPC client, stores
+      adapters/       RPC client
       hooks/          one per RPC mutation, named for the use case it calls
       ui/
     core/             design system, theme, RPC client setup
+  state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
 plugins/<id>/         built-in plugins, same format as user plugins; `rules/` beside the two halves when one has logic
 docs/
@@ -106,7 +125,7 @@ A layer with nothing in it is not created, and a package too thin to have layers
 
 One name follows an intention through the code: `session/usecases/send-message.ts`, the `session.sendMessage` RPC, `use-send-message.ts`, `ivin session send`.
 
-Enforced by the linter, everything else is navigation:
+Enforced by Oxlint (`no-restricted-imports` per glob in `.oxlintrc.json`), everything else is navigation:
 
 - `**/rules/**` imports no `effect`, `node:*`, `electron`, `react`, and no `adapters/`, `usecases/`, `hooks/` or `ui/`. Types from `contracts` come in through `import type`.
 - `**/usecases/**` imports no `adapters/`, `node:*` or `electron`: I/O goes through a port.
@@ -125,14 +144,50 @@ Files are kebab-case, nothing has a barrel, and a module that outgrows its folde
 
 - **Project**: a folder or a `.code-workspace` (several folders), with its settings.
 - **Session**: one agent conversation, bound to a project folder, a cwd (checkout or worktree), a branch, a harness and a model. Owns a transcript.
-- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `usage`, `status`…), each with a stable id. Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
+- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `usage`, `status`…), each with a stable id, **owned by ivin**: every event is written to SQLite as it streams, never re-read from the provider's files. Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
 - **Transcript items**: the read model derived from the events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled. Plugins render items; they don't re-derive them from events.
 - **Annotation**: typed, namespaced metadata attached to a session (or project), written by plugins, the CLI or the agent. Example: `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
 - **Tab / pane layout**: workspace tabs holding session, file and plugin views.
 
-The server is the source of truth and persists to SQLite; the renderer holds a read model fed by RPC streams, in a plain Zustand store that the plugin hooks wrap. Plugin storage is a namespaced key-value store in the same database.
+The server is the source of truth and persists to SQLite; the renderer holds a read model fed by RPC streams, in atoms that the plugin hooks wrap (see [UI state](#ui-state)). Plugin storage is a namespaced key-value store in the same database.
 
-ivin owns a copy of every transcript event. Codex and ACP have no equivalent of Claude's JSONL, and annotations and plugins need event ids that don't depend on a provider's file. The provider's own session files are used for one thing, resuming; on resume the server reconciles its copy with what the provider reports, which covers a session continued outside ivin.
+### Owning the transcript
+
+- Codex and ACP have no equivalent of Claude's JSONL, and annotations and plugins need event ids that don't depend on a provider's file.
+- Plugins, search and the UI read one store with one shape, whatever the harness, and ivin keeps events providers drop or rewrite (approvals, steering, interruptions, timings).
+- Providers keep their own files for resuming: ivin stores the provider's session id (Claude `--resume`, Codex thread id, ACP session id) and resumes through it. ivin's copy is for display and plugins, never fed back to the agent.
+- When the two diverge (a session resumed in a terminal, a Claude `/compact`), the provider's files win for the agent and ivin appends what it sees on the next run; an importer reads Claude and Codex files to backfill such gaps and to bring in sessions started outside ivin.
+
+### UI state
+
+The renderer is Effect end to end: each RPC stream from the server feeds an `Atom`, derived atoms compute views (sorted sessions, a session's PRs), and components read them with `@effect/atom-react` hooks (Suspense for async results). Plugin hooks (`useSession`, `useAnnotations`…) are thin wrappers over these atoms, and plugins may also define and read atoms of their own.
+
+`effect/unstable/*` modules, reactivity included, can break in minor releases: pin Effect to an exact version and upgrade deliberately.
+
+Why atoms rather than Zustand stores (T3 Code mixes both, Zustand for local UI state): one model for plugins to learn instead of two; server streams become atoms with no glue; per-entity atoms are released with their readers, where Zustand stores are global and live until cleaned by hand. The state layer sits behind `@ivin/state` (atom families, optimistic writes, stream bridging), so a swap would stay contained.
+
+### Responsiveness
+
+- **Normalised, fine-grained state.** A list atom holds ids; each session, message and tool call is its own atom in a family. Appending a message or streaming into one re-renders that row only.
+- **Optimistic by default.** Sending, renaming, archiving or reordering updates the atom at once and reconciles with the server's answer; the server is local, so it rarely waits more than a frame.
+- **Frame-batched streaming.** Token deltas are coalesced per animation frame before reaching atoms; finished Markdown blocks are memoised and only the open block is re-parsed.
+- **Virtualised lists** for transcripts, sidebar and file trees; React Compiler for memoisation; transitions (`useTransition`, `useDeferredValue`) for heavy views such as diffs and search.
+- **Perf tests** next to the leak test: stream a 10k-token answer and scroll a 2k-event transcript, failing below a frame-rate threshold.
+
+Queries run in the server against SQLite and stream their results; the renderer never holds a client-side copy of whole collections. A client database such as TanStack DB (live queries over in-memory collections) would duplicate data the server already indexes and add a second reactive model next to atoms; reconsider only if cross-collection queries in the renderer become heavy.
+
+## Performance and memory
+
+Targets, checked in CI on every PR: idle memory of all processes, cold start to first paint, and heap growth after the leak scenario below.
+
+- **Transcripts are paged, not loaded.** The renderer holds a window of events around the viewport (virtualised list) and asks the server for more; large tool outputs and images are stored as blobs and fetched when unfolded.
+- **Atoms die with their readers.** No `keepAlive` by default; per-session atom families are released when no component reads them.
+- **Everything long-lived is scoped.** Child processes, watchers, subscriptions and timers live in an Effect `Scope` (server) or in the plugin's `ctx` (plugins), closed with their session, tab or plugin.
+- **Bounded streams.** Harness and RPC streams have bounded buffers with backpressure; a slow renderer drops to snapshots instead of queuing events.
+- **Shared, paused polling.** GitHub and git polling go through one deduplicating scheduler per resource, paused while the window is hidden and stopped for merged PRs.
+- **Lazy plugins.** A plugin's UI half is imported when one of its slots first renders; its server half when its first event or command fires, unless it declares `"activation": "startup"`.
+- **One renderer.** No extra `BrowserWindow` or `WebContentsView` per tab; Vite code-splits views so unused ones are never parsed.
+- **Leak test.** A Playwright scenario opens and closes 50 sessions, switches tabs and reloads a plugin 20 times, forces GC, and fails if heap or open handles grow past a threshold.
 
 ## Harness layer
 
@@ -358,10 +413,18 @@ This table lists what the fork added, not what it sits on. The base app MonoCode
 
 Layout features (stacked or swapped panels, sub-tabs) are where the slot model is weakest; expect to grow a small layout API (`ctx.layout.registerPanel`, panel placement settings) while porting them.
 
+## Build and release
+
+- **One version.** The whole monorepo carries a single semver version, `0.x` until the switch. A plugin's `apiVersion` is a separate integer and does not follow it.
+- **Packaging.** electron-builder, macOS arm64 only at first. `node-pty` is the one native module: it is rebuilt for Electron and unpacked from the asar archive.
+- **Releases.** release-it bumps the version, writes the changelog from the conventional commits and tags `vX.Y.Z`; the tag starts a workflow that builds, signs, notarises and publishes a GitHub Release.
+- **Updates.** `electron-updater` reads the GitHub Releases. Auto-update on macOS needs a signed and notarised app, so an Apple Developer ID; an unsigned build still runs when built locally.
+- **Packaged early.** CI builds the packaged app and launches it from milestone 1 on, because `utilityProcess` paths, the asar archive and the native module only fail there.
+
 ## Milestones
 
-1. **Skeleton**: Electron + server process + RPC, one project, Claude harness, transcript view, composer, SQLite. Slot renderer and `activate(ctx)` in place, with built-in plugins imported statically.
-2. **Daily driver, narrow path**: Claude only. Worktrees, tabs, sidebar, files, diff, terminal. The fork features used every day, each as a static built-in plugin, session PRs first. `ivin` CLI with `session annotate`, `settings`, `theme`. The plugin API takes its shape here, at `apiVersion: 0`.
+1. **Skeleton**: Electron + server process + RPC, one project, Claude harness, transcript view, composer, SQLite. Slot renderer and `activate(ctx)` in place, with built-in plugins imported statically. A packaged build that launches, checked in CI.
+2. **Daily driver, narrow path**: Claude only. Worktrees, tabs, sidebar, files, diff, terminal. The fork features used every day, each as a static built-in plugin, session PRs first. `ivin` CLI with `session annotate`, `settings`, `theme`. The plugin API takes its shape here, at `apiVersion: 0`. Signed releases and auto-update.
 3. **Plugin host**: plugin host process, manifest, Rolldown loading, hot reload, error isolation, safe mode, content-hash trust, logs, `ivin plugin …`. Built-in plugins move to the dynamic path.
 4. **Switch**: Codex and ACP harnesses; port the rest from `docs/fork/` as needed; stop adding features to the fork; freeze `apiVersion: 1`.
 5. **Later**: MCP wrapper, headless server for remote and mobile, plugin sharing.
