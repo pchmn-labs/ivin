@@ -290,6 +290,7 @@ export const activate: ServerPlugin = (ctx) => {
   await ctx.storage.get(key) / await ctx.storage.set(key, value)
   ctx.harness.beforeSpawn(async (spawn) => ({ env: { FOO: "1" } }))
   ctx.commands.register("prs.refresh", async (args) => {})   // also exposed as `ivin run prs.refresh`
+  await ctx.commands.run("github.refresh", args)             // another plugin's command, with its result
   await ctx.exec("gh", ["pr", "view", url, "--json", "state"], { cwd })
   await ctx.settings.get("foldThreshold")
   ctx.poll(`pr:${url}`, refresh, { every: 60_000 })          // one run per key, paused while the window is hidden
@@ -336,6 +337,19 @@ function PrBadge({ sessionId }: { sessionId: string }) {
 ```
 
 Hooks available to plugin components: `useSession`, `useSessions`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Icon`, `Pill`, `HoverCard`, `Menu`…) so plugins look native.
+
+### Plugins building on plugins
+
+Plugins share through four soft channels; none makes a plugin fail when another is absent:
+
+- **Annotations.** A kind shared by several plugins has its `data` shape defined in `contracts`, `pr` first. Whoever writes it and whoever renders it need not know each other.
+- **Slots defined by a plugin.** `ctx.slots.define("prs.card.section")` opens a slot prefixed with the plugin's id. Contributions to a slot nobody defines never render.
+- **Commands with a result.** `ctx.commands.run("github.refresh", args)` calls another plugin's command and returns its result, or fails with an "unknown command" error. These calls are untyped across plugins.
+- **Core services**, for what no forge or tool owns: git, the account a project uses on a host, `ctx.poll`, `ctx.exec`.
+
+The core knows no forge. GitHub is a built-in plugin (`github`: PR detection and polling with `gh`, `#` issue mentions) that writes `pr` annotations, and the `prs` plugin renders them. A GitLab plugin writing the same annotations gets the same UI.
+
+Plugins declare no dependency on each other: that would bring load order, cascading reloads and an API version per plugin. It can come later as an optional manifest field, without breaking existing plugins, when a real feature needs typed calls into another plugin.
 
 ### API stability
 
@@ -387,12 +401,12 @@ Once the CLI is stable, an optional `ivin` MCP server can expose the same comman
 
 ## Example: session PRs
 
-The feature that started this design, as a plugin:
+The feature that started this design, as two plugins: `github` knows the forge, `prs` shows pull requests whatever the forge.
 
-- `server.ts` watches `transcript.onEvent` for a `gh pr create` or GitHub MCP `create_pull_request` result holding a PR URL, and adds a `pr` annotation with `relation: "created"`. Deterministic, free, no agent cooperation needed.
+- `github`'s `server.ts` watches `transcript.onEvent` for a `gh pr create` or GitHub MCP `create_pull_request` result holding a PR URL, and adds a `pr` annotation with `relation: "created"`. Deterministic, free, no agent cooperation needed.
 - The agent adds what detection can't see with `ivin pr link <url> --as referenced`; the `ivin-customize` skill tells it when.
-- The plugin polls each open PR's state, CI and mergeability with `ctx.poll` and `ctx.exec("gh", …)`, and stores it.
-- `ui.tsx` fills `session.badge` (state icon, CI chip, `+n`), `session.card` (folded PR list) and `tab.decoration`.
+- `github` polls each open PR's state, CI and mergeability with `ctx.poll` and `ctx.exec("gh", …)`, and updates the annotation.
+- `prs`'s `ui.tsx` reads the `pr` annotations and fills `session.badge` (state icon, CI chip, `+n`), `session.card` (folded PR list) and `tab.decoration`.
 
 In the fork this took hooks in 10 upstream files; here it touches no core file.
 
@@ -434,5 +448,4 @@ Layout features (stacked or swapped panels, sub-tabs) are where the slot model i
 
 - Terminal emulator, to settle at milestone 2: xterm.js, or `libghostty-vt` compiled to WASM (e.g. `ghostty-web`, which keeps the xterm.js API, so the swap is cheap either way). The PTY lives in the server (`node-pty`) and only speaks bytes over RPC, so the choice stays local to one UI component. The full libghostty with its native renderer is out: a Metal surface doesn't compose inside a Chromium window.
 - Plugin dependencies: may a plugin have its own `node_modules` (Rolldown would bundle them), or only the plugin API and Node built-ins?
-- Plugins building on plugins, to settle at milestone 2, before the API freezes. Today two plugins share only annotations and commands, yet several fork features want the same GitHub access (session PRs, `#` issue mentions, the account per project). Either such services live in the core behind `ctx` (`ctx.github`), or a plugin may export an API and slots of its own and declare the plugins it depends on.
 - Evolving stored data. Owning the transcript means a change to an event's shape meets events already stored, and nothing here says how the SQLite schema migrates, nor how a transcript event or an annotation's `data` is versioned. Numbered, forward-only migrations run at server start are needed from milestone 1; still to settle: a version on events and annotations, and whether old ones are rewritten or upcast on read.
