@@ -90,7 +90,8 @@ apps/                 what runs: each has a `main` and is imported by nothing
 packages/             what is imported
   contracts/          Schema only, one file per subject: RPC, domain types, transcript events, plugin manifest
   harness/src/
-    modules/<provider>/   claude, codex, acp
+    index.ts          the HarnessProvider port and one Layer per provider
+    modules/<provider>/   claude, codex, acp, scripted (replays a recorded transcript for tests)
       rules/          provider line → transcript events
       adapters/       the process and its stdio
     shared/
@@ -98,10 +99,11 @@ packages/             what is imported
     app/              window shell, layout, slot renderer
     modules/<subject>/
       rules/          pure
-      adapters/       RPC client
-      hooks/          one per RPC mutation, named for the use case it calls
+      atoms/          the subject's atoms fed by RPC streams, one Atom.fn per RPC mutation
+      hooks/          what needs a mounted component
+      adapters/       browser APIs and stores outside the RPC
       ui/
-    core/             design system, theme, RPC client setup
+    core/             design system, theme, the RPC client service
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
 plugins/<id>/         built-in plugins, same format as user plugins; `rules/` beside the two halves when one has logic
@@ -110,35 +112,15 @@ docs/
 
 ### Code layout
 
-The subject comes before the layer. A module is named in the singular for a term of the domain model (`session`, `transcript`, `annotation`, `project`, `plugin`, `worktree`) and carries the same name in `contracts`, `server` and `ui`. A module is a thing; a feature (session PRs, the approval sheet) is a plugin.
+The subject comes before the layer: a package with logic has one module per term of the domain model, named the same in `contracts`, `server` and `ui`, and what a test of a file needs decides its layer (`rules/`, `usecases/`, `atoms/`, `hooks/`, `ui/`, `adapters/`). Oxlint enforces that pure code imports nothing impure and that orchestration imports no adapter; every other direction is navigation. Packages too thin to have layers (`desktop`, `cli`, `plugin-host`, `contracts`, `state`, `plugin-api`) stay flat.
 
-Two layers exist in every package and mean the same everywhere; the one between them is named for what runs it:
-
-| Layer | Test of membership | Where |
-|---|---|---|
-| `rules/` | a test reaches it with no mock, no Layer and no `await` | everywhere |
-| `usecases/` | runs with test Layers: no real process, file or database | server |
-| `hooks/` | needs a mounted component | ui |
-| `adapters/` | everything that touches the outside | everywhere |
-
-A layer with nothing in it is not created, and a package too thin to have layers (`desktop`, `cli`, `plugin-host`, `contracts`) stays flat.
-
-One name follows an intention through the code: `session/usecases/send-message.ts`, the `session.sendMessage` RPC, `use-send-message.ts`, `ivin session send`.
-
-Enforced by Oxlint (`no-restricted-imports` per glob in `.oxlintrc.json`), everything else is navigation:
-
-- `**/rules/**` imports no `effect`, `node:*`, `electron`, `react`, and no `adapters/`, `usecases/`, `hooks/` or `ui/`. Types from `contracts` come in through `import type`.
-- `**/usecases/**` imports no `adapters/`, `node:*` or `electron`: I/O goes through a port.
-- `plugins/**` imports `@ivin/plugin-api` and `react`, nothing else.
-- Between workspaces, pnpm's strict resolution does the work: `ui` doesn't declare `server`, so it can't import it, and nothing declares an app.
+The rules per package are in [`docs/conventions/`](conventions/README.md), the reasons in [ADR-0001](adr/0001-code-grouped-by-subject-and-layered-by-test.md).
 
 Tests sit beside the file they test, at three levels:
 
 - **Rules**, called directly. Harness parsing runs on recorded provider output kept as fixtures.
 - **Server**, through the `rpc/` handlers, with an in-memory SQLite and a scripted `HarnessProvider` that replays a recorded transcript. No test spawns a real agent.
 - **App**, a few Playwright runs on the same scripted provider.
-
-Files are kebab-case, nothing has a barrel, and a module that outgrows its folders splits into `submodules/`, never a second `modules/`.
 
 ## Domain model
 
