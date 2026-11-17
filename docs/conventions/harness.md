@@ -21,4 +21,4 @@ packages/harness/src/
 
 ## Tests
 
-- `rules/`: on recorded provider output kept as fixtures in `modules/<provider>/fixtures/`.
+- `rules/`: on recorded provider output kept as fixtures.

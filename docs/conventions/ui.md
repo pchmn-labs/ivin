@@ -11,7 +11,7 @@ packages/ui/src/
     hooks/              what needs a mounted component: use- in the filename and in every export
     adapters/           browser APIs and stores outside the RPC: clipboard, local storage, drag and drop
     ui/                 components
-  core/                 design system, theme, i18n, the RPC client service
+  core/                 design system, theme, the RPC client service
 ```
 
 | Layer | Test of membership |
@@ -22,7 +22,7 @@ packages/ui/src/
 | `adapters/` | a test needs the real browser API |
 | `ui/` | a test needs a renderer |
 
-- An atom reaches the server through the RPC client service in `core/`, never through `adapters/`, so a test replaces it.
+- An atom reaches the server through the RPC client service in `core/`, never through `adapters/`.
 - A mutation atom is named for the server use case it calls: `atoms/rename-session.ts` for `usecases/rename-session.ts`.
 - A module has the server's name for the subject.
 - A file that needs a mock to reach one of its functions holds two layers: split it.

@@ -4,7 +4,7 @@ A package with logic puts its code in `modules/<subject>/`, one folder per thing
 
 Only the edges that keep that true are enforced by the linter: pure code imports nothing impure, and orchestration (`usecases/`, `atoms/`) imports no adapter, so its I/O goes through a port or a service a test can replace. Every other import direction is left to the convention, because a rule the linter cannot check is cheaper to state than to fake.
 
-A subject keeps one name in `contracts`, `server` and `ui`, and one name follows an intention through the code (use case, RPC, atom, CLI command), so a search for it finds every piece.
+A subject keeps one name in every package that handles it, and one name follows an intention from the server to the UI and the CLI, so a search for it finds every piece.
 
 ## Considered options
 

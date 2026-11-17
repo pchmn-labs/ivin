@@ -25,11 +25,11 @@ A layer exists only when it holds a file. Create a folder with its first file.
 
 ## Enforced imports
 
-Checked by Oxlint, as `no-restricted-imports` overrides in `.oxlintrc.json`:
+Checked by Oxlint once the milestone-1 skeleton adds it, as `no-restricted-imports` overrides in `.oxlintrc.json` whose message cites ADR-0001:
 
 - Files under `**/rules/**` import none of `effect`, `node:*`, `electron`, `react`, nor any `adapters/`, `usecases/`, `atoms/`, `hooks/` or `ui/`. Types from `contracts` come in through `import type`.
 - Files under `**/usecases/**` and `**/atoms/**` import none of `node:*`, `electron`, nor any `adapters/`.
-- Files under `plugins/**` import `@ivin/plugin-api` and `react` only.
+- Files under `plugins/**` import no package but `@ivin/plugin-api` and `react`.
 
 Between workspaces, a package imports only what its `package.json` declares, and nothing declares an app.
 
@@ -39,12 +39,12 @@ Every other direction is a convention nothing checks: `ui/` reads `hooks/` and `
 
 - kebab-case.
 - One name follows an intention through the code: `session/usecases/send-message.ts`, the `session.sendMessage` RPC, `session/atoms/send-message.ts`, `ivin session send`.
-- No `index.ts` inside a package: an import names its file. The file a package's `package.json` `exports` points to is its entry point and the only file that re-exports.
+- No barrel: an import names its file. The file a package's `package.json` `exports` points to is the only one that re-exports.
 - A module that outgrows its folders splits into `modules/<subject>/submodules/<part>/`, each with its own layers, never a second `modules/`.
 
 ## Tests
 
-Beside the file they test, as `<file>.test.ts`. `rules/` are called directly; everything else is tested through the package's entry point, as each package's file says.
+Beside the file they test, as `<file>.test.ts`. `rules/` are called directly; each package's file says how the other layers are tested.
 
 ## Flat packages
 
