@@ -2,6 +2,7 @@ import { MessageChannel } from "node:worker_threads"
 import { Effect, Layer } from "effect"
 import { expect, test } from "vitest"
 import { serveOverPort } from "../rpc/serve.ts"
+import { layerDatabase } from "./adapters/database.ts"
 
 test("serves the rpc group over a message port", async () => {
   const { port1, port2 } = new MessageChannel()
@@ -17,7 +18,7 @@ test("serves the rpc group over a message port", async () => {
 
   await Effect.runPromise(
     Effect.gen(function* () {
-      yield* Layer.build(server)
+      yield* Layer.build(server.pipe(Layer.provide(layerDatabase(":memory:"))))
       port2.postMessage(
         JSON.stringify({
           _tag: "Request",
