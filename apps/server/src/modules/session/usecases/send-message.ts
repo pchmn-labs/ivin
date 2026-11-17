@@ -12,7 +12,6 @@ export const sendMessage = (sessionId: string, messageId: string, text: string) 
     if (!session) return yield* new SessionNotFound({ sessionId })
     const title = titleFromMessage(text)
     if (title !== "") yield* store.setTitleIfUnset(sessionId, title)
-    // A harness failure is a defect here: the contract has no error for it yet.
-    yield* runs.send(session, { id: messageId, text }).pipe(Effect.orDie)
+    yield* runs.send(session, { id: messageId, text })
     return (yield* store.findById(sessionId)) ?? session
   })

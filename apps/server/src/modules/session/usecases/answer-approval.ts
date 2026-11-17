@@ -9,9 +9,6 @@ export const answerApproval = (sessionId: string, requestId: string, allow: bool
     const runs = yield* SessionRuns
     const session = yield* store.findById(sessionId)
     if (!session) return yield* new SessionNotFound({ sessionId })
-    // A harness failure is a defect here: the contract has no error for it yet.
-    yield* runs
-      .answerApproval(session, { requestId, allow })
-      .pipe(Effect.catchTag("HarnessError", Effect.die))
+    yield* runs.answerApproval(session, { requestId, allow })
     return (yield* store.findById(sessionId)) ?? session
   })

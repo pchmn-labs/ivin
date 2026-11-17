@@ -1,4 +1,6 @@
 import { spawn } from "node:child_process"
+import { existsSync } from "node:fs"
+import { randomUUID } from "node:crypto"
 import { createInterface } from "node:readline"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Effect, Layer, Stream } from "effect"
@@ -6,13 +8,11 @@ import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/
 import { approvalResponseLine } from "../rules/approval-response.ts"
 import { claudeArgs } from "../rules/claude-args.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
+import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
 
 const EVENT_BUFFER = 64
 const STDERR_LIMIT = 8_192
-
-type Exit =
-  | { readonly error: Error }
-  | { readonly code: number | null; readonly signal: string | null }
+const KILL_GRACE = "2 seconds"
 
 const spawnClaude = (
   sessionId: string,
@@ -34,7 +34,7 @@ const spawnClaude = (
   // Taken now: an iterator made after the interface closed would never end.
   const iterator = readline[Symbol.asyncIterator]()
   const lines = { [Symbol.asyncIterator]: () => iterator }
-  const exited = new Promise<Exit>((resolve) => {
+  const exited = new Promise<ProcessExit>((resolve) => {
     child.once("error", (error) => {
       // A process that never started leaves stdout open, which would stall the stream.
       readline.close()
@@ -42,36 +42,58 @@ const spawnClaude = (
     })
     child.once("close", (code, signal) => resolve({ code, signal }))
   })
+  const started = new Promise<ProcessExit | undefined>((resolve) => {
+    child.once("spawn", () => resolve(undefined))
+    child.once("error", (error) => resolve({ error }))
+  })
   // A failed write (the process is gone) is reported by `exited`; an unhandled stream error would crash the app.
   child.stdin.on("error", () => {})
-  return { child, lines, exited, stderr: () => stderr.trim() }
-}
-
-const describeExit = (exit: Exit, stderr: string) => {
-  const what =
-    "error" in exit
-      ? `Could not start claude: ${exit.error.message}`
-      : `claude exited (${exit.signal ?? `code ${exit.code}`})`
-  return stderr === "" ? what : `${what}: ${stderr}`
+  return { child, lines, exited, started, stderr: () => stderr.trim() }
 }
 
 export const layerClaude = Layer.succeed(HarnessProvider)({
   id: "claude",
   start: ({ sessionId, cwd, model, providerSessionId }) =>
     Effect.gen(function* () {
-      const { child, lines, exited, stderr } = yield* Effect.acquireRelease(
+      // spawn reports a missing cwd as ENOENT, the same as a missing binary.
+      if (!existsSync(cwd)) {
+        return yield* new HarnessError({ message: `The project folder does not exist: ${cwd}` })
+      }
+      let stoppedByIvin = false
+      const { child, lines, exited, started, stderr } = yield* Effect.acquireRelease(
         Effect.sync(() => spawnClaude(sessionId, cwd, model, providerSessionId)),
-        ({ child }) =>
-          Effect.sync(() => {
+        ({ child, exited }) =>
+          Effect.gen(function* () {
+            stoppedByIvin = true
             child.stdin.destroy()
-            child.kill()
+            // Without a pid, kill() would signal this whole process group.
+            if (child.pid === undefined) return
+            child.kill("SIGTERM")
+            // A process that ignores SIGTERM must not hold the finalizer or outlive the app.
+            yield* Effect.promise(() => exited).pipe(
+              Effect.timeout(KILL_GRACE),
+              Effect.catch(() => Effect.sync(() => child.kill("SIGKILL"))),
+            )
           }),
       )
+
+      const failedToStart = yield* Effect.promise(() => started)
+      if (failedToStart) {
+        return yield* new HarnessError({
+          message: describeExit(failedToStart, ""),
+          cause: failedToStart,
+        })
+      }
 
       const ended = Stream.fromEffect(
         Effect.promise(() => exited).pipe(
           Effect.flatMap((exit) =>
-            Effect.fail(new HarnessError({ message: describeExit(exit, stderr()), cause: exit })),
+            Effect.fail(
+              new HarnessError({
+                message: describeExit(exit, stderr(), { stoppedByIvin }),
+                cause: exit,
+              }),
+            ),
           ),
         ),
       )
@@ -140,7 +162,14 @@ export const layerClaude = Layer.succeed(HarnessProvider)({
               )
             })
           }),
-        interrupt: Effect.void,
+        interrupt: Effect.sync(() => {
+          const request = {
+            type: "control_request",
+            request_id: randomUUID(),
+            request: { subtype: "interrupt" },
+          }
+          child.stdin.write(`${JSON.stringify(request)}\n`)
+        }),
       }
       return run
     }),

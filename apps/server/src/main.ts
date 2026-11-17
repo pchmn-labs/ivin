@@ -1,7 +1,8 @@
 import { demoScript, layerClaude, layerScripted } from "@ivin/harness"
-import { Cause, Effect, Layer } from "effect"
+import { Cause, Effect, Fiber, Layer } from "effect"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
+import { layerServices } from "./rpc/handlers.ts"
 import { serveOverPort } from "./rpc/serve.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
 
@@ -13,7 +14,9 @@ interface MainPort {
 
 // Electron adds `parentPort` to `process` inside a utilityProcess.
 const { parentPort } = process as unknown as {
-  parentPort: { on(event: "message", listener: (event: { ports: MainPort[] }) => void): void }
+  parentPort: {
+    on(event: "message", listener: (event: { data: unknown; ports: MainPort[] }) => void): void
+  }
 }
 
 const {
@@ -44,17 +47,21 @@ const layerHarness = layerHarnesses[harnessId as keyof typeof layerHarnesses]
 // Ports main posts before the database is ready wait here.
 let serve: ((port: MainPort) => void) | undefined
 const waiting: MainPort[] = []
+const launched: Fiber.Fiber<never, unknown>[] = []
 
 // Each port main hands over is one client; a window reload brings a new one.
-parentPort.on("message", ({ ports: [port] }) => {
+parentPort.on("message", ({ data, ports: [port] }) => {
+  if ((data as { type?: unknown } | null)?.type === "shutdown") return shutdown()
   if (!port) return
   if (serve) serve(port)
   else waiting.push(port)
 })
 
-// One connection for the whole process, shared by every port.
+// Stores, feeds and runs are built once here: every port, and so every window reload, shares them.
 const startup = Effect.gen(function* () {
-  const context = yield* Layer.build(Layer.mergeAll(layerDatabase(path), layerHarness))
+  const context = yield* Layer.build(
+    layerServices.pipe(Layer.provideMerge(Layer.mergeAll(layerDatabase(path), layerHarness))),
+  )
   serve = (port) => {
     const server = serveOverPort(
       {
@@ -63,16 +70,31 @@ const startup = Effect.gen(function* () {
       },
       { version: pkg.version },
     ).pipe(Layer.provide(Layer.succeedContext(context)))
-    Effect.runFork(Layer.launch(server))
+    launched.push(Effect.runFork(Layer.launch(server)))
     port.start()
   }
   waiting.splice(0).forEach(serve)
   return yield* Effect.never
 }).pipe(Effect.scoped)
 
-Effect.runFork(
+const startupFiber = Effect.runFork(
   startup.pipe(
     Effect.catchTag("DatabaseSchemaTooNew", (error) => Effect.sync(() => fail(error.message))),
     Effect.catchCause((cause) => Effect.sync(() => fail(Cause.pretty(cause)))),
   ),
 )
+
+// Closing the scopes runs the finalizers that kill the claude processes; exiting directly would orphan them.
+let stopping = false
+const shutdown = () => {
+  if (stopping) return
+  stopping = true
+  void Effect.runPromise(
+    Fiber.interruptAll([...launched, startupFiber]).pipe(
+      // Must exceed the harness kill grace (2 s) and stay under the desktop's 5 s quit timeout.
+      Effect.timeout("3 seconds"),
+      Effect.ignore,
+    ),
+  ).finally(() => process.exit(0))
+}
+process.on("SIGTERM", shutdown)

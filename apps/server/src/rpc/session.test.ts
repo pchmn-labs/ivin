@@ -2,9 +2,12 @@ import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import {
   layerScripted,
-  type ApprovalDecision,
-  type ScriptedSend,
+  scriptedFailure,
   type StartInput,
+  type ApprovalDecision,
+  type ScriptedElement,
+  type ScriptedOptions,
+  type ScriptedSend,
 } from "@ivin/harness"
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
@@ -13,7 +16,7 @@ import { expect, test } from "vitest"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
-import { handlers } from "./handlers.ts"
+import { handlers, layerServices } from "./handlers.ts"
 
 const turn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: { from: "scripted" } },
@@ -35,20 +38,20 @@ const newDatabase = () => {
 
 const withServer = <A, E>(
   db: DatabaseSync,
-  turns: readonly (readonly HarnessOutput[])[],
+  turns: readonly (readonly ScriptedElement[])[],
   sent: ScriptedSend[],
   use: (client: Client) => Effect.Effect<A, E>,
-  starts: StartInput[] = [],
-  responded: ApprovalDecision[] = [],
+  options: ScriptedOptions = {},
 ) =>
   Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
       Effect.provide(
         handlers.pipe(
+          Layer.provide(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerScripted(turns, { sent, starts, responded, reportSession: true })),
+          Layer.provide(layerScripted(turns, { reportSession: true, ...options, sent })),
         ),
       ),
       Effect.scoped,
@@ -287,22 +290,6 @@ test("an item reaches a watcher only after its events are in the database", asyn
   expect(checks).toEqual([true, true, true, true, true])
 })
 
-test("when the harness fails after the user message was stored, the message stays whole", async () => {
-  const db = newDatabase()
-  const outcome = await withServer(db, [], [], (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
-      const exit = yield* Effect.exit(
-        client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" }),
-      )
-      return { exit, page: yield* endOfTranscript(client, session.id) }
-    }),
-  )
-
-  expect(outcome.exit._tag).toBe("Failure")
-  expect(outcome.page.items).toMatchObject([{ id: "m1", role: "user", text: "go" }])
-})
-
 const delta = (kind: "assistant_text" | "thinking", text: string): HarnessOutput => ({
   type: "delta",
   kind,
@@ -426,6 +413,342 @@ test("a status between a block's deltas and its finished event keeps the reserve
   expect(upsert).toMatchObject({ type: "upsert", item: { id: deltas[0]!.itemId } })
 })
 
+const running: HarnessOutput = { type: "status", status: "running", raw: null }
+const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
+const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
+
+const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
+  Effect.gen(function* () {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const value = yield* read
+      if (done(value)) return value
+      yield* Effect.sleep("5 millis")
+    }
+    return yield* Effect.die("The condition was never met")
+  })
+
+const statusOf = (client: Client, projectPath: string, sessionId: string) =>
+  client["session.list"]({ projectPath }).pipe(
+    Effect.map((sessions) => sessions.find((s) => s.id === sessionId)?.status),
+  )
+
+test("interrupting reaches the provider, stores an interruption, and the session is idle again", async () => {
+  const interrupted: string[] = []
+  const { id, page, status, before } = await withServer(
+    newDatabase(),
+    [[running, said("Working")]],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        const sent = yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "go",
+        })
+        yield* until(endOfTranscript(client, session.id), (p) => p.items.length === 2)
+        const before = yield* statusOf(client, "/p", session.id)
+        const returned = yield* client["session.interrupt"]({ sessionId: session.id })
+        const status = yield* until(statusOf(client, "/p", session.id), (s) => s === "idle")
+        const page = yield* until(endOfTranscript(client, session.id), (p) => p.items.length === 3)
+        return { id: session.id, page, status, before: [sent.status, before, returned.id] }
+      }),
+    { interrupted },
+  )
+
+  expect(interrupted).toEqual([id])
+  expect(before.slice(0, 2)).toEqual(["working", "working"])
+  expect(page.items.map((item) => item.type)).toEqual(["message", "message", "interruption"])
+  expect(status).toBe("idle")
+})
+
+test("interrupting a session with no run does nothing, and an unknown session is not found", async () => {
+  const interrupted: string[] = []
+  const { session, error } = await withServer(
+    newDatabase(),
+    [],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        return {
+          session: yield* client["session.interrupt"]({ sessionId: created.id }),
+          error: yield* Effect.flip(client["session.interrupt"]({ sessionId: "nope" })),
+        }
+      }),
+    { interrupted },
+  )
+
+  expect(session.status).toBe("idle")
+  expect(error._tag).toBe("SessionNotFound")
+  expect(interrupted).toEqual([])
+})
+
+test("a harness error is stored as an error item and fails the session, and the next message starts a new run", async () => {
+  const sent: ScriptedSend[] = []
+  const { page, status, afterRetry } = await withServer(
+    newDatabase(),
+    [
+      [running, said("Starting"), scriptedFailure("You are not logged in to Claude.")],
+      [said("Back"), idle],
+    ],
+    sent,
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        const status = yield* until(statusOf(client, "/p", session.id), (s) => s === "failed")
+        const page = yield* endOfTranscript(client, session.id)
+        yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m2",
+          text: "again",
+        })
+        const afterRetry = yield* until(statusOf(client, "/p", session.id), (s) => s === "idle")
+        return { page, status, afterRetry }
+      }),
+  )
+
+  expect(status).toBe("failed")
+  expect(page.items.map((item) => item.type)).toEqual(["message", "message", "error"])
+  expect(page.items[2]).toMatchObject({ message: "You are not logged in to Claude." })
+  expect(afterRetry).toBe("idle")
+  expect(sent.map((s) => s.text)).toEqual(["go", "again"])
+})
+
+test("a harness that cannot start stores the message and an error, and fails the session", async () => {
+  const { returned, page } = await withServer(
+    newDatabase(),
+    [],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        const returned = yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "go",
+        })
+        return { returned, page: yield* endOfTranscript(client, session.id) }
+      }),
+    { startFailure: "Claude Code is not installed." },
+  )
+
+  expect(returned.status).toBe("failed")
+  expect(page.items).toMatchObject([
+    { id: "m1", role: "user", text: "go" },
+    { type: "error", message: "Claude Code is not installed." },
+  ])
+})
+
+test("a harness that cannot take a message stores the message and an error, and fails the session", async () => {
+  const { returned, page } = await withServer(newDatabase(), [], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      const returned = yield* client["session.sendMessage"]({
+        sessionId: session.id,
+        messageId: "m1",
+        text: "go",
+      })
+      return { returned, page: yield* endOfTranscript(client, session.id) }
+    }),
+  )
+
+  expect(returned.status).toBe("failed")
+  expect(page.items).toMatchObject([
+    { id: "m1", role: "user", text: "go" },
+    { type: "error", message: "The scripted harness has no turn left" },
+  ])
+})
+
+test("a message sent while a turn is still running reaches the provider", async () => {
+  const sent: ScriptedSend[] = []
+  const status = await withServer(
+    newDatabase(),
+    [
+      [running, said("Working")],
+      [said("Noted"), idle],
+    ],
+    sent,
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* until(endOfTranscript(client, session.id), (p) => p.items.length === 2)
+        expect(yield* statusOf(client, "/p", session.id)).toBe("working")
+        yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m2",
+          text: "also",
+        })
+        return yield* until(statusOf(client, "/p", session.id), (s) => s === "idle")
+      }),
+  )
+
+  expect(sent.map((s) => s.text)).toEqual(["go", "also"])
+  expect(status).toBe("idle")
+})
+
+test("watching a project's sessions streams each status and title change", async () => {
+  const changes = await withServer(newDatabase(), [turn], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      yield* client["session.create"]({ projectPath: "/other", model: "sonnet" })
+      const watching = yield* client["session.watch"]({ projectPath: "/p" }).pipe(
+        Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
+        Stream.runCollect,
+        Effect.forkChild,
+      )
+      yield* Effect.sleep("20 millis")
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      return yield* Fiber.join(watching)
+    }),
+  )
+
+  expect(changes[0]).toMatchObject({ status: "idle", title: "New session" })
+  expect(changes[1]).toMatchObject({ status: "working", title: "go" })
+  expect(changes.at(-1)).toMatchObject({ status: "idle", projectPath: "/p" })
+  expect(new Set(changes.map((s) => s.projectPath))).toEqual(new Set(["/p"]))
+})
+
+test("a session left working by a previous server is idle again after a restart", async () => {
+  const db = newDatabase()
+  const id = await withServer(db, [[running, said("Working")]], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      return session.id
+    }),
+  )
+  expect(db.prepare("SELECT status FROM sessions WHERE id = ?").get(id)).toEqual({
+    status: "working",
+  })
+
+  const status = await withServer(db, [], [], (client) => statusOf(client, "/p", id))
+
+  expect(status).toBe("idle")
+})
+
+test("closing the server closes the agent of every run", async () => {
+  const closed: string[] = []
+  const id = await withServer(
+    newDatabase(),
+    [[running, said("Working")]],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        expect(closed).toEqual([])
+        return session.id
+      }),
+    { closed },
+  )
+
+  expect(closed).toEqual([id])
+})
+
+test("a run started by one client is seen, interrupted and continued by another, and keeps its status", async () => {
+  const sent: ScriptedSend[] = []
+  const interrupted: string[] = []
+  const db = newDatabase()
+  const outcome = await Effect.runPromise(
+    Effect.gen(function* () {
+      const services = yield* Layer.build(
+        layerServices.pipe(
+          Layer.provideMerge(
+            Layer.mergeAll(
+              Layer.succeed(Database)(db),
+              layerScripted([[running, said("Working")], [said("Noted")]], { sent, interrupted }),
+            ),
+          ),
+        ),
+      )
+      const connection = handlers.pipe(
+        Layer.provide(Layer.succeedContext(services)),
+        Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
+      )
+      const as = <A, E>(use: (client: Client) => Effect.Effect<A, E>) =>
+        makeClient().pipe(Effect.flatMap(use), Effect.provide(connection))
+
+      const id = yield* as((a) =>
+        Effect.gen(function* () {
+          const session = yield* a["session.create"]({ projectPath: "/p", model: "sonnet" })
+          yield* a["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+          yield* until(endOfTranscript(a, session.id), (p) => p.items.length === 2)
+          return session.id
+        }),
+      )
+      return yield* as((b) =>
+        Effect.gen(function* () {
+          const status = yield* statusOf(b, "/p", id)
+          yield* b["session.interrupt"]({ sessionId: id })
+          yield* until(endOfTranscript(b, id), (p) => p.items.length === 3)
+          yield* b["session.sendMessage"]({ sessionId: id, messageId: "m2", text: "more" })
+          const page = yield* until(endOfTranscript(b, id), (p) => p.items.length === 5)
+          return { id, status, page }
+        }),
+      )
+    }).pipe(Effect.scoped),
+  )
+
+  expect(outcome.status).toBe("working")
+  expect(interrupted).toEqual([outcome.id])
+  expect(sent.map((s) => s.text)).toEqual(["go", "more"])
+  expect(outcome.page.items.map((i) => i.type)).toEqual([
+    "message",
+    "message",
+    "interruption",
+    "message",
+    "message",
+  ])
+})
+
+test("watching a project's sessions starts with every current session of the project", async () => {
+  const { current, listed } = await withServer(newDatabase(), [], [], (client) =>
+    Effect.gen(function* () {
+      yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      yield* client["session.create"]({ projectPath: "/p", model: "opus" })
+      yield* client["session.create"]({ projectPath: "/other", model: "sonnet" })
+      return {
+        current: yield* client["session.watch"]({ projectPath: "/p" }).pipe(
+          Stream.take(2),
+          Stream.runCollect,
+        ),
+        listed: yield* client["session.list"]({ projectPath: "/p" }),
+      }
+    }),
+  )
+
+  expect(new Set(current.map((s) => s.id))).toEqual(new Set(listed.map((s) => s.id)))
+})
+
+test("closing the server closes every run at once, not one after the other", async () => {
+  const closed: string[] = []
+  const started = Date.now()
+  await withServer(
+    newDatabase(),
+    [[running], [running], [running], [running]],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        for (const n of [1, 2, 3, 4]) {
+          const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+          yield* client["session.sendMessage"]({
+            sessionId: session.id,
+            messageId: `m${n}`,
+            text: "go",
+          })
+        }
+        return Date.now()
+      }),
+    { closed, closeDelay: "150 millis" },
+  )
+
+  expect(closed).toHaveLength(4)
+  expect(Date.now() - started).toBeLessThan(450)
+})
+
 test("a session resumes with the provider session id stored by an earlier server, and its events append", async () => {
   const db = newDatabase()
   const starts: StartInput[] = []
@@ -440,7 +763,7 @@ test("a session resumes with the provider session id stored by an earlier server
         yield* untilItems(client, session.id, 4)
         return session.id
       }),
-    starts,
+    { starts },
   )
   expect(starts.map((s) => s.providerSessionId)).toEqual([null])
 
@@ -460,7 +783,7 @@ test("a session resumes with the provider session id stored by an earlier server
         }
         return yield* Effect.die("The second turn never reached the transcript")
       }),
-    starts,
+    { starts },
   )
 
   expect(starts.map((s) => s.providerSessionId)).toEqual([null, `scripted-${sessionId}`])
@@ -486,15 +809,10 @@ const approvalTurn: readonly HarnessOutput[] = [
   { type: "status", status: "idle", raw: null },
 ]
 
-const statusOf = (client: Client, sessionId: string) =>
-  client["session.list"]({ projectPath: "/p" }).pipe(
-    Effect.map((sessions) => sessions.find((s) => s.id === sessionId)?.status),
-  )
-
 const untilStatus = (client: Client, sessionId: string, status: string) =>
   Effect.gen(function* () {
     for (let attempt = 0; attempt < 200; attempt++) {
-      if ((yield* statusOf(client, sessionId)) === status) return
+      if ((yield* statusOf(client, "/p", sessionId)) === status) return
       yield* Effect.sleep("5 millis")
     }
     return yield* Effect.die(`The session never reached ${status}`)
@@ -511,7 +829,7 @@ const askAndAnswer = async (allow: boolean) => {
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
         yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-        yield* untilStatus(client, session.id, "waiting_for_approval")
+        yield* untilStatus(client, session.id, "waiting")
         yield* client["session.answerApproval"]({
           sessionId: session.id,
           requestId: "r1",
@@ -519,8 +837,7 @@ const askAndAnswer = async (allow: boolean) => {
         })
         return yield* untilItems(client, session.id, 5)
       }),
-    [],
-    responded,
+    { responded },
   )
   const decisions = db
     .prepare("SELECT payload FROM transcript_events WHERE type = 'approval_decision'")
@@ -548,24 +865,24 @@ test("denying a request stores the decision and tells the harness", async () => 
   expect(responded).toEqual([{ requestId: "r1", allow: false }])
 })
 
-test("a session waits for approval while a request is open, then goes back to idle", async () => {
+test("a session waits for approval while a request is open, then goes back to working and idle", async () => {
   const statuses = await withServer(newDatabase(), [approvalTurn], [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-      yield* untilStatus(client, session.id, "waiting_for_approval")
-      const waiting = yield* statusOf(client, session.id)
+      yield* untilStatus(client, session.id, "waiting")
+      const waiting = yield* statusOf(client, "/p", session.id)
       yield* client["session.answerApproval"]({
         sessionId: session.id,
         requestId: "r1",
         allow: true,
       })
       yield* untilStatus(client, session.id, "idle")
-      return [waiting, yield* statusOf(client, session.id)]
+      return [waiting, yield* statusOf(client, "/p", session.id)]
     }),
   )
 
-  expect(statuses).toEqual(["waiting_for_approval", "idle"])
+  expect(statuses).toEqual(["waiting", "idle"])
 })
 
 test("answering a request that is not open fails, and so does an unknown session", async () => {
@@ -576,7 +893,7 @@ test("answering a request that is not open fails, and so does an unknown session
         client["session.answerApproval"]({ sessionId: session.id, requestId: "r1", allow: true }),
       )
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-      yield* untilStatus(client, session.id, "waiting_for_approval")
+      yield* untilStatus(client, session.id, "waiting")
       const unknown = yield* Effect.flip(
         client["session.answerApproval"]({ sessionId: session.id, requestId: "zz", allow: true }),
       )
@@ -601,7 +918,7 @@ test("two concurrent answers to one request give one decision and one ApprovalNo
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
         yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-        yield* untilStatus(client, session.id, "waiting_for_approval")
+        yield* untilStatus(client, session.id, "waiting")
         const answer = client["session.answerApproval"]({
           sessionId: session.id,
           requestId: "r1",
@@ -613,8 +930,7 @@ test("two concurrent answers to one request give one decision and one ApprovalNo
         yield* untilStatus(client, session.id, "idle")
         return exits.map((exit) => exit._tag)
       }),
-    [],
-    responded,
+    { responded },
   )
 
   expect(results.toSorted()).toEqual(["Failure", "Success"])
@@ -623,12 +939,12 @@ test("two concurrent answers to one request give one decision and one ApprovalNo
   expect(decisions.all()).toHaveLength(1)
 })
 
-test("a turn that ends right after the answer leaves the session idle, not running", async () => {
+test("a turn that ends right after the answer leaves the session idle, not working", async () => {
   const status = await withServer(newDatabase(), [approvalTurn], [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-      yield* untilStatus(client, session.id, "waiting_for_approval")
+      yield* untilStatus(client, session.id, "waiting")
       yield* client["session.answerApproval"]({
         sessionId: session.id,
         requestId: "r1",
@@ -636,9 +952,33 @@ test("a turn that ends right after the answer leaves the session idle, not runni
       })
       yield* untilItems(client, session.id, 5)
       yield* Effect.sleep("30 millis")
-      return yield* statusOf(client, session.id)
+      return yield* statusOf(client, "/p", session.id)
     }),
   )
 
   expect(status).toBe("idle")
+})
+
+test("answering an approval puts a session that waited back to working until the turn ends", async () => {
+  const turnThatKeepsRunning: readonly HarnessOutput[] = [
+    { type: "status", status: "running", raw: null },
+    { ...approvalTurn[2]! },
+    { type: "assistant_text", text: "Carrying on.", raw: null },
+  ]
+  const statuses = await withServer(newDatabase(), [turnThatKeepsRunning], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      yield* untilStatus(client, session.id, "waiting")
+      const answered = yield* client["session.answerApproval"]({
+        sessionId: session.id,
+        requestId: "r1",
+        allow: true,
+      })
+      yield* until(endOfTranscript(client, session.id), (p) => p.items.length === 3)
+      return [answered.status, yield* statusOf(client, "/p", session.id)]
+    }),
+  )
+
+  expect(statuses).toEqual(["working", "working"])
 })

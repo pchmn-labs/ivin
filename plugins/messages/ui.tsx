@@ -10,10 +10,13 @@ function Message({ item }: SlotProps["transcript.message"]) {
       </details>
     )
   }
+  if (item.type === "interruption") {
+    return <p style={{ margin: 0, fontStyle: "italic", opacity: 0.7 }}>Interrupted</p>
+  }
   if (item.type === "error") {
     return (
       <p role="alert" style={{ margin: 0, color: "crimson" }}>
-        {item.message}
+        <strong>Error:</strong> {item.message}
       </p>
     )
   }

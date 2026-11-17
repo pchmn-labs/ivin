@@ -64,8 +64,22 @@ ipcMain.handle(PICK_FOLDER, async (event) => {
 })
 
 app.on("window-all-closed", () => app.quit())
-app.on("will-quit", () => {
-  server?.kill()
+const SERVER_STOP_TIMEOUT_MS = 5_000
+let serverStopped = false
+let serverExited = false
+app.on("will-quit", (event) => {
+  if (serverStopped || serverExited || !server) return
+  event.preventDefault()
+  serverStopped = true
+  const timer = setTimeout(() => {
+    server.kill()
+    app.quit()
+  }, SERVER_STOP_TIMEOUT_MS)
+  server.once("exit", () => {
+    clearTimeout(timer)
+    app.quit()
+  })
+  server.postMessage({ type: "shutdown" })
 })
 
 void app.whenReady().then(() => {
@@ -75,5 +89,8 @@ void app.whenReady().then(() => {
     ["--database", join(app.getPath("userData"), "ivin.db")],
     { serviceName: "ivin-server", stdio: "inherit" },
   )
+  server.once("exit", () => {
+    serverExited = true
+  })
   return createWindow()
 })

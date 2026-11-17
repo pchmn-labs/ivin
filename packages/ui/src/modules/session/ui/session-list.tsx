@@ -5,6 +5,7 @@ import { useState } from "react"
 import { createSessionAtom } from "../atoms/create-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { DEFAULT_MODEL, MODELS, type Model } from "../rules/models.ts"
+import { statusLabel } from "../rules/status-label.ts"
 import { renameSessionAtom } from "../atoms/rename-session.ts"
 import { selectedSessionIdAtom } from "../atoms/selected-session.ts"
 
@@ -36,6 +37,7 @@ function SessionRow({ projectPath, id }: { projectPath: string; id: string }) {
             style={{ textAlign: "left" }}
           >
             <span data-testid="session-title">{session.title}</span>{" "}
+            <small data-testid="session-status">{statusLabel(session.status)}</small>{" "}
             <time dateTime={DateTime.formatIso(session.lastActivityAt)}>
               {formatter.format(DateTime.toEpochMillis(session.lastActivityAt))}
             </time>
@@ -53,7 +55,10 @@ function SessionRow({ projectPath, id }: { projectPath: string; id: string }) {
           onBlur={commit}
           onKeyDown={(event) => {
             if (event.key === "Enter") commit()
-            if (event.key === "Escape") setDraft(null)
+            if (event.key === "Escape") {
+              event.preventDefault()
+              setDraft(null)
+            }
           }}
         />
       )}

@@ -5,9 +5,12 @@ import apiError from "./fixtures/api-error.jsonl?raw"
 import failedToolCall from "./fixtures/failed-tool-call.jsonl?raw"
 import permissionAllow from "./fixtures/permission-allow.jsonl?raw"
 import permissionDeny from "./fixtures/permission-deny.jsonl?raw"
+import interruption from "./fixtures/interruption.jsonl?raw"
+import notLoggedIn from "./fixtures/not-logged-in.jsonl?raw"
 import plainAnswer from "./fixtures/plain-answer.jsonl?raw"
 import resumedSession from "./fixtures/resumed-session.jsonl?raw"
 import thinking from "./fixtures/thinking.jsonl?raw"
+import toolInterruption from "./fixtures/tool-interruption.jsonl?raw"
 import toolCall from "./fixtures/tool-call.jsonl?raw"
 
 const fixtures = {
@@ -15,6 +18,9 @@ const fixtures = {
   "failed-tool-call": failedToolCall,
   "permission-allow": permissionAllow,
   "permission-deny": permissionDeny,
+  interruption,
+  "not-logged-in": notLoggedIn,
+  "tool-interruption": toolInterruption,
   "plain-answer": plainAnswer,
   "resumed-session": resumedSession,
   thinking: thinking,
@@ -194,4 +200,37 @@ test("a control request of another subtype is ignored", () => {
   })
 
   expect(decodeClaudeLine(line)).toEqual([])
+})
+
+test("an interrupt during an answer becomes an interruption, not an error, then usage and idle", () => {
+  const outputs = stored(fixture("interruption"))
+
+  expect(outputs.filter((o) => o.type === "interruption")).toHaveLength(1)
+  expect(outputs.some((o) => o.type === "error")).toBe(false)
+  expect(types(outputs).slice(-2)).toEqual(["usage", "status"])
+  expect(outputs.at(-1)).toMatchObject({ type: "status", status: "idle" })
+  expect(outputs.find((o) => o.type === "interruption")).toMatchObject({
+    raw: { message: { content: [{ text: "[Request interrupted by user]" }] } },
+  })
+})
+
+test("an interrupt during a tool call becomes an interruption, not an error", () => {
+  const outputs = stored(fixture("tool-interruption"))
+
+  expect(outputs.filter((o) => o.type === "interruption")).toHaveLength(1)
+  expect(outputs.some((o) => o.type === "error")).toBe(false)
+  expect(outputs.at(-1)).toMatchObject({ type: "status", status: "idle" })
+})
+
+test("the control response to an interrupt is ignored", () => {
+  const line = '{"type":"control_response","response":{"subtype":"success","request_id":"req-1"}}'
+
+  expect(decodeClaudeLine(line)).toEqual([])
+})
+
+test("a logged-out claude becomes an error saying to log in", () => {
+  const errors = stored(fixture("not-logged-in")).filter((o) => o.type === "error")
+
+  expect(errors).toHaveLength(1)
+  expect(errors[0]).toMatchObject({ message: "Not logged in · Please run /login" })
 })

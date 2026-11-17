@@ -1,7 +1,8 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
 
-export const SessionStatus = Schema.Literals(["idle", "running", "waiting_for_approval"])
+// `waiting`: the agent waits on the user, such as an approval.
+export const SessionStatus = Schema.Literals(["working", "waiting", "idle", "failed"])
 export type SessionStatus = typeof SessionStatus.Type
 
 export const Session = Schema.Struct({
@@ -48,5 +49,17 @@ export const SessionRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String, requestId: Schema.String, allow: Schema.Boolean },
     success: Session,
     error: Schema.Union([SessionNotFound, ApprovalNotOpen]),
+  }),
+  // Stops the running turn; the agent keeps its process and the events received so far.
+  Rpc.make("session.interrupt", {
+    payload: { sessionId: Schema.String },
+    success: Session,
+    error: SessionNotFound,
+  }),
+  // First every session of the project, read after the server subscribed; then each change.
+  Rpc.make("session.watch", {
+    payload: { projectPath: Schema.String },
+    success: Session,
+    stream: true,
   }),
 )

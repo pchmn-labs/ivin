@@ -14,7 +14,6 @@ const setup = async () => {
   registry.mount(createSessionAtom)
   registry.mount(sendMessageAtom)
   registry.mount(renameSessionAtom)
-  await vi.waitFor(() => expect(registry.get(sessions.status)?._tag).toBe("Success"))
   return { registry, server, sessions }
 }
 

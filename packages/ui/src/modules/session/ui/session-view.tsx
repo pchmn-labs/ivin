@@ -1,11 +1,18 @@
-import { useAtomValue } from "@effect/atom-react"
+import { useAtomMount, useAtomValue } from "@effect/atom-react"
 import { TranscriptView } from "../../transcript/ui/transcript-view.tsx"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { selectedSessionIdAtom } from "../atoms/selected-session.ts"
+import { useInterruptOnEscape } from "../hooks/use-interrupt-on-escape.ts"
+import { isRunning } from "../rules/is-running.ts"
 import { Composer } from "./composer.tsx"
 
 export function SessionView({ projectPath }: { projectPath: string }) {
   const sessionId = useAtomValue(selectedSessionIdAtom)
+  const sessions = sessionsOf(projectPath)
+  useAtomMount(sessions.ids)
+  const status = useAtomValue(sessions.item(sessionId ?? ""))?.status
+  useInterruptOnEscape({ projectPath, sessionId: sessionId ?? "", running: isRunning(status) })
+
   if (sessionId === null) return <p>Select or create a session</p>
 
   return (

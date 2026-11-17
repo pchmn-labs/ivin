@@ -1,6 +1,5 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
-import { SessionStatus } from "./session.ts"
 
 const UserMessageBody = Schema.Struct({
   type: Schema.Literal("user_message"),
@@ -40,7 +39,7 @@ const ApprovalDecisionBody = Schema.Struct({
 })
 const StatusBody = Schema.Struct({
   type: Schema.Literal("status"),
-  status: SessionStatus,
+  status: Schema.Literals(["running", "idle"]),
 })
 // One turn's consumption; a session's total is the sum of its usage events.
 const UsageBody = Schema.Struct({
@@ -56,6 +55,8 @@ const ErrorBody = Schema.Struct({
   message: Schema.String,
 })
 
+const InterruptionBody = Schema.Struct({ type: Schema.Literal("interruption") })
+
 const eventBodies = [
   UserMessageBody,
   AssistantTextBody,
@@ -67,6 +68,7 @@ const eventBodies = [
   UsageBody,
   StatusBody,
   ErrorBody,
+  InterruptionBody,
 ] as const
 
 const raw = { raw: Schema.Unknown }
@@ -158,6 +160,11 @@ export const ErrorItem = Schema.Struct({
   message: Schema.String,
 })
 
+export const InterruptionItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("interruption"),
+})
+
 export const TranscriptItem = Schema.Union([
   MessageItem,
   ThinkingItem,
@@ -165,6 +172,7 @@ export const TranscriptItem = Schema.Union([
   ApprovalItem,
   UsageItem,
   ErrorItem,
+  InterruptionItem,
 ])
 export type TranscriptItem = typeof TranscriptItem.Type
 
