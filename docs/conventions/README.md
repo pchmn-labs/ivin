@@ -27,8 +27,9 @@ A layer exists only when it holds a file. Create a folder with its first file.
 
 Checked by Oxlint once the milestone-1 skeleton adds it, as `no-restricted-imports` overrides in `.oxlintrc.json` whose message cites ADR-0001:
 
-- Files under `**/rules/**` import none of `effect`, `node:*`, `electron`, `react`, nor any `adapters/`, `usecases/`, `atoms/`, `hooks/` or `ui/`. Types from `contracts` come in through `import type`.
+- Files under `**/rules/**` import none of `effect` and its submodules except `effect/Schema`, `node:*`, `electron`, `react`, nor any `adapters/`, `usecases/`, `atoms/`, `hooks/` or `ui/`. Types from `contracts` come in through `import type`.
 - Files under `**/usecases/**` and `**/atoms/**` import none of `node:*`, `electron`, nor any `adapters/`.
+- Files under `**/atoms/**` import none of `react`, nor any `hooks/` or `ui/`.
 - Files under `plugins/**` import no package but `@ivin/plugin-api` and `react`.
 
 Between workspaces, a package imports only what its `package.json` declares, and nothing declares an app.

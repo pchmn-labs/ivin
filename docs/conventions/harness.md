@@ -17,6 +17,7 @@ packages/harness/src/
 | `adapters/` | a test needs the real agent process |
 
 - A module is a provider, named by its `HarnessProvider` id.
+- `rules/` decode a provider line with `effect/Schema`, synchronously, then map it to events.
 - `scripted` replays a recorded transcript through the same port; the server's tests use it in place of a real provider.
 
 ## Tests
