@@ -6,7 +6,12 @@ import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { SlotProps, TranscriptItem, UiContext } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
-const usage = (position: number, inputTokens: number, outputTokens: number, costUsd: number) =>
+const usage = (
+  position: number,
+  inputTokens: number,
+  outputTokens: number,
+  costUsd: number | null,
+) =>
   ({
     id: `u${position}`,
     sessionId: "s1",
@@ -30,7 +35,12 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
   const Status = added.find((a) => a.slot === "composer.status")!.component as ComponentType<
     SlotProps["composer.status"]
   >
-  const host = { useSession: () => undefined, useSessions: () => [], useTranscript: () => items }
+  const host = {
+    useSession: () => undefined,
+    useSessions: () => [],
+    useTranscript: () => items,
+    Markdown: () => null,
+  }
   await render(
     <UiHostProvider host={host}>
       <Status sessionId="s1" />

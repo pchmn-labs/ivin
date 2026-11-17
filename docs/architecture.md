@@ -322,7 +322,7 @@ function PrBadge({ sessionId }: { sessionId: string }) {
 }
 ```
 
-Hooks available to plugin components: `useSession`, `useSessions`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Icon`, `Pill`, `HoverCard`, `Menu`…) so plugins look native.
+Hooks available to plugin components: `useSession`, `useSessions`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Icon`, `Pill`, `HoverCard`, `Menu`, `Markdown`…) so plugins look native; the host supplies them, so a plugin never imports a UI library.
 
 ### Plugins building on plugins
 

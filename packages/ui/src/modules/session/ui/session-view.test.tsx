@@ -50,6 +50,7 @@ test("the transcript renders through the plugins and the status line shows the u
     id: "s1",
     projectPath: "/p",
     title: "t",
+    model: "sonnet",
     createdAt: at,
     lastActivityAt: at,
   })
@@ -68,7 +69,7 @@ test("the transcript renders through the plugins and the status line shows the u
   )
 
   await expect.element(page.getByText("hello", { exact: true })).toBeVisible()
-  await expect.element(page.getByTestId("tool-status")).toHaveTextContent("done")
+  await expect.element(page.getByTestId("tool-status")).toHaveTextContent("succeeded")
   expect(document.querySelectorAll('[data-testid="transcript-item"]')).toHaveLength(2)
   await expect
     .element(page.getByTestId("composer-status"))

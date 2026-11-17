@@ -36,9 +36,11 @@ test("a message sent in a new session gets the scripted answer, and both are bac
 
     await window.getByRole("textbox", { name: "Message" }).fill("And now?")
     await window.getByRole("textbox", { name: "Message" }).press("Enter")
-    await expect(items.filter({ hasText: scriptedAnswer })).toHaveCount(2)
+    // The usage totals show the second turn is done; the virtual list renders only its tail.
     await expect(status).toContainText(usageTotals(2).tokens)
     await expect(status).toContainText(usageTotals(2).cost)
+    await expect(items.filter({ hasText: "And now?" })).toHaveCount(1)
+    await expect(items.filter({ hasText: scriptedAnswer }).last()).toBeVisible()
   } finally {
     await first.close()
   }

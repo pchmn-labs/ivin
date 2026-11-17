@@ -2,7 +2,13 @@ import type { HarnessOutput } from "@ivin/contracts/transcript"
 
 export const demoAnswer = "The scripted answer: this project has 3 files and every test passes."
 
-export const demoUsage = { inputTokens: 1200, outputTokens: 340, cacheReadTokens: 0, cacheWriteTokens: 0, costUsd: 0.0123 }
+export const demoUsage = {
+  inputTokens: 1200,
+  outputTokens: 340,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
+  costUsd: 0.0123,
+}
 
 export const demoTurn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: null },

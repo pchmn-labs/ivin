@@ -5,6 +5,7 @@ import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
 import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
 import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
+import { Markdown } from "../modules/transcript/ui/markdown.tsx"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
 
 const NO_PROJECT = ""
@@ -19,6 +20,7 @@ const host: UiHost = {
   useSession: (sessionId) =>
     useAtomValue(sessionsOf(useProjectPath()).items).find((s) => s.id === sessionId),
   useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).list.items),
+  Markdown,
 }
 
 export function PluginsProvider({

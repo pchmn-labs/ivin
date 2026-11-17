@@ -2,7 +2,12 @@ import { expect, test } from "vitest"
 import type { TranscriptItem } from "@ivin/plugin-api/ui"
 import { formatUsage, totalUsage } from "./total-usage.ts"
 
-const usage = (position: number, inputTokens: number, outputTokens: number, costUsd: number) =>
+const usage = (
+  position: number,
+  inputTokens: number,
+  outputTokens: number,
+  costUsd: number | null,
+) =>
   ({
     id: `u${position}`,
     sessionId: "s",
@@ -21,6 +26,11 @@ test("the total sums input and output tokens and the cost of every usage item", 
   ])
   expect(total?.tokens).toBe(1540)
   expect(total?.costUsd).toBeCloseTo(0.0123)
+})
+
+test("a usage item without a cost adds tokens but no cost", () => {
+  const total = totalUsage([usage(0, 100, 20, null), usage(1, 10, 5, 0.5)])
+  expect(total).toEqual({ tokens: 135, costUsd: 0.5 })
 })
 
 test("there is no total without a usage item", () => {
