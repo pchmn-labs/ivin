@@ -1,10 +1,6 @@
 import { Effect, Layer } from "effect"
-import { RpcServer } from "effect/rpc"
-import { ServerRpcs } from "@ivin/contracts/server"
 import pkg from "../package.json" with { type: "json" }
-import { handlers } from "./rpc/handlers.ts"
-import { layerProtocolMessagePort } from "./shared/message-port-protocol.ts"
-import { ServerInfo } from "./shared/server-info.ts"
+import { serveOverPort } from "./rpc/serve.ts"
 
 interface MainPort {
   on(event: "message", listener: (event: { data: unknown }) => void): void
@@ -20,15 +16,12 @@ const { parentPort } = process as unknown as {
 // Each port main hands over is one client; a window reload brings a new one.
 parentPort.on("message", ({ ports: [port] }) => {
   if (!port) return
-  const server = RpcServer.layer(ServerRpcs).pipe(
-    Layer.provide(handlers),
-    Layer.provide(Layer.succeed(ServerInfo)({ version: pkg.version })),
-    Layer.provide(
-      layerProtocolMessagePort({
-        onMessage: (handler) => port.on("message", (event) => handler(event.data)),
-        postMessage: (data) => port.postMessage(data),
-      }),
-    ),
+  const server = serveOverPort(
+    {
+      onMessage: (handler) => port.on("message", (event) => handler(event.data)),
+      postMessage: (data) => port.postMessage(data),
+    },
+    { version: pkg.version },
   )
   Effect.runFork(Layer.launch(server))
   port.start()

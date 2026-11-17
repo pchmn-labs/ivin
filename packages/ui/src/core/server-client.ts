@@ -22,7 +22,7 @@ const requestServerPort = () =>
     window.postMessage("ivin:request-rpc-port", "*")
   })
 
-const layer = Layer.unwrap(
+const serverClientLayer = Layer.unwrap(
   Effect.promise(requestServerPort).pipe(
     Effect.map((port) =>
       Layer.effect(ServerClient)(RpcClient.make(ServerRpcs)).pipe(
@@ -39,4 +39,4 @@ const layer = Layer.unwrap(
   ),
 )
 
-export const serverRuntime = Atom.runtime(layer)
+export const serverRuntime = Atom.runtime(serverClientLayer)

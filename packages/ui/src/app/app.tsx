@@ -1,9 +1,9 @@
 import { useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
-import { serverVersionAtom } from "./server-version-atom.ts"
+import { getVersionAtom } from "../modules/server/atoms/get-version.ts"
 
 export function App() {
-  const result = useAtomValue(serverVersionAtom)
+  const result = useAtomValue(getVersionAtom)
   return (
     <main>
       <h1>ivin</h1>

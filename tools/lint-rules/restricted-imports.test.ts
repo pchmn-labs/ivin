@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
-import { afterAll, describe, expect, test } from "vite-plus/test"
+import { afterAll, describe, expect, test } from "vitest"
 
 const root = resolve(import.meta.dirname, "../..")
 const adr = "docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"

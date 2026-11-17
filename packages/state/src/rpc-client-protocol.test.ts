@@ -1,7 +1,7 @@
 import { MessageChannel } from "node:worker_threads"
 import { Effect } from "effect"
 import { RpcClient } from "effect/rpc"
-import { expect, test } from "vite-plus/test"
+import { expect, test } from "vitest"
 import { ServerRpcs } from "@ivin/contracts/server"
 import { layerClientProtocolMessagePort } from "./rpc-client-protocol.ts"
 
@@ -24,8 +24,8 @@ test("a client calls an rpc over a message port", async () => {
   }).pipe(
     Effect.provide(
       layerClientProtocolMessagePort({
-        onMessage: (h) => port1.on("message", h),
-        postMessage: (d) => port1.postMessage(d),
+        onMessage: (handler) => port1.on("message", handler),
+        postMessage: (data) => port1.postMessage(data),
       }),
     ),
     Effect.scoped,

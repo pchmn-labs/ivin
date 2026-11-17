@@ -41,7 +41,7 @@ All build and quality tools come from the VoidZero open-source stack (MIT):
 | Oxfmt | format |
 | Vite+ (`vp`) | single entry point for the above, cached monorepo tasks, Node and pnpm versions |
 
-Vite+ is still in beta: the repo keeps a plain config per tool (`vite.config.ts`, `tsdown.config.ts`, `.oxlintrc.json`), so dropping `vp` for direct tool calls stays a script change. Electron packaging (electron-builder) and end-to-end tests (Playwright driving Electron) are outside this stack.
+Vite+ is still in beta: the repo keeps a plain config per tool, so dropping `vp` for direct tool calls stays a script change. `vp lint` and `vp fmt` are passed their config with `-c` (`.oxlintrc.json`, `.oxfmtrc.json`), because `vp` only reads such options from `vite.config.ts`; `vp check` has no `-c` and is not used. Each package that bundles keeps its options in `tsdown.config.ts`, and its `vite.config.ts` imports them as `pack`. Build, dev and type-check tasks run through `vp run`. Electron packaging (electron-builder) and end-to-end tests (Playwright driving Electron) are outside this stack.
 
 GPUI (or any native Rust UI) was considered and rejected: UI plugins in Rust mean WASM or dynamic libraries with no stable ABI, and Zed itself can't offer UI extensions on it. Tauri was rejected because its backend is Rust, which would confine plugins to the webview.
 
@@ -106,6 +106,7 @@ packages/             what is imported
     core/             design system, theme, the RPC client service
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
+tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`
 plugins/<id>/         built-in plugins, same format as user plugins; `rules/` beside the two halves when one has logic
 docs/
 ```

@@ -1,25 +1,18 @@
 import { MessageChannel } from "node:worker_threads"
 import { Effect, Layer } from "effect"
-import { RpcServer } from "effect/rpc"
-import { expect, test } from "vite-plus/test"
-import { ServerRpcs } from "@ivin/contracts/server"
-import { handlers } from "../rpc/handlers.ts"
-import { ServerInfo } from "./server-info.ts"
-import { layerProtocolMessagePort } from "./message-port-protocol.ts"
+import { expect, test } from "vitest"
+import { serveOverPort } from "../rpc/serve.ts"
 
 test("serves the rpc group over a message port", async () => {
   const { port1, port2 } = new MessageChannel()
   const reply = new Promise<unknown>((resolve) => port2.once("message", resolve))
 
-  const server = RpcServer.layer(ServerRpcs).pipe(
-    Layer.provide(handlers),
-    Layer.provide(Layer.succeed(ServerInfo)({ version: "9.9.9" })),
-    Layer.provide(
-      layerProtocolMessagePort({
-        onMessage: (h) => port1.on("message", h),
-        postMessage: (d) => port1.postMessage(d),
-      }),
-    ),
+  const server = serveOverPort(
+    {
+      onMessage: (handler) => port1.on("message", handler),
+      postMessage: (data) => port1.postMessage(data),
+    },
+    { version: "9.9.9" },
   )
 
   await Effect.runPromise(

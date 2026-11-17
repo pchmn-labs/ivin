@@ -1,8 +1,8 @@
 import { Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
-import { expect, test } from "vite-plus/test"
+import { expect, test } from "vitest"
 import { ServerRpcs } from "@ivin/contracts/server"
-import { ServerInfo } from "../shared/server-info.ts"
+import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { handlers } from "./handlers.ts"
 
 test("server.getVersion answers with the version the server was built with", async () => {

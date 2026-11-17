@@ -6,7 +6,6 @@ export interface RpcPort {
   readonly postMessage: (data: string) => void
 }
 
-// One port carries one client, always id 0.
 export const layerProtocolMessagePort = (port: RpcPort): Layer.Layer<RpcServer.Protocol> => {
   const serialization = RpcSerialization.json
   return Layer.effect(RpcServer.Protocol)(
@@ -21,6 +20,7 @@ export const layerProtocolMessagePort = (port: RpcPort): Layer.Layer<RpcServer.P
           for (const message of parser.decode(
             data,
           ) as ReadonlyArray<RpcMessage.FromClientEncoded>) {
+            // One port carries one client, always id 0.
             run(writeRequest(0, message))
           }
         })
