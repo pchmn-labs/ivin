@@ -10,7 +10,8 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 2. **Files and a CLI before tools.** Settings, themes, keybindings and session annotations live in watched files and are reachable through the `ivin` CLI. Agents already master files and shells, on every harness, with no injection. MCP comes later, only as an optimisation.
 3. **A broken plugin never breaks the app.** Agents write most plugins; errors are contained to the plugin's own slot and reported where the agent can read them.
 4. **Don't reinvent the harness layer.** Provider protocols come from T3 Code and MonoCode (both MIT, attribution kept in `NOTICE`).
-5. **Effect inside, plain TypeScript at the edge.** The core is written with Effect v4; the plugin API is functions, promises and React hooks.
+5. **Light and leak-free by default.** Every feature is measured against a memory and startup budget (see [Performance and memory](#performance-and-memory)).
+6. **Effect inside, plain TypeScript at the edge.** The core is written with Effect v4; the plugin API is functions, promises and React hooks.
 
 ## Stack
 
@@ -106,6 +107,21 @@ The server is the source of truth and persists to SQLite; the renderer holds a r
 The renderer is Effect end to end: each RPC stream from the server feeds an `Atom`, derived atoms compute views (sorted sessions, a session's PRs), and components read them with `@effect/atom-react` hooks (Suspense for async results). Plugin hooks (`useSession`, `useAnnotations`…) are thin wrappers over these atoms, and plugins may also define and read atoms of their own.
 
 `effect/unstable/*` modules, reactivity included, can break in minor releases: pin Effect to an exact version and upgrade deliberately.
+
+Queries run in the server against SQLite and stream their results; the renderer never holds a client-side copy of whole collections. A client database such as TanStack DB (live queries over in-memory collections) would duplicate data the server already indexes and add a second reactive model next to atoms; reconsider only if cross-collection queries in the renderer become heavy.
+
+## Performance and memory
+
+Targets, checked in CI on every PR: idle memory of all processes, cold start to first paint, and heap growth after the leak scenario below.
+
+- **Transcripts are paged, not loaded.** The renderer holds a window of events around the viewport (virtualised list) and asks the server for more; large tool outputs and images are stored as blobs and fetched when unfolded.
+- **Atoms die with their readers.** No `keepAlive` by default; per-session atom families are released when no component reads them.
+- **Everything long-lived is scoped.** Child processes, watchers, subscriptions and timers live in an Effect `Scope` (server) or in the plugin's `ctx` (plugins), closed with their session, tab or plugin.
+- **Bounded streams.** Harness and RPC streams have bounded buffers with backpressure; a slow renderer drops to snapshots instead of queuing events.
+- **Shared, paused polling.** GitHub and git polling go through one deduplicating scheduler per resource, paused while the window is hidden and stopped for merged PRs.
+- **Lazy plugins.** A plugin's UI half is imported when one of its slots first renders; its server half when its first event or command fires, unless it declares `"activation": "startup"`.
+- **One renderer.** No extra `BrowserWindow` or `WebContentsView` per tab; Vite code-splits views so unused ones are never parsed.
+- **Leak test.** A Playwright scenario opens and closes 50 sessions, switches tabs and reloads a plugin 20 times, forces GC, and fails if heap or open handles grow past a threshold.
 
 ## Harness layer
 
