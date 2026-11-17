@@ -1,0 +1,2 @@
+# Agent tooling: .agents/ is shared and .claude is a symlink to it; per-machine settings stay local.
+.agents/settings.local.json
