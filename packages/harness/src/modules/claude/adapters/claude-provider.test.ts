@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync } from "node:fs"
+import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect, Stream } from "effect"
@@ -106,3 +106,139 @@ test("answering a request that is not open fails with a HarnessError", async () 
 
   expect(error._tag).toBe("HarnessError")
 })
+
+// A stand-in `claude` on the PATH, so the adapter's stdin and signal handling run without the API.
+const withFakeClaude = async <A>(body: string, use: (dir: string) => Promise<A>): Promise<A> => {
+  const dir = mkdtempSync(join(tmpdir(), "ivin-fake-claude-"))
+  const bin = join(dir, "claude")
+  writeFileSync(bin, `#!/usr/bin/env node\n${body}`)
+  chmodSync(bin, 0o755)
+  const path = process.env["PATH"]
+  process.env["PATH"] = `${dir}:${path}`
+  try {
+    return await use(dir)
+  } finally {
+    process.env["PATH"] = path
+  }
+}
+
+const logStdin = `
+const fs = require("node:fs")
+process.stdin.on("data", (d) => fs.appendFileSync(process.env.FAKE_LOG ?? "stdin.log", d))
+`
+
+test("interrupt writes a control request to stdin and keeps the process alive", async () => {
+  await withFakeClaude(
+    `${logStdin}
+setInterval(() => {}, 1000)`,
+    async (dir) => {
+      const log = join(dir, "stdin.log")
+      process.env["FAKE_LOG"] = log
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const harness = yield* (yield* HarnessProvider).start({
+            sessionId: "s1",
+            cwd: dir,
+            model: "haiku",
+            providerSessionId: null,
+          })
+          yield* harness.interrupt
+          yield* Effect.sleep("300 millis")
+        }).pipe(Effect.provide(layerClaude), Effect.scoped),
+      )
+
+      const [line] = readFileSync(log, "utf8").trim().split("\n")
+      expect(JSON.parse(line!)).toMatchObject({
+        type: "control_request",
+        request: { subtype: "interrupt" },
+      })
+      expect(JSON.parse(line!).request_id).toEqual(expect.any(String))
+    },
+  )
+})
+
+test("closing the scope kills a process that ignores SIGTERM", async () => {
+  await withFakeClaude(
+    `process.on("SIGTERM", () => {})
+require("node:fs").writeFileSync(process.env.FAKE_PID, String(process.pid))
+setInterval(() => {}, 1000)`,
+    async (dir) => {
+      const pidFile = join(dir, "pid")
+      process.env["FAKE_PID"] = pidFile
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* (yield* HarnessProvider).start({
+            sessionId: "s1",
+            cwd: dir,
+            model: "haiku",
+            providerSessionId: null,
+          })
+          yield* Effect.sleep("500 millis")
+        }).pipe(Effect.provide(layerClaude), Effect.scoped),
+      )
+
+      const pid = Number(readFileSync(pidFile, "utf8"))
+      await new Promise((resolve) => setTimeout(resolve, 200))
+      expect(() => process.kill(pid, 0)).toThrow()
+    },
+  )
+}, 15_000)
+
+test("start fails with plain words when claude is not on the PATH", async () => {
+  const path = process.env["PATH"]
+  process.env["PATH"] = mkdtempSync(join(tmpdir(), "ivin-empty-path-"))
+  try {
+    const exit = await Effect.runPromiseExit(
+      Effect.gen(function* () {
+        yield* (yield* HarnessProvider).start({
+          sessionId: "s1",
+          cwd: tmpdir(),
+          model: "haiku",
+          providerSessionId: null,
+        })
+      }).pipe(Effect.provide(layerClaude), Effect.scoped),
+    )
+
+    expect(JSON.stringify(exit)).toContain("Claude Code is not installed")
+  } finally {
+    process.env["PATH"] = path
+  }
+})
+
+test("start names a project folder that does not exist", async () => {
+  const exit = await Effect.runPromiseExit(
+    Effect.gen(function* () {
+      yield* (yield* HarnessProvider).start({
+        sessionId: "s1",
+        cwd: "/does/not/exist",
+        model: "haiku",
+        providerSessionId: null,
+      })
+    }).pipe(Effect.provide(layerClaude), Effect.scoped),
+  )
+
+  expect(JSON.stringify(exit)).toContain("The project folder does not exist: /does/not/exist")
+})
+
+test("closing the scope returns within a bound when a grandchild holds the pipes open", async () => {
+  await withFakeClaude(
+    `require("node:child_process").spawn("sleep", ["5"], { stdio: "inherit", detached: true }).unref()
+setInterval(() => {}, 1000)`,
+    async (dir) => {
+      const started = Date.now()
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* (yield* HarnessProvider).start({
+            sessionId: "s1",
+            cwd: dir,
+            model: "haiku",
+            providerSessionId: null,
+          })
+          yield* Effect.sleep("500 millis")
+        }).pipe(Effect.provide(layerClaude), Effect.scoped),
+      )
+
+      expect(Date.now() - started).toBeLessThan(3_000)
+    },
+  )
+}, 15_000)

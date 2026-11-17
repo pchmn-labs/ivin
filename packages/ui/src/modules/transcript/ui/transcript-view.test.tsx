@@ -59,7 +59,11 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
   await frames()
   expect(scroller().scrollTop).toBe(scrolledUpTo)
 
-  scroller().scrollTop = scroller().scrollHeight
+  // The virtual list grows as rows are measured, so one jump may stop short of the bottom.
+  await vi.waitFor(() => {
+    scroller().scrollTop = scroller().scrollHeight
+    expect(page.getByText("message 40", { exact: true }).query()).not.toBeNull()
+  })
   await expect.element(page.getByText("message 40", { exact: true })).toBeVisible()
   server.pushItem(message(41))
   await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()

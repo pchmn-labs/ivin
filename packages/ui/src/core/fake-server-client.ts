@@ -1,5 +1,5 @@
 import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
-import type { Session } from "@ivin/contracts/session"
+import type { Session, SessionStatus } from "@ivin/contracts/session"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
 import { ServerClient } from "./server-client.ts"
 
@@ -10,6 +10,8 @@ export interface FakeServer {
   readonly pushItem: (item: TranscriptItem) => void
   // Streams any change (a delta, say) to watchers without storing it.
   readonly pushChange: (change: TranscriptItemChange) => void
+  // Changes a session's status as the server would, and streams it to `session.watch`.
+  readonly setStatus: (sessionId: string, status: SessionStatus) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
   readonly holdNextSend: () => { readonly release: () => void; readonly fail: () => void }
@@ -19,6 +21,7 @@ export const makeFakeServer = (): FakeServer => {
   const sessions = new Map<string, Session>()
   const transcripts = new Map<string, Array<TranscriptItem>>()
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
+  const sessionChanges = Effect.runSync(PubSub.unbounded<Session>())
   let clock = 1_000
   let nextId = 1
   let hold: { readonly wait: Promise<boolean> } | null = null
@@ -32,6 +35,12 @@ export const makeFakeServer = (): FakeServer => {
   const publish = (item: TranscriptItem) => {
     itemsOf(item.sessionId).push(item)
     Effect.runSync(PubSub.publish(pubsub, { type: "upsert", item }))
+  }
+
+  const saveSession = (session: Session) => {
+    sessions.set(session.id, session)
+    Effect.runSync(PubSub.publish(sessionChanges, session))
+    return session
   }
 
   const getItems = ({
@@ -74,6 +83,26 @@ export const makeFakeServer = (): FakeServer => {
         sessions.set(session.id, session)
         return session
       }),
+    "session.watch": ({ projectPath }: { projectPath: string }) =>
+      Stream.unwrap(
+        Effect.map(PubSub.subscribe(sessionChanges), (subscription) =>
+          Stream.fromIterable([...sessions.values()]).pipe(
+            Stream.concat(Stream.fromSubscription(subscription)),
+            Stream.filter((session) => session.projectPath === projectPath),
+          ),
+        ),
+      ),
+    "session.interrupt": ({ sessionId }: { sessionId: string }) =>
+      Effect.sync(() => {
+        const items = itemsOf(sessionId)
+        publish({
+          id: `interruption-${nextId++}`,
+          sessionId,
+          position: items.length,
+          type: "interruption",
+        })
+        return saveSession({ ...sessions.get(sessionId)!, status: "idle", lastActivityAt: tick() })
+      }),
     "session.list": ({ projectPath }: { projectPath: string }) =>
       Effect.sync(() => [...sessions.values()].filter((s) => s.projectPath === projectPath)),
     "session.rename": ({ sessionId, title }: { sessionId: string; title: string }) =>
@@ -100,13 +129,13 @@ export const makeFakeServer = (): FakeServer => {
           role: "user",
           text: input.text,
         })
-        const updated = {
+        const updated: Session = {
           ...session,
+          status: "working",
           title: isFirstMessage ? input.text : session.title,
           lastActivityAt: tick(),
         }
-        sessions.set(session.id, updated)
-        return updated
+        return saveSession(updated)
       }),
     "session.answerApproval": (input: { sessionId: string; requestId: string; allow: boolean }) =>
       Effect.sync(() => {
@@ -123,7 +152,7 @@ export const makeFakeServer = (): FakeServer => {
           items[index] = answered
           Effect.runSync(PubSub.publish(pubsub, { type: "upsert", item: answered }))
         }
-        const updated = { ...sessions.get(input.sessionId)!, status: "running" as const }
+        const updated = { ...sessions.get(input.sessionId)!, status: "working" as const }
         sessions.set(input.sessionId, updated)
         return updated
       }),
@@ -156,6 +185,7 @@ export const makeFakeServer = (): FakeServer => {
     sessions,
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
+    setStatus: (sessionId, status) => void saveSession({ ...sessions.get(sessionId)!, status }),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
     holdNextSend: () => {
       let settle!: (ok: boolean) => void

@@ -29,3 +29,14 @@ test("a new session uses sonnet unless another model is picked", async () => {
     expect([...server.sessions.values()].map((s) => s.model)).toEqual(["sonnet", "opus"]),
   )
 })
+
+test("each row shows the session status and follows the server", async () => {
+  const server = await setup()
+  await page.getByRole("button", { name: "New session" }).click()
+  await expect.element(page.getByTestId("session-status")).toHaveTextContent("Idle")
+
+  server.setStatus("session-1", "working")
+  await expect.element(page.getByTestId("session-status")).toHaveTextContent("Working")
+  server.setStatus("session-1", "failed")
+  await expect.element(page.getByTestId("session-status")).toHaveTextContent("Failed")
+})

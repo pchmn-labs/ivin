@@ -1,0 +1,3 @@
+{"name":"not-installed","exit":{"error":{"message":"spawn claude ENOENT","code":"ENOENT"}},"stderr":""}
+{"name":"unrecognized-model","exit":{"code":1,"signal":null},"stderr":"[claude-code:unrecognized_model] {\"model\":\"not-a-model\",\"query_source\":\"sdk\"}"}
+{"name":"killed-by-signal","exit":{"code":null,"signal":"SIGTERM"},"stderr":""}

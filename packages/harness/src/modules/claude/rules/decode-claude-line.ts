@@ -54,6 +54,7 @@ const UserLine = Schema.Struct({
 
 const ResultLine = Schema.Struct({
   is_error: Schema.Boolean,
+  terminal_reason: Schema.optional(Schema.String),
   result: Schema.optional(Schema.String),
   errors: Schema.optional(Schema.Array(Schema.String)),
   total_cost_usd: Schema.optional(Schema.NullOr(Schema.Number)),
@@ -117,21 +118,34 @@ const fromAssistant = (line: unknown): HarnessOutput[] => {
   })
 }
 
+const INTERRUPTION_TEXT = "[Request interrupted by user"
+
 const fromUser = (line: unknown): HarnessOutput[] => {
   const { message } = Schema.decodeUnknownSync(UserLine)(line)
   if (typeof message.content === "string") return []
-  return message.content.filter(isToolResultBlock).map((block) => ({
-    type: "tool_result",
-    toolCallId: block.tool_use_id,
-    output: toolResultOutput(block.content),
-    isError: block.is_error ?? false,
-    raw: block,
-  }))
+  return message.content.flatMap((block): HarnessOutput[] => {
+    if (isToolResultBlock(block)) {
+      return [
+        {
+          type: "tool_result",
+          toolCallId: block.tool_use_id,
+          output: toolResultOutput(block.content),
+          isError: block.is_error ?? false,
+          raw: block,
+        },
+      ]
+    }
+    return isTextBlock(block) && block.text.startsWith(INTERRUPTION_TEXT)
+      ? [{ type: "interruption", raw: line }]
+      : []
+  })
 }
 
 const fromResult = (line: unknown, subtype: string | undefined): HarnessOutput[] => {
   const result = Schema.decodeUnknownSync(ResultLine)(line)
-  const failed = result.is_error || (subtype !== undefined && subtype !== "success")
+  // The interruption was already reported from the user line; the aborted result is not a failure.
+  const aborted = result.terminal_reason?.startsWith("aborted_") ?? false
+  const failed = !aborted && (result.is_error || (subtype !== undefined && subtype !== "success"))
   const message = result.result || result.errors?.join("\n") || subtype || "The run failed"
   const usage = result.usage
   return [

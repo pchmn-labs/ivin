@@ -96,6 +96,10 @@ export const applyEvent = (
       const item: TranscriptItem = { ...base, type: "error", message: event.message }
       return { state: { ...state, openMessage: null }, item }
     }
+    case "interruption": {
+      const item: TranscriptItem = { ...base, type: "interruption" }
+      return { state: { ...state, openMessage: null }, item }
+    }
     case "status":
       return {
         state: event.status === "idle" ? { ...state, openMessage: null } : state,

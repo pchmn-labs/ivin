@@ -15,7 +15,7 @@ test("answering an approval stores the decision on its item and updates the sess
     projectPath: project,
     title: "t",
     model: "sonnet",
-    status: "waiting_for_approval",
+    status: "waiting",
     createdAt: at,
     lastActivityAt: at,
   })
@@ -46,7 +46,7 @@ test("answering an approval stores the decision on its item and updates the sess
     allow: true,
   })
 
-  await vi.waitFor(() => expect(registry.get(sessions.item("s1"))?.status).toBe("running"))
+  await vi.waitFor(() => expect(registry.get(sessions.item("s1"))?.status).toBe("working"))
   await vi.waitFor(() =>
     expect(registry.get(transcript.list.item("a1"))).toMatchObject({ decision: "allow" }),
   )

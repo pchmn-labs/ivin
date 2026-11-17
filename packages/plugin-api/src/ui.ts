@@ -9,7 +9,8 @@ export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 export type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
 export type ErrorItem = Extract<TranscriptItem, { type: "error" }>
-export type MessageSlotItem = MessageItem | ThinkingItem | ErrorItem
+export type InterruptionItem = Extract<TranscriptItem, { type: "interruption" }>
+export type MessageSlotItem = MessageItem | ThinkingItem | ErrorItem | InterruptionItem
 
 export interface SlotProps {
   "transcript.message": { readonly item: MessageSlotItem; readonly sessionId: string }

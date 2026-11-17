@@ -8,7 +8,7 @@ import { expect, test } from "vitest"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { handlers } from "./handlers.ts"
+import { handlers, layerServices } from "./handlers.ts"
 
 const newDatabase = () => {
   const db = new DatabaseSync(":memory:")
@@ -25,6 +25,7 @@ const withServer = <A, E>(
       Effect.flatMap(use),
       Effect.provide(
         handlers.pipe(
+          Layer.provide(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
           Layer.provide(layerScripted([])),

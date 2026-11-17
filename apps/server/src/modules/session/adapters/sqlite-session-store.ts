@@ -1,4 +1,4 @@
-import type { Session } from "@ivin/contracts/session"
+import type { Session, SessionStatus } from "@ivin/contracts/session"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
 import { SessionStore } from "../usecases/session-store.ts"
@@ -8,7 +8,7 @@ interface SessionRow {
   project_path: string
   title: string
   model: string
-  status: Session["status"]
+  status: SessionStatus
   created_at: number
   last_activity_at: number
 }
@@ -90,6 +90,11 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         Effect.sync(() => {
           db.prepare("UPDATE sessions SET status = ? WHERE id = ?").run(status, id)
         }),
+      resetRunning: Effect.sync(() => {
+        db.prepare(
+          "UPDATE sessions SET status = 'idle' WHERE status NOT IN ('idle', 'failed')",
+        ).run()
+      }),
       touch: (id, at) =>
         Effect.sync(() => {
           db.prepare("UPDATE sessions SET last_activity_at = ? WHERE id = ?").run(

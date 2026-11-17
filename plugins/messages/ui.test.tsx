@@ -60,5 +60,10 @@ test("thinking is folded until opened", async () => {
 
 test("an error item is shown as an alert", async () => {
   await mount({ ...base, type: "error", message: "The run failed" })
-  await expect.element(page.getByRole("alert")).toHaveTextContent("The run failed")
+  await expect.element(page.getByRole("alert")).toHaveTextContent("Error: The run failed")
+})
+
+test("an interruption is shown as a short note", async () => {
+  await mount({ ...base, type: "interruption" })
+  await expect.element(page.getByText("Interrupted")).toBeVisible()
 })

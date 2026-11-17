@@ -1,4 +1,4 @@
-import { DateTime, Effect } from "effect"
+import { DateTime, Effect, Stream } from "effect"
 import type { Session } from "@ivin/contracts/session"
 import { makeEntityList } from "@ivin/state/entity-list"
 import { strongFamily } from "@ivin/state/strong-family"
@@ -16,7 +16,9 @@ export const sessionsOf = strongFamily((projectPath: string) =>
       run: (writer) =>
         Effect.gen(function* () {
           const client = yield* ServerClient
-          yield* writer.upsert(yield* client["session.list"]({ projectPath }))
+          yield* client["session.watch"]({ projectPath }).pipe(
+            Stream.runForEach((session) => writer.upsert([session])),
+          )
         }),
     },
   }),

@@ -2,12 +2,17 @@ import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Effect, type Scope, Stream } from "effect"
 import { expect, test } from "vitest"
 import { type ApprovalDecision, HarnessProvider } from "../../../shared/harness-provider.ts"
-import { layerScripted, type ScriptedSend } from "./scripted-provider.ts"
+import {
+  layerScripted,
+  scriptedFailure,
+  type ScriptedElement,
+  type ScriptedSend,
+} from "./scripted-provider.ts"
 
 const text = (value: string): HarnessOutput => ({ type: "assistant_text", text: value, raw: null })
 
 const run = <A, E>(
-  turns: readonly (readonly HarnessOutput[])[],
+  turns: readonly (readonly ScriptedElement[])[],
   sent: ScriptedSend[],
   use: (provider: HarnessProvider["Service"]) => Effect.Effect<A, E, Scope.Scope>,
 ) =>
@@ -140,4 +145,72 @@ test("responding with no paused turn fails", async () => {
   )
 
   expect(error._tag).toBe("HarnessError")
+})
+
+test("interrupt is recorded and offers an interruption then an idle status", async () => {
+  const interrupted: string[] = []
+  const events = await Effect.runPromise(
+    Effect.gen(function* () {
+      const harness = yield* (yield* HarnessProvider).start({
+        sessionId: "s1",
+        cwd: "/p",
+        model: "m",
+        providerSessionId: null,
+      })
+      yield* harness.interrupt
+      return yield* Stream.runCollect(Stream.take(harness.events, 2))
+    }).pipe(Effect.provide(layerScripted([], { interrupted })), Effect.scoped),
+  )
+
+  expect(interrupted).toEqual(["s1"])
+  expect(events.map((e) => e.type)).toEqual(["interruption", "status"])
+})
+
+test("a scripted failure fails the events stream at that point, after the events before it", async () => {
+  const outcome = await run(
+    [[text("one"), scriptedFailure("Boom"), text("never")]],
+    [],
+    (provider) =>
+      Effect.gen(function* () {
+        const harness = yield* provider.start({
+          sessionId: "s1",
+          cwd: "/p",
+          model: "m",
+          providerSessionId: null,
+        })
+        yield* harness.send({ text: "go" })
+        const seen: string[] = []
+        const error = yield* Stream.runForEach(harness.events, (e) =>
+          Effect.sync(() => void seen.push(e.type)),
+        ).pipe(Effect.flip)
+        return { seen, message: error.message }
+      }),
+  )
+
+  expect(outcome).toEqual({ seen: ["assistant_text"], message: "Boom" })
+})
+
+test("a start failure fails start, and closing the scope is reported", async () => {
+  const closed: string[] = []
+  await Effect.runPromise(
+    Effect.gen(function* () {
+      const provider = yield* HarnessProvider
+      yield* provider.start({ sessionId: "s1", cwd: "/p", model: "m", providerSessionId: null })
+    }).pipe(Effect.provide(layerScripted([], { closed })), Effect.scoped),
+  )
+  expect(closed).toEqual(["s1"])
+
+  const error = await Effect.runPromise(
+    Effect.gen(function* () {
+      return yield* Effect.flip(
+        (yield* HarnessProvider).start({
+          sessionId: "s1",
+          cwd: "/p",
+          model: "m",
+          providerSessionId: null,
+        }),
+      )
+    }).pipe(Effect.provide(layerScripted([], { startFailure: "No agent" })), Effect.scoped),
+  )
+  expect(error.message).toBe("No agent")
 })

@@ -203,3 +203,13 @@ test("a decision with no request, and any status, produce no item", () => {
     ),
   ).toEqual([])
 })
+
+test("an interruption is its own item and closes the open assistant message", () => {
+  const items = deriveItems(
+    events(user("hi"), assistant("one"), { type: "interruption" }, assistant("two")),
+  )
+
+  expect(items.map((i) => i.type)).toEqual(["message", "message", "interruption", "message"])
+  expect(items[2]).toEqual({ id: "e3", sessionId: "s1", position: 3, type: "interruption" })
+  expect(items[3]).toMatchObject({ text: "two" })
+})

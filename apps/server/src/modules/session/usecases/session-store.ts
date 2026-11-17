@@ -1,4 +1,4 @@
-import type { Session } from "@ivin/contracts/session"
+import type { Session, SessionStatus } from "@ivin/contracts/session"
 import { Context, type Effect } from "effect"
 
 export class SessionStore extends Context.Service<
@@ -12,7 +12,9 @@ export class SessionStore extends Context.Service<
     readonly setTitleIfUnset: (id: string, title: string) => Effect.Effect<void>
     readonly providerSessionId: (id: string) => Effect.Effect<string | null>
     readonly setProviderSessionId: (id: string, providerSessionId: string) => Effect.Effect<void>
-    readonly setStatus: (id: string, status: Session["status"]) => Effect.Effect<void>
+    readonly setStatus: (id: string, status: SessionStatus) => Effect.Effect<void>
+    // No run survives a connection, so a session left working or waiting is idle again.
+    readonly resetRunning: Effect.Effect<void>
     readonly touch: (id: string, at: Session["lastActivityAt"]) => Effect.Effect<void>
   }
 >()("ivin/server/SessionStore") {}
