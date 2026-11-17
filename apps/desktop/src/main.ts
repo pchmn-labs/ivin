@@ -69,6 +69,7 @@ app.on("will-quit", () => {
 })
 
 void app.whenReady().then(() => {
+  if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
   server = utilityProcess.fork(
     serverEntry,
     ["--database", join(app.getPath("userData"), "ivin.db")],
