@@ -1,13 +1,14 @@
 import {
   app,
   BrowserWindow,
+  dialog,
   ipcMain,
   MessageChannelMain,
   utilityProcess,
   type UtilityProcess,
 } from "electron"
 import { join } from "node:path"
-import { RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
+import { PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
 
 const devUrl = process.env["IVIN_DEV_URL"]
 
@@ -53,12 +54,25 @@ ipcMain.on(RPC_PORT_REQUEST, (event) => {
   event.sender.postMessage(RPC_PORT_REPLY, null, [port2])
 })
 
+ipcMain.handle(PICK_FOLDER, async (event) => {
+  const window = BrowserWindow.fromWebContents(event.sender)
+  const options = { properties: ["openDirectory" as const] }
+  const result = await (window
+    ? dialog.showOpenDialog(window, options)
+    : dialog.showOpenDialog(options))
+  return result.canceled ? null : (result.filePaths[0] ?? null)
+})
+
 app.on("window-all-closed", () => app.quit())
 app.on("will-quit", () => {
   server?.kill()
 })
 
 void app.whenReady().then(() => {
-  server = utilityProcess.fork(serverEntry, [], { serviceName: "ivin-server", stdio: "inherit" })
+  server = utilityProcess.fork(
+    serverEntry,
+    ["--database", join(app.getPath("userData"), "ivin.db")],
+    { serviceName: "ivin-server", stdio: "inherit" },
+  )
   return createWindow()
 })

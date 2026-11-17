@@ -1,4 +1,4 @@
-import { ServerRpcs } from "@ivin/contracts/server"
+import { Rpcs } from "@ivin/contracts/rpcs"
 import { layerClientProtocolMessagePort } from "@ivin/state/rpc-client-protocol"
 import { Context, Effect, Layer } from "effect"
 import { RpcClient, RpcClientError } from "effect/rpc"
@@ -6,7 +6,7 @@ import { Atom } from "effect/reactivity"
 
 export class ServerClient extends Context.Service<
   ServerClient,
-  RpcClient.FromGroup<typeof ServerRpcs, RpcClientError.RpcClientError>
+  RpcClient.FromGroup<typeof Rpcs, RpcClientError.RpcClientError>
 >()("ivin/ui/ServerClient") {}
 
 // The preload answers this window message with a port to the server, see apps/desktop/src/preload.ts.
@@ -25,7 +25,7 @@ const requestServerPort = () =>
 const serverClientLayer = Layer.unwrap(
   Effect.promise(requestServerPort).pipe(
     Effect.map((port) =>
-      Layer.effect(ServerClient)(RpcClient.make(ServerRpcs)).pipe(
+      Layer.effect(ServerClient)(RpcClient.make(Rpcs)).pipe(
         Layer.provide(
           layerClientProtocolMessagePort({
             onMessage: (handler) => {

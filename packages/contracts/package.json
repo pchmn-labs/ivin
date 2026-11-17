@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./project": "./src/project.ts",
+    "./rpcs": "./src/rpcs.ts",
     "./server": "./src/server.ts"
   },
   "scripts": {

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test"
 import { execFileSync } from "node:child_process"
-import { launchPackagedApp } from "./launch-app.ts"
+import { launchPackagedApp, makeTempDir } from "./launch-app.ts"
 
 interface ProcessEntry {
   readonly pid: number
@@ -42,7 +42,7 @@ const isAlive = (pid: number): boolean => {
 }
 
 test("quitting the app leaves no server process running", async () => {
-  const app = await launchPackagedApp()
+  const app = await launchPackagedApp(makeTempDir("user-data"))
   try {
     const appPid = app.process().pid!
     const window = await app.firstWindow()
