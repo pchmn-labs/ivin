@@ -1,5 +1,13 @@
 {
-  "ignorePatterns": [".agents/**", ".claude/**", "**/dist/**", "**/out/**", "**/release/**"],
+  "ignorePatterns": [
+    ".agents/**",
+    ".claude/**",
+    "**/dist/**",
+    "**/out/**",
+    "**/release/**",
+    "**/playwright-report/**",
+    "**/test-results/**"
+  ],
   "overrides": [
     {
       "files": ["**/rules/**"],

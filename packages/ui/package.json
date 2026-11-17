@@ -4,6 +4,23 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "vp dev",
+    "build": "vp build",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/atom-react": "4.1.4",
+    "@ivin/contracts": "workspace:*",
+    "@ivin/state": "workspace:*",
+    "effect": "4.1.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@rolldown/plugin-babel": "^0.3.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "6.3.0",
+    "babel-plugin-react-compiler": "1.0.0"
   }
 }

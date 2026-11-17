@@ -19,7 +19,7 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 |---|---|---|
 | Shell | Electron | Node in the backend, so plugins have a backend half in TS; one Chromium everywhere; most mature desktop runtime |
 | UI | React + TypeScript | What agents write best; plugin UI is just React components |
-| UI state | Effect `Atom` (`effect/unstable/reactivity`) + `@effect/atom-react` | One model from server to screen: RPC streams feed atoms, components read atoms |
+| UI state | Effect `Atom` (`effect/reactivity`) + `@effect/atom-react` | One model from server to screen: RPC streams feed atoms, components read atoms |
 | Core | Effect v4 (stable since 2026-09-30) | Long-lived processes, streams, cancellation and scoped resources are the harness layer's daily work |
 | Contracts | Effect `Schema` | One definition for RPC payloads, persisted data and transcript parsing |
 | Storage | SQLite (`node:sqlite`) | Sessions, transcript events, plugin storage; files stay files. No native module to rebuild; checked in a `utilityProcess` on Electron 45 (WAL, JSON operators, FTS5) |
