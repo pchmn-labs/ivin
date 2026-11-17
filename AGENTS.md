@@ -20,6 +20,15 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Read `docs/a
 
 `docs/architecture.md` is the design the code follows. Read it before exploring an area, and a change that departs from it updates it in the same PR.
 
+### Conventions
+
+Read `docs/conventions/README.md` before writing code anywhere, then the file for the package you write in:
+
+- `apps/server/`: `docs/conventions/server.md`
+- `packages/harness/`: `docs/conventions/harness.md`
+- `packages/ui/`: `docs/conventions/ui.md`
+- `plugins/`: `docs/conventions/plugins.md`
+
 ### Grilling
 
 Ask each round of a grilling session (`grilling`, `grill-with-docs`) through the `interactive-form` skill rather than in the chat, unless the user asks for the terminal.
