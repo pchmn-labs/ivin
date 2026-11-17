@@ -25,8 +25,15 @@ type Exit =
   | { readonly error: Error }
   | { readonly code: number | null; readonly signal: string | null }
 
-const spawnClaude = (sessionId: string, cwd: string, model: string) => {
-  const child = spawn("claude", [...ARGS, "--model", model], {
+export const claudeArgs = (model: string, resume: string | null) => [
+  ...ARGS,
+  "--model",
+  model,
+  ...(resume === null ? [] : ["--resume", resume]),
+]
+
+const spawnClaude = (sessionId: string, cwd: string, model: string, resume: string | null) => {
+  const child = spawn("claude", claudeArgs(model, resume), {
     cwd,
     env: { ...process.env, IVIN_SESSION_ID: sessionId },
     stdio: ["pipe", "pipe", "pipe"],
@@ -63,10 +70,10 @@ const describeExit = (exit: Exit, stderr: string) => {
 
 export const layerClaude = Layer.succeed(HarnessProvider)({
   id: "claude",
-  start: ({ sessionId, cwd, model }) =>
+  start: ({ sessionId, cwd, model, resume }) =>
     Effect.gen(function* () {
       const { child, lines, exited, stderr } = yield* Effect.acquireRelease(
-        Effect.sync(() => spawnClaude(sessionId, cwd, model)),
+        Effect.sync(() => spawnClaude(sessionId, cwd, model, resume)),
         ({ child }) =>
           Effect.sync(() => {
             child.stdin.destroy()

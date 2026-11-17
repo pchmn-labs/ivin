@@ -1,5 +1,5 @@
 import type { Session } from "@ivin/contracts/session"
-import type { HarnessDelta, HarnessEvent } from "@ivin/contracts/transcript"
+import type { HarnessDelta, HarnessEvent, HarnessOutput } from "@ivin/contracts/transcript"
 import { HarnessProvider, type HarnessError } from "@ivin/harness"
 import { Context, DateTime, Effect, Exit, Layer, Scope, Semaphore, Stream } from "effect"
 import { applyEvent, emptyItemState } from "../../transcript/rules/derive-items.ts"
@@ -41,8 +41,9 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
     const startRun = (session: Session) =>
       Effect.gen(function* () {
         const scope = yield* Scope.fork(serverScope)
+        const resume = yield* sessions.providerSessionId(session.id)
         const harness = yield* provider
-          .start({ sessionId: session.id, cwd: session.projectPath, model: session.model })
+          .start({ sessionId: session.id, cwd: session.projectPath, model: session.model, resume })
           .pipe(
             Scope.provide(scope),
             Effect.tapError((error) => Scope.close(scope, Exit.fail(error))),
@@ -88,9 +89,16 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             }),
           )
 
-        yield* Stream.runForEach(harness.events, (output) =>
-          output.type === "delta" ? stream(output) : record(output),
-        ).pipe(
+        let providerSessionId = resume
+        const handle = (output: HarnessOutput) => {
+          if (output.type === "delta") return stream(output)
+          if (output.type !== "provider_session") return record(output)
+          if (output.providerSessionId === providerSessionId) return Effect.void
+          providerSessionId = output.providerSessionId
+          return sessions.setProviderSessionId(session.id, output.providerSessionId)
+        }
+
+        yield* Stream.runForEach(harness.events, handle).pipe(
           Effect.catchTag("HarnessError", (error) => Effect.logError(error.message)),
           Effect.ensuring(
             Effect.suspend(() => {

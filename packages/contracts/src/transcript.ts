@@ -77,7 +77,14 @@ export const HarnessDelta = Schema.Struct({
 })
 export type HarnessDelta = typeof HarnessDelta.Type
 
-export const HarnessOutput = Schema.Union([HarnessEvent, HarnessDelta])
+// The provider's own id for the session, kept to resume it; never stored as an event.
+export const HarnessProviderSession = Schema.Struct({
+  type: Schema.Literal("provider_session"),
+  providerSessionId: Schema.String,
+})
+export type HarnessProviderSession = typeof HarnessProviderSession.Type
+
+export const HarnessOutput = Schema.Union([HarnessEvent, HarnessDelta, HarnessProviderSession])
 export type HarnessOutput = typeof HarnessOutput.Type
 
 export const TranscriptEvent = Schema.Union(

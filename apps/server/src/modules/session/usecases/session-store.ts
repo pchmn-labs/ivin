@@ -10,6 +10,8 @@ export class SessionStore extends Context.Service<
     readonly rename: (id: string, title: string) => Effect.Effect<void>
     // No-op once the title was set by a first message or a rename.
     readonly setTitleIfUnset: (id: string, title: string) => Effect.Effect<void>
+    readonly providerSessionId: (id: string) => Effect.Effect<string | null>
+    readonly setProviderSessionId: (id: string, providerSessionId: string) => Effect.Effect<void>
     readonly touch: (id: string, at: Session["lastActivityAt"]) => Effect.Effect<void>
   }
 >()("ivin/server/SessionStore") {}

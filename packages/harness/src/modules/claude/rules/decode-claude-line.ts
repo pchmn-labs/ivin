@@ -7,6 +7,8 @@ const Envelope = Schema.Struct({
   parent_tool_use_id: Schema.optional(Schema.NullOr(Schema.String)),
 })
 
+const SystemInitLine = Schema.Struct({ session_id: Schema.String })
+
 const SystemStatusLine = Schema.Struct({ status: Schema.NullOr(Schema.String) })
 
 const StreamEventLine = Schema.Struct({
@@ -138,6 +140,10 @@ const fromResult = (line: unknown, subtype: string | undefined): HarnessOutput[]
 }
 
 const fromSystem = (line: unknown, subtype: string | undefined): HarnessOutput[] => {
+  if (subtype === "init") {
+    const { session_id } = Schema.decodeUnknownSync(SystemInitLine)(line)
+    return [{ type: "provider_session", providerSessionId: session_id }]
+  }
   if (subtype !== "status") return []
   const { status } = Schema.decodeUnknownSync(SystemStatusLine)(line)
   return status === "requesting" ? [{ type: "status", status: "running", raw: line }] : []

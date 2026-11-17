@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { Effect, Stream } from "effect"
 import { expect, test } from "vitest"
 import { HarnessProvider } from "../../../shared/harness-provider.ts"
-import { layerClaude } from "./claude-provider.ts"
+import { claudeArgs, layerClaude } from "./claude-provider.ts"
 
 // Spawns the real `claude` CLI and calls the API; kept out of CI.
 const real = process.env["IVIN_TEST_CLAUDE"] === "1" ? test : test.skip
@@ -19,6 +19,7 @@ real(
           sessionId: "s1",
           cwd,
           model: "haiku",
+          resume: null,
         })
         yield* harness.send({ text: "Reply with exactly: pong" })
         return yield* Stream.runCollect(
@@ -41,10 +42,16 @@ test("a process that fails to start ends the stream with a HarnessError", async 
         sessionId: "s1",
         cwd: "/does/not/exist",
         model: "haiku",
+        resume: null,
       })
       return yield* Stream.runCollect(harness.events)
     }).pipe(Effect.provide(layerClaude), Effect.scoped),
   )
 
   expect(exit._tag).toBe("Failure")
+})
+
+test("a stored session id is passed to claude with --resume", () => {
+  expect(claudeArgs("haiku", "abc").slice(-2)).toEqual(["--resume", "abc"])
+  expect(claudeArgs("haiku", null)).not.toContain("--resume")
 })
