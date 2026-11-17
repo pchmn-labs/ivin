@@ -113,3 +113,28 @@ test("applyEvent gives the changed item for each event, so a watcher sees one up
   expect(a.item).toMatchObject({ id: "e1", status: "running" })
   expect(b.item).toMatchObject({ id: "e1", status: "done" })
 })
+
+test("a usage event is a usage item at its own position and leaves the open message alone", () => {
+  const usage: Body = { type: "usage", inputTokens: 10, outputTokens: 5, costUsd: 0.01 }
+  const items = deriveItems(events(assistant("one"), usage, assistant("two")))
+
+  expect(items).toEqual([
+    {
+      id: "e1",
+      sessionId: "s1",
+      position: 1,
+      type: "message",
+      role: "assistant",
+      text: "one\n\ntwo",
+    },
+    {
+      id: "e2",
+      sessionId: "s1",
+      position: 2,
+      type: "usage",
+      inputTokens: 10,
+      outputTokens: 5,
+      costUsd: 0.01,
+    },
+  ])
+})

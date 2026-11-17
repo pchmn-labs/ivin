@@ -286,14 +286,16 @@ export const activate: ServerPlugin = (ctx) => {
 
 Plugins contribute React components to named **slots**. A slot receives typed props and renders every contribution in `order`; a contribution can declare `replaces` to take over a built-in one (e.g. a custom renderer for `Bash` tool calls). When several plugins replace the same contribution, one wins: the plugin from the most specific directory (project, then user, then built-in), then the lowest `order`; `ivin doctor` lists the losers.
 
+A contribution is named `<plugin id>/<name>` (`name` defaults to the slot name), and `replaces` holds that id. A `transcript.toolCall` contribution declares the tool it renders with `tool: "Bash"`, and one without `tool` matches every tool. Every matching contribution renders unless another shown one replaces it, so a `Bash` renderer sets `replaces: "tool-calls/default"`. Thinking has no slot: it goes through `transcript.message`. The host passes the hooks to `@ivin/plugin-api` through a provider (`UiHostProvider`), implemented over the UI's atoms, so the package never imports the UI.
+
 Transcript slots render inside a virtualised list and once per item, so they receive transcript items, not raw events, and must stay cheap.
 
 | Slot | Props | Used for |
 |---|---|---|
-| `transcript.message` | item, session | custom message rendering, skill highlights |
-| `transcript.toolCall` | tool call item (call, result, status), session; matched by tool name | expandable commands, logs pill, subagent details |
+| `transcript.message` | item, session id | custom message rendering, skill highlights |
+| `transcript.toolCall` | tool call item (call, result, status), session id; matched by tool name | expandable commands, logs pill, subagent details |
 | `transcript.inline` | markdown node | inline code links, issue mentions |
-| `composer.status` | session | tokens, cost, branch PR |
+| `composer.status` | session id | tokens, cost, branch PR |
 | `composer.above` | session | approval sheet, queued messages, detail sheets |
 | `composer.suggest` | trigger char, query | `#` issues, `@../` paths, `/` commands |
 | `session.badge` | session | linked PR/issue icon in the sidebar and tabs |

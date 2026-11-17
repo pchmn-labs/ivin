@@ -25,6 +25,13 @@ const ToolResultBody = Schema.Struct({
   output: Schema.String,
   isError: Schema.Boolean,
 })
+// One turn's consumption; a session's total is the sum of its usage events.
+const UsageBody = Schema.Struct({
+  type: Schema.Literal("usage"),
+  inputTokens: Schema.Int,
+  outputTokens: Schema.Int,
+  costUsd: Schema.Number,
+})
 const StatusBody = Schema.Struct({
   type: Schema.Literal("status"),
   status: Schema.Literals(["running", "idle"]),
@@ -36,6 +43,7 @@ const eventBodies = [
   ThinkingBody,
   ToolCallBody,
   ToolResultBody,
+  UsageBody,
   StatusBody,
 ] as const
 
@@ -86,7 +94,15 @@ export const ToolCallItem = Schema.Struct({
   output: Schema.NullOr(Schema.String),
 })
 
-export const TranscriptItem = Schema.Union([MessageItem, ThinkingItem, ToolCallItem])
+export const UsageItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("usage"),
+  inputTokens: Schema.Int,
+  outputTokens: Schema.Int,
+  costUsd: Schema.Number,
+})
+
+export const TranscriptItem = Schema.Union([MessageItem, ThinkingItem, ToolCallItem, UsageItem])
 export type TranscriptItem = typeof TranscriptItem.Type
 
 export const TranscriptPage = Schema.Struct({

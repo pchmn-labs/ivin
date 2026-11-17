@@ -1,0 +1,7 @@
+{
+  "id": "usage",
+  "name": "Usage",
+  "version": "0.0.0",
+  "apiVersion": 0,
+  "ui": "ui.tsx"
+}

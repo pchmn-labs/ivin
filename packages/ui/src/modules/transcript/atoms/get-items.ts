@@ -43,6 +43,14 @@ export const transcriptOf = strongFamily((sessionId: string) => {
     },
   })
   // Reading `paging` first keeps it alive before the feed, which sets it, starts.
-  const view = Atom.readable((get) => ({ ...get(paging), ids: get(list.ids) }))
+  // Usage items feed the status line and have no row; the same array while the ids are the same keeps the list from re-rendering.
+  let rowIds: ReadonlyArray<string> = []
+  const visibleIds = Atom.readable((get) => {
+    const next = get(list.ids).filter((id) => get(list.item(id))?.type !== "usage")
+    if (next.length === rowIds.length && next.every((id, i) => id === rowIds[i])) return rowIds
+    rowIds = next
+    return next
+  })
+  const view = Atom.readable((get) => ({ ...get(paging), ids: get(visibleIds) }))
   return { list, paging, view }
 })

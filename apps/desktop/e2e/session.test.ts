@@ -1,8 +1,13 @@
-import { demoAnswer as scriptedAnswer } from "@ivin/harness"
+import { demoAnswer as scriptedAnswer, demoUsage } from "@ivin/harness"
 import { expect, test } from "@playwright/test"
 import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { launchPackagedApp, makeTempDir } from "./launch-app.ts"
+
+const usageTotals = (turns: number) => ({
+  tokens: ((demoUsage.inputTokens + demoUsage.outputTokens) * turns).toLocaleString("en-US"),
+  cost: `$${(demoUsage.costUsd * turns).toFixed(4)}`,
+})
 
 test("a message sent in a new session gets the scripted answer, and both are back after a relaunch", async () => {
   const userDataDir = makeTempDir("user-data")
@@ -25,10 +30,15 @@ test("a message sent in a new session gets the scripted answer, and both are bac
     const items = window.getByTestId("transcript-item")
     await expect(items.filter({ hasText: "How many files are there?" })).toHaveCount(1)
     await expect(items.filter({ hasText: scriptedAnswer })).toHaveCount(1)
+    const status = window.getByTestId("composer-status")
+    await expect(status).toContainText(usageTotals(1).tokens)
+    await expect(status).toContainText(usageTotals(1).cost)
 
     await window.getByRole("textbox", { name: "Message" }).fill("And now?")
     await window.getByRole("textbox", { name: "Message" }).press("Enter")
     await expect(items.filter({ hasText: scriptedAnswer })).toHaveCount(2)
+    await expect(status).toContainText(usageTotals(2).tokens)
+    await expect(status).toContainText(usageTotals(2).cost)
   } finally {
     await first.close()
   }

@@ -20,6 +20,7 @@ export interface EntityList<A> extends EntityWriter<A> {
   // Reading `ids` mounts the feed: the list is fed while something reads it.
   readonly ids: Atom.Atom<ReadonlyArray<string>>
   readonly item: (id: string) => Atom.Atom<A | undefined>
+  readonly items: Atom.Atom<ReadonlyArray<A>>
   readonly status: Atom.Atom<AsyncResult.AsyncResult<unknown, unknown> | undefined>
 }
 
@@ -104,7 +105,13 @@ export const makeEntityList = <A, R = never, E = never, ER = never>(options: {
     return get(state).ids
   })
   const item = Atom.family((id: string) => Atom.readable((get) => get(state).byId.get(id)))
+  const items = Atom.readable((get) =>
+    get(ids).flatMap((id) => {
+      const found = get(item(id))
+      return found === undefined ? [] : [found]
+    }),
+  )
   const status = Atom.readable((get) => (feed ? get(feed) : undefined))
 
-  return { ...writer, ids, item, status }
+  return { ...writer, ids, item, items, status }
 }
