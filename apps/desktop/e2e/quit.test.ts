@@ -43,7 +43,7 @@ const isAlive = (pid: number): boolean => {
 
 test("quitting the app leaves no server process running", async () => {
   const app = await launchPackagedApp(makeTempDir("user-data"))
-  // app.process() throws once the app has exited.
+  // app.process() throws once Playwright has disposed the app, shortly after it exits.
   const appProcess = app.process()
   try {
     const appPid = appProcess.pid!
