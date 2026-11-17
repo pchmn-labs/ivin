@@ -6,7 +6,9 @@
   "exports": {
     "./project": "./src/project.ts",
     "./rpcs": "./src/rpcs.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./session": "./src/session.ts",
+    "./transcript": "./src/transcript.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
