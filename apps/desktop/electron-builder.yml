@@ -19,3 +19,7 @@ mac:
     - target: dir
       arch: arm64
   identity: null
+linux:
+  target:
+    - target: dir
+      arch: x64

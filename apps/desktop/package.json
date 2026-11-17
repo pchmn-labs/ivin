@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vp pack && IVIN_DEV_URL=http://localhost:5173 electron .",
     "build": "vp pack",
-    "package": "electron-builder --config electron-builder.yml --mac --arm64",
+    "package": "electron-builder --config electron-builder.yml",
     "e2e": "playwright test --config e2e/playwright.config.ts",
     "typecheck": "tsc --noEmit"
   },
