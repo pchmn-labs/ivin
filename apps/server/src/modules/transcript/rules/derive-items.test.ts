@@ -155,3 +155,51 @@ test("an error event is an error item", () => {
     message: "boom",
   })
 })
+
+const request = (requestId: string): Body => ({
+  type: "approval_request",
+  requestId,
+  toolCallId: "t1",
+  name: "Bash",
+  input: { command: "ls" },
+})
+const decision = (requestId: string, allow: boolean): Body => ({
+  type: "approval_decision",
+  requestId,
+  allow,
+})
+
+test("an approval request is an approval item with no decision yet", () => {
+  expect(deriveItems(events(request("r1")))).toEqual([
+    {
+      id: "e1",
+      sessionId: "s1",
+      position: 1,
+      type: "approval",
+      requestId: "r1",
+      toolCallId: "t1",
+      name: "Bash",
+      input: { command: "ls" },
+      decision: null,
+    },
+  ])
+})
+
+test("a decision fills the decision of its own request, in place", () => {
+  const items = deriveItems(
+    events(request("r1"), request("r2"), decision("r2", false), decision("r1", true)),
+  )
+
+  expect(items).toMatchObject([
+    { id: "e1", position: 1, decision: "allow" },
+    { id: "e2", position: 2, decision: "deny" },
+  ])
+})
+
+test("a decision with no request, and any status, produce no item", () => {
+  expect(
+    deriveItems(
+      events(decision("ghost", true), { type: "status", status: "waiting_for_approval" }),
+    ),
+  ).toEqual([])
+})

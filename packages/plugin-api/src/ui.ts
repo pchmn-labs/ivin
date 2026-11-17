@@ -7,12 +7,14 @@ export type { Session, TranscriptItem }
 export type MessageItem = Extract<TranscriptItem, { type: "message" }>
 export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
+export type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
 export type ErrorItem = Extract<TranscriptItem, { type: "error" }>
 export type MessageSlotItem = MessageItem | ThinkingItem | ErrorItem
 
 export interface SlotProps {
   "transcript.message": { readonly item: MessageSlotItem; readonly sessionId: string }
   "transcript.toolCall": { readonly item: ToolCallItem; readonly sessionId: string }
+  "transcript.approval": { readonly item: ApprovalItem; readonly sessionId: string }
   "composer.status": { readonly sessionId: string }
 }
 export type SlotName = keyof SlotProps
@@ -43,6 +45,9 @@ export interface UiHost {
   readonly useSession: (sessionId: string) => Session | undefined
   readonly useSessions: () => ReadonlyArray<Session>
   readonly useTranscript: (sessionId: string) => ReadonlyArray<TranscriptItem>
+  readonly useAnswerApproval: (
+    sessionId: string,
+  ) => (answer: { readonly requestId: string; readonly allow: boolean }) => Promise<void>
   readonly Markdown: ComponentType<{ text: string }>
 }
 
@@ -60,6 +65,7 @@ const useHost = (): UiHost => {
 export const useSession = (sessionId: string) => useHost().useSession(sessionId)
 export const useSessions = () => useHost().useSessions()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
+export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
 
 export const Markdown = ({ text }: { text: string }) => {
   const HostMarkdown = useHost().Markdown

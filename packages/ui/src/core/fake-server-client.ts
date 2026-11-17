@@ -67,6 +67,7 @@ export const makeFakeServer = (): FakeServer => {
           projectPath,
           model,
           title: "New session",
+          status: "idle",
           createdAt: at,
           lastActivityAt: at,
         }
@@ -105,6 +106,25 @@ export const makeFakeServer = (): FakeServer => {
           lastActivityAt: tick(),
         }
         sessions.set(session.id, updated)
+        return updated
+      }),
+    "session.answerApproval": (input: { sessionId: string; requestId: string; allow: boolean }) =>
+      Effect.sync(() => {
+        const items = itemsOf(input.sessionId)
+        const index = items.findIndex(
+          (i) => i.type === "approval" && i.requestId === input.requestId,
+        )
+        const item = items[index]
+        if (item?.type === "approval") {
+          const answered = {
+            ...item,
+            decision: input.allow ? ("allow" as const) : ("deny" as const),
+          }
+          items[index] = answered
+          Effect.runSync(PubSub.publish(pubsub, { type: "upsert", item: answered }))
+        }
+        const updated = { ...sessions.get(input.sessionId)!, status: "running" as const }
+        sessions.set(input.sessionId, updated)
         return updated
       }),
     "transcript.getItems": getItems,

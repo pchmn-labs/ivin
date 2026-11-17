@@ -1,6 +1,6 @@
-import type { Session } from "@ivin/contracts/session"
+import { ApprovalNotOpen, type Session } from "@ivin/contracts/session"
 import type { HarnessDelta, HarnessEvent, HarnessOutput } from "@ivin/contracts/transcript"
-import { HarnessProvider, type HarnessError } from "@ivin/harness"
+import { HarnessProvider, type ApprovalDecision, type HarnessError } from "@ivin/harness"
 import { Context, DateTime, Effect, Exit, Layer, Scope, Semaphore, Stream } from "effect"
 import { applyEvent, emptyItemState } from "../../transcript/rules/derive-items.ts"
 import {
@@ -20,12 +20,18 @@ export class SessionRuns extends Context.Service<
       session: Session,
       message: { readonly id: string; readonly text: string },
     ) => Effect.Effect<void, HarnessError>
+    readonly answerApproval: (
+      session: Session,
+      answer: ApprovalDecision,
+    ) => Effect.Effect<void, HarnessError | ApprovalNotOpen>
   }
 >()("ivin/server/SessionRuns") {}
 
 interface ActiveRun {
   readonly record: (event: HarnessEvent, id?: string) => Effect.Effect<void>
   readonly send: (text: string) => Effect.Effect<void, HarnessError>
+  readonly decide: (decision: ApprovalDecision) => Effect.Effect<void, ApprovalNotOpen>
+  readonly respond: (decision: ApprovalDecision) => Effect.Effect<void, HarnessError>
 }
 
 export const layerSessionRuns = Layer.effect(SessionRuns)(
@@ -58,28 +64,56 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
         let streamed: StreamedBlock | null = null
         const writing = yield* Semaphore.make(1)
 
+        const writeUnlocked = (event: HarnessEvent, id?: string) =>
+          Effect.gen(function* () {
+            const at = yield* DateTime.now
+            sequence += 1
+            const reserved =
+              event.type === "assistant_text" || event.type === "thinking"
+                ? finishedEventId(streamed, event.type)
+                : undefined
+            streamed = blockAfterEvent(streamed, event)
+            const stored = {
+              ...event,
+              id: id ?? reserved ?? crypto.randomUUID(),
+              sessionId: session.id,
+              sequence,
+              at,
+            }
+            yield* transcript.append(stored)
+            yield* sessions.touch(session.id, at)
+            if (event.type === "status") yield* sessions.setStatus(session.id, event.status)
+            const next = applyEvent(itemState, stored)
+            itemState = next.state
+            if (next.item) yield* feed.publish({ type: "upsert", item: next.item })
+          })
+
         const record = (event: HarnessEvent, id?: string) =>
           writing.withPermits(1)(
             Effect.gen(function* () {
-              const at = yield* DateTime.now
-              sequence += 1
-              const reserved =
-                event.type === "assistant_text" || event.type === "thinking"
-                  ? finishedEventId(streamed, event.type)
-                  : undefined
-              streamed = blockAfterEvent(streamed, event)
-              const stored = {
-                ...event,
-                id: id ?? reserved ?? crypto.randomUUID(),
-                sessionId: session.id,
-                sequence,
-                at,
+              yield* writeUnlocked(event, id)
+              if (event.type === "approval_request") {
+                yield* writeUnlocked({ type: "status", status: "waiting_for_approval", raw: null })
               }
-              yield* transcript.append(stored)
-              yield* sessions.touch(session.id, at)
-              const next = applyEvent(itemState, stored)
-              itemState = next.state
-              if (next.item) yield* feed.publish({ type: "upsert", item: next.item })
+            }),
+          )
+
+        // Check, decision and status share one permit so a turn-ending idle cannot land between them.
+        const decide = (decision: ApprovalDecision) =>
+          writing.withPermits(1)(
+            Effect.gen(function* () {
+              if (!itemState.openApprovals.has(decision.requestId)) {
+                return yield* new ApprovalNotOpen({
+                  sessionId: session.id,
+                  requestId: decision.requestId,
+                })
+              }
+              yield* writeUnlocked({ type: "approval_decision", ...decision, raw: null })
+              yield* writeUnlocked({
+                type: "status",
+                status: itemState.openApprovals.size > 0 ? "waiting_for_approval" : "running",
+                raw: null,
+              })
             }),
           )
 
@@ -108,13 +142,20 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           Effect.ensuring(
             Effect.suspend(() => {
               runs.delete(session.id)
-              return Scope.close(scope, Exit.void)
+              return sessions
+                .setStatus(session.id, "idle")
+                .pipe(Effect.andThen(Scope.close(scope, Exit.void)))
             }),
           ),
           Effect.forkIn(serverScope),
         )
 
-        const run: ActiveRun = { record, send: (text) => harness.send({ text }) }
+        const run: ActiveRun = {
+          record,
+          send: (text) => harness.send({ text }),
+          decide,
+          respond: harness.respond,
+        }
         runs.set(session.id, run)
         return run
       })
@@ -133,6 +174,18 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           const run = yield* runOf(session)
           yield* run.record({ type: "user_message", text: message.text, raw: null }, message.id)
           yield* run.send(message.text)
+        }),
+      answerApproval: (session, answer) =>
+        Effect.gen(function* () {
+          const run = runs.get(session.id)
+          if (!run) {
+            return yield* new ApprovalNotOpen({
+              sessionId: session.id,
+              requestId: answer.requestId,
+            })
+          }
+          yield* run.decide(answer)
+          yield* run.respond(answer)
         }),
     }
   }),

@@ -1,7 +1,7 @@
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Effect, type Scope, Stream } from "effect"
 import { expect, test } from "vitest"
-import { HarnessProvider } from "../../../shared/harness-provider.ts"
+import { type ApprovalDecision, HarnessProvider } from "../../../shared/harness-provider.ts"
 import { layerScripted, type ScriptedSend } from "./scripted-provider.ts"
 
 const text = (value: string): HarnessOutput => ({ type: "assistant_text", text: value, raw: null })
@@ -76,4 +76,68 @@ test("with cycle, the turns start over once they are used up", async () => {
   )
 
   expect(events).toHaveLength(2)
+})
+
+const approval = (requestId: string): HarnessOutput => ({
+  type: "approval_request",
+  requestId,
+  toolCallId: null,
+  name: "Bash",
+  input: {},
+  raw: null,
+})
+
+test("a turn pauses after an approval request and resumes on each decision", async () => {
+  const responded: ApprovalDecision[] = []
+  const events = await Effect.runPromise(
+    Effect.gen(function* () {
+      const harness = yield* (yield* HarnessProvider).start({
+        sessionId: "s1",
+        cwd: "/p",
+        providerSessionId: null,
+        model: "m",
+      })
+      yield* harness.send({ text: "go" })
+      const first = yield* Stream.runCollect(Stream.take(harness.events, 2))
+      yield* harness.respond({ requestId: "a", allow: true })
+      const second = yield* Stream.runCollect(Stream.take(harness.events, 2))
+      yield* harness.respond({ requestId: "b", allow: false })
+      const third = yield* Stream.runCollect(Stream.take(harness.events, 1))
+      return [first, second, third].map((chunk) => chunk.map((e) => e.type))
+    }).pipe(
+      Effect.provide(
+        layerScripted([[text("x"), approval("a"), text("y"), approval("b"), text("z")]], {
+          responded,
+        }),
+      ),
+      Effect.scoped,
+    ),
+  )
+
+  expect(events).toEqual([
+    ["assistant_text", "approval_request"],
+    ["assistant_text", "approval_request"],
+    ["assistant_text"],
+  ])
+  expect(responded).toEqual([
+    { requestId: "a", allow: true },
+    { requestId: "b", allow: false },
+  ])
+})
+
+test("responding with no paused turn fails", async () => {
+  const error = await run([[text("x")]], [], (provider) =>
+    Effect.gen(function* () {
+      const harness = yield* provider.start({
+        sessionId: "s1",
+        cwd: "/p",
+        model: "m",
+        providerSessionId: null,
+      })
+      yield* harness.send({ text: "go" })
+      return yield* Effect.flip(harness.respond({ requestId: "a", allow: true }))
+    }),
+  )
+
+  expect(error._tag).toBe("HarnessError")
 })

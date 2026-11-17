@@ -15,6 +15,7 @@ const setup = async () => {
     projectPath: project,
     title: "New session",
     model: "sonnet",
+    status: "idle",
     createdAt: at,
     lastActivityAt: at,
   })

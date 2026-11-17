@@ -127,7 +127,7 @@ Tests sit beside the file they test, at three levels:
 
 - **Project**: a folder or a `.code-workspace` (several folders), with its settings.
 - **Session**: one agent conversation, bound to a project folder, a cwd (checkout or worktree), a branch, a harness and a model. Owns a transcript.
-- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `usage`, `status`, `error`…), each with a stable id, **owned by ivin**: every event is written to SQLite as it streams, never re-read from the provider's files. Token deltas are not events: they go to the renderer and are never stored, and the finished block is stored once, under the id its streamed copy had. Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
+- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `approval_decision`, `usage`, `status`, `error`…), each with a stable id, **owned by ivin**: every event is written to SQLite as it streams, never re-read from the provider's files. Token deltas are not events: they go to the renderer and are never stored, and the finished block is stored once, under the id its streamed copy had. Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
 - **Transcript items**: the read model derived from the events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled. Plugins render items; they don't re-derive them from events.
 - **Annotation**: typed, namespaced metadata attached to a session (or project), written by plugins, the CLI or the agent. Example: `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
 - **Tab / pane layout**: workspace tabs holding session, file and plugin views.
@@ -295,6 +295,7 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 | `transcript.message` | item, session id | custom message rendering, skill highlights |
 | `transcript.toolCall` | tool call item (call, result, status), session id; matched by tool name | expandable commands, logs pill, subagent details |
 | `transcript.inline` | markdown node | inline code links, issue mentions |
+| `transcript.approval` | approval item (tool, input, decision), session id | allow or deny a tool the agent asks to run |
 | `composer.status` | session id | tokens, cost, branch PR |
 | `composer.above` | session | approval sheet, queued messages, detail sheets |
 | `composer.suggest` | trigger char, query | `#` issues, `@../` paths, `/` commands |

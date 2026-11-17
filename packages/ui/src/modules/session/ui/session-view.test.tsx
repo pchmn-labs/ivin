@@ -51,6 +51,7 @@ test("the transcript renders through the plugins and the status line shows the u
     projectPath: "/p",
     title: "t",
     model: "sonnet",
+    status: "idle",
     createdAt: at,
     lastActivityAt: at,
   })

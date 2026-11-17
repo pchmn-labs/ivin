@@ -9,6 +9,8 @@ const ARGS = [
   // Without it the thinking blocks come back empty.
   "--thinking-display",
   "summarized",
+  "--permission-prompt-tool",
+  "stdio",
 ]
 
 export const claudeArgs = (model: string, providerSessionId: string | null) => [

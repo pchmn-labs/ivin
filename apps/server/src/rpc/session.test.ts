@@ -1,6 +1,11 @@
 import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { layerScripted, type ScriptedSend, type StartInput } from "@ivin/harness"
+import {
+  layerScripted,
+  type ApprovalDecision,
+  type ScriptedSend,
+  type StartInput,
+} from "@ivin/harness"
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { DatabaseSync } from "node:sqlite"
@@ -34,6 +39,7 @@ const withServer = <A, E>(
   sent: ScriptedSend[],
   use: (client: Client) => Effect.Effect<A, E>,
   starts: StartInput[] = [],
+  responded: ApprovalDecision[] = [],
 ) =>
   Effect.runPromise(
     makeClient().pipe(
@@ -42,7 +48,7 @@ const withServer = <A, E>(
         handlers.pipe(
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerScripted(turns, { sent, starts, reportSession: true })),
+          Layer.provide(layerScripted(turns, { sent, starts, responded, reportSession: true })),
         ),
       ),
       Effect.scoped,
@@ -461,4 +467,178 @@ test("a session resumes with the provider session id stored by an earlier server
   expect(page.items.map((i) => i.position)).toEqual([1, 3, 4, 6, 8, 10, 11, 13])
   expect(page.items[0]).toMatchObject({ id: "m1", text: "go" })
   expect(page.items[4]).toMatchObject({ id: "m2", text: "again" })
+})
+
+const approvalTurn: readonly HarnessOutput[] = [
+  { type: "status", status: "running", raw: null },
+  { type: "assistant_text", text: "Looking.", raw: null },
+  {
+    type: "approval_request",
+    requestId: "r1",
+    toolCallId: "t1",
+    name: "ls",
+    input: { path: "." },
+    raw: null,
+  },
+  { type: "tool_call", toolCallId: "t1", name: "ls", input: { path: "." }, raw: null },
+  { type: "tool_result", toolCallId: "t1", output: "a.txt", isError: false, raw: null },
+  { type: "assistant_text", text: "Found a.txt.", raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
+const statusOf = (client: Client, sessionId: string) =>
+  client["session.list"]({ projectPath: "/p" }).pipe(
+    Effect.map((sessions) => sessions.find((s) => s.id === sessionId)?.status),
+  )
+
+const untilStatus = (client: Client, sessionId: string, status: string) =>
+  Effect.gen(function* () {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      if ((yield* statusOf(client, sessionId)) === status) return
+      yield* Effect.sleep("5 millis")
+    }
+    return yield* Effect.die(`The session never reached ${status}`)
+  })
+
+const askAndAnswer = async (allow: boolean) => {
+  const db = newDatabase()
+  const responded: ApprovalDecision[] = []
+  const page = await withServer(
+    db,
+    [approvalTurn],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* untilStatus(client, session.id, "waiting_for_approval")
+        yield* client["session.answerApproval"]({
+          sessionId: session.id,
+          requestId: "r1",
+          allow,
+        })
+        return yield* untilItems(client, session.id, 5)
+      }),
+    [],
+    responded,
+  )
+  const decisions = db
+    .prepare("SELECT payload FROM transcript_events WHERE type = 'approval_decision'")
+    .all() as { payload: string }[]
+  return { page, responded, decisions: decisions.map((d) => JSON.parse(d.payload)) }
+}
+
+test("allowing a request stores the decision, tells the harness and lets the turn finish", async () => {
+  const { page, responded, decisions } = await askAndAnswer(true)
+
+  expect(decisions).toMatchObject([{ requestId: "r1", allow: true, raw: null }])
+  expect(page.items.find((item) => item.type === "approval")).toMatchObject({
+    requestId: "r1",
+    decision: "allow",
+  })
+  expect(responded).toEqual([{ requestId: "r1", allow: true }])
+  expect(page.items.at(-1)).toMatchObject({ text: "Found a.txt." })
+})
+
+test("denying a request stores the decision and tells the harness", async () => {
+  const { page, responded, decisions } = await askAndAnswer(false)
+
+  expect(decisions).toMatchObject([{ requestId: "r1", allow: false }])
+  expect(page.items.find((item) => item.type === "approval")).toMatchObject({ decision: "deny" })
+  expect(responded).toEqual([{ requestId: "r1", allow: false }])
+})
+
+test("a session waits for approval while a request is open, then goes back to idle", async () => {
+  const statuses = await withServer(newDatabase(), [approvalTurn], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      yield* untilStatus(client, session.id, "waiting_for_approval")
+      const waiting = yield* statusOf(client, session.id)
+      yield* client["session.answerApproval"]({
+        sessionId: session.id,
+        requestId: "r1",
+        allow: true,
+      })
+      yield* untilStatus(client, session.id, "idle")
+      return [waiting, yield* statusOf(client, session.id)]
+    }),
+  )
+
+  expect(statuses).toEqual(["waiting_for_approval", "idle"])
+})
+
+test("answering a request that is not open fails, and so does an unknown session", async () => {
+  const errors = await withServer(newDatabase(), [approvalTurn], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      const idle = yield* Effect.flip(
+        client["session.answerApproval"]({ sessionId: session.id, requestId: "r1", allow: true }),
+      )
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      yield* untilStatus(client, session.id, "waiting_for_approval")
+      const unknown = yield* Effect.flip(
+        client["session.answerApproval"]({ sessionId: session.id, requestId: "zz", allow: true }),
+      )
+      const missing = yield* Effect.flip(
+        client["session.answerApproval"]({ sessionId: "nope", requestId: "r1", allow: true }),
+      )
+      return [idle._tag, unknown._tag, missing._tag]
+    }),
+  )
+
+  expect(errors).toEqual(["ApprovalNotOpen", "ApprovalNotOpen", "SessionNotFound"])
+})
+
+test("two concurrent answers to one request give one decision and one ApprovalNotOpen", async () => {
+  const db = newDatabase()
+  const responded: ApprovalDecision[] = []
+  const results = await withServer(
+    db,
+    [approvalTurn],
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* untilStatus(client, session.id, "waiting_for_approval")
+        const answer = client["session.answerApproval"]({
+          sessionId: session.id,
+          requestId: "r1",
+          allow: true,
+        })
+        const exits = yield* Effect.all([Effect.exit(answer), Effect.exit(answer)], {
+          concurrency: "unbounded",
+        })
+        yield* untilStatus(client, session.id, "idle")
+        return exits.map((exit) => exit._tag)
+      }),
+    [],
+    responded,
+  )
+
+  expect(results.toSorted()).toEqual(["Failure", "Success"])
+  expect(responded).toEqual([{ requestId: "r1", allow: true }])
+  const decisions = db.prepare("SELECT 1 FROM transcript_events WHERE type = 'approval_decision'")
+  expect(decisions.all()).toHaveLength(1)
+})
+
+test("a turn that ends right after the answer leaves the session idle, not running", async () => {
+  const status = await withServer(newDatabase(), [approvalTurn], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      yield* untilStatus(client, session.id, "waiting_for_approval")
+      yield* client["session.answerApproval"]({
+        sessionId: session.id,
+        requestId: "r1",
+        allow: true,
+      })
+      yield* untilItems(client, session.id, 5)
+      yield* Effect.sleep("30 millis")
+      return yield* statusOf(client, session.id)
+    }),
+  )
+
+  expect(status).toBe("idle")
 })

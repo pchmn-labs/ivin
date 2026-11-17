@@ -1,6 +1,7 @@
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Cause, Effect, Layer, Queue, Stream } from "effect"
 import {
+  type ApprovalDecision,
   HarnessError,
   HarnessProvider,
   type HarnessRun,
@@ -19,11 +20,13 @@ export const layerScripted = (
   {
     sent = [],
     starts = [],
+    responded = [],
     cycle = false,
     reportSession = false,
   }: {
     sent?: ScriptedSend[]
     starts?: StartInput[]
+    responded?: ApprovalDecision[]
     cycle?: boolean
     reportSession?: boolean
   } = {},
@@ -43,6 +46,14 @@ export const layerScripted = (
             providerSessionId: input.providerSessionId ?? `scripted-${input.sessionId}`,
           })
         let next = 0
+        let paused: readonly HarnessOutput[] | null = null
+        const offerUntilApproval = (events: readonly HarnessOutput[]) => {
+          const at = events.findIndex((event) => event.type === "approval_request")
+          paused = at === -1 ? null : events.slice(at + 1)
+          return Queue.offerAll(queue, at === -1 ? events : events.slice(0, at + 1)).pipe(
+            Effect.asVoid,
+          )
+        }
         const run: HarnessRun = {
           events: Stream.fromQueue(queue),
           send: ({ text }) =>
@@ -50,12 +61,20 @@ export const layerScripted = (
               sent.push({ sessionId: input.sessionId, text })
               const turn = turns[cycle ? next++ % turns.length : next++]
               return turn
-                ? Queue.offerAll(queue, turn).pipe(Effect.asVoid)
+                ? offerUntilApproval(turn)
                 : Effect.fail(
                     new HarnessError({ message: "The scripted harness has no turn left" }),
                   )
             }),
-          respond: () => Effect.void,
+          respond: (decision) =>
+            Effect.suspend(() => {
+              if (paused === null)
+                return Effect.fail(
+                  new HarnessError({ message: "The scripted harness has no paused turn" }),
+                )
+              responded.push(decision)
+              return offerUntilApproval(paused)
+            }),
           interrupt: Effect.void,
         }
         return run

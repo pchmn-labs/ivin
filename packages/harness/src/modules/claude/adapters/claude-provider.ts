@@ -3,6 +3,7 @@ import { createInterface } from "node:readline"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Effect, Layer, Stream } from "effect"
 import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/harness-provider.ts"
+import { approvalResponseLine } from "../rules/approval-response.ts"
 import { claudeArgs } from "../rules/claude-args.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
 
@@ -74,6 +75,7 @@ export const layerClaude = Layer.succeed(HarnessProvider)({
           ),
         ),
       )
+      const openRequests = new Map<string, unknown>()
       const events = Stream.unwrap(
         Effect.sync(() => {
           let lastStatus: string | undefined
@@ -83,6 +85,12 @@ export const layerClaude = Layer.succeed(HarnessProvider)({
           ).pipe(
             Stream.map(decodeClaudeLine),
             Stream.flattenIterable,
+            Stream.tap((output: HarnessOutput) =>
+              Effect.sync(() => {
+                if (output.type === "approval_request")
+                  openRequests.set(output.requestId, output.input)
+              }),
+            ),
             Stream.filter((output: HarnessOutput) => {
               if (output.type !== "status") return true
               const repeated = output.status === lastStatus
@@ -113,7 +121,25 @@ export const layerClaude = Layer.succeed(HarnessProvider)({
               ),
             )
           }),
-        respond: () => Effect.void,
+        respond: ({ requestId, allow }) =>
+          Effect.suspend(() => {
+            if (!openRequests.has(requestId))
+              return Effect.fail(
+                new HarnessError({ message: `No approval request is open for ${requestId}` }),
+              )
+            const line = approvalResponseLine(requestId, allow, openRequests.get(requestId))
+            return Effect.callback<void, HarnessError>((resume) => {
+              child.stdin.write(`${line}\n`, (error) =>
+                resume(
+                  error
+                    ? Effect.fail(
+                        new HarnessError({ message: "Could not write to claude", cause: error }),
+                      )
+                    : Effect.sync(() => void openRequests.delete(requestId)),
+                ),
+              )
+            })
+          }),
         interrupt: Effect.void,
       }
       return run
