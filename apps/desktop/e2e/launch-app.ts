@@ -21,5 +21,6 @@ export const launchPackagedApp = (userDataDir: string): Promise<ElectronApplicat
   return electron.launch({
     executablePath: packagedExecutable,
     args: [`--user-data-dir=${userDataDir}`],
+    env: { ...process.env, IVIN_HARNESS: "scripted" },
   })
 }

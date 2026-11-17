@@ -178,7 +178,7 @@ Each provider implements one Effect service:
 
 ```ts
 interface HarnessProvider {
-  readonly id: "claude" | "codex" | "acp"
+  readonly id: "claude" | "codex" | "acp" | "scripted"
   readonly start: (input: StartInput) => Effect<HarnessRun, HarnessError, Scope>
 }
 interface HarnessRun {
@@ -191,6 +191,7 @@ interface HarnessRun {
 
 - Claude: `--output-format stream-json --input-format stream-json`, permission prompts over stdio. Codex: `app-server` JSON-RPC. ACP: one generic client for Cursor, Devin, Grok, Hermes and others.
 - Reference implementations: T3 Code's provider layer and MonoCode's `src/integrations/harness`. Both are read before writing a provider, for the protocol details and edge cases they already solved (flags, message shapes, approval flow, resume, interrupts). Code is copied or adapted where it fits ivin's interfaces, with attribution; neither is a dependency, and nothing requires matching their structure or their Effect version.
+- The server picks the provider from `IVIN_HARNESS`; tests and the CI smoke run set it to `scripted`, which replays a recorded transcript and never spawns an agent.
 - Every spawned agent gets `IVIN_SESSION_ID` and `IVIN_SOCKET` in its environment, so `ivin` commands run by the agent apply to its own session with no argument.
 - Plugins can amend a spawn (`harness.beforeSpawn`: extra args, env, MCP servers, appended system prompt) and observe every event (`transcript.onEvent`).
 - `transcript.onEvent` is an observer: events are forwarded to the plugin host after they are persisted, and a slow plugin only delays itself.

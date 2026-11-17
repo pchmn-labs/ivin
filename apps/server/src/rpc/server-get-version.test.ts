@@ -1,3 +1,4 @@
+import { layerScripted } from "@ivin/harness"
 import { Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
 import { expect, test } from "vitest"
@@ -15,6 +16,7 @@ test("server.getVersion answers with the version the server was built with", asy
       handlers.pipe(
         Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
         Layer.provide(layerDatabase(":memory:")),
+        Layer.provide(layerScripted([])),
       ),
     ),
     Effect.scoped,

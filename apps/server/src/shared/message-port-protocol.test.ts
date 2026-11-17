@@ -1,3 +1,4 @@
+import { layerScripted } from "@ivin/harness"
 import { MessageChannel } from "node:worker_threads"
 import { Effect, Layer } from "effect"
 import { expect, test } from "vitest"
@@ -18,7 +19,9 @@ test("serves the rpc group over a message port", async () => {
 
   await Effect.runPromise(
     Effect.gen(function* () {
-      yield* Layer.build(server.pipe(Layer.provide(layerDatabase(":memory:"))))
+      yield* Layer.build(
+        server.pipe(Layer.provide(layerDatabase(":memory:")), Layer.provide(layerScripted([]))),
+      )
       port2.postMessage(
         JSON.stringify({
           _tag: "Request",

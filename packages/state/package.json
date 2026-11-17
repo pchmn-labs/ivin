@@ -4,7 +4,10 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./rpc-client-protocol": "./src/rpc-client-protocol.ts"
+    "./rpc-client-protocol": "./src/rpc-client-protocol.ts",
+    "./entity-list": "./src/entity-list.ts",
+    "./stream-feed": "./src/stream-feed.ts",
+    "./optimistic": "./src/optimistic.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -12,5 +15,8 @@
   "dependencies": {
     "@ivin/contracts": "workspace:*",
     "effect": "4.1.4"
+  },
+  "devDependencies": {
+    "vitest": "5.1.0"
   }
 }

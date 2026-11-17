@@ -1,3 +1,4 @@
+import { layerScripted } from "@ivin/harness"
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { DateTime, Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
@@ -26,6 +27,7 @@ const withServer = <A, E>(
         handlers.pipe(
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
+          Layer.provide(layerScripted([])),
         ),
       ),
       Effect.scoped,
