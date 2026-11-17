@@ -18,11 +18,29 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 |---|---|---|
 | Shell | Electron | Node in the backend, so plugins have a backend half in TS; one Chromium everywhere; most mature desktop runtime |
 | UI | React + TypeScript | What agents write best; plugin UI is just React components |
+| UI state | Effect `Atom` (`effect/unstable/reactivity`) + `@effect/atom-react` | One model from server to screen: RPC streams feed atoms, components read atoms |
 | Core | Effect v4 (stable since 2026-09-30) | Long-lived processes, streams, cancellation and scoped resources are the harness layer's daily work |
 | Contracts | Effect `Schema` | One definition for RPC payloads, persisted data and transcript parsing |
-| Storage | SQLite (`node:sqlite`) | Sessions, transcripts index, plugin storage; files stay files |
-| Plugin build | esbuild, in process | Plugins are `.ts` sources compiled on load; no build step for the author |
-| Monorepo | pnpm workspaces, Vitest, Playwright | |
+| Storage | SQLite (`node:sqlite`) | Sessions, transcripts, plugin storage; files stay files |
+| Plugin build | Rolldown (Oxc transform), in process | Plugins are `.ts` sources compiled on load; no build step for the author |
+| Toolchain | VoidZero stack, through Vite+ (`vp`) | One CLI and one parser (Oxc) for dev server, build, tests, lint and format |
+| Monorepo | pnpm workspaces, `vp` task runner | |
+
+### Toolchain
+
+All build and quality tools come from the VoidZero open-source stack (MIT):
+
+| Tool | Used for |
+|---|---|
+| Vite (Rolldown-based) | renderer dev server with HMR, renderer build |
+| tsdown | `main`, `preload`, `server`, `cli` and the publishable packages (`contracts`, `plugin-api`) |
+| Rolldown | plugin compilation at runtime (its JS API, with host modules as externals) |
+| Vitest | unit and component tests; Vitest browser mode for UI tests |
+| Oxlint | lint, with type-aware rules |
+| Oxfmt | format |
+| Vite+ (`vp`) | single entry point for the above, cached monorepo tasks, Node and pnpm versions |
+
+Vite+ is still in beta: the repo keeps a plain config per tool (`vite.config.ts`, `tsdown.config.ts`, `.oxlintrc.json`), so dropping `vp` for direct tool calls stays a script change. Electron packaging (electron-builder) and end-to-end tests (Playwright driving Electron) are outside this stack.
 
 GPUI (or any native Rust UI) was considered and rejected: UI plugins in Rust mean WASM or dynamic libraries with no stable ABI, Zed itself can't offer UI extensions on it, and agents write Rust/GPUI far worse than TS/React. Tauri was rejected because its backend is Rust, which would confine plugins to the webview.
 
@@ -71,11 +89,23 @@ docs/
 
 - **Project**: a folder or a `.code-workspace` (several folders), with its settings.
 - **Session**: one agent conversation, bound to a project folder, a cwd (checkout or worktree), a branch, a harness and a model. Owns a transcript.
-- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `usage`, `status`…). Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops.
+- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `usage`, `status`…), **owned by ivin**: every event is written to SQLite as it streams, never re-read from the provider's files. Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops.
 - **Annotation**: typed, namespaced metadata attached to a session (or project), written by plugins, the CLI or the agent. Example: `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
 - **Tab / pane layout**: workspace tabs holding session, file and plugin views.
 
 The server is the source of truth and persists to SQLite; the renderer holds a read model fed by RPC streams. Plugin storage is a namespaced key-value store in the same database.
+
+### Owning the transcript
+
+- Plugins, search and the UI read one store with one shape, whatever the harness, and ivin keeps events providers drop or rewrite (approvals, steering, interruptions, timings).
+- Providers keep their own files for resuming: ivin stores the provider's session id (Claude `--resume`, Codex thread id, ACP session id) and resumes through it. ivin's copy is for display and plugins, never fed back to the agent.
+- When the two diverge (a session resumed in a terminal, a Claude `/compact`), the provider's files win for the agent and ivin appends what it sees on the next run; an importer reads Claude and Codex files to backfill such gaps and to bring in sessions started outside ivin.
+
+### UI state
+
+The renderer is Effect end to end: each RPC stream from the server feeds an `Atom`, derived atoms compute views (sorted sessions, a session's PRs), and components read them with `@effect/atom-react` hooks (Suspense for async results). Plugin hooks (`useSession`, `useAnnotations`…) are thin wrappers over these atoms, and plugins may also define and read atoms of their own.
+
+`effect/unstable/*` modules, reactivity included, can break in minor releases: pin Effect to an exact version and upgrade deliberately.
 
 ## Harness layer
 
@@ -131,7 +161,7 @@ Plugin directories, loaded in this order (a later one with the same `id` overrid
 
 ### Loading
 
-- The server compiles `server.ts` and `ui.tsx` with esbuild on load (cached by content hash in `~/.ivin/cache/plugins`).
+- The server compiles `server.ts` and `ui.tsx` with Rolldown on load (cached by content hash in `~/.ivin/cache/plugins`).
 - `react`, `react-dom` and `@ivin/plugin-api` are externals provided by the host (import map in the renderer, module aliases in the server), so there is exactly one React instance.
 - Each half exports `activate(ctx)`; everything it registers through `ctx` is disposed automatically on deactivate.
 - **Hot reload**: a watcher on each plugin directory recompiles on change, deactivates the old version, then imports the new one with a hash in its URL. Reload takes well under a second, so an agent can edit, reload and look in one loop.
@@ -274,14 +304,12 @@ Layout features (stacked or swapped panels, sub-tabs) are where the slot model i
 ## Milestones
 
 1. **Skeleton**: Electron + server process + RPC, one project, Claude harness, transcript view, composer, SQLite. Slot renderer in place even with only built-in contributions.
-2. **Plugin host**: manifest, esbuild loading, hot reload, error isolation, logs, `ivin` CLI with `plugin` and `session annotate`. First built-in plugin: session PRs.
+2. **Plugin host**: manifest, Rolldown loading, hot reload, error isolation, logs, `ivin` CLI with `plugin` and `session annotate`. First built-in plugin: session PRs.
 3. **Daily driver**: Codex and ACP harnesses, worktrees, tabs, sidebar, files and diff. Port the fork features needed day to day, each as a plugin.
 4. **Switch**: stop adding features to the fork; port the rest from `docs/fork/` as needed.
 5. **Later**: MCP wrapper, headless server for remote and mobile, plugin sharing.
 
 ## Open questions
 
-- Transcript storage: keep the providers' own files (Claude's JSONL) as the source and index them, or own a copy of every event? Owning a copy simplifies plugins; indexing avoids drift on resume.
-- Renderer state: Effect atoms on top of the RPC streams, or a plain store (Zustand) fed by them? The plugin hooks hide the choice either way.
 - How much of T3 Code's server to take as-is versus re-deriving from MonoCode, after reading both provider layers side by side.
 - Project plugins: trust per repo, or per commit of `.ivin/plugins/`?
