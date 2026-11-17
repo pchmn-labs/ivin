@@ -1,6 +1,7 @@
 import { useAtomSet } from "@effect/atom-react"
 import { Exit } from "effect"
 import { useState } from "react"
+import { Slot } from "../../../app/slot-renderer.tsx"
 import { sendMessageAtom } from "../atoms/send-message.ts"
 
 export function Composer({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
@@ -33,6 +34,9 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
       <button type="button" onClick={submit}>
         Send
       </button>
+      <div data-testid="composer-status">
+        <Slot slot="composer.status" props={{ sessionId }} />
+      </div>
     </div>
   )
 }

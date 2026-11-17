@@ -12,9 +12,18 @@ importers:
 
   .:
     devDependencies:
+      '@ivin/plugin-api':
+        specifier: workspace:*
+        version: link:packages/plugin-api
       '@types/node':
         specifier: ^22.13.0
         version: 22.20.5
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
+      react:
+        specifier: 19.3.1
+        version: 19.3.1
       typescript:
         specifier: ^5.9.0
         version: 5.9.3
@@ -27,6 +36,9 @@ importers:
       vitest:
         specifier: 5.1.0
         version: 5.1.0(@types/node@22.20.5)(@vitest/browser-playwright@5.1.0)(@vitest/browser-preview@5.1.0)(@vitest/ui@5.1.0)(@voidzero-dev/vite-plus-core@8.3.8000(@types/node@22.20.5)(jiti@2.7.0)(typescript@5.9.3))
+      vitest-browser-react:
+        specifier: ^2.3.0
+        version: 2.3.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0)
 
   apps/desktop:
     devDependencies:
@@ -79,7 +91,18 @@ importers:
         specifier: 4.1.4
         version: 4.1.4
 
-  packages/plugin-api: {}
+  packages/plugin-api:
+    dependencies:
+      '@ivin/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      react:
+        specifier: 19.3.1
+        version: 19.3.1
+    devDependencies:
+      '@types/react':
+        specifier: ^19
+        version: 19.3.0
 
   packages/state:
     dependencies:
@@ -102,6 +125,9 @@ importers:
       '@ivin/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@ivin/plugin-api':
+        specifier: workspace:*
+        version: link:../plugin-api
       '@ivin/state':
         specifier: workspace:*
         version: link:../state
@@ -4450,7 +4476,7 @@ snapshots:
     dependencies:
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
-      vitest: 5.1.0(@types/node@22.20.5)(@vitest/browser-playwright@5.1.0)(@vitest/browser-preview@5.1.0)(@vitest/ui@5.1.0)(@voidzero-dev/vite-plus-core@8.3.8000(@types/node@22.20.5)(jiti@2.7.0)(typescript@5.9.3))
+      vitest: 5.1.0(@types/node@22.20.5)(@vitest/browser-playwright@5.1.0(@voidzero-dev/vite-plus-core@8.3.8000(@types/node@22.20.5)(jiti@2.7.0)(typescript@5.9.3))(playwright@1.65.1)(vitest@5.1.0))(@vitest/browser-preview@5.1.0)(@vitest/ui@5.1.0(vitest@5.1.0))(@voidzero-dev/vite-plus-core@8.3.8000(@types/node@22.20.5)(jiti@2.7.0)(typescript@5.9.3))
     optionalDependencies:
       '@types/react': 19.3.0
       '@types/react-dom': 19.3.0(@types/react@19.3.0)

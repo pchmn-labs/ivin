@@ -4,6 +4,8 @@ import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
+import { builtinPlugins } from "../../../app/builtin-plugins.ts"
+import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { TranscriptView } from "./transcript-view.tsx"
@@ -38,7 +40,9 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <div style={{ height: 300 }}>
-        <TranscriptView sessionId="s1" />
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" />
+        </PluginsProvider>
       </div>
     </RegistryProvider>,
   )

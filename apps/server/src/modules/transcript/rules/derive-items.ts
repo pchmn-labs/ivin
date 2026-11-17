@@ -55,6 +55,16 @@ export const applyEvent = (
       openToolCalls.delete(event.toolCallId)
       return { state: { ...state, openToolCalls }, item }
     }
+    case "usage": {
+      const item: TranscriptItem = {
+        ...base,
+        type: "usage",
+        inputTokens: event.inputTokens,
+        outputTokens: event.outputTokens,
+        costUsd: event.costUsd,
+      }
+      return { state, item }
+    }
     case "status":
       return {
         state: event.status === "idle" ? { ...state, openMessage: null } : state,

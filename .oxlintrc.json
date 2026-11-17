@@ -137,9 +137,9 @@
                 "group": [
                   "**",
                   "!@ivin/plugin-api",
+                  "!@ivin/plugin-api/**",
                   "!react",
                   "!react/**",
-                  "!node:*",
                   "!./**",
                   "!../**"
                 ],
@@ -148,6 +148,12 @@
             ]
           }
         ]
+      }
+    },
+    {
+      "files": ["plugins/**/*.test.ts", "plugins/**/*.test.tsx"],
+      "rules": {
+        "no-restricted-imports": "off"
       }
     }
   ]

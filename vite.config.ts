@@ -6,7 +6,12 @@ export default defineConfig({
       {
         test: {
           name: "node",
-          include: ["apps/*/src/**/*.test.ts", "packages/*/src/**/*.test.ts", "tools/**/*.test.ts"],
+          include: [
+            "apps/*/src/**/*.test.ts",
+            "packages/*/src/**/*.test.ts",
+            "tools/**/*.test.ts",
+            "plugins/**/*.test.ts",
+          ],
         },
       },
       "packages/ui/vitest.browser.config.ts",

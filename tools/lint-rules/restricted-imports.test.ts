@@ -105,6 +105,26 @@ const forbidden: [string, string, string][] = [
   ["modules/session/atoms/a.ts", "hooks", `import { a } from "../hooks/send.ts"\nexport { a }\n`],
   ["modules/session/atoms/a.ts", "ui", `import { a } from "../ui/send.tsx"\nexport { a }\n`],
   ["plugins/demo/index.ts", "another package", `import _ from "lodash"\nexport const a = _\n`],
+  [
+    "plugins/demo/ui.tsx",
+    "node:fs",
+    `import { readFileSync } from "node:fs"\nexport const a = readFileSync\n`,
+  ],
+  [
+    "plugins/demo/ui.tsx",
+    "contracts",
+    `import type { UsageItem } from "@ivin/contracts/transcript"\nexport type A = UsageItem\n`,
+  ],
+  [
+    "plugins/demo/ui.tsx",
+    "ui",
+    `import { Button } from "@ivin/ui/button"\nexport const a = Button\n`,
+  ],
+  [
+    "plugins/demo/ui.tsx",
+    "an effect package",
+    `import { useAtomValue } from "@effect/atom-react"\nexport const a = useAtomValue\n`,
+  ],
 ]
 
 const allowed: [string, string, string][] = [
@@ -137,6 +157,16 @@ const allowed: [string, string, string][] = [
     "plugins/demo/index.ts",
     "react",
     `import { useState } from "react"\nexport const a = useState\n`,
+  ],
+  [
+    "plugins/demo/ui.tsx",
+    "a plugin api subpath",
+    `import { Text } from "@ivin/plugin-api/ui"\nexport const a = Text\n`,
+  ],
+  [
+    "plugins/demo/ui.tsx",
+    "a react subpath",
+    `import { jsx } from "react/jsx-runtime"\nexport const a = jsx\n`,
   ],
   ["plugins/demo/index.ts", "its own files", `import { a } from "./util.ts"\nexport { a }\n`],
 ]

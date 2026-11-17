@@ -1,4 +1,5 @@
 {
   "extends": "./tsconfig.base.json",
-  "include": ["tools", "vite.config.ts"]
+  "compilerOptions": { "lib": ["ES2023", "DOM"], "jsx": "react-jsx" },
+  "include": ["tools", "plugins", "vite.config.ts"]
 }
