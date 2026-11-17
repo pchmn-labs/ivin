@@ -1,0 +1,154 @@
+{
+  "ignorePatterns": [
+    ".agents/**",
+    ".claude/**",
+    "**/dist/**",
+    "**/out/**",
+    "**/release/**",
+    "**/playwright-report/**",
+    "**/test-results/**"
+  ],
+  "overrides": [
+    {
+      "files": ["**/rules/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "electron",
+                "message": "Imports of electron are not allowed in this layer, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "name": "react",
+                "message": "rules/ is called directly and does not import react, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "name": "effect",
+                "message": "rules/ imports only effect/Schema from effect, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["effect/**", "!effect/Schema"],
+                "message": "rules/ imports only effect/Schema from effect, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["node:*"],
+                "message": "Imports of node:* are not allowed in this layer, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["react/**"],
+                "message": "rules/ does not import react, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": [
+                  "**/adapters/**",
+                  "**/usecases/**",
+                  "**/atoms/**",
+                  "**/hooks/**",
+                  "**/ui/**"
+                ],
+                "message": "rules/ does not import the layers above it, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/usecases/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "electron",
+                "message": "Imports of electron are not allowed in this layer, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["node:*"],
+                "message": "Imports of node:* are not allowed in this layer, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["**/adapters/**"],
+                "message": "A layer that is tested without a real process, file or database does not import adapters/, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["**/atoms/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "electron",
+                "message": "Imports of electron are not allowed in this layer, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "name": "react",
+                "message": "atoms/ does not import react, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["node:*"],
+                "message": "Imports of node:* are not allowed in this layer, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["**/adapters/**"],
+                "message": "A layer that is tested without a real process, file or database does not import adapters/, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["react/**"],
+                "message": "atoms/ does not import react, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["**/hooks/**"],
+                "message": "atoms/ does not import hooks/, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["**/ui/**"],
+                "message": "atoms/ does not import ui/, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["plugins/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [],
+            "patterns": [
+              {
+                "group": [
+                  "**",
+                  "!@ivin/plugin-api",
+                  "!react",
+                  "!react/**",
+                  "!node:*",
+                  "!./**",
+                  "!../**"
+                ],
+                "message": "A plugin imports only @ivin/plugin-api and react, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

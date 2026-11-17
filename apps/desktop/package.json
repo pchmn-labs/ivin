@@ -1,0 +1,23 @@
+{
+  "name": "@ivin/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "ivin",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "dev": "vp pack && IVIN_DEV_URL=http://localhost:5173 electron .",
+    "build": "vp pack",
+    "package": "electron-builder --config electron-builder.yml --mac --arm64",
+    "e2e": "playwright test --config e2e/playwright.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@ivin/contracts": "workspace:*",
+    "@ivin/server": "workspace:*",
+    "@ivin/ui": "workspace:*",
+    "@playwright/test": "1.65.1",
+    "electron": "45.3.3",
+    "electron-builder": "26.18.0"
+  }
+}

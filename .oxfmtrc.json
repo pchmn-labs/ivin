@@ -1,0 +1,17 @@
+{
+  "semi": false,
+  "printWidth": 100,
+  "ignorePatterns": [
+    ".agents/**",
+    ".claude/**",
+    "docs/**",
+    "**/*.md",
+    "skills-lock.json",
+    "pnpm-lock.yaml",
+    "**/dist/**",
+    "**/out/**",
+    "**/release/**",
+    "**/playwright-report/**",
+    "**/test-results/**"
+  ]
+}

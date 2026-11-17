@@ -1,0 +1,21 @@
+appId: dev.pchmn.ivin
+productName: ivin
+executableName: ivin
+directories:
+  output: release
+files:
+  - from: dist
+    to: .
+    filter: ["main.js", "preload.cjs"]
+  - from: ../server/dist
+    to: server
+  - from: ../../packages/ui/dist
+    to: renderer
+  - package.json
+extraMetadata:
+  main: main.js
+mac:
+  target:
+    - target: dir
+      arch: arm64
+  identity: null

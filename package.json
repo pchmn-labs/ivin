@@ -1,0 +1,35 @@
+{
+  "name": "ivin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "vp lint -c .oxlintrc.json --deny-warnings",
+    "format": "vp fmt -c .oxfmtrc.json",
+    "format:check": "vp fmt --check -c .oxfmtrc.json",
+    "typecheck": "vp run --filter './apps/*' --filter './packages/*' typecheck && tsc --noEmit",
+    "test": "vp test run",
+    "build": "vp run --filter './apps/*' --filter './packages/*' build",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "dev": "vp run --filter @ivin/server build && vp run --parallel --filter @ivin/ui --filter @ivin/desktop dev",
+    "package": "pnpm build && pnpm --filter @ivin/desktop package",
+    "e2e": "pnpm --filter @ivin/desktop e2e"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "typescript": "^5.9.0",
+    "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8000",
+    "vite-plus": "1.7.0",
+    "vitest": "5.1.0"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "effect": "4.1.4",
+      "vite": "npm:@voidzero-dev/vite-plus-core@8.3.8000"
+    }
+  }
+}

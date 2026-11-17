@@ -1,0 +1,16 @@
+{
+  "name": "@ivin/state",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./rpc-client-protocol": "./src/rpc-client-protocol.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ivin/contracts": "workspace:*",
+    "effect": "4.1.4"
+  }
+}
