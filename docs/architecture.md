@@ -108,6 +108,16 @@ The renderer is Effect end to end: each RPC stream from the server feeds an `Ato
 
 `effect/unstable/*` modules, reactivity included, can break in minor releases: pin Effect to an exact version and upgrade deliberately.
 
+Why atoms rather than Zustand stores (T3 Code mixes both, Zustand for local UI state): one model for plugins to learn instead of two; server streams become atoms with no glue; per-entity atoms are released with their readers, where Zustand stores are global and live until cleaned by hand. The state layer sits behind `@ivin/state` (atom families, optimistic writes, stream bridging), so a swap would stay contained.
+
+### Responsiveness
+
+- **Normalised, fine-grained state.** A list atom holds ids; each session, message and tool call is its own atom in a family. Appending a message or streaming into one re-renders that row only.
+- **Optimistic by default.** Sending, renaming, archiving or reordering updates the atom at once and reconciles with the server's answer; the server is local, so it rarely waits more than a frame.
+- **Frame-batched streaming.** Token deltas are coalesced per animation frame before reaching atoms; finished Markdown blocks are memoised and only the open block is re-parsed.
+- **Virtualised lists** for transcripts, sidebar and file trees; React Compiler for memoisation; transitions (`useTransition`, `useDeferredValue`) for heavy views such as diffs and search.
+- **Perf tests** next to the leak test: stream a 10k-token answer and scroll a 2k-event transcript, failing below a frame-rate threshold.
+
 Queries run in the server against SQLite and stream their results; the renderer never holds a client-side copy of whole collections. A client database such as TanStack DB (live queries over in-memory collections) would duplicate data the server already indexes and add a second reactive model next to atoms; reconsider only if cross-collection queries in the renderer become heavy.
 
 ## Performance and memory
