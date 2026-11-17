@@ -2,7 +2,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from 
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect, Stream } from "effect"
-import { expect, test } from "vitest"
+import { expect, test, vi } from "vitest"
 import { HarnessProvider } from "../../../shared/harness-provider.ts"
 import { layerClaude } from "./claude-provider.ts"
 
@@ -91,22 +91,6 @@ test("a process that fails to start ends the stream with a HarnessError", async 
   expect(exit._tag).toBe("Failure")
 })
 
-test("answering a request that is not open fails with a HarnessError", async () => {
-  const error = await Effect.runPromise(
-    Effect.gen(function* () {
-      const harness = yield* (yield* HarnessProvider).start({
-        sessionId: "s1",
-        cwd: tmpdir(),
-        model: "haiku",
-        providerSessionId: null,
-      })
-      return yield* Effect.flip(harness.respond({ requestId: "nope", allow: true }))
-    }).pipe(Effect.provide(layerClaude), Effect.scoped),
-  )
-
-  expect(error._tag).toBe("HarnessError")
-})
-
 // A stand-in `claude` on the PATH, so the adapter's stdin and signal handling run without the API.
 const withFakeClaude = async <A>(body: string, use: (dir: string) => Promise<A>): Promise<A> => {
   const dir = mkdtempSync(join(tmpdir(), "ivin-fake-claude-"))
@@ -127,6 +111,24 @@ const fs = require("node:fs")
 process.stdin.on("data", (d) => fs.appendFileSync(process.env.FAKE_LOG ?? "stdin.log", d))
 `
 
+test("answering a request that is not open fails with a HarnessError", async () => {
+  const error = await withFakeClaude("setInterval(() => {}, 1000)", (dir) =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        const harness = yield* (yield* HarnessProvider).start({
+          sessionId: "s1",
+          cwd: dir,
+          model: "haiku",
+          providerSessionId: null,
+        })
+        return yield* Effect.flip(harness.respond({ requestId: "nope", allow: true }))
+      }).pipe(Effect.provide(layerClaude), Effect.scoped),
+    ),
+  )
+
+  expect(error._tag).toBe("HarnessError")
+})
+
 test("interrupt writes a control request to stdin and keeps the process alive", async () => {
   await withFakeClaude(
     `${logStdin}
@@ -143,7 +145,11 @@ setInterval(() => {}, 1000)`,
             providerSessionId: null,
           })
           yield* harness.interrupt
-          yield* Effect.sleep("300 millis")
+          yield* Effect.promise(() =>
+            vi.waitFor(() => expect(existsSync(log) && readFileSync(log, "utf8")).toContain("\n"), {
+              timeout: 5_000,
+            }),
+          )
         }).pipe(Effect.provide(layerClaude), Effect.scoped),
       )
 
