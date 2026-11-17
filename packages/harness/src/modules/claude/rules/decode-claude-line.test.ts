@@ -3,6 +3,8 @@ import { expect, test } from "vitest"
 import { decodeClaudeLine } from "./decode-claude-line.ts"
 import apiError from "./fixtures/api-error.jsonl?raw"
 import failedToolCall from "./fixtures/failed-tool-call.jsonl?raw"
+import permissionAllow from "./fixtures/permission-allow.jsonl?raw"
+import permissionDeny from "./fixtures/permission-deny.jsonl?raw"
 import plainAnswer from "./fixtures/plain-answer.jsonl?raw"
 import resumedSession from "./fixtures/resumed-session.jsonl?raw"
 import thinking from "./fixtures/thinking.jsonl?raw"
@@ -11,6 +13,8 @@ import toolCall from "./fixtures/tool-call.jsonl?raw"
 const fixtures = {
   "api-error": apiError,
   "failed-tool-call": failedToolCall,
+  "permission-allow": permissionAllow,
+  "permission-deny": permissionDeny,
   "plain-answer": plainAnswer,
   "resumed-session": resumedSession,
   thinking: thinking,
@@ -150,4 +154,44 @@ test("a resumed run reports the provider session id and decodes the new turn", (
   ])
   expect(types(outputs)).toEqual(["status", "assistant_text", "usage", "status"])
   expect(stored(outputs)[1]).toMatchObject({ type: "assistant_text", text: "walrus" })
+})
+
+test.each([
+  ["permission-allow", false],
+  ["permission-deny", true],
+] as const)(
+  "%s: the approval request sits between the tool call and its result",
+  (name, isError) => {
+    const events = stored(fixture(name))
+    const call = events.find((o) => o.type === "tool_call")
+    const request = events.find((o) => o.type === "approval_request")
+    const result = events.find((o) => o.type === "tool_result")
+
+    expect(call && request && result).toBeTruthy()
+    expect(request).toMatchObject({
+      type: "approval_request",
+      requestId: expect.any(String),
+      toolCallId: call && "toolCallId" in call ? call.toolCallId : null,
+      name: "Bash",
+    })
+    expect(request && "input" in request ? request.input : null).toEqual(
+      call && "input" in call ? call.input : undefined,
+    )
+    expect(result).toMatchObject({ isError })
+    expect(
+      types(
+        events.filter((o) => ["tool_call", "approval_request", "tool_result"].includes(o.type)),
+      ),
+    ).toEqual(["tool_call", "approval_request", "tool_result"])
+  },
+)
+
+test("a control request of another subtype is ignored", () => {
+  const line = JSON.stringify({
+    type: "control_request",
+    request_id: "r1",
+    request: { subtype: "hook_callback" },
+  })
+
+  expect(decodeClaudeLine(line)).toEqual([])
 })

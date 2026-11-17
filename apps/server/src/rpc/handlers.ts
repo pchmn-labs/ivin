@@ -5,6 +5,7 @@ import { getCurrentProject } from "../modules/project/usecases/get-current-proje
 import { openProject } from "../modules/project/usecases/open-project.ts"
 import { getVersion } from "../modules/server/usecases/get-version.ts"
 import { layerSqliteSessionStore } from "../modules/session/adapters/sqlite-session-store.ts"
+import { answerApproval } from "../modules/session/usecases/answer-approval.ts"
 import { createSession } from "../modules/session/usecases/create-session.ts"
 import { listSessions } from "../modules/session/usecases/list-sessions.ts"
 import { renameSession } from "../modules/session/usecases/rename-session.ts"
@@ -35,6 +36,8 @@ export const handlers = Rpcs.toLayer({
   "session.rename": ({ sessionId, title }) => renameSession(sessionId, title),
   "session.sendMessage": ({ sessionId, messageId, text }) =>
     sendMessage(sessionId, messageId, text),
+  "session.answerApproval": ({ sessionId, requestId, allow }) =>
+    answerApproval(sessionId, requestId, allow),
   "transcript.getItems": ({ sessionId, position, before, after }) =>
     getItems(sessionId, position, before, after),
   "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

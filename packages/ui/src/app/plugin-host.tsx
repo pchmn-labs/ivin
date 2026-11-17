@@ -1,8 +1,10 @@
-import { RegistryContext, useAtomValue } from "@effect/atom-react"
+import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { Exit } from "effect"
 import { AsyncResult } from "effect/reactivity"
 import { useContext, useEffect, useState, type ReactNode } from "react"
 import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
 import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
+import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
 import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
 import { Markdown } from "../modules/transcript/ui/markdown.tsx"
@@ -20,6 +22,14 @@ const host: UiHost = {
   useSession: (sessionId) =>
     useAtomValue(sessionsOf(useProjectPath()).items).find((s) => s.id === sessionId),
   useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).list.items),
+  useAnswerApproval: (sessionId) => {
+    const projectPath = useProjectPath()
+    const answer = useAtomSet(answerApprovalAtom, { mode: "promiseExit" })
+    return async ({ requestId, allow }) => {
+      const exit = await answer({ projectPath, sessionId, requestId, allow })
+      if (Exit.isFailure(exit)) throw new Error("answer failed")
+    }
+  },
   Markdown,
 }
 

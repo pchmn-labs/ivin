@@ -18,6 +18,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     useSession: () => undefined,
     useSessions: () => [],
     useTranscript: () => [],
+    useAnswerApproval: () => async () => {},
     Markdown,
   }
   await render(

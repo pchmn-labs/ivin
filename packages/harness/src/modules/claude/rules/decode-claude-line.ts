@@ -67,6 +67,16 @@ const ResultLine = Schema.Struct({
   ),
 })
 
+const ControlRequestLine = Schema.Struct({
+  request_id: Schema.String,
+  request: Schema.Struct({
+    subtype: Schema.String,
+    tool_name: Schema.optional(Schema.String),
+    input: Schema.optional(Schema.Unknown),
+    tool_use_id: Schema.optional(Schema.String),
+  }),
+})
+
 const isBlock = Schema.is(AssistantBlock)
 const isToolResultBlock = Schema.is(ToolResultBlock)
 const isTextBlock = Schema.is(TextBlock)
@@ -149,6 +159,21 @@ const fromSystem = (line: unknown, subtype: string | undefined): HarnessOutput[]
   return status === "requesting" ? [{ type: "status", status: "running", raw: line }] : []
 }
 
+const fromControlRequest = (line: unknown): HarnessOutput[] => {
+  const { request_id, request } = Schema.decodeUnknownSync(ControlRequestLine)(line)
+  if (request.subtype !== "can_use_tool" || request.tool_name === undefined) return []
+  return [
+    {
+      type: "approval_request",
+      requestId: request_id,
+      toolCallId: request.tool_use_id ?? null,
+      name: request.tool_name,
+      input: request.input,
+      raw: line,
+    },
+  ]
+}
+
 export const decodeClaudeLine = (text: string): HarnessOutput[] => {
   let line: unknown
   try {
@@ -168,6 +193,8 @@ export const decodeClaudeLine = (text: string): HarnessOutput[] => {
         return fromUser(line)
       case "result":
         return fromResult(line, subtype)
+      case "control_request":
+        return fromControlRequest(line)
       case "system":
         return fromSystem(line, subtype)
       default:

@@ -10,6 +10,8 @@ export function TranscriptRow({ sessionId, id }: { sessionId: string; id: string
     <div data-testid="transcript-item" data-type={item.type} style={{ padding: "0.5rem 0" }}>
       {item.type === "tool_call" ? (
         <Slot slot="transcript.toolCall" tool={item.name} props={{ item, sessionId }} />
+      ) : item.type === "approval" ? (
+        <Slot slot="transcript.approval" props={{ item, sessionId }} />
       ) : (
         <Slot slot="transcript.message" props={{ item, sessionId }} />
       )}

@@ -8,6 +8,7 @@ interface SessionRow {
   project_path: string
   title: string
   model: string
+  status: Session["status"]
   created_at: number
   last_activity_at: number
 }
@@ -17,11 +18,12 @@ const toSession = (row: SessionRow): Session => ({
   projectPath: row.project_path,
   title: row.title,
   model: row.model,
+  status: row.status,
   createdAt: DateTime.makeUnsafe(row.created_at),
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
 })
 
-const columns = "id, project_path, title, model, created_at, last_activity_at"
+const columns = "id, project_path, title, model, status, created_at, last_activity_at"
 
 export const layerSqliteSessionStore = Layer.effect(SessionStore)(
   Effect.gen(function* () {
@@ -30,13 +32,14 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
       insert: (session) =>
         Effect.sync(() => {
           db.prepare(
-            `INSERT INTO sessions (id, project_path, title, model, created_at, last_activity_at)
-             VALUES (?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO sessions (id, project_path, title, model, status, created_at, last_activity_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
           ).run(
             session.id,
             session.projectPath,
             session.title,
             session.model,
+            session.status,
             DateTime.toEpochMillis(session.createdAt),
             DateTime.toEpochMillis(session.lastActivityAt),
           )
@@ -82,6 +85,10 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             providerSessionId,
             id,
           )
+        }),
+      setStatus: (id, status) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET status = ? WHERE id = ?").run(status, id)
         }),
       touch: (id, at) =>
         Effect.sync(() => {

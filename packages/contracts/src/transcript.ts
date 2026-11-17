@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
+import { SessionStatus } from "./session.ts"
 
 const UserMessageBody = Schema.Struct({
   type: Schema.Literal("user_message"),
@@ -25,9 +26,21 @@ const ToolResultBody = Schema.Struct({
   output: Schema.String,
   isError: Schema.Boolean,
 })
+const ApprovalRequestBody = Schema.Struct({
+  type: Schema.Literal("approval_request"),
+  requestId: Schema.String,
+  toolCallId: Schema.NullOr(Schema.String),
+  name: Schema.String,
+  input: Schema.Unknown,
+})
+const ApprovalDecisionBody = Schema.Struct({
+  type: Schema.Literal("approval_decision"),
+  requestId: Schema.String,
+  allow: Schema.Boolean,
+})
 const StatusBody = Schema.Struct({
   type: Schema.Literal("status"),
-  status: Schema.Literals(["running", "idle"]),
+  status: SessionStatus,
 })
 // One turn's consumption; a session's total is the sum of its usage events.
 const UsageBody = Schema.Struct({
@@ -49,6 +62,8 @@ const eventBodies = [
   ThinkingBody,
   ToolCallBody,
   ToolResultBody,
+  ApprovalRequestBody,
+  ApprovalDecisionBody,
   UsageBody,
   StatusBody,
   ErrorBody,
@@ -119,6 +134,16 @@ export const ToolCallItem = Schema.Struct({
   output: Schema.NullOr(Schema.String),
 })
 
+export const ApprovalItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("approval"),
+  requestId: Schema.String,
+  toolCallId: Schema.NullOr(Schema.String),
+  name: Schema.String,
+  input: Schema.Unknown,
+  decision: Schema.NullOr(Schema.Literals(["allow", "deny"])),
+})
+
 export const UsageItem = Schema.Struct({
   ...itemFields,
   type: Schema.Literal("usage"),
@@ -137,6 +162,7 @@ export const TranscriptItem = Schema.Union([
   MessageItem,
   ThinkingItem,
   ToolCallItem,
+  ApprovalItem,
   UsageItem,
   ErrorItem,
 ])

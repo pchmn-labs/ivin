@@ -12,6 +12,7 @@ export class SessionStore extends Context.Service<
     readonly setTitleIfUnset: (id: string, title: string) => Effect.Effect<void>
     readonly providerSessionId: (id: string) => Effect.Effect<string | null>
     readonly setProviderSessionId: (id: string, providerSessionId: string) => Effect.Effect<void>
+    readonly setStatus: (id: string, status: Session["status"]) => Effect.Effect<void>
     readonly touch: (id: string, at: Session["lastActivityAt"]) => Effect.Effect<void>
   }
 >()("ivin/server/SessionStore") {}

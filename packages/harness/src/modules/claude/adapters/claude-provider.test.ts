@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs"
+import { existsSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { Effect, Stream } from "effect"
@@ -35,6 +35,46 @@ real(
   60_000,
 )
 
+real.each([
+  { allow: true, isError: false, made: true },
+  { allow: false, isError: true, made: false },
+])(
+  "the real claude CLI waits for an approval and runs the tool only once allowed (allow: $allow)",
+  async ({ allow, isError, made }) => {
+    const cwd = mkdtempSync(join(tmpdir(), "ivin-claude-"))
+    const outputs = await Effect.runPromise(
+      Effect.gen(function* () {
+        const harness = yield* (yield* HarnessProvider).start({
+          sessionId: "s1",
+          cwd,
+          model: "haiku",
+          providerSessionId: null,
+        })
+        yield* harness.send({
+          text: "Run the shell command `touch made.txt` with the Bash tool. Do nothing else.",
+        })
+        return yield* Stream.runCollect(
+          harness.events.pipe(
+            Stream.tap((o) =>
+              o.type === "approval_request"
+                ? Effect.sync(() => expect(existsSync(join(cwd, "made.txt"))).toBe(false)).pipe(
+                    Effect.andThen(harness.respond({ requestId: o.requestId, allow })),
+                  )
+                : Effect.void,
+            ),
+            Stream.takeUntil((o) => o.type === "status" && o.status === "idle"),
+          ),
+        )
+      }).pipe(Effect.provide(layerClaude), Effect.scoped),
+    )
+
+    expect(outputs.find((o) => o.type === "approval_request")).toMatchObject({ name: "Bash" })
+    expect(outputs.find((o) => o.type === "tool_result")).toMatchObject({ isError })
+    expect(existsSync(join(cwd, "made.txt"))).toBe(made)
+  },
+  90_000,
+)
+
 test("a process that fails to start ends the stream with a HarnessError", async () => {
   const exit = await Effect.runPromiseExit(
     Effect.gen(function* () {
@@ -49,4 +89,20 @@ test("a process that fails to start ends the stream with a HarnessError", async 
   )
 
   expect(exit._tag).toBe("Failure")
+})
+
+test("answering a request that is not open fails with a HarnessError", async () => {
+  const error = await Effect.runPromise(
+    Effect.gen(function* () {
+      const harness = yield* (yield* HarnessProvider).start({
+        sessionId: "s1",
+        cwd: tmpdir(),
+        model: "haiku",
+        providerSessionId: null,
+      })
+      return yield* Effect.flip(harness.respond({ requestId: "nope", allow: true }))
+    }).pipe(Effect.provide(layerClaude), Effect.scoped),
+  )
+
+  expect(error._tag).toBe("HarnessError")
 })
