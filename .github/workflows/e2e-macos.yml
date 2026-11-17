@@ -6,21 +6,21 @@ on:
   push:
     branches: [main]
 
-concurrency:
-  group: e2e-macos-${{ github.ref }}
-  cancel-in-progress: true
-
 permissions:
   contents: read
 
 jobs:
   e2e:
     name: Packaged app on macos
-    # Avrea minutes are paid: on a PR, only a maintainer's label spends them.
+    # Avrea minutes are paid: a PR spends them only once labelled.
     if: >-
       github.event_name == 'push' ||
       (contains(github.event.pull_request.labels.*.name, 'e2e:macos') &&
       (github.event.action != 'labeled' || github.event.label.name == 'e2e:macos'))
+    # At job level, so a skipped run (another label added) does not cancel the one in progress.
+    concurrency:
+      group: e2e-macos-${{ github.ref }}
+      cancel-in-progress: true
     runs-on: avrea-macos-latest-8-vcpu
     timeout-minutes: 30
     steps:
