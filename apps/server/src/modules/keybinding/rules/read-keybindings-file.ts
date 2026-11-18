@@ -32,7 +32,6 @@ const read = (text: string | null): Read => {
   return { keybindings }
 }
 
-// `text` is null when the file does not exist.
 export const readKeybindingsFile = (
   previous: UserKeybindings,
   text: string | null,

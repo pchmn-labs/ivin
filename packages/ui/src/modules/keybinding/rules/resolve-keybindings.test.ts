@@ -1,5 +1,10 @@
 import { expect, test } from "vitest"
-import { findCommand, resolveKeybindings } from "./resolve-keybindings.ts"
+import {
+  findCommand,
+  findCommands,
+  resolveKeybindings,
+  unreadableKeys,
+} from "./resolve-keybindings.ts"
 import { normalizeKey } from "./key.ts"
 
 const mac = { mac: true }
@@ -63,10 +68,28 @@ test("the user's keybinding wins over a default on the same key and area, and th
 })
 
 test("a key written differently still matches, and a key the app cannot read is left out", () => {
-  const { keybindings, unreadable } = resolve([
+  const user = [
     { key: "Cmd+B", command: "sidebar.toggle", when: null },
     { key: "mod+k mod+s", command: "files.save", when: null },
-  ])
+  ]
+  const { keybindings } = resolve(user)
   expect(findCommand(keybindings, key("mod+b"), [])).toBe("sidebar.toggle")
-  expect(unreadable).toEqual(["mod+k mod+s"])
+  expect(unreadableKeys(user)).toEqual(["mod+k mod+s"])
+})
+
+test("the commands to try run from the closest area out, the latest keybinding first in each", () => {
+  const { keybindings } = resolveKeybindings({
+    defaults: [
+      { key: "escape", command: "session.interrupt", when: null },
+      { key: "escape", command: "composer.clear", when: "composer" },
+      { key: "escape", command: "composer.blur", when: "composer" },
+    ],
+    user: [],
+    platform: mac,
+  })
+  expect(findCommands(keybindings, [key("escape")], ["composer"])).toEqual([
+    "composer.blur",
+    "composer.clear",
+    "session.interrupt",
+  ])
 })

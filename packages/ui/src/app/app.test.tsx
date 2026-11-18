@@ -261,3 +261,16 @@ test("a middle click on a tab closes it without selecting it", async () => {
     .element(page.getByRole("tab", { name: /Second/ }))
     .toHaveAttribute("aria-selected", "true")
 })
+
+test("a key keybindings.json gives that ivin cannot read is reported", async () => {
+  const server = await mountApp()
+  server.setUserKeybindings({
+    keybindings: [{ key: "hyper+b", command: "sidebar.toggle", when: null }],
+    problem: null,
+  })
+  await expect
+    .element(
+      page.getByRole("alert").getByText(/keys ivin cannot read, which do nothing: "hyper\+b"/),
+    )
+    .toBeVisible()
+})

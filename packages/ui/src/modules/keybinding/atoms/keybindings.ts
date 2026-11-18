@@ -2,10 +2,9 @@ import type { Keybinding } from "@ivin/contracts/keybinding"
 import { Effect, Stream } from "effect"
 import { Atom, AsyncResult } from "effect/reactivity"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
-import { resolveKeybindings } from "../rules/resolve-keybindings.ts"
+import { resolveKeybindings, unreadableKeys } from "../rules/resolve-keybindings.ts"
 
 export interface DefaultKeybinding extends Keybinding {
-  // Null for a keybinding of the core.
   readonly pluginId: string | null
 }
 
@@ -30,21 +29,27 @@ export const userKeybindingsAtom = serverRuntime
   )
   .pipe(Atom.keepAlive)
 
-export const keybindingsFileProblemAtom = Atom.readable((get) => {
+const userKeybindingsValueAtom = Atom.readable((get) => {
   const result = get(userKeybindingsAtom)
-  return AsyncResult.isSuccess(result) ? result.value.problem : null
+  return AsyncResult.isSuccess(result) ? result.value : { keybindings: [], problem: null }
 })
+
+export const keybindingsFileProblemAtom = Atom.readable(
+  (get) => get(userKeybindingsValueAtom).problem,
+)
+
+export const unreadableKeysAtom = Atom.readable((get) =>
+  unreadableKeys(get(userKeybindingsValueAtom).keybindings),
+)
 
 export const keybindingsOf = Atom.family((mac: boolean) =>
   Atom.readable((get) => {
-    const result = get(userKeybindingsAtom)
-    const { keybindings, conflicts, unreadable } = resolveKeybindings({
+    const { keybindings, conflicts } = resolveKeybindings({
       defaults: get(defaultKeybindingsAtom),
-      user: AsyncResult.isSuccess(result) ? result.value.keybindings : [],
+      user: get(userKeybindingsValueAtom).keybindings,
       platform: { mac },
     })
     for (const conflict of conflicts) console.warn("keybinding replaces a default one", conflict)
-    for (const key of unreadable) console.warn(`keybinding ignored, its key cannot be read: ${key}`)
     return keybindings
   }),
 )

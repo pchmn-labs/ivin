@@ -3,15 +3,13 @@ import { Atom } from "effect/reactivity"
 export interface Command {
   readonly id: string
   readonly title: string
-  // Null for a command of the core.
   readonly pluginId: string | null
 }
 
-// A command runs through the last handler registered for it; a command with none does nothing.
 export interface CommandHandler {
   readonly commandId: string
   readonly run: () => void
-  readonly owner: string | symbol
+  readonly pluginId: string | null
 }
 
 export const coreCommands: ReadonlyArray<Command> = [

@@ -25,12 +25,9 @@ export const resolveKeybindings = (input: {
 }): {
   readonly keybindings: ReadonlyArray<ResolvedKeybinding>
   readonly conflicts: ReadonlyArray<KeybindingConflict>
-  readonly unreadable: ReadonlyArray<string>
 } => {
-  const unreadable: Array<string> = []
   const read = (keybinding: Keybinding): ResolvedKeybinding | null => {
     const key = normalizeKey(keybinding.key, input.platform)
-    if (key === null) unreadable.push(keybinding.key)
     return key === null ? null : { ...keybinding, key, written: keybinding.key }
   }
   const user = input.user.map(read).filter((k) => k !== null)
@@ -59,21 +56,31 @@ export const resolveKeybindings = (input: {
         userCommand: u.command,
       })),
   )
-  return { keybindings: [...defaults, ...added], conflicts, unreadable }
+  return { keybindings: [...defaults, ...added], conflicts }
 }
 
-// `areas` holds the areas around the focus, closest first. The last of equal keybindings wins.
+// The commands bound to any of `keys`, in the order to try them; `areas` is closest first.
+export const findCommands = (
+  keybindings: ReadonlyArray<ResolvedKeybinding>,
+  keys: ReadonlyArray<string>,
+  areas: ReadonlyArray<string>,
+): ReadonlyArray<string> =>
+  [...areas, null].flatMap((area) =>
+    keybindings
+      .filter((k) => keys.includes(k.key) && k.when === area)
+      .map((k) => k.command)
+      .reverse(),
+  )
+
 export const findCommand = (
   keybindings: ReadonlyArray<ResolvedKeybinding>,
   key: string,
   areas: ReadonlyArray<string>,
-): string | null => {
-  for (const area of [...areas, null]) {
-    const found = keybindings.findLast((k) => k.key === key && k.when === area)
-    if (found !== undefined) return found.command
-  }
-  return null
-}
+): string | null => findCommands(keybindings, [key], areas)[0] ?? null
+
+// What `mod` stands for does not change whether a key can be read.
+export const unreadableKeys = (keybindings: ReadonlyArray<Keybinding>): ReadonlyArray<string> =>
+  keybindings.filter((k) => normalizeKey(k.key, { mac: false }) === null).map((k) => k.key)
 
 export const keyOfCommand = (
   keybindings: ReadonlyArray<ResolvedKeybinding>,

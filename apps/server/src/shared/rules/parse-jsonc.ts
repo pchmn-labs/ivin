@@ -59,7 +59,6 @@ const withoutTrailingCommas = (text: string) => {
   return out
 }
 
-// Index just past the string that opens at `start`.
 const endOfString = (text: string, start: number) => {
   let i = start + 1
   while (i < text.length && text[i] !== '"') i += text[i] === "\\" ? 2 : 1

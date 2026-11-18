@@ -83,17 +83,24 @@ export const normalizeKey = (text: string, platform: Platform): string | null =>
   return chord === null ? null : serialize(chord)
 }
 
-export const eventKey = (event: PressedKey): string => {
-  // Option changes the character typed on macOS, so the physical key names it instead.
-  const physical = event.altKey ? /^(?:Key([A-Z])|Digit(\d))$/.exec(event.code) : null
-  const key = physical ? (physical[1] ?? physical[2]!) : event.key
-  return serialize({
+// The written forms a pressed key can match.
+export const eventKeys = (event: PressedKey): ReadonlyArray<string> => {
+  const pressed = {
     ctrl: event.ctrlKey,
     alt: event.altKey,
     shift: event.shiftKey,
     meta: event.metaKey,
-    key: canonicalKey(key),
-  })
+    key: canonicalKey(event.key),
+  }
+  // The layout may need Shift or Option to type a symbol, so the symbol alone names it.
+  const symbol = /^[^\p{L}\p{N}]$/u.test(event.key)
+  const typed = symbol ? { ...pressed, shift: false, alt: false } : pressed
+  // Option changes the character typed on macOS, so the physical key names it too.
+  const physical = event.altKey ? /^(?:Key([A-Z])|Digit(\d))$/.exec(event.code) : null
+  const forms = [serialize(typed)]
+  if (physical)
+    forms.push(serialize({ ...pressed, key: (physical[1] ?? physical[2]!).toLowerCase() }))
+  return forms
 }
 
 const KEY_LABELS: Readonly<Record<string, string>> = {

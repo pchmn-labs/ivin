@@ -281,3 +281,10 @@ test("Escape closes an open menu without interrupting the session", async () => 
   await new Promise((resolve) => setTimeout(resolve, 200))
   expect(server.sessions.get("s1")?.status).toBe("working")
 })
+
+test("Enter on the focused Interrupt button presses it rather than running composer.send", async () => {
+  await mountSession("working")
+  await page.getByRole("button", { name: "Interrupt" }).element().focus()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
+})

@@ -1,4 +1,4 @@
-import type { AtomRegistry } from "effect/reactivity"
+import type { Atom, AtomRegistry } from "effect/reactivity"
 import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
 import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
 import { addCommandHandler } from "../../command/atoms/run-command.ts"
@@ -15,23 +15,18 @@ export const activatePlugin = (
   { manifest, activate }: UiPluginEntry,
 ): (() => void) => {
   const pluginId = manifest.id
+  const removeFrom = <T extends { readonly pluginId: string | null }>(
+    atom: Atom.Writable<ReadonlyArray<T>>,
+  ) =>
+    registry.set(
+      atom,
+      registry.get(atom).filter((item) => item.pluginId !== pluginId),
+    )
   const removeOwn = () => {
-    registry.set(
-      contributionsAtom,
-      registry.get(contributionsAtom).filter((c) => c.pluginId !== pluginId),
-    )
-    registry.set(
-      commandsAtom,
-      registry.get(commandsAtom).filter((c) => c.pluginId !== pluginId),
-    )
-    registry.set(
-      commandHandlersAtom,
-      registry.get(commandHandlersAtom).filter((h) => h.owner !== pluginId),
-    )
-    registry.set(
-      defaultKeybindingsAtom,
-      registry.get(defaultKeybindingsAtom).filter((k) => k.pluginId !== pluginId),
-    )
+    removeFrom(contributionsAtom)
+    removeFrom(commandsAtom)
+    removeFrom(commandHandlersAtom)
+    removeFrom(defaultKeybindingsAtom)
   }
 
   const ctx: UiContext = {

@@ -14,7 +14,6 @@ const readText = (path: string) =>
     }),
   )
 
-// Watches the folder rather than the file: editors save by replacing it, and it may not exist yet.
 export const layerFsKeybindingsFile = (ivinHome: string) =>
   Layer.succeed(KeybindingsFile)({
     contents: Stream.callback<void>((queue) =>
@@ -22,9 +21,13 @@ export const layerFsKeybindingsFile = (ivinHome: string) =>
         yield* Effect.promise(() => mkdir(ivinHome, { recursive: true }))
         yield* Effect.acquireRelease(
           Effect.sync(() =>
+            // The folder, not the file: editors save by replacing it, and it may not exist yet.
             watch(ivinHome, (_, fileName) => {
               if (fileName === FILE_NAME) Queue.offerUnsafe(queue, undefined)
-            }),
+            }).on("error", (error) =>
+              // Without a listener, losing the folder would crash the server.
+              Effect.runFork(Effect.logWarning("stopped watching keybindings.json", error)),
+            ),
           ),
           (watcher) => Effect.sync(() => watcher.close()),
         )
