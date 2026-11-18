@@ -3,7 +3,7 @@
 }
 
 .iv-icon--spin {
-  animation: iv-spin 900ms linear infinite;
+  animation: iv-spin var(--iv-duration-spin) linear infinite;
 }
 
 @keyframes iv-spin {

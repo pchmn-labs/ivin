@@ -4,12 +4,20 @@ import { foldText, mainArgument, prettyInput } from "./rules/tool-output.ts"
 
 const STATUS_LABELS = { running: "running", done: "succeeded", error: "failed" } as const
 
+type Output = ReturnType<typeof foldText> | null
+
+function summaryOf(output: Output) {
+  if (output === null) return "Input"
+  return output.folded ? output.preview : "Output"
+}
+
+const outputTestId = (output: Output) => (output === null ? {} : { "data-testid": "tool-output" })
+
 function ToolCall({ item }: SlotProps["transcript.toolCall"]) {
   const failed = item.status === "error"
   const main = mainArgument(item.name, item.input)
   const output = item.output === null ? null : foldText(item.output)
   const showInput = main === null && item.input !== undefined
-  const summary = output?.folded ? output.preview : output === null ? "Input" : "Output"
   return (
     <Stack gap={2}>
       <Stack direction="row" gap={2} align="center">
@@ -29,10 +37,10 @@ function ToolCall({ item }: SlotProps["transcript.toolCall"]) {
       </Stack>
       {(output !== null || showInput) && (
         <Disclosure
-          {...(output === null ? {} : { "data-testid": "tool-output" })}
+          {...outputTestId(output)}
           summary={
             <Text size="sm" tone="muted" mono={output?.folded === true} preWrap>
-              {summary}
+              {summaryOf(output)}
             </Text>
           }
         >

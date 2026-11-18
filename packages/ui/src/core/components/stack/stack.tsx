@@ -1,7 +1,7 @@
-import type { StackProps } from "@ivin/plugin-api/ui"
+import type { StackProps as PluginStackProps } from "@ivin/plugin-api/ui"
 import "./stack.css"
 
-export type { StackProps }
+export type StackProps = PluginStackProps & { readonly className?: string }
 
 export function Stack({
   direction = "column",

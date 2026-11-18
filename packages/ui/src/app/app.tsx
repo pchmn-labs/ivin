@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
-import { Tooltip } from "../core/ui/tooltip/tooltip.tsx"
+import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
 import {
   NoProject,

@@ -40,8 +40,15 @@
   --iv-radius-md: 6px;
   --iv-radius-lg: 10px;
 
+  --iv-control-sm: 24px;
+  --iv-control-md: 28px;
+  --iv-row-height: 30px;
+  --iv-content-width: 760px;
+
   --iv-duration-fast: 120ms;
   --iv-duration-base: 180ms;
+  --iv-duration-spin: 900ms;
+  --iv-duration-pulse: 1600ms;
   --iv-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
   --iv-bg: #0f1613;
@@ -60,6 +67,7 @@
   --iv-danger: #f0644a;
   --iv-danger-subtle: rgba(229, 83, 59, 0.14);
   --iv-focus-ring: #a9d9a0;
+  --iv-backdrop: rgba(5, 10, 8, 0.5);
   --iv-shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
   color-scheme: dark;
 }
@@ -82,6 +90,7 @@
     --iv-danger: #c8402a;
     --iv-danger-subtle: rgba(200, 64, 42, 0.1);
     --iv-focus-ring: #2e6b3e;
+    --iv-backdrop: rgba(11, 35, 24, 0.32);
     --iv-shadow-overlay: 0 8px 24px rgba(11, 35, 24, 0.14), 0 2px 6px rgba(11, 35, 24, 0.08);
     color-scheme: light;
   }
@@ -104,6 +113,7 @@
   --iv-danger: #f0644a;
   --iv-danger-subtle: rgba(229, 83, 59, 0.14);
   --iv-focus-ring: #a9d9a0;
+  --iv-backdrop: rgba(5, 10, 8, 0.5);
   --iv-shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
   color-scheme: dark;
 }
@@ -125,6 +135,7 @@
   --iv-danger: #c8402a;
   --iv-danger-subtle: rgba(200, 64, 42, 0.1);
   --iv-focus-ring: #2e6b3e;
+  --iv-backdrop: rgba(11, 35, 24, 0.32);
   --iv-shadow-overlay: 0 8px 24px rgba(11, 35, 24, 0.14), 0 2px 6px rgba(11, 35, 24, 0.08);
   color-scheme: light;
 }

@@ -5,7 +5,7 @@
 }
 
 .iv-select__control {
-  height: 28px;
+  height: var(--iv-control-md);
   padding: 0 var(--iv-space-6) 0 var(--iv-space-2);
   border: 1px solid var(--iv-border-strong);
   border-radius: var(--iv-radius-md);

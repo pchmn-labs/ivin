@@ -21,12 +21,12 @@
 }
 
 .iv-field--input {
-  height: 28px;
+  height: var(--iv-control-md);
   padding: 0 var(--iv-space-2);
 }
 
 .iv-field--area {
-  min-height: 28px;
+  min-height: var(--iv-control-md);
   max-height: 240px;
   padding: 5px var(--iv-space-2);
   field-sizing: content;

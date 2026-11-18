@@ -40,7 +40,7 @@
 }
 
 .iv-status-mark[data-status="working"] .iv-status-mark__dot {
-  animation: iv-pulse 1600ms var(--iv-ease-out) infinite;
+  animation: iv-pulse var(--iv-duration-pulse) var(--iv-ease-out) infinite;
 }
 
 .iv-status-mark__label {

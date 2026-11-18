@@ -1,6 +1,6 @@
 .iv-composer {
   width: 100%;
-  max-width: 760px;
+  max-width: var(--iv-content-width);
   margin: 0 auto;
   padding: 0 var(--iv-space-6) var(--iv-space-4);
 }

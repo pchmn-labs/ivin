@@ -1,8 +1,8 @@
 import { memo, useRef } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import "../../../core/ui/markdown/markdown.css"
-import { extendBlocks, splitBlocks } from "../rules/split-blocks.ts"
+import "./markdown.css"
+import { extendBlocks, splitBlocks } from "../../../modules/transcript/rules/split-blocks.ts"
 
 const Block = memo(function Block({ source }: { source: string }) {
   return <ReactMarkdown remarkPlugins={[remarkGfm]}>{source}</ReactMarkdown>

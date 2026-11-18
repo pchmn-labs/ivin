@@ -1,7 +1,7 @@
 .iv-dialog__backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(5, 10, 8, 0.5);
+  background: var(--iv-backdrop);
   transition: opacity var(--iv-duration-base) var(--iv-ease-out);
 }
 

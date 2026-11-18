@@ -8,7 +8,7 @@
 }
 
 .iv-transcript__column {
-  max-width: 760px;
+  max-width: var(--iv-content-width);
   margin: 0 auto;
   padding: 0 var(--iv-space-6);
 }

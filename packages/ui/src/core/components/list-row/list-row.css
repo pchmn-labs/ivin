@@ -2,7 +2,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  min-height: 30px;
+  min-height: var(--iv-row-height);
   border-radius: var(--iv-radius-md);
   transition: background-color var(--iv-duration-fast) var(--iv-ease-out);
 }
@@ -21,7 +21,7 @@
   align-items: center;
   gap: var(--iv-space-2);
   min-width: 0;
-  min-height: 30px;
+  min-height: var(--iv-row-height);
   padding: 0 var(--iv-space-2);
   border: 0;
   border-radius: inherit;

@@ -18,7 +18,7 @@ export function Tabs({ tabs, value, onValueChange, children, "aria-label": ariaL
       value={value}
       onValueChange={(next) => onValueChange(String(next))}
     >
-      <BaseTabs.List className="iv-tabs__list" aria-label={ariaLabel}>
+      <BaseTabs.List className="iv-tabs__list" aria-label={ariaLabel} activateOnFocus>
         {tabs.map((tab) => (
           <BaseTabs.Tab key={tab.value} value={tab.value} className="iv-tabs__tab">
             {tab.icon === undefined ? null : <Icon name={tab.icon} size={14} />}

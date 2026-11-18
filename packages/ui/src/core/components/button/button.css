@@ -19,24 +19,24 @@
 }
 
 .iv-button--md {
-  height: 28px;
+  height: var(--iv-control-md);
   padding: 0 var(--iv-space-3);
   font-size: var(--iv-text-md);
 }
 
 .iv-button--sm {
-  height: 24px;
+  height: var(--iv-control-sm);
   padding: 0 var(--iv-space-2);
   font-size: var(--iv-text-sm);
 }
 
 .iv-button--icon.iv-button--md {
-  width: 28px;
+  width: var(--iv-control-md);
   padding: 0;
 }
 
 .iv-button--icon.iv-button--sm {
-  width: 24px;
+  width: var(--iv-control-sm);
   padding: 0;
 }
 

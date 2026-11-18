@@ -12,7 +12,7 @@ packages/ui/src/
     adapters/           browser APIs and stores outside the RPC: clipboard, local storage, drag and drop
     ui/                 components
   core/
-    ui/<component>/     design system: <component>.tsx, <component>.css, its test
+    components/<name>/  design system: <name>.tsx, <name>.css, its test
     theme/              the --iv- tokens and base styles
     server-client.ts    the RPC client service
 ```

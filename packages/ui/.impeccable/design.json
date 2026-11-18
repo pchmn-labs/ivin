@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-18T00:00:00Z",
+  "title": "Design System: ivin",
+  "extensions": {
+    "colorMeta": {
+      "yew": {
+        "role": "primary",
+        "displayName": "Yew Green",
+        "canonical": "var(--iv-accent)",
+        "tonalRamp": [
+          "#0b2318",
+          "#173e2b",
+          "#255a33",
+          "#2e6b3e",
+          "#5c9a63",
+          "#a9d9a0",
+          "#bde5b5",
+          "#e3f3df"
+        ]
+      },
+      "yew-light": {
+        "role": "primary",
+        "displayName": "Yew Green (light)",
+        "canonical": "var(--iv-accent)"
+      },
+      "yew-hover": {
+        "role": "primary",
+        "displayName": "Yew Hover",
+        "canonical": "var(--iv-accent-hover)"
+      },
+      "yew-contrast": {
+        "role": "primary",
+        "displayName": "Yew Contrast",
+        "canonical": "var(--iv-accent-contrast)"
+      },
+      "cursor-red": {
+        "role": "secondary",
+        "displayName": "Cursor Red",
+        "canonical": "var(--iv-danger)",
+        "tonalRamp": [
+          "#3a120b",
+          "#6e2416",
+          "#a03321",
+          "#c8402a",
+          "#e5533b",
+          "#f0644a",
+          "#f6a596",
+          "#fbe0da"
+        ]
+      },
+      "cursor-red-light": {
+        "role": "secondary",
+        "displayName": "Cursor Red (light)",
+        "canonical": "var(--iv-danger)"
+      },
+      "cursor-red-subtle": {
+        "role": "secondary",
+        "displayName": "Cursor Red Wash",
+        "canonical": "var(--iv-danger-subtle)"
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Forest Ground",
+        "canonical": "var(--iv-bg)",
+        "tonalRamp": [
+          "#0b110e",
+          "#0f1613",
+          "#18211c",
+          "#2a3630",
+          "#788a7e",
+          "#9daba2",
+          "#e4ebe6",
+          "#f8faf7"
+        ]
+      },
+      "ground-subtle": {
+        "role": "neutral",
+        "displayName": "Deep Ground",
+        "canonical": "var(--iv-bg-subtle)"
+      },
+      "ground-raised": {
+        "role": "neutral",
+        "displayName": "Raised Ground",
+        "canonical": "var(--iv-bg-raised)"
+      },
+      "hover-wash": {
+        "role": "neutral",
+        "displayName": "Hover Wash",
+        "canonical": "var(--iv-bg-hover)"
+      },
+      "active-wash": {
+        "role": "neutral",
+        "displayName": "Active Wash",
+        "canonical": "var(--iv-bg-active)"
+      },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "var(--iv-border)" },
+      "hairline-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "var(--iv-border-strong)"
+      },
+      "text": { "role": "neutral", "displayName": "Text", "canonical": "var(--iv-text)" },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Muted Text",
+        "canonical": "var(--iv-text-muted)"
+      },
+      "text-faint": {
+        "role": "neutral",
+        "displayName": "Faint Text",
+        "canonical": "var(--iv-text-faint)"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Level-1 headings inside Markdown answers only."
+      },
+      "title-lg": {
+        "displayName": "Title Large",
+        "purpose": "Dialog titles and level-2 Markdown headings."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "The sidebar project name and level-3/4 Markdown headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "The app default: transcript text, row titles, controls."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Small buttons, field labels, tooltips, status and tool metadata."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "The You and Claude speaker labels, in muted text."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Code blocks, commands, tool arguments and file paths."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay",
+        "value": "0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3)",
+        "purpose": "Menus, tooltips and dialogs only (forest-dark; forest-light uses rgba(11, 35, 24, 0.14) and 0.08). Token: --iv-shadow-overlay."
+      }
+    ],
+    "motion": [
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Hover and colour changes, menus, tooltips, the disclosure chevron. Token: --iv-duration-fast."
+      },
+      {
+        "name": "duration-base",
+        "value": "180ms",
+        "purpose": "Dialog and backdrop fade and scale. Token: --iv-duration-base."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "The single easing for state transitions and overlay entry. Token: --iv-ease-out."
+      },
+      {
+        "name": "status-pulse",
+        "value": "opacity 1 to 0.4, 1600ms, infinite",
+        "purpose": "The working status dot only."
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one primary action on a surface: Send, Allow.",
+      "html": "<button class=\"ds-btn ds-btn-primary\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z\"/><path d=\"m21.854 2.147-10.94 10.939\"/></svg>Send</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: var(--iv-space-1, 4px); height: 28px; padding: 0 var(--iv-space-3, 12px); border: 1px solid transparent; border-radius: var(--iv-radius-md, 6px); font-family: var(--iv-font-sans, system-ui); font-size: var(--iv-text-md, 13px); font-weight: 500; cursor: default; transition: background-color 120ms cubic-bezier(0.22, 1, 0.36, 1), color 120ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn:focus-visible { outline: 2px solid var(--iv-focus-ring, #a9d9a0); outline-offset: 2px; } .ds-btn-primary { background: var(--iv-accent, #a9d9a0); color: var(--iv-accent-contrast, #0b2318); } .ds-btn-primary:hover, .ds-btn-primary:active { background: var(--iv-accent-hover, #bde5b5); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "The paired alternative: Deny, Interrupt, New session.",
+      "html": "<button class=\"ds-btn-secondary\">Deny</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; height: 28px; padding: 0 var(--iv-space-3, 12px); border: 1px solid var(--iv-border-strong, rgba(214,235,220,0.15)); border-radius: var(--iv-radius-md, 6px); background: var(--iv-bg-raised, #18211c); color: var(--iv-text, #e4ebe6); font-family: var(--iv-font-sans, system-ui); font-size: var(--iv-text-md, 13px); font-weight: 500; cursor: default; transition: background-color 120ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn-secondary:hover { background: var(--iv-bg-hover, rgba(169,217,160,0.06)); } .ds-btn-secondary:active { background: var(--iv-bg-active, rgba(169,217,160,0.11)); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--iv-focus-ring, #a9d9a0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Toolbar and row actions.",
+      "html": "<button class=\"ds-btn-ghost\" aria-label=\"Open folder\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2\"/></svg></button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: var(--iv-radius-md, 6px); background: transparent; color: var(--iv-text-muted, #9daba2); cursor: default; transition: background-color 120ms cubic-bezier(0.22, 1, 0.36, 1), color 120ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-btn-ghost:hover { background: var(--iv-bg-hover, rgba(169,217,160,0.06)); color: var(--iv-text, #e4ebe6); } .ds-btn-ghost:focus-visible { outline: 2px solid var(--iv-focus-ring, #a9d9a0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "text-field",
+      "description": "Single-line field; the border takes the focus ring colour.",
+      "html": "<input class=\"ds-field\" placeholder=\"Session title\" />",
+      "css": ".ds-field { width: 240px; height: 28px; padding: 0 var(--iv-space-2, 8px); border: 1px solid var(--iv-border-strong, rgba(214,235,220,0.15)); border-radius: var(--iv-radius-md, 6px); background: var(--iv-bg-raised, #18211c); color: var(--iv-text, #e4ebe6); font-family: var(--iv-font-sans, system-ui); font-size: var(--iv-text-md, 13px); transition: border-color 120ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-field::placeholder { color: var(--iv-text-faint, #788a7e); } .ds-field:focus-visible { border-color: var(--iv-focus-ring, #a9d9a0); outline: 2px solid var(--iv-focus-ring, #a9d9a0); outline-offset: -1px; }"
+    },
+    {
+      "name": "Session Row",
+      "kind": "nav",
+      "refersTo": "list-row",
+      "description": "A sidebar row: status mark, truncated title, faint relative time.",
+      "html": "<div class=\"ds-rows\"><button class=\"ds-row ds-row-selected\"><span class=\"ds-dot ds-dot-waiting\"></span><span class=\"ds-row-title\">Set up the design system</span><span class=\"ds-row-meta\">2 min</span></button><button class=\"ds-row\"><span class=\"ds-dot ds-dot-working\"></span><span class=\"ds-row-title\">Branch picker for worktrees</span><span class=\"ds-row-meta\">14 min</span></button><button class=\"ds-row\"><span class=\"ds-dot ds-dot-idle\"></span><span class=\"ds-row-title\">Stop agents on quit</span><span class=\"ds-row-meta\">3 d</span></button></div>",
+      "css": ".ds-rows { display: flex; flex-direction: column; gap: 2px; width: 236px; } .ds-row { display: flex; align-items: center; gap: var(--iv-space-2, 8px); min-height: 30px; padding: 0 var(--iv-space-2, 8px); border: 0; border-radius: var(--iv-radius-md, 6px); background: transparent; color: var(--iv-text, #e4ebe6); font-family: var(--iv-font-sans, system-ui); font-size: var(--iv-text-md, 13px); text-align: left; cursor: default; transition: background-color 120ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-row:hover { background: var(--iv-bg-hover, rgba(169,217,160,0.06)); } .ds-row-selected { background: var(--iv-bg-active, rgba(169,217,160,0.11)); font-weight: 500; } .ds-row:focus-visible { outline: 2px solid var(--iv-focus-ring, #a9d9a0); outline-offset: 2px; } .ds-row-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row-meta { color: var(--iv-text-faint, #788a7e); font-size: var(--iv-text-sm, 12px); font-variant-numeric: tabular-nums; } .ds-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; } .ds-dot-working { background: var(--iv-accent, #a9d9a0); animation: ds-pulse 1600ms cubic-bezier(0.22, 1, 0.36, 1) infinite; } .ds-dot-waiting { width: 8px; height: 8px; background: var(--iv-danger, #f0644a); } .ds-dot-idle { box-shadow: inset 0 0 0 1.5px var(--iv-text-faint, #788a7e); } @keyframes ds-pulse { 50% { opacity: 0.4; } }"
+    },
+    {
+      "name": "Approval Block",
+      "kind": "card",
+      "refersTo": "block-attention",
+      "description": "An approval awaiting an answer: raised ground, full cursor-red border.",
+      "html": "<div class=\"ds-approval\"><div class=\"ds-approval-name\">Bash</div><pre class=\"ds-code\">git push origin feat/33-design-system</pre><div class=\"ds-approval-wait\">Claude is waiting for your approval</div></div>",
+      "css": ".ds-approval { display: flex; flex-direction: column; gap: var(--iv-space-3, 12px); width: 420px; padding: var(--iv-space-3, 12px); border: 1px solid var(--iv-danger, #f0644a); border-radius: var(--iv-radius-md, 6px); background: var(--iv-bg-raised, #18211c); color: var(--iv-text, #e4ebe6); font-family: var(--iv-font-sans, system-ui); font-size: var(--iv-text-md, 13px); } .ds-approval-name { font-weight: 500; } .ds-code { margin: 0; padding: var(--iv-space-2, 8px) var(--iv-space-3, 12px); border-radius: var(--iv-radius-md, 6px); background: var(--iv-bg-subtle, #0b110e); font-family: var(--iv-font-mono, ui-monospace, monospace); font-size: var(--iv-text-sm, 12px); line-height: 20px; white-space: pre-wrap; } .ds-approval-wait { color: var(--iv-danger, #f0644a); font-size: var(--iv-text-sm, 12px); font-weight: 500; }"
+    },
+    {
+      "name": "Menu",
+      "kind": "custom",
+      "refersTo": "menu",
+      "description": "Floating menu: the one surface family that casts a shadow.",
+      "html": "<div class=\"ds-menu\"><div class=\"ds-menu-item ds-menu-item-hl\">Rename</div><div class=\"ds-menu-sep\"></div><div class=\"ds-menu-item ds-menu-item-danger\">Delete session</div></div>",
+      "css": ".ds-menu { min-width: 160px; padding: var(--iv-space-1, 4px); border: 1px solid var(--iv-border-strong, rgba(214,235,220,0.15)); border-radius: var(--iv-radius-lg, 10px); background: var(--iv-bg-raised, #18211c); box-shadow: var(--iv-shadow-overlay, 0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3)); font-family: var(--iv-font-sans, system-ui); font-size: var(--iv-text-md, 13px); } .ds-menu-item { display: flex; align-items: center; height: 28px; padding: 0 var(--iv-space-2, 8px); border-radius: var(--iv-radius-sm, 4px); color: var(--iv-text, #e4ebe6); cursor: default; } .ds-menu-item:hover, .ds-menu-item-hl { background: var(--iv-bg-active, rgba(169,217,160,0.11)); } .ds-menu-item-danger { color: var(--iv-danger, #f0644a); } .ds-menu-sep { height: 1px; margin: var(--iv-space-1, 4px) 0; background: var(--iv-border, rgba(214,235,220,0.08)); }"
+    },
+    {
+      "name": "Composer",
+      "kind": "custom",
+      "refersTo": "composer",
+      "description": "The docked message surface; the whole surface takes the focus colour.",
+      "html": "<div class=\"ds-composer\" tabindex=\"0\"><div class=\"ds-composer-field\">Message Claude</div><div class=\"ds-composer-bar\"><span class=\"ds-composer-status\">18,440 tokens · $0.4200</span><button class=\"ds-composer-send\">Send</button></div></div>",
+      "css": ".ds-composer { display: flex; flex-direction: column; gap: var(--iv-space-2, 8px); width: 520px; padding: var(--iv-space-2, 8px); border: 1px solid var(--iv-border-strong, rgba(214,235,220,0.15)); border-radius: var(--iv-radius-lg, 10px); background: var(--iv-bg-raised, #18211c); font-family: var(--iv-font-sans, system-ui); font-size: var(--iv-text-md, 13px); outline: none; transition: border-color 120ms cubic-bezier(0.22, 1, 0.36, 1); } .ds-composer:focus-within, .ds-composer:focus-visible { border-color: var(--iv-focus-ring, #a9d9a0); } .ds-composer-field { padding: 5px var(--iv-space-2, 8px); color: var(--iv-text-faint, #788a7e); } .ds-composer-bar { display: flex; align-items: center; justify-content: space-between; } .ds-composer-status { color: var(--iv-text-muted, #9daba2); font-size: var(--iv-text-sm, 12px); font-variant-numeric: tabular-nums; } .ds-composer-send { height: 28px; padding: 0 var(--iv-space-3, 12px); border: 0; border-radius: var(--iv-radius-md, 6px); background: var(--iv-accent, #a9d9a0); color: var(--iv-accent-contrast, #0b2318); font: inherit; font-weight: 500; } .ds-composer-send:hover { background: var(--iv-accent-hover, #bde5b5); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Workbench",
+    "overview": "ivin uses the layout every agent app ships: a project rail, a session sidebar, a transcript, a composer. It is finished to the level of Linear, Zed and Raycast, with fewer facts per row than Linear. The look is calm and flat, built for a window that stays open all day. Neutrals are tinted from the app icon's forest greens. Yew green is the one accent. The icon's red cursor appears only when the user is needed or something failed.\n\nAll colours, sizes, radii and durations are `--iv-` CSS custom properties in `packages/ui/src/core/theme/tokens.css`. A theme changes the app by overriding those variables. The built-in theme is \"forest\", in a dark and a light variant, and follows the system appearance unless `data-theme` forces one. Plugins get the same components as the built-in screens, only through `@ivin/plugin-api`. The reasons are in `docs/adr/0002-design-system-on-base-ui-and-css-custom-properties.md`.\n\nThe design does without dense dashboards, IDE chrome, chat bubbles and decoration.",
+    "keyCharacteristics": [
+      "Flat, tinted neutrals. Depth comes from three ground tones and 1px hairlines.",
+      "One green accent and one red signal, each with a single job.",
+      "System UI type at 13px body, with mono for code, commands and paths.",
+      "A 4px grid, 28px controls, 6px corners.",
+      "Shadows only on overlays: menus, tooltips and dialogs.",
+      "Every value is a `--iv-` token a theme file can override."
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "Yew green marks focus, selection, the primary action and \"working\". It never decorates.",
+        "section": "colors"
+      },
+      {
+        "name": "The Red Means You Rule",
+        "body": "Cursor red marks only what needs the user (waiting, an approval) or what went wrong (error, failure). A status colour goes through `--iv-status-working`, `--iv-status-waiting`, `--iv-status-idle` or `--iv-status-failed`, never a raw colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Token-Only Rule",
+        "body": "No colour, font or size outside the `--iv-` tokens. Derived tints use `color-mix()` on a token (accent blocks at 8% fill and 40% border, the project mark at 14% fill and 45% border).",
+        "section": "colors"
+      },
+      {
+        "name": "The Native Type Rule",
+        "body": "Body copy is 13px system UI. Hierarchy comes from weight and muted tones, not size jumps. 20px is the largest size and appears only inside Markdown.",
+        "section": "typography"
+      },
+      {
+        "name": "The Overlays-Only Rule",
+        "body": "A shadow means \"this floats above the window\". Blocks, the composer, rows and buttons never cast one.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do take every colour, size, radius and duration from a `--iv-` token, so a theme file can override it.",
+      "Do keep yew green for focus, selection, the primary action and \"working\", and use at most one primary button per surface.",
+      "Do keep cursor red for \"waiting for you\", approvals, errors and failures, through the `--iv-status-*` tokens.",
+      "Do build plugin UI only from `@ivin/plugin-api` components, with layout through `Stack` and `Block`.",
+      "Do use mono for code, commands and file paths, and tabular figures for times, counts and costs.",
+      "Do keep transcript rows flat and cheap: a block, text, a disclosure, a code block."
+    ],
+    "donts": [
+      "Don't put a shadow on anything that does not float above the window.",
+      "Don't use chat bubbles, dense dashboards, IDE chrome or decoration.",
+      "Don't add inline styles to screens or plugins, or import a UI library into a plugin.",
+      "Don't add a font size, weight or radius outside the scales above.",
+      "Don't use red for emphasis or decoration."
+    ]
+  }
+}

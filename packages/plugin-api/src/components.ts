@@ -24,9 +24,12 @@ export type IconName =
   | "user"
   | "sparkles"
 
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
+export type ButtonSize = "sm" | "md"
+
 export interface ButtonProps {
-  readonly variant?: "primary" | "secondary" | "ghost" | "danger"
-  readonly size?: "sm" | "md"
+  readonly variant?: ButtonVariant
+  readonly size?: ButtonSize
   readonly icon?: IconName
   readonly disabled?: boolean
   readonly type?: "button" | "submit"
@@ -41,8 +44,8 @@ export interface ButtonProps {
 export interface IconButtonProps {
   readonly icon: IconName
   readonly label: string
-  readonly size?: "sm" | "md"
-  readonly variant?: "primary" | "secondary" | "ghost" | "danger"
+  readonly size?: ButtonSize
+  readonly variant?: ButtonVariant
   readonly onClick?: () => void
   readonly disabled?: boolean
   readonly "data-testid"?: string
@@ -107,7 +110,6 @@ export interface StackProps {
   readonly wrap?: boolean
   readonly grow?: boolean
   readonly as?: "div" | "span" | "ul" | "li" | "section"
-  readonly className?: string
   readonly "data-testid"?: string
   readonly children?: ReactNode
 }
