@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { elapsed, workingSessions } from "./working-sessions.ts"
+import { workingSessions } from "./working-sessions.ts"
 
 const session = (
   id: string,
@@ -58,14 +58,4 @@ test("the session on screen and the sessions of closed projects are left out", (
 
   expect(ids(groups.needsYou)).toEqual(["other-tab"])
   expect(groups.running).toEqual([])
-})
-
-test("the elapsed time reads in the largest whole unit", () => {
-  const minute = 60_000
-  expect(elapsed(0, 59_999)).toBe("<1 min")
-  expect(elapsed(0, minute)).toBe("1 min")
-  expect(elapsed(0, 59 * minute)).toBe("59 min")
-  expect(elapsed(0, 60 * minute)).toBe("1 h")
-  expect(elapsed(0, 48 * 60 * minute)).toBe("2 d")
-  expect(elapsed(10, 0)).toBe("<1 min")
 })

@@ -14,25 +14,28 @@ import {
   type Project,
   type Session,
 } from "@ivin/plugin-api/ui"
-import { elapsed, workingSessions } from "./rules/working-sessions.ts"
+import { elapsed } from "./rules/elapsed.ts"
+import { workingSessions } from "./rules/working-sessions.ts"
 
 // One timer for the whole panel, so the rows tick together.
-function useNow(intervalMs = 15_000) {
+function useNow() {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), intervalMs)
+    const timer = setInterval(() => setNow(Date.now()), 15_000)
     return () => clearInterval(timer)
-  }, [intervalMs])
+  }, [])
   return now
 }
 
 function Group({
   label,
+  attention = false,
   sessions,
   projectNames,
   now,
 }: {
   label: string
+  attention?: boolean
   sessions: ReadonlyArray<Session>
   projectNames: ReadonlyMap<string, string>
   now: number
@@ -40,7 +43,7 @@ function Group({
   const openTab = useOpenTab()
   if (sessions.length === 0) return null
   return (
-    <ListSection label={label} attention={label === "Needs you"}>
+    <ListSection label={label} count={sessions.length} attention={attention}>
       {sessions.map((session) => (
         <Stack as="li" key={session.id}>
           <ListRow
@@ -48,14 +51,8 @@ function Group({
             attention={session.status === "waiting"}
             onSelect={() => openTab(session.id)}
             leading={<SessionMark status={session.status} />}
-            title={
-              <>
-                <span>{session.title}</span>{" "}
-                <Text size="sm" tone="faint">
-                  {projectNames.get(session.projectPath)}
-                </Text>
-              </>
-            }
+            title={session.title}
+            subtitle={projectNames.get(session.projectPath)}
             meta={elapsed(session.statusChangedAt.epochMilliseconds, now)}
           />
         </Stack>
@@ -69,14 +66,16 @@ function WorkingPanel() {
   const { needsYou, running } = workingSessions(useSessions(), projects, useSelectedSessionId())
   const count = needsYou.length + running.length
   if (count === 0) return null
-  return <Panel needsYou={needsYou} running={running} projects={projects} />
+  return <Panel count={count} needsYou={needsYou} running={running} projects={projects} />
 }
 
 function Panel({
+  count,
   needsYou,
   running,
   projects,
 }: {
+  count: number
   needsYou: ReadonlyArray<Session>
   running: ReadonlyArray<Session>
   projects: ReadonlyArray<Project>
@@ -90,7 +89,7 @@ function Panel({
       defaultOpen
       summary={
         <span>
-          Working · <span>{needsYou.length + running.length}</span>
+          Working · <span>{count}</span>
           {needsYou.length > 0 && (
             <Text size="xs" tone="danger">
               {" "}
@@ -100,7 +99,13 @@ function Panel({
         </span>
       }
     >
-      <Group label="Needs you" sessions={needsYou} projectNames={projectNames} now={now} />
+      <Group
+        label="Needs you"
+        attention
+        sessions={needsYou}
+        projectNames={projectNames}
+        now={now}
+      />
       <Group label="Running" sessions={running} projectNames={projectNames} now={now} />
     </Disclosure>
   )

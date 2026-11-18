@@ -5,7 +5,6 @@ import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
 import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
-import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { openSessionsAtom } from "../modules/session/atoms/open-sessions.ts"
 import { answerApprovalFailure } from "../modules/session/rules/failure-message.ts"
 import { tabsOf } from "../modules/tab/atoms/list-tabs.ts"
@@ -24,8 +23,7 @@ const host: UiHost = {
   useSessions: () => useAtomValue(openSessionsAtom),
   useProjects: () => useAtomValue(projectsAtom.value),
   useSelectedSessionId: () => useAtomValue(selectedSessionIdAtom),
-  useSession: (sessionId) =>
-    useAtomValue(sessionsOf(useProjectPath()).items).find((s) => s.id === sessionId),
+  useSession: (sessionId) => useAtomValue(openSessionsAtom).find((s) => s.id === sessionId),
   useTabs: () => useAtomValue(tabsOf(useProjectPath()).value).tabs,
   useOpenTab: () => {
     const openTab = useAtomSet(openTabAtom)
