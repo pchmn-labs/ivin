@@ -132,6 +132,8 @@ The terms are defined in [`GLOSSARY.md`](../GLOSSARY.md). What the design adds t
 - Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
 - Plugins render transcript items; they don't re-derive them from events.
 - An annotation looks like `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
+- The open projects, their order, the selected project, the tabs, their order and each project's selected tab are stored in SQLite and restored at launch.
+- A tab stores its project and its position, so a single bar for all projects can later be a view over the same rows.
 
 The server is the source of truth and persists to SQLite; the renderer holds a read model fed by RPC streams, in atoms that the plugin hooks wrap (see [UI state](#ui-state)). Plugin storage is a namespaced key-value store in the same database.
 
@@ -306,7 +308,7 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 | `sidebar.section` | — | Inactive sessions, Working panel, custom panels |
 | `sidebar.panel` | — | a whole sidebar tab (Files, Changes…) |
 | `tab.decoration` | tab | git status colour, session icon |
-| `view` | params | a full tab or pane view |
+| `view` | params | a full tab view |
 | `settings.section` | — | a plugin's settings page (generated from `plugin.json` when absent) |
 
 Plus non-visual contributions: `commands` (command palette), `keybindings`, `themes`, `fileIcons`, `editorExtensions` (CodeMirror), `fileOpeners` (HTML preview).
@@ -405,7 +407,7 @@ In the fork this took hooks in 10 upstream files; here it touches no core file.
 
 The fork's `docs/fork/` entries are the backlog. Each feature becomes a built-in plugin unless it is core behaviour.
 
-This table lists what the fork added, not what it sits on. The base app MonoCode provides (editor, file explorer, diff, git, worktrees, tabs and panes, terminal, three harnesses) has to be rebuilt too, and is the larger part of the work; the milestones are ordered around it.
+This table lists what the fork added, not what it sits on. The base app MonoCode provides (editor, file explorer, diff, git, worktrees, tabs, terminal, three harnesses) has to be rebuilt too, and is the larger part of the work; the milestones are ordered around it.
 
 | Area | Fork features | Extension points |
 |---|---|---|
@@ -419,11 +421,11 @@ This table lists what the fork added, not what it sits on. The base app MonoCode
 
 ### Window shell
 
-The sidebar is a floating card inset from the window edges: a header row (macOS traffic lights, a sidebar toggle on ⌘\, back and forward over the sessions opened in this window, kept in memory), then the project's session list, and a project bar at the bottom (project icons with their waiting count, open folder, connection status). The main area sits on the plain app background under a slim top bar showing the active session's title; tabs take that bar in milestone 2. With the card hidden, the toggle and arrows move to the top left of the main bar.
+The sidebar is a floating card inset from the window edges: a header row (macOS traffic lights, a sidebar toggle on ⌘\, back and forward over the sessions opened in this window, kept in memory), then a body split into a project rail and the list column. The rail has one button per open project in their order (its creature, with the count of sessions waiting on the user), the open-folder button (native folder dialog) and the connection status at its bottom. The list column has a head with the selected project's name, New session with its model menu, and a menu with Close project; under it the project's sessions that have an open tab, in tab order, grouped "Needs you" then "Sessions". The main area sits on the plain app background; the slim top bar is the selected project's tab bar, where each tab shows its session's title and state, has a close button, and reorders by drag. Under it the selected tab shows its session (transcript and composer); a project with no tab shows an empty message. With the card hidden, the toggle and arrows move to the top left of the main bar.
 
-A project is a pixel creature (8x8, mirrored, generated from its name, one of six `--iv-project-hue-*` hues). A session row is the harness mark with a status overlay; the sessions waiting on the user form a "Needs you" group above "Sessions". The Claude mark keeps its brand orange, the one colour outside the tokens.
+A project is a pixel creature (8x8, mirrored, generated from its name, one of six `--iv-project-hue-*` hues). A session row is the harness mark with a status overlay; a project button shows how many of its sessions wait on the user, and a session waiting on the user is outlined. The Claude mark keeps its brand orange, the one colour outside the tokens.
 
-The prototype these come from is kept in [`docs/design/app-shell-prototype.html`](design/app-shell-prototype.html). Pending, waiting on a settings screen: a Column sidebar view (the projects as a column on the card's left edge) and Letter project icons, both alternatives to the bottom project bar and Pixel icons that ship now. Pending, waiting on server data: the PR icon with checks, branch and worktree in the status line, background tasks, tabs.
+The prototype these come from is kept in [`docs/design/app-shell-prototype.html`](design/app-shell-prototype.html). Pending, waiting on a settings screen: Letter project icons, an alternative to the Pixel icons that ship now. Pending, waiting on server data: the PR icon with checks, branch and worktree in the status line, background tasks.
 
 Layout features (stacked or swapped panels, sub-tabs) are where the slot model is weakest; expect to grow a small layout API (`ctx.layout.registerPanel`, panel placement settings) while porting them.
 

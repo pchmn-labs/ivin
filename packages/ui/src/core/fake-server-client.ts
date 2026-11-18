@@ -1,7 +1,10 @@
 import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
-import type { Project } from "@ivin/contracts/project"
+import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session, SessionStatus } from "@ivin/contracts/session"
+import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
+import { ProjectNotOpen } from "@ivin/contracts/project"
+import { SessionNotFound } from "@ivin/contracts/session"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -16,10 +19,21 @@ export interface FakeServer {
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
   readonly holdNextSend: () => { readonly release: () => void; readonly fail: () => void }
+  // Makes the next tab.reorder wait until `release` is called, or fail.
+  readonly holdNextReorder: () => { readonly release: () => void; readonly fail: () => void }
+  // Opens a project, or a session's tab, as the server would.
+  readonly openProject: (path: string) => void
+  readonly openTab: (sessionId: string) => void
+  // Makes the next tab.list wait until `release` is called.
+  readonly holdNextTabList: () => { readonly release: () => void }
+  readonly tabOrder: (projectPath: string) => ReadonlyArray<string>
 }
 
 export const makeFakeServer = (options: { readonly project?: Project } = {}): FakeServer => {
-  let project: Project | null = options.project ?? null
+  let projects: Array<Project> = options.project ? [options.project] : []
+  let selectedPath: string | null = options.project?.path ?? null
+  let tabs: Array<{ sessionId: string; projectPath: string }> = []
+  const selectedTab = new Map<string, string | null>()
   const sessions = new Map<string, Session>()
   const transcripts = new Map<string, Array<TranscriptItem>>()
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
@@ -27,7 +41,22 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   let clock = 1_000
   let nextId = 1
   let hold: { readonly wait: Promise<boolean> } | null = null
+  let holdReorder: { readonly wait: Promise<boolean> } | null = null
+  let holdTabList: Promise<void> | null = null
 
+  const openProjects = (): OpenProjects => ({ projects: [...projects], selectedPath })
+  const tabsOf = (projectPath: string) => tabs.filter((tab) => tab.projectPath === projectPath)
+  const projectTabs = (projectPath: string): ProjectTabs => ({
+    projectPath,
+    tabs: tabsOf(projectPath),
+    selectedSessionId: selectedTab.get(projectPath) ?? null,
+  })
+  const projectOr = <A>(path: string, run: () => A) =>
+    Effect.suspend(() =>
+      projects.some((p) => p.path === path)
+        ? Effect.succeed(run())
+        : Effect.fail(new ProjectNotOpen({ path })),
+    )
   const tick = () => DateTime.makeUnsafe((clock += 1_000))
   const itemsOf = (sessionId: string) => {
     const items = transcripts.get(sessionId) ?? []
@@ -71,11 +100,78 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
 
   const client = {
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
-    "project.getCurrent": () => Effect.sync(() => project),
+    "project.list": () => Effect.sync(openProjects),
     "project.open": ({ path }: { path: string }) =>
       Effect.sync(() => {
-        project = { path, name: path.split("/").at(-1)!, lastOpenedAt: tick() }
-        return project
+        if (!projects.some((p) => p.path === path)) {
+          projects.push({ path, name: path.split("/").at(-1)!, lastOpenedAt: tick() })
+        }
+        selectedPath = path
+        return openProjects()
+      }),
+    "project.select": ({ path }: { path: string }) =>
+      projectOr(path, () => {
+        selectedPath = path
+        return openProjects()
+      }),
+    "project.close": ({ path }: { path: string }) =>
+      projectOr(path, () => {
+        const index = projects.findIndex((p) => p.path === path)
+        projects = projects.filter((p) => p.path !== path)
+        tabs = tabs.filter((tab) => tab.projectPath !== path)
+        selectedTab.delete(path)
+        if (selectedPath === path)
+          selectedPath = (projects[index] ?? projects[index - 1])?.path ?? null
+        return openProjects()
+      }),
+    "tab.list": ({ projectPath }: { projectPath: string }) =>
+      Effect.promise(async () => {
+        await holdTabList
+        return projectTabs(projectPath)
+      }),
+    "tab.open": ({ sessionId }: { sessionId: string }) =>
+      Effect.suspend((): Effect.Effect<ProjectTabs, SessionNotFound | ProjectNotOpen> => {
+        const session = sessions.get(sessionId)
+        if (!session) return Effect.fail(new SessionNotFound({ sessionId }))
+        return projectOr(session.projectPath, () => {
+          if (!tabs.some((tab) => tab.sessionId === sessionId)) {
+            tabs.push({ sessionId, projectPath: session.projectPath })
+          }
+          selectedTab.set(session.projectPath, sessionId)
+          return projectTabs(session.projectPath)
+        })
+      }),
+    "tab.close": ({ sessionId }: { sessionId: string }) =>
+      Effect.suspend(() => {
+        const session = sessions.get(sessionId)
+        if (!session) return Effect.fail(new SessionNotFound({ sessionId }))
+        const bar = tabsOf(session.projectPath)
+        const index = bar.findIndex((tab) => tab.sessionId === sessionId)
+        tabs = tabs.filter((tab) => tab.sessionId !== sessionId)
+        if (index >= 0 && selectedTab.get(session.projectPath) === sessionId) {
+          const rest = tabsOf(session.projectPath)
+          selectedTab.set(session.projectPath, (rest[index] ?? rest[index - 1])?.sessionId ?? null)
+        }
+        return Effect.succeed(projectTabs(session.projectPath))
+      }),
+    "tab.reorder": ({
+      projectPath,
+      sessionIds,
+    }: {
+      projectPath: string
+      sessionIds: ReadonlyArray<string>
+    }) =>
+      Effect.promise(async () => {
+        if (holdReorder) {
+          const ok = await holdReorder.wait
+          holdReorder = null
+          if (!ok) throw new Error("reorder failed")
+        }
+        const bar = tabsOf(projectPath)
+        const named = sessionIds.flatMap((id) => bar.filter((tab) => tab.sessionId === id))
+        const others = bar.filter((tab) => !sessionIds.includes(tab.sessionId))
+        tabs = [...tabs.filter((tab) => tab.projectPath !== projectPath), ...named, ...others]
+        return projectTabs(projectPath)
       }),
     "session.create": ({ projectPath, model }: { projectPath: string; model: string }) =>
       Effect.sync(() => {
@@ -201,5 +297,18 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
       hold = { wait: new Promise<boolean>((resolve) => (settle = resolve)) }
       return { release: () => settle(true), fail: () => settle(false) }
     },
+    holdNextReorder: () => {
+      let settle!: (ok: boolean) => void
+      holdReorder = { wait: new Promise<boolean>((resolve) => (settle = resolve)) }
+      return { release: () => settle(true), fail: () => settle(false) }
+    },
+    openProject: (path) => void Effect.runSync(client["project.open"]({ path })),
+    openTab: (sessionId) => void Effect.runSync(client["tab.open"]({ sessionId })),
+    holdNextTabList: () => {
+      let release!: () => void
+      holdTabList = new Promise<void>((resolve) => (release = resolve))
+      return { release }
+    },
+    tabOrder: (projectPath) => tabsOf(projectPath).map((tab) => tab.sessionId),
   }
 }

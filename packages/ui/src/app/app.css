@@ -13,7 +13,7 @@
 .iv-app__card {
   display: flex;
   flex-direction: column;
-  width: 300px;
+  width: var(--iv-card-width);
   min-height: 0;
   margin: var(--iv-space-2) 0 var(--iv-space-2) var(--iv-space-2);
   overflow: hidden;
@@ -32,9 +32,9 @@
 }
 
 .iv-app__card-body {
-  display: flex;
+  display: grid;
   flex: 1;
-  flex-direction: column;
+  grid-template-columns: var(--iv-rail-width) minmax(0, 1fr);
   min-height: 0;
 }
 

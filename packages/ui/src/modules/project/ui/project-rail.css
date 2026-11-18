@@ -1,0 +1,71 @@
+.iv-project-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--iv-space-2);
+  min-height: 0;
+  padding: var(--iv-space-1) 0 var(--iv-space-3);
+  overflow-y: auto;
+  border-right: 1px solid var(--iv-border);
+  scrollbar-width: none;
+}
+
+.iv-project-rail__spacer {
+  flex: 1;
+}
+
+.iv-project-rail__item {
+  position: relative;
+  flex: none;
+}
+
+.iv-project-rail__project {
+  display: grid;
+  width: var(--iv-rail-button-size);
+  height: var(--iv-rail-button-size);
+  place-items: center;
+  border: 0;
+  border-radius: var(--iv-radius-rail-button);
+  background: transparent;
+  color: var(--iv-text-muted);
+  cursor: default;
+  transition:
+    background-color var(--iv-duration-fast) ease-out,
+    transform var(--iv-duration-press) var(--iv-ease-out);
+}
+
+.iv-project-rail__project:active {
+  transform: scale(0.97);
+}
+
+.iv-project-rail__project[aria-current="true"] {
+  background: var(--iv-bg-raised);
+  box-shadow:
+    0 0 0 1px var(--iv-border),
+    var(--iv-shadow-raised);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-project-rail__project:not([aria-current="true"]):hover {
+    background: var(--iv-bg-hover);
+  }
+}
+
+.iv-project-rail__badge {
+  position: absolute;
+  top: calc(-1 * var(--iv-space-1));
+  right: calc(-1 * var(--iv-space-half));
+  min-width: var(--iv-badge-size);
+  height: var(--iv-badge-size);
+  padding: 0 var(--iv-space-1);
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-danger);
+  box-shadow: 0 0 0 var(--iv-line-bold) var(--iv-bg-card);
+  color: var(--iv-bg-card);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-badge-size);
+  font-weight: var(--iv-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  pointer-events: none;
+}

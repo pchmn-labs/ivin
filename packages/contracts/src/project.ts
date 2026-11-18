@@ -8,7 +8,29 @@ export const Project = Schema.Struct({
 })
 export type Project = typeof Project.Type
 
+export const OpenProjects = Schema.Struct({
+  projects: Schema.Array(Project),
+  selectedPath: Schema.NullOr(Schema.String),
+})
+export type OpenProjects = typeof OpenProjects.Type
+
+export class ProjectNotOpen extends Schema.TaggedError<ProjectNotOpen>()("ProjectNotOpen", {
+  path: Schema.String,
+}) {}
+
 export const ProjectRpcs = RpcGroup.make(
-  Rpc.make("project.open", { payload: { path: Schema.String }, success: Project }),
-  Rpc.make("project.getCurrent", { success: Schema.NullOr(Project) }),
+  // Opens the folder at the end of the list, or keeps its place if already open, and selects it.
+  Rpc.make("project.open", { payload: { path: Schema.String }, success: OpenProjects }),
+  // Closes the project's tabs too; its sessions are kept.
+  Rpc.make("project.close", {
+    payload: { path: Schema.String },
+    success: OpenProjects,
+    error: ProjectNotOpen,
+  }),
+  Rpc.make("project.select", {
+    payload: { path: Schema.String },
+    success: OpenProjects,
+    error: ProjectNotOpen,
+  }),
+  Rpc.make("project.list", { success: OpenProjects }),
 )

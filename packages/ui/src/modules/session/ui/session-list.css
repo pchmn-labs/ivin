@@ -1,30 +1,9 @@
 .iv-session-list {
   display: flex;
-  flex-direction: column;
   flex: 1;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
-}
-
-.iv-session-list__head {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--iv-space-2);
-  height: 36px;
-  padding: 0 var(--iv-space-2) 0 var(--iv-space-4);
-}
-
-.iv-session-list__project {
-  flex: 1;
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  font-size: var(--iv-text-lg);
-  line-height: var(--iv-text-lg-lh);
-  font-weight: var(--iv-weight-semibold);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .iv-session-list__scroll {
@@ -37,7 +16,7 @@
 .iv-session-list__label {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--iv-space-1);
   margin: 0;
   padding: var(--iv-space-3) var(--iv-space-2) var(--iv-space-1);
   color: var(--iv-text-faint);
@@ -51,7 +30,7 @@
 }
 
 .iv-session-list__label[data-needs-you] {
-  color: var(--iv-status-waiting);
+  color: var(--iv-danger);
 }
 
 .iv-session-list__count {
@@ -61,18 +40,20 @@
 .iv-session-list__rows {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--iv-space-half);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .iv-session-list__edit {
-  padding: 1px 0;
+  padding: 0;
 }
 
-.iv-session-list__new {
-  display: flex;
-  flex: none;
-  align-items: center;
+.iv-session-list__empty {
+  margin: 0;
+  padding: var(--iv-space-6) var(--iv-space-3);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
 }

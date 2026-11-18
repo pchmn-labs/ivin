@@ -89,3 +89,42 @@ test("the connection is in WAL mode", async () => {
     rmSync(dir, { recursive: true, force: true })
   }
 })
+
+test("the milestone 1 project becomes the one open, selected project with a tab per session", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 5)))
+  const project = db.prepare("INSERT INTO projects (path, name, last_opened_at) VALUES (?, ?, ?)")
+  project.run("/a/old", "old", 1)
+  project.run("/a/current", "current", 2)
+  const session = db.prepare(
+    `INSERT INTO sessions (id, project_path, title, created_at, last_activity_at)
+     VALUES (?, ?, 't', 0, ?)`,
+  )
+  session.run("s-old", "/a/current", 10)
+  session.run("s-recent", "/a/current", 30)
+  session.run("s-mid", "/a/current", 20)
+  session.run("s-other", "/a/old", 40)
+
+  Effect.runSync(runMigrations(db))
+
+  expect(db.prepare("SELECT path, position, selected_session_id FROM open_projects").all()).toEqual(
+    [{ path: "/a/current", position: 0, selected_session_id: "s-recent" }],
+  )
+  expect(db.prepare("SELECT selected_project_path FROM workspace").all()).toEqual([
+    { selected_project_path: "/a/current" },
+  ])
+  expect(db.prepare("SELECT session_id, project_path FROM tabs ORDER BY position").all()).toEqual([
+    { session_id: "s-recent", project_path: "/a/current" },
+    { session_id: "s-mid", project_path: "/a/current" },
+    { session_id: "s-old", project_path: "/a/current" },
+  ])
+})
+
+test("a database with no project gets no open project", () => {
+  const db = new DatabaseSync(":memory:")
+
+  Effect.runSync(runMigrations(db))
+
+  expect(db.prepare("SELECT * FROM open_projects").all()).toEqual([])
+  expect(db.prepare("SELECT * FROM tabs").all()).toEqual([])
+})

@@ -1,6 +1,7 @@
-import { useAtom, useAtomValue } from "@effect/atom-react"
+import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { useEffect } from "react"
-import { selectedSessionIdAtom } from "../atoms/selected-session.ts"
+import { openTabAtom } from "../../tab/atoms/open-tab.ts"
+import { selectedSessionIdAtom } from "../../tab/atoms/selected-session-id.ts"
 import { sessionHistoryAtom } from "../atoms/session-history.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import {
@@ -22,14 +23,15 @@ export function useRecordSessionVisits() {
 }
 
 export function useSessionHistory(projectPath: string) {
-  const [, select] = useAtom(selectedSessionIdAtom)
+  const openTab = useAtomSet(openTabAtom)
   const [history, setHistory] = useAtom(sessionHistoryAtom)
   const ids = useAtomValue(sessionsOf(projectPath).ids)
   const exists = (id: string) => ids.includes(id)
 
   const move = (next: typeof history) => {
     setHistory(next)
-    select(currentOf(next))
+    const sessionId = currentOf(next)
+    if (sessionId !== null) openTab({ sessionId })
   }
 
   return {

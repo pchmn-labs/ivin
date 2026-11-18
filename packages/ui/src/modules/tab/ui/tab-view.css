@@ -1,0 +1,11 @@
+.iv-tab-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.iv-tab-view--empty {
+  align-items: center;
+  justify-content: center;
+}

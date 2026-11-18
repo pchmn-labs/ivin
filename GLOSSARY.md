@@ -5,7 +5,7 @@ The terms ivin's code, docs and tickets use.
 ## Language
 
 **Project**:
-A folder, or a `.code-workspace` holding several folders, with its settings.
+A folder, or a `.code-workspace` holding several folders, with its settings. Several projects are open at once in a window, in order; one is selected, and each has its own tab bar.
 
 **Session**:
 One agent conversation, bound to a project folder, a cwd (checkout or worktree), a branch, a harness and a model. Its status is working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript.
@@ -22,8 +22,8 @@ The read model derived from a transcript's events, and what the UI and plugin ho
 **Annotation**:
 Typed, namespaced metadata attached to a session or a project, written by plugins, the CLI or the agent.
 
-**Tab / pane layout**:
-The workspace tabs, holding session, file and plugin views.
+**Tab**:
+Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Its sub-views (files, diff, terminal) come later.
 
 **Command**:
 An action with an id and a title that the user, a keybinding, the CLI or a plugin can run.

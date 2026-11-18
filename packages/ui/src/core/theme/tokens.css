@@ -36,22 +36,39 @@
   --iv-space-8: 32px;
   --iv-space-9: 36px;
   --iv-space-10: 40px;
+  --iv-space-half: 2px;
 
   --iv-radius-sm: 4px;
   --iv-radius-md: 6px;
   --iv-radius-lg: 10px;
   --iv-radius-card: 10px;
+  --iv-radius-tab: 8px;
+  --iv-radius-rail-button: 8px;
+  --iv-line-bold: 2px;
+  --iv-radius-pill: 999px;
 
   --iv-traffic-lights-width: 78px;
   --iv-control-sm: 24px;
   --iv-control-md: 28px;
   --iv-row-height: 30px;
+  --iv-tab-height: 30px;
+  --iv-tab-width: 240px;
+  --iv-tab-min-width: 180px;
+  --iv-tab-padding: 10px;
+  --iv-tab-close-size: 20px;
+  --iv-badge-size: 16px;
+  --iv-card-width: 300px;
+  --iv-rail-width: 44px;
+  --iv-rail-button-size: 32px;
+  --iv-list-head-height: 36px;
+  --iv-shadow-raised: 0 1px 2px color-mix(in srgb, black 12%, transparent);
   --iv-content-width: 760px;
 
   --iv-opacity-disabled: 0.45;
 
   --iv-duration-fast: 120ms;
   --iv-duration-base: 180ms;
+  --iv-duration-press: 160ms;
   --iv-duration-spin: 900ms;
   --iv-duration-pulse: 1600ms;
   --iv-ease-out: cubic-bezier(0.22, 1, 0.36, 1);

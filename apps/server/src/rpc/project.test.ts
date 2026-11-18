@@ -1,8 +1,7 @@
 import { layerScripted } from "@ivin/harness"
 import { Rpcs } from "@ivin/contracts/rpcs"
-import { DateTime, Effect, Layer } from "effect"
+import { Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
-import { TestClock } from "effect/testing"
 import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
 import { Database } from "../shared/adapters/database.ts"
@@ -36,52 +35,119 @@ const withServer = <A, E>(
   )
 const makeClient = () => RpcTest.makeClient(Rpcs)
 
-test("project.getCurrent is null before any project was opened", async () => {
-  expect(await withServer(newDatabase(), (client) => client["project.getCurrent"]())).toBeNull()
+test("nothing is open on a new database", async () => {
+  const open = await withServer(newDatabase(), (client) => client["project.list"]())
+
+  expect(open).toEqual({ projects: [], selectedPath: null })
 })
 
-test("project.open returns the project and project.getCurrent gives it back", async () => {
-  const { opened, current } = await withServer(newDatabase(), (client) =>
+test("opening two projects lists them in order with the last one selected", async () => {
+  const open = await withServer(newDatabase(), (client) =>
     Effect.gen(function* () {
-      const opened = yield* client["project.open"]({ path: "/Users/paul/Dev/ivin/" })
-      return { opened, current: yield* client["project.getCurrent"]() }
+      yield* client["project.open"]({ path: "/Users/paul/Dev/ivin/" })
+      return yield* client["project.open"]({ path: "/a/second" })
     }),
   )
 
-  expect(opened.name).toBe("ivin")
-  expect(opened.path).toBe("/Users/paul/Dev/ivin/")
-  expect(current).toEqual(opened)
+  expect(open.projects.map((p) => [p.path, p.name])).toEqual([
+    ["/Users/paul/Dev/ivin/", "ivin"],
+    ["/a/second", "second"],
+  ])
+  expect(open.selectedPath).toBe("/a/second")
 })
 
-test("the last opened project is current again after the server restarts on the same database", async () => {
+test("opening an open project keeps its place and selects it", async () => {
+  const open = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      yield* client["project.open"]({ path: "/a/first" })
+      yield* client["project.open"]({ path: "/a/second" })
+      return yield* client["project.open"]({ path: "/a/first" })
+    }),
+  )
+
+  expect(open.projects.map((p) => p.path)).toEqual(["/a/first", "/a/second"])
+  expect(open.selectedPath).toBe("/a/first")
+})
+
+test("selecting an open project selects it, and a project that is not open fails", async () => {
+  const { selected, error } = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      yield* client["project.open"]({ path: "/a/first" })
+      yield* client["project.open"]({ path: "/a/second" })
+      const selected = yield* client["project.select"]({ path: "/a/first" })
+      const error = yield* Effect.flip(client["project.select"]({ path: "/a/none" }))
+      return { selected, error }
+    }),
+  )
+
+  expect(selected.selectedPath).toBe("/a/first")
+  expect(error._tag).toBe("ProjectNotOpen")
+})
+
+test.each([
+  ["a selected project selects the next one", "/a/b", "/a/c"],
+  ["the selected last project selects the previous one", "/a/c", "/a/b"],
+  ["an unselected project leaves the selection", "/a/a", "/a/b"],
+])("closing %s", async (_, closed, expectedSelected) => {
+  const open = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      for (const path of ["/a/a", "/a/b", "/a/c"]) yield* client["project.open"]({ path })
+      yield* client["project.select"]({ path: closed === "/a/a" ? "/a/b" : closed })
+      return yield* client["project.close"]({ path: closed })
+    }),
+  )
+
+  expect(open.projects.map((p) => p.path)).not.toContain(closed)
+  expect(open.selectedPath).toBe(expectedSelected)
+})
+
+test("closing the only project selects none, and a project that is not open fails", async () => {
+  const { open, error } = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      yield* client["project.open"]({ path: "/a/first" })
+      const open = yield* client["project.close"]({ path: "/a/first" })
+      const error = yield* Effect.flip(client["project.close"]({ path: "/a/first" }))
+      return { open, error }
+    }),
+  )
+
+  expect(open).toEqual({ projects: [], selectedPath: null })
+  expect(error._tag).toBe("ProjectNotOpen")
+})
+
+test("closing a project closes its tabs and keeps its sessions", async () => {
+  const { sessions, tabs } = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      yield* client["project.open"]({ path: "/a/first" })
+      const session = yield* client["session.create"]({ projectPath: "/a/first", model: "sonnet" })
+      yield* client["tab.open"]({ sessionId: session.id })
+      yield* client["project.close"]({ path: "/a/first" })
+      yield* client["project.open"]({ path: "/a/first" })
+      return {
+        sessions: yield* client["session.list"]({ projectPath: "/a/first" }),
+        tabs: yield* client["tab.list"]({ projectPath: "/a/first" }),
+      }
+    }),
+  )
+
+  expect(sessions).toHaveLength(1)
+  expect(tabs).toEqual({ projectPath: "/a/first", tabs: [], selectedSessionId: null })
+})
+
+test("open projects, their order and the selection are back after a restart on the same database", async () => {
   const db = newDatabase()
   await withServer(db, (client) =>
     Effect.gen(function* () {
       yield* client["project.open"]({ path: "/a/first" })
-      yield* TestClock.adjust(1000)
       yield* client["project.open"]({ path: "/a/second" })
-    }).pipe(Effect.provide(TestClock.layer())),
+      yield* client["project.open"]({ path: "/a/third" })
+      yield* client["project.close"]({ path: "/a/third" })
+      yield* client["project.select"]({ path: "/a/first" })
+    }),
   )
 
-  const current = await withServer(db, (client) => client["project.getCurrent"]())
+  const open = await withServer(db, (client) => client["project.list"]())
 
-  expect(current?.path).toBe("/a/second")
-})
-
-test("reopening a known project makes it current again with a later time", async () => {
-  const { first, current } = await withServer(newDatabase(), (client) =>
-    Effect.gen(function* () {
-      const first = yield* client["project.open"]({ path: "/a/first" })
-      yield* TestClock.adjust(1000)
-      yield* client["project.open"]({ path: "/a/second" })
-      yield* TestClock.adjust(1000)
-      yield* client["project.open"]({ path: "/a/first" })
-      return { first, current: yield* client["project.getCurrent"]() }
-    }).pipe(Effect.provide(TestClock.layer())),
-  )
-
-  expect(current?.path).toBe("/a/first")
-  expect(DateTime.toEpochMillis(current!.lastOpenedAt)).toBe(
-    DateTime.toEpochMillis(first.lastOpenedAt) + 2000,
-  )
+  expect(open.projects.map((p) => p.path)).toEqual(["/a/first", "/a/second"])
+  expect(open.selectedPath).toBe("/a/first")
 })

@@ -2,11 +2,12 @@ import { useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { useCallback, useEffect, useState } from "react"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
-import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
-import { NoProject, OpenFolderError, ProjectBar } from "../modules/project/ui/project-picker.tsx"
-import { SessionList } from "../modules/session/ui/session-list.tsx"
+import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
+import { ProjectColumn } from "../modules/project/ui/project-column.tsx"
+import { ProjectRail } from "../modules/project/ui/project-rail.tsx"
+import { NoProject, OpenFolderError } from "../modules/project/ui/no-project.tsx"
 import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
-import { SessionView } from "../modules/session/ui/session-view.tsx"
+import { TabView } from "../modules/tab/ui/tab-view.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
 import { MainTopBar } from "./main-top-bar.tsx"
@@ -16,9 +17,8 @@ import "./app.css"
 
 export function App() {
   const result = useAtomValue(getVersionAtom)
-  const project = useAtomValue(getCurrentProjectAtom)
+  const current = useAtomValue(selectedProjectAtom)
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const current = AsyncResult.isSuccess(project) ? project.value : null
   const projectPath = current?.path ?? null
 
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [])
@@ -71,9 +71,9 @@ export function App() {
                 />
               </div>
               <div className="iv-app__card-body">
-                <SessionList projectPath={projectPath} projectName={current.name} />
+                <ProjectRail>{version}</ProjectRail>
+                <ProjectColumn project={current} />
               </div>
-              <ProjectBar footer={version} />
             </aside>
           )}
           <main className="iv-app__main">
@@ -84,7 +84,7 @@ export function App() {
               }
             />
             <OpenFolderError />
-            <SessionView projectPath={projectPath} />
+            <TabView projectPath={projectPath} />
           </main>
         </div>
       )}
