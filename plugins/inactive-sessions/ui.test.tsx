@@ -35,7 +35,7 @@ const mountSection = async (
     useTabs: () => openTabIds.map((sessionId) => ({ sessionId, projectPath: "/p" })),
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
     useTranscript: () => [],
-    useAnswerApproval: () => async () => {},
+    useAnswerApproval: () => async () => undefined,
     components: hostComponents,
   }
   await render(
