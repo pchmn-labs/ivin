@@ -9,7 +9,7 @@
   -webkit-app-region: no-drag;
 }
 
-/* In the sidebar card the controls sit at its right edge, clear of the traffic lights. */
+/* In the sidebar card the toggle follows the traffic lights and the arrows sit at its right edge. */
 .iv-shell-controls[data-sidebar="open"] {
   flex: 1;
 }
@@ -19,6 +19,6 @@
   width: var(--iv-traffic-lights-width);
 }
 
-.iv-shell-controls[data-sidebar="open"] > .iv-shell-controls__lights {
+.iv-shell-controls[data-sidebar="open"] > .iv-shell-controls__lights + * {
   margin-right: auto;
 }
