@@ -6,24 +6,52 @@ The terms ivin's code, docs and tickets use.
 
 **Project**:
 A folder, or a `.code-workspace` holding several folders, with its settings. Several projects are open at once in a window, in order; one is selected, and each has its own tab bar.
+_Avoid_: workspace, repo
+
+**Main checkout**:
+The project folder itself, as opposed to its worktrees.
+
+**Worktree**:
+A separate git checkout of a project folder, on its own branch, that a session can run in so it does not share files with other sessions.
+_Avoid_: workspace, clone
 
 **Session**:
-One agent conversation, bound to a project folder, a cwd (checkout or worktree), a branch, a harness and a model. Its status is working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript.
+One agent conversation, bound to a project folder, a cwd (main checkout or worktree), a branch, a harness and a model. Its status is working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript.
+_Avoid_: conversation, chat, thread
 
 **Harness**:
 The agent CLI a session runs on: Claude Code, Codex or an ACP agent.
 
 **Transcript**:
 The append-only list of a session's normalised events, each with a stable id, owned by ivin.
+_Avoid_: history, log, conversation
+
+**Event**:
+One normalised entry of a transcript, such as a user message, a tool call or an approval request, stored as it streams. A streamed token is not an event.
+_Avoid_: message (for anything but a user or assistant message), log entry
 
 **Transcript items**:
 The read model derived from a transcript's events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled.
+
+**Approval**:
+An agent's request to run a tool that the user allows or denies, together with that decision. It is open until decided, and the session waits meanwhile.
+_Avoid_: permission, permission prompt
 
 **Annotation**:
 Typed, namespaced metadata attached to a session or a project, written by plugins, the CLI or the agent.
 
 **Tab**:
 Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Its sub-views (files, diff, terminal) come later.
+
+**Plugin**:
+A folder with a manifest and up to two halves, a server half and a UI half, that adds a feature to ivin through the plugin API. ivin's own features are plugins too.
+_Avoid_: extension, add-on
+
+**Slot**:
+A named place in the UI where plugins render their components, such as a session's badges.
+
+**Contribution**:
+One thing a plugin adds to ivin: a component in a slot, a command, a keybinding, a theme.
 
 **Command**:
 An action with an id and a title that the user, a keybinding, the CLI or a plugin can run.
