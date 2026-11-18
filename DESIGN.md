@@ -2,10 +2,10 @@
 name: ivin
 description: A desktop app to run and supervise coding agents, in the forest theme.
 colors:
-  ground: "#0f1613"
+  ground: "#161e1a"
   ground-subtle: "#0b110e"
-  ground-raised: "#18211c"
-  ground-card: "#151e19"
+  ground-raised: "#1e2823"
+  ground-card: "#0b110e"
   hover-wash: "rgba(169, 217, 160, 0.06)"
   active-wash: "rgba(169, 217, 160, 0.11)"
   hairline: "rgba(214, 235, 220, 0.08)"
@@ -16,7 +16,7 @@ colors:
   yew: "#a9d9a0"
   yew-hover: "#bde5b5"
   yew-contrast: "#0b2318"
-  bubble: "color-mix(in srgb, #a9d9a0 14%, #18211c)"
+  bubble: "color-mix(in srgb, #a9d9a0 14%, #1e2823)"
   cursor-red: "#f0644a"
   cursor-red-subtle: "rgba(229, 83, 59, 0.14)"
   cursor-red-outline: "color-mix(in srgb, #f0644a 60%, transparent)"
@@ -262,7 +262,7 @@ The palette is green-tinted neutrals, one yew-green accent, one cursor red, six 
 
 ### Neutral
 - **Forest Ground** (`--iv-bg`): the window, the main area and the transcript.
-- **Card Ground** (`--iv-bg-card`): the floating sidebar card. In dark it sits a step above the ground; in light it is a step darker than the ground.
+- **Card Ground** (`--iv-bg-card`): the floating sidebar card. In both themes it is a step darker than the ground; in dark it shares the deep ground's tone.
 - **Deep Ground** (`--iv-bg-subtle`): code blocks, subtle blocks and table headers.
 - **Raised Ground** (`--iv-bg-raised`): controls, the composer, the action sheet, menus, tooltips and dialogs.
 - **Hover Wash / Active Wash** (`--iv-bg-hover`, `--iv-bg-active`): translucent washes (green in dark, olive in light) for hover, press, the selected row, the selected option, the current project, the highlighted menu item and inline code.
