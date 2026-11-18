@@ -2,7 +2,7 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
-import { Text } from "../../../core/design/text.tsx"
+import { Text } from "../../../core/ui/text/text.tsx"
 import { TranscriptRow } from "./transcript-row.tsx"
 import "./transcript-view.css"
 

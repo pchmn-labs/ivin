@@ -1,7 +1,7 @@
 import { memo, useRef } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import "../../../core/design/markdown.css"
+import "../../../core/ui/markdown/markdown.css"
 import { extendBlocks, splitBlocks } from "../rules/split-blocks.ts"
 
 const Block = memo(function Block({ source }: { source: string }) {

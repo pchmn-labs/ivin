@@ -1,6 +1,6 @@
 import { Tabs as BaseTabs } from "@base-ui/react/tabs"
 import type { ReactNode } from "react"
-import { Icon, type IconName } from "./icon.tsx"
+import { Icon, type IconName } from "../icon/icon.tsx"
 import "./tabs.css"
 
 export interface TabsProps {

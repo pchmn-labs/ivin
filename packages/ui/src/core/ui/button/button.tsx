@@ -1,6 +1,6 @@
 import type { ButtonProps as PluginButtonProps, IconButtonProps } from "@ivin/plugin-api/ui"
-import { Icon } from "./icon.tsx"
-import { Tooltip } from "./tooltip.tsx"
+import { Icon } from "../icon/icon.tsx"
+import { Tooltip } from "../tooltip/tooltip.tsx"
 import "./button.css"
 
 export type ButtonProps = PluginButtonProps

@@ -1,6 +1,6 @@
 import { Menu as BaseMenu } from "@base-ui/react/menu"
 import type { MenuProps } from "@ivin/plugin-api/ui"
-import { Icon } from "./icon.tsx"
+import { Icon } from "../icon/icon.tsx"
 import "./menu.css"
 
 export type { MenuProps }

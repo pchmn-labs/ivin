@@ -103,7 +103,7 @@ packages/             what is imported
       hooks/          what needs a mounted component
       adapters/       browser APIs and stores outside the RPC
       ui/
-    core/             design system (`design/`), theme tokens (`theme/`), the RPC client service
+    core/             design system (`ui/<component>/`, `theme/`), the RPC client service
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
 tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`

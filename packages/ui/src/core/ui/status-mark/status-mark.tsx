@@ -1,5 +1,5 @@
 import type { StatusMarkProps } from "@ivin/plugin-api/ui"
-import { Icon } from "./icon.tsx"
+import { Icon } from "../icon/icon.tsx"
 import "./status-mark.css"
 
 export type { StatusMarkProps }

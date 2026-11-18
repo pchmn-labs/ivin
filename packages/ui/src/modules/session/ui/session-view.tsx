@@ -1,5 +1,5 @@
 import { useAtomMount, useAtomValue } from "@effect/atom-react"
-import { Text } from "../../../core/design/text.tsx"
+import { Text } from "../../../core/ui/text/text.tsx"
 import { TranscriptView } from "../../transcript/ui/transcript-view.tsx"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { selectedSessionIdAtom } from "../atoms/selected-session.ts"

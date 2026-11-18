@@ -1,4 +1,4 @@
-import { Icon } from "./icon.tsx"
+import { Icon } from "../icon/icon.tsx"
 import "./select.css"
 
 export interface SelectProps {

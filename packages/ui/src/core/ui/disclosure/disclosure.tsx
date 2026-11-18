@@ -1,5 +1,5 @@
 import type { DisclosureProps } from "@ivin/plugin-api/ui"
-import { Icon } from "./icon.tsx"
+import { Icon } from "../icon/icon.tsx"
 import "./disclosure.css"
 
 export type { DisclosureProps }
