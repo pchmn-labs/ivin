@@ -1,6 +1,6 @@
 import { SessionNotFound } from "@ivin/contracts/session"
 import { Effect } from "effect"
-import { selectionAfterRemoval } from "../../../shared/rules/neighbour.ts"
+import { selectionAfterRemoval } from "../../../shared/rules/selection-after-removal.ts"
 import { SessionStore } from "../../session/usecases/session-store.ts"
 import { listTabs } from "./list-tabs.ts"
 import { TabStore } from "./tab-store.ts"

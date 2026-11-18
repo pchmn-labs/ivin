@@ -52,7 +52,7 @@ test("two projects each with a session are back with their tabs after a relaunch
       )
       await window.getByRole("button", { name: "Open folder…" }).click()
       await expect(window.getByTestId("project-item").filter({ hasText: name })).toBeVisible()
-      await window.getByRole("button", { name: "New session" }).click()
+      await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
       await expect(window.getByRole("tab")).toHaveCount(1)
     }
   } finally {

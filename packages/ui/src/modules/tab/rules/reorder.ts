@@ -1,11 +1,9 @@
-// Same rule as the server: named ids first, the others after, in their order.
-export const reorderTabs = <T extends { readonly sessionId: string }>(
-  tabs: ReadonlyArray<T>,
-  sessionIds: ReadonlyArray<string>,
-): ReadonlyArray<T> => [
-  ...sessionIds.flatMap((id) => tabs.filter((tab) => tab.sessionId === id)),
-  ...tabs.filter((tab) => !sessionIds.includes(tab.sessionId)),
-]
+export const reorder = (current: readonly string[], named: readonly string[]): string[] => {
+  const known = new Set(current)
+  const first = [...new Set(named)].filter((id) => known.has(id))
+  const placed = new Set(first)
+  return [...first, ...current.filter((id) => !placed.has(id))]
+}
 
 // The ids of the bar once `moved` is dropped before or after `target`.
 export const moveTab = (

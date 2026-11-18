@@ -12,7 +12,7 @@ export const startSession = async (app: ElectronApplication): Promise<Page> => {
   }, projectDir)
   await window.getByRole("button", { name: "Open folder…" }).click()
   await expect(window.getByTestId("project-name")).toHaveText("my-project")
-  await window.getByRole("button", { name: "New session" }).click()
+  await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
   return window
 }
 

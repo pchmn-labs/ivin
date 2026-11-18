@@ -23,14 +23,14 @@
 .iv-session-list__rows {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--iv-space-half);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .iv-session-list__edit {
-  padding: 1px 0;
+  padding: 0;
 }
 
 .iv-session-list__new {

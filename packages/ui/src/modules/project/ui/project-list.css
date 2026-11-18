@@ -33,20 +33,20 @@
 .iv-project-list__project {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  margin-bottom: 2px;
+  gap: var(--iv-space-half);
+  margin-bottom: var(--iv-space-half);
 }
 
 .iv-project-list__badge {
   display: inline-block;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border-radius: 8px;
+  min-width: var(--iv-badge-size);
+  height: var(--iv-badge-size);
+  padding: 0 var(--iv-space-1);
+  border-radius: var(--iv-radius-pill);
   background: var(--iv-status-waiting);
   color: var(--iv-bg-card);
   font-size: var(--iv-text-xs);
-  line-height: 16px;
+  line-height: var(--iv-badge-size);
   font-weight: var(--iv-weight-semibold);
   font-variant-numeric: tabular-nums;
   text-align: center;

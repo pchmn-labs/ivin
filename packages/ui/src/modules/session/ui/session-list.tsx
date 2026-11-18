@@ -11,7 +11,8 @@ import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { createSessionAtom } from "../atoms/create-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useNow } from "../../../shared/use-now.ts"
-import { DEFAULT_MODEL, MODELS, type Model } from "../rules/models.ts"
+import { MODELS } from "../rules/models.ts"
+import { newSessionModelAtom } from "../atoms/new-session-model.ts"
 import { relativeTime } from "../rules/relative-time.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import { renameSessionAtom } from "../atoms/rename-session.ts"
@@ -113,7 +114,7 @@ export function SessionList({ projectPath }: { projectPath: string }) {
   useAtomMount(sessionsOf(projectPath).ids)
   const { tabs, selectedSessionId } = useAtomValue(tabsOf(projectPath).value)
   const [created, createSession] = useAtom(createSessionAtom)
-  const [model, setModel] = useState<Model>(DEFAULT_MODEL)
+  const [model, setModel] = useAtom(newSessionModelAtom)
 
   return (
     <nav className="iv-session-list" aria-label="Sessions">

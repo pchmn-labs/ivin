@@ -5,7 +5,7 @@ import { Stack } from "../../../core/components/stack/stack.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { openProjectsAtom } from "../atoms/list-projects.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
-import "./project-picker.css"
+import "./no-project.css"
 
 export function NoProject() {
   const status = useAtomValue(openProjectsAtom.status)

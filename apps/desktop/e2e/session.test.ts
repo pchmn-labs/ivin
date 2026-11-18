@@ -23,7 +23,7 @@ test("a message sent in a new session gets the scripted answer, and both are bac
     await window.getByRole("button", { name: "Open folder…" }).click()
     await expect(window.getByTestId("project-name")).toHaveText("my-project")
 
-    await window.getByRole("button", { name: "New session" }).click()
+    await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
     await window.getByRole("textbox", { name: "Message" }).fill("How many files are there?")
     await window.getByRole("textbox", { name: "Message" }).press("Enter")
 

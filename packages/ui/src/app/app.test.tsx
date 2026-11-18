@@ -111,8 +111,10 @@ test("each tab shows its session, closes on its button, and the bar reorders by 
   fire(items[0]!, "drop")
   await vi.waitFor(() => expect(server.tabOrder("/dev/ivin")).toEqual(["s2", "s1"]))
 
+  await page.getByRole("tab", { name: /Second/ }).hover()
   await page.getByRole("button", { name: "Close Second" }).click()
   await expect.element(tabs).toHaveLength(1)
+  await page.getByRole("tab", { name: /First/ }).hover()
   await page.getByRole("button", { name: "Close First" }).click()
   await expect.element(page.getByText(/No session open/)).toBeVisible()
 })
@@ -131,4 +133,22 @@ test("picking another project shows its own tabs, and closing a project drops it
   await page.getByRole("button", { name: "Close ivin" }).click()
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
   await expect.element(page.getByText(/No session open/)).toBeVisible()
+})
+
+test("the plus after the tabs starts a session with the chosen model, and arrow keys walk the tabs", async () => {
+  const server = await mountApp()
+  await page.getByRole("button", { name: "Model for the next session" }).click()
+  await page.getByRole("menuitem", { name: "opus" }).click()
+  await vi.waitFor(() => expect(server.sessions.size).toBe(3))
+
+  await page.getByRole("tablist").getByRole("tab").first().click()
+  await userEvent.keyboard("{ArrowRight}")
+  await expect.element(page.getByRole("tab").nth(1)).toHaveAttribute("aria-selected", "true")
+  await userEvent.keyboard("{ArrowLeft}")
+  await expect.element(page.getByRole("tab").first()).toHaveAttribute("aria-selected", "true")
+
+  await page.getByRole("main").getByRole("button", { name: "New session" }).click()
+  await vi.waitFor(() => expect(server.sessions.size).toBe(4))
+  expect([...server.sessions.values()].at(-1)?.model).toBe("opus")
+  await expect.element(page.getByRole("tab")).toHaveLength(4)
 })

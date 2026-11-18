@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { selectionAfterRemoval } from "./neighbour.ts"
+import { selectionAfterRemoval } from "./selection-after-removal.ts"
 
 test.each([
   [["a", "b", "c"], "b", "c"],

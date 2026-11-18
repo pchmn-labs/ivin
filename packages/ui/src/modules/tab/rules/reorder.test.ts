@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { moveTab, reorderTabs } from "./reorder-tabs.ts"
+import { moveTab, reorder } from "./reorder.ts"
 
 test("moving a tab before or after another", () => {
   expect(moveTab(["a", "b", "c"], "c", "a", "before")).toEqual(["c", "a", "b"])
@@ -8,7 +8,10 @@ test("moving a tab before or after another", () => {
   expect(moveTab(["a", "b", "c"], "b", "b", "before")).toEqual(["a", "b", "c"])
 })
 
-test("named tabs come first, the others follow in their order", () => {
-  const tabs = ["a", "b", "c"].map((sessionId) => ({ sessionId }))
-  expect(reorderTabs(tabs, ["c"]).map((t) => t.sessionId)).toEqual(["c", "a", "b"])
+test("named ids come first, the others follow in their order", () => {
+  expect(reorder(["a", "b", "c"], ["c"])).toEqual(["c", "a", "b"])
+})
+
+test("duplicate and unknown ids are dropped", () => {
+  expect(reorder(["a", "b", "c"], ["c", "x", "c", "a"])).toEqual(["c", "a", "b"])
 })

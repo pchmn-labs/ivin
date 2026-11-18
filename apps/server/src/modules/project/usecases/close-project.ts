@@ -1,6 +1,6 @@
 import { ProjectNotOpen } from "@ivin/contracts/project"
 import { Effect } from "effect"
-import { selectionAfterRemoval } from "../../../shared/rules/neighbour.ts"
+import { selectionAfterRemoval } from "../../../shared/rules/selection-after-removal.ts"
 import { TabStore } from "../../tab/usecases/tab-store.ts"
 import { ProjectStore } from "./project-store.ts"
 
