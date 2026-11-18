@@ -2,7 +2,7 @@
   width: 100%;
   max-width: var(--iv-content-width);
   margin: 0 auto;
-  padding: 0 var(--iv-space-6) var(--iv-space-4);
+  padding: 0 var(--iv-space-6) var(--iv-space-1);
 }
 
 .iv-composer__surface {
@@ -27,6 +27,16 @@
 
 .iv-composer__surface .iv-field:focus-visible {
   outline: none;
+}
+
+.iv-composer__statusline {
+  display: flex;
+  justify-content: flex-end;
+  min-height: var(--iv-space-6);
+  align-items: center;
+  padding: 0 var(--iv-space-2);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
 }
 
 .iv-composer__alert {

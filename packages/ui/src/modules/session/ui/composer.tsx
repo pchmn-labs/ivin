@@ -2,7 +2,7 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Exit } from "effect"
 import { useRef, useState } from "react"
 import { Slot } from "../../../app/slot-renderer.tsx"
-import { Button } from "../../../core/components/button/button.tsx"
+import { IconButton } from "../../../core/components/button/button.tsx"
 import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
@@ -59,38 +59,45 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
           }}
         />
         <Stack direction="row" align="center" justify="between" gap={2}>
-          <Stack direction="row" align="center" gap={3}>
-            {session && (
-              <span className="iv-composer__model" data-testid="composer-model">
-                <ClaudeMark size={14} />
-                {session.model}
-              </span>
-            )}
-            {session && (
-              // The state shows on the session mark; screen readers hear it from here.
-              <span
-                className="iv-visually-hidden"
-                role="status"
-                data-testid="composer-session-status"
-              >
-                {statusLabel(session.status)}
-              </span>
-            )}
-            <div data-testid="composer-status">
-              <Slot slot="composer.status" props={{ sessionId }} />
-            </div>
-          </Stack>
-          <Stack direction="row" align="center" gap={2}>
-            {running && (
-              <Button icon="square" onClick={() => interrupt({ projectPath, sessionId })}>
-                Interrupt
-              </Button>
-            )}
-            <Button variant="primary" icon="send" onClick={submit}>
-              Send
-            </Button>
-          </Stack>
+          {session && (
+            <span className="iv-composer__model" data-testid="composer-model">
+              <ClaudeMark size={14} />
+              {session.model}
+            </span>
+          )}
+          {session && (
+            // The state shows on the session mark; screen readers hear it from here.
+            <span
+              className="iv-visually-hidden"
+              role="status"
+              data-testid="composer-session-status"
+            >
+              {statusLabel(session.status)}
+            </span>
+          )}
+          {/* A working session with an empty field offers Stop; typed text can still be sent. */}
+          {running && text.trim() === "" ? (
+            <IconButton
+              icon="square"
+              label="Interrupt"
+              tooltip="Interrupt (Esc)"
+              variant="secondary"
+              onClick={() => interrupt({ projectPath, sessionId })}
+            />
+          ) : (
+            <IconButton
+              icon="send"
+              label="Send"
+              tooltip="Send (Enter)"
+              variant="primary"
+              disabled={text.trim() === ""}
+              onClick={submit}
+            />
+          )}
         </Stack>
+      </div>
+      <div className="iv-composer__statusline" data-testid="composer-status">
+        <Slot slot="composer.status" props={{ sessionId }} />
       </div>
     </div>
   )

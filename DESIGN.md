@@ -337,7 +337,7 @@ Components live in `packages/ui/src/core/components/<component>/`, one folder ea
 ### Buttons
 - **Shape:** 6px corners, a 1px border slot, 500 weight. Medium is 28px tall with 12px side padding; small is 24px tall with 8px padding and 12px text. Icon buttons are square.
 - **Primary:** yew fill with yew-contrast text. One per surface: Send, Open folder.
-- **Secondary (default):** raised ground, strong hairline, default text: Interrupt.
+- **Secondary (default):** raised ground, strong hairline, default text: the composer's Stop.
 - **Ghost:** transparent and muted, for toolbar, shell and row actions, New session and the model chevron.
 - **Danger:** red wash and red text.
 - **States:** hover changes fill only (yew hover on primary, hover wash elsewhere) over 120ms; press uses the active wash; disabled drops to 45% opacity (`--iv-opacity-disabled`, shared by fields, selects, menu items and options). Focus is the global 2px yew outline, 2px offset.
@@ -372,7 +372,7 @@ A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv
 - **Tabs:** 32px tall, muted 500-weight labels, a 2px yew underline on the active tab, over a hairline.
 
 ### Composer
-A raised 10px-corner surface with a strong hairline, docked at the bottom of the centred column. The text field sits flat inside it, and the whole surface takes the focus ring colour when focused. Below the field: the session's model and usage on the left (the status shows only on the session mark, with a hidden label here for screen readers), Interrupt (secondary, while running) and Send (primary) on the right. Plugins can dock a sheet on its top edge through the `composer.above` slot.
+A raised 10px-corner surface with a strong hairline, docked at the bottom of the centred column. The text field sits flat inside it, and the whole surface takes the focus ring colour when focused. Below the field: the session's model on the left (the status shows only on the session mark, with a hidden label here for screen readers) and one icon action on the right: Send (primary, arrow up, disabled while the field is empty), or Stop (secondary, square) while the session works and the field is empty. Under the surface, a faint status line carries the `composer.status` slot (usage) at its right end; the prototype's worktree, branch and PR checks join it when the server sends them. Plugins can dock a sheet on its top edge through the `composer.above` slot.
 
 ### Action Sheet
 A raised panel docked on the composer's top edge: 10px top corners, no bottom border, and the composer's top corners go square so the two read as one surface. It slides up 8px and fades in over 180ms (`--iv-duration-base`) on `--iv-ease-out`. A head row carries an optional muted icon, a 500-weight title and a mono detail clamped to three lines; a faint caption hint sits below the content. In the danger tone the outline turns to the dashed red outline, the composer's top edge turns dashed red with it, and the title turns red.
