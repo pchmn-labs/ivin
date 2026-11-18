@@ -31,10 +31,10 @@
     },
     "code-review": {
       "source": "pchmn/skills",
-      "commit": "a04c2245f598b757ae85b2c758b64130b78c9c8a",
+      "commit": "edb78e05fbbb896aa564cf0d6efbccedcfdbb265",
       "sourceType": "github",
       "skillPath": "skills/engineering/code-review/SKILL.md",
-      "computedHash": "7f7db41e7bbf35c7a4387e4a8d9fb518dfbbfd3ed3179b8bc63e66ef5ed2d08e"
+      "computedHash": "bdc40bc9ee8c508109d3f26551da1b1193edf9129d7c0c4e7dd4cd9774deb170"
     },
     "codebase-design": {
       "source": "pchmn/skills",
@@ -66,10 +66,10 @@
     },
     "implement": {
       "source": "pchmn/skills",
-      "commit": "a04c2245f598b757ae85b2c758b64130b78c9c8a",
+      "commit": "edb78e05fbbb896aa564cf0d6efbccedcfdbb265",
       "sourceType": "github",
       "skillPath": "skills/engineering/implement/SKILL.md",
-      "computedHash": "21ecfae77805ed2182681db087b727676f22edf6ff67519d4428d73eda96cacd"
+      "computedHash": "4ff619eb32e8665bf185f8fcd480f89b1a5941915570a5c20400e8114385b5cd"
     },
     "improve-codebase-architecture": {
       "source": "pchmn/skills",
@@ -122,10 +122,10 @@
     },
     "to-tickets": {
       "source": "pchmn/skills",
-      "commit": "a04c2245f598b757ae85b2c758b64130b78c9c8a",
+      "commit": "edb78e05fbbb896aa564cf0d6efbccedcfdbb265",
       "sourceType": "github",
       "skillPath": "skills/engineering/to-tickets/SKILL.md",
-      "computedHash": "d86d3ef9a86f00b32be49a5b2d23df3416cfcb2ae911c645fb3e4cd63ffc9211"
+      "computedHash": "1eaea0a65ef1aa112d5fdc2a845c3240e9e0ed8670dfe99822668c7ee6dfc159"
     },
     "triage": {
       "source": "pchmn/skills",

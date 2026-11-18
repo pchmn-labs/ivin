@@ -33,7 +33,11 @@ Read `docs/finished-features.md` before specifying, ticketing or building anythi
 
 ### Launching ivin
 
-To run ivin, show it to the user or take a screenshot of it, use the `launch-ivin` skill.
+To run ivin, show it to the user or capture its screens, use the `launch-ivin` skill: its `shot` command is the way to capture them, for example to compare a change with its prototype.
+
+### Running tests
+
+While building, run the test files you touch. Run `pnpm check` once, before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI.
 
 ### Grilling
 
@@ -58,6 +62,8 @@ Before opening the PR, run the `code-review` skill on the branch since its merge
 Everything written to the tracker is in English, whatever the language of the conversation: a ticket, a PR title, a PR body, a comment. The code, the commits and the docs are too.
 
 ### Design
+
+Validated UI prototypes live in `docs/design/`. A ticket that adds a screen or changes a layout links one there.
 
 Motion goes through the `animate` and `choreograph` skills, not `impeccable animate`. A new UI dependency goes through `pick-ui-library` first.
 
