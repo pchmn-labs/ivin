@@ -2,9 +2,9 @@ import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
+import { hostComponents } from "../../packages/ui/src/app/host-components.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { SlotProps, UiContext } from "@ivin/plugin-api/ui"
-import { Markdown } from "../../packages/ui/src/modules/transcript/ui/markdown.tsx"
 import { activate } from "./ui.tsx"
 
 const mount = async (item: SlotProps["transcript.message"]["item"]) => {
@@ -19,7 +19,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     useSessions: () => [],
     useTranscript: () => [],
     useAnswerApproval: () => async () => {},
-    Markdown,
+    components: hostComponents,
   }
   await render(
     <UiHostProvider host={host}>

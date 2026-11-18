@@ -9,11 +9,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@effect/atom-react": "4.1.4",
     "@ivin/contracts": "workspace:*",
     "@ivin/plugin-api": "workspace:*",
     "@ivin/state": "workspace:*",
     "effect": "4.1.4",
+    "lucide-react": "^1.75.0",
     "marked": "^18.2.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",

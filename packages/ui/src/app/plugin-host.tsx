@@ -7,7 +7,7 @@ import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-proj
 import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
 import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
-import { Markdown } from "../modules/transcript/ui/markdown.tsx"
+import { hostComponents } from "./host-components.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
 
 const NO_PROJECT = ""
@@ -30,7 +30,7 @@ const host: UiHost = {
       if (Exit.isFailure(exit)) throw new Error("answer failed")
     }
   },
-  Markdown,
+  components: hostComponents,
 }
 
 export function PluginsProvider({

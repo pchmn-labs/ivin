@@ -1,0 +1,13 @@
+.iv-icon {
+  flex: none;
+}
+
+.iv-icon--spin {
+  animation: iv-spin 900ms linear infinite;
+}
+
+@keyframes iv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -103,7 +103,7 @@ packages/             what is imported
       hooks/          what needs a mounted component
       adapters/       browser APIs and stores outside the RPC
       ui/
-    core/             design system, theme, the RPC client service
+    core/             design system (`design/`), theme tokens (`theme/`), the RPC client service
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
 tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`
@@ -323,7 +323,7 @@ function PrBadge({ sessionId }: { sessionId: string }) {
 }
 ```
 
-Hooks available to plugin components: `useSession`, `useSessions`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Icon`, `Pill`, `HoverCard`, `Menu`, `Markdown`…) so plugins look native; the host supplies them, so a plugin never imports a UI library.
+Hooks available to plugin components: `useSession`, `useSessions`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Button`, `IconButton`, `Icon`, `Menu`, `Dialog`, `Tooltip`, `Text`, `Stack`, `Block`, `Disclosure`, `CodeBlock`, `StatusMark`, `Markdown`) so plugins look native; the host supplies them, so a plugin never imports a UI library ([ADR-0002](adr/0002-design-system-on-base-ui-and-css-custom-properties.md)).
 
 ### Plugins building on plugins
 
@@ -350,7 +350,7 @@ Plugins declare no dependency on each other: that would bring load order, cascad
 ~/.ivin/
   settings.json        JSONC, watched
   keybindings.json
-  themes/<id>.json     colours + CSS; filename is the id
+  themes/<id>.json     colours + CSS overriding the `--iv-` variables; filename is the id
   plugins/<id>/
   cache/plugins/       compiled bundles, by content hash
   run/ivin.sock

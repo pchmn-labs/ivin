@@ -1,0 +1,30 @@
+.iv-disclosure__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  min-height: 24px;
+  color: var(--iv-text-muted);
+  cursor: default;
+  list-style: none;
+}
+
+.iv-disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.iv-disclosure__summary:hover {
+  color: var(--iv-text);
+}
+
+.iv-disclosure__chevron {
+  display: inline-flex;
+  transition: rotate var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-disclosure[open] > .iv-disclosure__summary .iv-disclosure__chevron {
+  rotate: 90deg;
+}
+
+.iv-disclosure__body {
+  padding-top: var(--iv-space-2);
+}

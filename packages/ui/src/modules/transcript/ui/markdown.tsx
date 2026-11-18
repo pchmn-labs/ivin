@@ -1,6 +1,7 @@
 import { memo, useRef } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
+import "../../../core/design/markdown.css"
 import { extendBlocks, splitBlocks } from "../rules/split-blocks.ts"
 
 const Block = memo(function Block({ source }: { source: string }) {
@@ -19,5 +20,11 @@ export function Markdown({ text }: { text: string }) {
         ? splitBlocks(text)
         : extendBlocks(previous.current, text)
   previous.current = { text, blocks }
-  return blocks.map((source, index) => <Block key={index} source={source} />)
+  return (
+    <div className="iv-markdown">
+      {blocks.map((source, index) => (
+        <Block key={index} source={source} />
+      ))}
+    </div>
+  )
 }

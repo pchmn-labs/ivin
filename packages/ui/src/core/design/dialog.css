@@ -1,0 +1,56 @@
+.iv-dialog__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 10, 8, 0.5);
+  transition: opacity var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.iv-dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-3);
+  width: min(420px, calc(100vw - var(--iv-space-8)));
+  padding: var(--iv-space-5);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+  box-shadow: var(--iv-shadow-overlay);
+  translate: -50% -50%;
+  transition:
+    opacity var(--iv-duration-base) var(--iv-ease-out),
+    scale var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.iv-dialog__backdrop[data-starting-style],
+.iv-dialog__backdrop[data-ending-style],
+.iv-dialog[data-starting-style],
+.iv-dialog[data-ending-style] {
+  opacity: 0;
+}
+
+.iv-dialog[data-starting-style],
+.iv-dialog[data-ending-style] {
+  scale: 0.97;
+}
+
+.iv-dialog__title {
+  margin: 0;
+  font-size: var(--iv-text-xl);
+  line-height: var(--iv-text-xl-lh);
+  font-weight: var(--iv-weight-semibold);
+}
+
+.iv-dialog__description {
+  margin: 0;
+  color: var(--iv-text-muted);
+}
+
+.iv-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--iv-space-2);
+  margin-top: var(--iv-space-2);
+}

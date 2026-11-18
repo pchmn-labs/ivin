@@ -2,6 +2,7 @@ import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
+import { hostComponents } from "../../packages/ui/src/app/host-components.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { ApprovalItem, SlotProps, UiContext, UiHost } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
@@ -18,7 +19,7 @@ const mount = async (item: ApprovalItem, answer = vi.fn().mockResolvedValue(unde
     useSessions: () => [],
     useTranscript: () => [],
     useAnswerApproval: () => answer,
-    Markdown: ({ text }) => <p>{text}</p>,
+    components: hostComponents,
   }
   await render(
     <UiHostProvider host={host}>

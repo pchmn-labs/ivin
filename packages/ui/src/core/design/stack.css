@@ -1,0 +1,84 @@
+.iv-stack {
+  display: flex;
+  min-width: 0;
+}
+
+.iv-stack--column {
+  flex-direction: column;
+}
+
+.iv-stack--row {
+  flex-direction: row;
+}
+
+.iv-stack--wrap {
+  flex-wrap: wrap;
+}
+
+.iv-stack--grow {
+  flex: 1;
+}
+
+.iv-stack--gap-0 {
+  gap: 0;
+}
+
+.iv-stack--gap-1 {
+  gap: var(--iv-space-1, 0);
+}
+
+.iv-stack--gap-2 {
+  gap: var(--iv-space-2, 0);
+}
+
+.iv-stack--gap-3 {
+  gap: var(--iv-space-3, 0);
+}
+
+.iv-stack--gap-4 {
+  gap: var(--iv-space-4, 0);
+}
+
+.iv-stack--gap-6 {
+  gap: var(--iv-space-6, 0);
+}
+
+.iv-stack--gap-8 {
+  gap: var(--iv-space-8, 0);
+}
+
+.iv-stack--align-start {
+  align-items: flex-start;
+}
+
+.iv-stack--align-center {
+  align-items: center;
+}
+
+.iv-stack--align-end {
+  align-items: flex-end;
+}
+
+.iv-stack--align-stretch {
+  align-items: stretch;
+}
+
+.iv-stack--align-baseline {
+  align-items: baseline;
+}
+
+.iv-stack--justify-start {
+  justify-content: flex-start;
+}
+
+.iv-stack--justify-center {
+  justify-content: center;
+}
+
+.iv-stack--justify-end {
+  justify-content: flex-end;
+}
+
+.iv-stack--justify-between {
+  justify-content: space-between;
+}

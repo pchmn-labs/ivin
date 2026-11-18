@@ -1,0 +1,35 @@
+.iv-block {
+  min-width: 0;
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-md);
+}
+
+.iv-block--plain {
+  background: transparent;
+}
+
+.iv-block--subtle {
+  background: var(--iv-bg-subtle);
+}
+
+.iv-block--accent {
+  border-color: color-mix(in srgb, var(--iv-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--iv-accent) 8%, transparent);
+}
+
+.iv-block--danger {
+  border-color: color-mix(in srgb, var(--iv-danger) 40%, transparent);
+  background: var(--iv-danger-subtle);
+}
+
+.iv-block--pad-2 {
+  padding: var(--iv-space-2);
+}
+
+.iv-block--pad-3 {
+  padding: var(--iv-space-3);
+}
+
+.iv-block--pad-4 {
+  padding: var(--iv-space-4);
+}

@@ -1,0 +1,67 @@
+.iv-status-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  min-width: 12px;
+  justify-content: center;
+}
+
+.iv-status-mark[data-status="working"] {
+  color: var(--iv-status-working);
+}
+
+.iv-status-mark[data-status="waiting"] {
+  color: var(--iv-status-waiting);
+}
+
+.iv-status-mark[data-status="idle"] {
+  color: var(--iv-status-idle);
+}
+
+.iv-status-mark[data-status="failed"] {
+  color: var(--iv-status-failed);
+}
+
+.iv-status-mark__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.iv-status-mark[data-status="waiting"] .iv-status-mark__dot {
+  width: 8px;
+  height: 8px;
+}
+
+.iv-status-mark[data-status="idle"] .iv-status-mark__dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+.iv-status-mark[data-status="working"] .iv-status-mark__dot {
+  animation: iv-pulse 1600ms var(--iv-ease-out) infinite;
+}
+
+.iv-status-mark__label {
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+}
+
+.iv-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes iv-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}

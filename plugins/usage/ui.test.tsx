@@ -2,6 +2,7 @@ import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
+import { hostComponents } from "../../packages/ui/src/app/host-components.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { SlotProps, TranscriptItem, UiContext } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
@@ -40,7 +41,7 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
     useSessions: () => [],
     useTranscript: () => items,
     useAnswerApproval: () => async () => {},
-    Markdown: () => null,
+    components: hostComponents,
   }
   await render(
     <UiHostProvider host={host}>
