@@ -265,7 +265,7 @@ The palette is green-tinted neutrals, one yew-green accent, one cursor red, six 
 - **Card Ground** (`--iv-bg-card`): the floating sidebar card. In both themes it is a step darker than the ground; in dark it shares the deep ground's tone.
 - **Deep Ground** (`--iv-bg-subtle`): code blocks, subtle blocks and table headers.
 - **Raised Ground** (`--iv-bg-raised`): controls, the composer, the action sheet, menus, tooltips and dialogs.
-- **Hover Wash / Active Wash** (`--iv-bg-hover`, `--iv-bg-active`): translucent washes (green in dark, olive in light) for hover, press, the selected row, the selected option, the current project, the highlighted menu item and inline code.
+- **Hover Wash / Active Wash** (`--iv-bg-hover`, `--iv-bg-active`): translucent washes (green in dark, olive in light) for hover, press, the selected row, the selected option, the highlighted menu item and inline code.
 - **Hairline / Strong Hairline** (`--iv-border`, `--iv-border-strong`): dividers, the sidebar card and block borders (hairline); controls, overlays, the composer and the action sheet, and scrollbar thumbs (strong).
 - **Text / Muted / Faint** (`--iv-text`, `--iv-text-muted`, `--iv-text-faint`): primary copy; secondary copy, ghost buttons and the composer's model; metadata, group labels, key hints, placeholders, timestamps and the idle status.
 
@@ -316,7 +316,7 @@ The app is flat at rest. Depth comes from four ground tones and 1px hairlines. T
 ### Shadow Vocabulary
 - **Overlay** (`--iv-shadow-overlay`): menus, tooltips and dialogs. In dark, `0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3)`; in light, the same shape in a soft green-black.
 
-A zero-blur `box-shadow` ring that stands in for a border (the current project's 1px hairline ring, the badge's 2px card-coloured ring, the idle status ring) is a line, not elevation.
+A zero-blur `box-shadow` ring that stands in for a border (the selected rail button's and the selected tab's 1px hairline ring, the badge's 2px card-coloured ring, the idle status ring) is a line, not elevation.
 
 ### Named Rules
 **The Overlays-Only Rule.** A shadow means "this floats above the window". Blocks, the sidebar card, the composer, the action sheet, rows and buttons never cast one.
@@ -325,7 +325,7 @@ A zero-blur `box-shadow` ring that stands in for a border (the current project's
 
 Corners are gently rounded in three sizes: 4px (`sm`) for menu items, tooltips, inline code and the bubble's tail corner; 6px (`md`) for buttons, fields, rows, options, blocks and code blocks; 10px (`lg`) for the composer, the action sheet, menus, dialogs, and scrollbar thumbs. Large surfaces that frame the app take `--iv-radius-card` (10px): the sidebar card and the bubble. The user's bubble is rounded on three corners and keeps a 4px corner at the bottom right, toward the user's side.
 
-Borders are 1px. The one 2px line is the selected tab underline. Status marks and overlays on the session mark are circles; the project badge is a pill. Project creatures are 8 by 8 pixel grids drawn with crisp edges, at 16px in the project column.
+Borders are 1px. The 2px lines are the selected tab underline and the tab drop line (`--iv-line-bold`). Status marks and overlays on the session mark are circles; the project badge is a pill. Project creatures are 8 by 8 pixel grids drawn with crisp edges, at 16px in the project column.
 
 ### Named Rules
 **The Dashed Red Rule.** A dashed 1px line in `--iv-danger-outline` means "the user must answer". It goes around a waiting session row and the approval sheet, and nowhere else. A solid red line means an error, not a question.
@@ -370,7 +370,7 @@ A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv
 - **List head:** 36px (`--iv-list-head-height`): creature, project name, New session with the model chevron, and a ghost ellipsis menu holding Close project.
 - **Session groups:** caption labels in faint text with a tabular count; "Needs you" is in cursor red.
 - **Model menu:** a small ghost chevron beside New session opens a menu of models; the current choice carries a check, and picking one starts a session with it. The composer then shows that session's model, fixed at creation, as muted 12px text beside a 14px Claude mark.
-- **Tab bar:** in the 40px main title bar, the selected project's tabs followed by a ghost New session icon button (plus; it starts a session with the model chosen in the model menu). A tab is `--iv-tab-height` (30px) tall with `--iv-radius-tab` (8px) corners, `--iv-tab-width` (240px) wide whatever its title, shrinking equally with the room left down to `--iv-tab-min-width` (180px) before the bar scrolls, 4px apart, its title cut with an ellipsis. It shows the session mark, then the title in muted 500-weight small text. The selected tab takes the raised background with a 1px hairline ring and a main-colour title; an unselected tab takes the hover wash on hover. A 20px close button (x) appears only on hover or keyboard focus; the title gives it room, the tab keeps its width. A middle click also closes a tab. The bar scrolls sideways with no visible scrollbar. Tabs reorder by drag, with a 2px yew drop line; Left and Right arrows move between tabs. The prototype's separators between unselected tabs are left out.
+- **Tab bar:** in the 40px main title bar, the selected project's tabs followed by a ghost New session icon button (plus; it starts a session with the model chosen in the model menu). A tab is `--iv-tab-height` (30px) tall with `--iv-radius-tab` (8px) corners, `--iv-tab-width` (240px) wide whatever its title, shrinking equally with the room left down to `--iv-tab-min-width` (180px) before the bar scrolls, 4px apart, its title cut with an ellipsis. It shows the session mark, then the title in muted 500-weight small text. The selected tab takes the raised background with a 1px hairline ring and a main-colour title; an unselected tab takes the hover wash on hover. A 20px close button (14px x) appears only on hover or keyboard focus; the title gives it room, the tab keeps its width. A middle click also closes a tab. The bar scrolls sideways with no visible scrollbar. Tabs reorder by drag, with a 2px yew drop line; Left, Right, Home and End move between tabs. The prototype's separators between unselected tabs are left out.
 - **Tabs (component):** the underlined tabs for inside a panel: 32px tall, muted 500-weight labels, a 2px yew underline on the active tab, over a hairline. The tab bar above does not use it.
 
 ### Composer

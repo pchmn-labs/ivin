@@ -1,6 +1,5 @@
 import { Effect } from "effect"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
-import { tabsOf } from "../../tab/atoms/list-tabs.ts"
 import { sessionsOf } from "./list-sessions.ts"
 
 export const createSessionAtom = serverRuntime.fn<{ projectPath: string; model: string }>()(
@@ -8,8 +7,6 @@ export const createSessionAtom = serverRuntime.fn<{ projectPath: string; model: 
     const client = yield* ServerClient
     const session = yield* client["session.create"]({ projectPath, model })
     yield* sessionsOf(projectPath).upsert([session])
-    const tabs = yield* client["tab.open"]({ sessionId: session.id })
-    yield* tabsOf(projectPath).set(tabs)
     return session
   }),
 )

@@ -17,7 +17,7 @@ export const closeTab = (sessionId: string) =>
     const before = yield* listTabs(tab.projectPath)
     yield* store.remove(sessionId)
     if (before.selectedSessionId === sessionId) {
-      const order = before.tabs.map((t) => t.sessionId)
+      const order = before.tabs.map((tab) => tab.sessionId)
       yield* store.select(tab.projectPath, selectionAfterRemoval(order, sessionId))
     }
     return yield* listTabs(tab.projectPath)

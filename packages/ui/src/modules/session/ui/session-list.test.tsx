@@ -7,7 +7,7 @@ import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { SessionList } from "./session-list.tsx"
 
-const setup = async (titles: ReadonlyArray<string>) => {
+const setup = async (titles: ReadonlyArray<string>, options: { holdTabs?: boolean } = {}) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
@@ -24,12 +24,13 @@ const setup = async (titles: ReadonlyArray<string>) => {
     })
     if (title !== "Closed") server.openTab(`s${index + 1}`)
   })
+  const list = options.holdTabs ? server.holdNextTabList() : null
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <SessionList projectPath="/p" projectName="p" />
     </RegistryProvider>,
   )
-  return server
+  return Object.assign(server, { list })
 }
 
 test("a project with no tab says how to start a session", async () => {
@@ -37,6 +38,20 @@ test("a project with no tab says how to start a session", async () => {
   await expect
     .element(page.getByText("No sessions in p yet. Start one with New session."))
     .toBeVisible()
+})
+
+test("a project whose sessions all have their tab closed says no session is open", async () => {
+  await setup(["Closed"])
+  await expect.element(page.getByText("No session open. Start one with New session.")).toBeVisible()
+  expect(page.getByText(/No sessions in p/).query()).toBeNull()
+})
+
+test("no empty message shows before the tab list has loaded", async () => {
+  const server = await setup([], { holdTabs: true })
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  expect(page.getByText(/Start one with New session/).query()).toBeNull()
+  server.list?.release()
+  await expect.element(page.getByText(/No sessions in p yet/)).toBeVisible()
 })
 
 test("each row shows the session status and follows the server", async () => {

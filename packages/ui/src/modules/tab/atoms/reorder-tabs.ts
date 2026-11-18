@@ -13,6 +13,7 @@ export const reorderTabsAtom = serverRuntime.fn<{
     const client = yield* ServerClient
     const state = tabsOf(projectPath)
     const before = yield* state.get
+    if (before === null) return undefined
     return yield* optimistic<ProjectTabs>({
       apply: state.set({
         ...before,

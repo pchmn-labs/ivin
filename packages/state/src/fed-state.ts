@@ -5,7 +5,9 @@ export interface FedState<A> {
   readonly value: Atom.Atom<A>
   readonly status: Atom.Atom<AsyncResult.AsyncResult<unknown, unknown>>
   readonly set: (next: A) => Effect.Effect<void, never, AtomRegistry.AtomRegistry>
-  readonly get: Effect.Effect<A, never, AtomRegistry.AtomRegistry>
+  readonly loaded: Atom.Atom<boolean>
+  // Null until the load or a write has given the value.
+  readonly get: Effect.Effect<A | null, never, AtomRegistry.AtomRegistry>
 }
 
 // A value loaded once while something reads it, then written by mutations; a write made before the load ends wins.
@@ -28,13 +30,18 @@ export const makeFedState = <A, R, ER, E>(options: {
     get(live)
     return get(state) ?? options.initial
   })
+  const loaded = Atom.readable((get) => {
+    get(live)
+    return get(state) !== null
+  })
   return {
     value,
+    loaded,
     status: feed,
     set: (next) => Atom.set(state, next),
     get: Effect.gen(function* () {
       const registry = yield* AtomRegistry.AtomRegistry
-      return registry.get(state) ?? options.initial
+      return registry.get(state)
     }),
   }
 }

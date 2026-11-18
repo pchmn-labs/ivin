@@ -5,7 +5,6 @@ export const reorder = (current: readonly string[], named: readonly string[]): s
   return [...first, ...current.filter((id) => !placed.has(id))]
 }
 
-// The ids of the bar once `moved` is dropped before or after `target`.
 export const moveTab = (
   ids: ReadonlyArray<string>,
   moved: string,

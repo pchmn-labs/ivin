@@ -25,13 +25,13 @@
   height: var(--iv-rail-button-size);
   place-items: center;
   border: 0;
-  border-radius: var(--iv-radius-tab);
+  border-radius: var(--iv-radius-rail-button);
   background: transparent;
   color: var(--iv-text-muted);
   cursor: default;
   transition:
     background-color var(--iv-duration-fast) ease-out,
-    transform 160ms var(--iv-ease-out);
+    transform var(--iv-duration-press) var(--iv-ease-out);
 }
 
 .iv-project-rail__project:active {
@@ -60,7 +60,7 @@
   padding: 0 var(--iv-space-1);
   border-radius: var(--iv-radius-pill);
   background: var(--iv-danger);
-  box-shadow: 0 0 0 var(--iv-space-half) var(--iv-bg-card);
+  box-shadow: 0 0 0 var(--iv-line-bold) var(--iv-bg-card);
   color: var(--iv-bg-card);
   font-size: var(--iv-text-xs);
   line-height: var(--iv-badge-size);

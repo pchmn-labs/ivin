@@ -3,7 +3,7 @@ import { Rpc, RpcGroup } from "effect/rpc"
 import { ProjectNotOpen } from "./project.ts"
 import { SessionNotFound } from "./session.ts"
 
-// A session has at most one tab, so its id names the tab.
+// The session id names the tab.
 export const Tab = Schema.Struct({
   sessionId: Schema.String,
   projectPath: Schema.String,

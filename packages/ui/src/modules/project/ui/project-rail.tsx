@@ -1,14 +1,13 @@
-import { useAtomMount, useAtomValue } from "@effect/atom-react"
+import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { ReactNode } from "react"
 import type { Project } from "@ivin/contracts/project"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
 import { groupSessions } from "../../session/rules/group-sessions.ts"
-import { openProjectsAtom } from "../atoms/list-projects.ts"
+import { projectsAtom } from "../atoms/list-projects.ts"
 import { selectProjectAtom } from "../atoms/select-project.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
-import { useAtomSet } from "@effect/atom-react"
 import { ProjectCreature } from "./project-creature.tsx"
 import "./project-rail.css"
 
@@ -42,7 +41,7 @@ function ProjectButton({ project, selected }: { project: Project; selected: bool
 }
 
 export function ProjectRail({ children }: { children?: ReactNode }) {
-  const { projects, selectedPath } = useAtomValue(openProjectsAtom.value)
+  const { projects, selectedPath } = useAtomValue(projectsAtom.value)
   const { openFolder } = useOpenFolder()
 
   return (

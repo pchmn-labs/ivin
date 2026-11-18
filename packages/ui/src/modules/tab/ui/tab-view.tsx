@@ -5,7 +5,11 @@ import { tabsOf } from "../atoms/list-tabs.ts"
 import "./tab-view.css"
 
 export function TabView({ projectPath }: { projectPath: string }) {
-  const { selectedSessionId } = useAtomValue(tabsOf(projectPath).value)
+  const tabs = tabsOf(projectPath)
+  const { selectedSessionId } = useAtomValue(tabs.value)
+  const loaded = useAtomValue(tabs.loaded)
+
+  if (!loaded) return <div className="iv-tab-view" />
 
   if (selectedSessionId === null) {
     return (

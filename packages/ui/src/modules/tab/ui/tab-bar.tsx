@@ -96,13 +96,12 @@ function TabItem({
         aria-label={`Close ${session.title}`}
         onClick={() => closeTab({ sessionId })}
       >
-        <Icon name="x" size={12} />
+        <Icon name="x" size={14} />
       </button>
     </div>
   )
 }
 
-// Arrow keys, Home and End move to a tab and select it, as a tablist does.
 const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
   const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
   const current = tabs.indexOf(document.activeElement as HTMLButtonElement)
@@ -175,7 +174,7 @@ export function TabBar({ projectPath }: { projectPath: string }) {
           />
         ))}
       </div>
-      <NewSessionButton projectPath={projectPath} />
+      <NewSessionButton projectPath={projectPath} icon="plus" size="sm" />
     </div>
   )
 }

@@ -129,16 +129,16 @@
   position: absolute;
   top: var(--iv-space-1);
   bottom: var(--iv-space-1);
-  width: var(--iv-space-half);
+  width: var(--iv-line-bold);
   border-radius: var(--iv-radius-sm);
   background: var(--iv-accent);
   content: "";
 }
 
 .iv-tab-bar__item[data-drop="before"]::before {
-  left: calc((var(--iv-space-1) + var(--iv-space-half)) / -2);
+  left: calc((var(--iv-space-half) + var(--iv-line-bold)) / -2);
 }
 
 .iv-tab-bar__item[data-drop="after"]::before {
-  right: calc((var(--iv-space-1) + var(--iv-space-half)) / -2);
+  right: calc((var(--iv-space-half) + var(--iv-line-bold)) / -2);
 }

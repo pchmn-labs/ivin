@@ -12,6 +12,5 @@ export class TabStore extends Context.Service<
     readonly removeByProject: (projectPath: string) => Effect.Effect<void>
     readonly setOrder: (projectPath: string, sessionIds: readonly string[]) => Effect.Effect<void>
     readonly select: (projectPath: string, sessionId: string | null) => Effect.Effect<void>
-    readonly isProjectOpen: (projectPath: string) => Effect.Effect<boolean>
   }
 >()("ivin/server/TabStore") {}

@@ -1,6 +1,14 @@
+import type { Tab } from "@ivin/contracts/tab"
 import { Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
 import { TabStore } from "../usecases/tab-store.ts"
+
+interface TabRow {
+  session_id: string
+  project_path: string
+}
+
+const toTab = (row: TabRow): Tab => ({ sessionId: row.session_id, projectPath: row.project_path })
 
 export const layerSqliteTabStore = Layer.effect(TabStore)(
   Effect.gen(function* () {
@@ -10,8 +18,8 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
         Effect.sync(() => {
           const row = db
             .prepare("SELECT session_id, project_path FROM tabs WHERE session_id = ?")
-            .get(sessionId) as { session_id: string; project_path: string } | undefined
-          return row ? { sessionId: row.session_id, projectPath: row.project_path } : null
+            .get(sessionId) as TabRow | undefined
+          return row ? toTab(row) : null
         }),
       listByProject: (projectPath) =>
         Effect.sync(() =>
@@ -20,8 +28,8 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
               .prepare(
                 "SELECT session_id, project_path FROM tabs WHERE project_path = ? ORDER BY position",
               )
-              .all(projectPath) as unknown as { session_id: string; project_path: string }[]
-          ).map((row) => ({ sessionId: row.session_id, projectPath: row.project_path })),
+              .all(projectPath) as unknown as TabRow[]
+          ).map(toTab),
         ),
       selectedOf: (projectPath) =>
         Effect.sync(() => {
@@ -59,11 +67,6 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
             projectPath,
           )
         }),
-      isProjectOpen: (projectPath) =>
-        Effect.sync(
-          () =>
-            db.prepare("SELECT 1 FROM open_projects WHERE path = ?").get(projectPath) !== undefined,
-        ),
     }
   }),
 )

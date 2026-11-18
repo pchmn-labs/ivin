@@ -123,7 +123,7 @@ test("each tab shows its session, closes on its button, and the bar reorders by 
   await expect.element(tabs).toHaveLength(1)
   await page.getByRole("tab", { name: /First/ }).hover()
   await page.getByRole("button", { name: "Close First" }).click()
-  await expect.element(page.getByText(/No session open/)).toBeVisible()
+  await expect.element(page.getByRole("main").getByText(/No session open/)).toBeVisible()
 })
 
 test("picking another project shows its own tabs, and closing a project drops it", async () => {
@@ -131,7 +131,7 @@ test("picking another project shows its own tabs, and closing a project drops it
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
   await page.getByRole("button", { name: "other" }).click()
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
-  await expect.element(page.getByText(/No session open/)).toBeVisible()
+  await expect.element(page.getByRole("main").getByText(/No session open/)).toBeVisible()
   await page.getByRole("button", { name: "ivin" }).click()
   await expect.element(page.getByRole("tab")).toHaveLength(2)
 
@@ -141,7 +141,7 @@ test("picking another project shows its own tabs, and closing a project drops it
   await page.getByRole("button", { name: "Project actions" }).click()
   await page.getByRole("menuitem", { name: "Close project" }).click()
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
-  await expect.element(page.getByText(/No session open/)).toBeVisible()
+  await expect.element(page.getByRole("main").getByText(/No session open/)).toBeVisible()
 })
 
 test("the plus after the tabs starts a session with the chosen model, and arrow keys walk the tabs", async () => {

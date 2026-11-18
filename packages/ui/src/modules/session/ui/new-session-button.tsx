@@ -1,18 +1,27 @@
-import { useAtomValue, useAtomSet } from "@effect/atom-react"
+import { useAtomValue } from "@effect/atom-react"
 import { IconButton } from "../../../core/components/button/button.tsx"
-import { createSessionAtom } from "../atoms/create-session.ts"
+import type { IconProps } from "../../../core/components/icon/icon.tsx"
 import { newSessionModelAtom } from "../atoms/new-session-model.ts"
+import { useStartSession } from "../hooks/use-start-session.ts"
 
-export function NewSessionButton({ projectPath }: { projectPath: string }) {
+export function NewSessionButton({
+  projectPath,
+  icon,
+  size,
+}: {
+  projectPath: string
+  icon: IconProps["name"]
+  size?: "sm" | "md"
+}) {
   const model = useAtomValue(newSessionModelAtom)
-  const createSession = useAtomSet(createSessionAtom)
+  const startSession = useStartSession()
   return (
     <IconButton
-      icon="plus"
+      icon={icon}
       label="New session"
       tooltip={`New session · ${model}`}
-      size="sm"
-      onClick={() => createSession({ projectPath, model })}
+      {...(size && { size })}
+      onClick={() => void startSession(projectPath, model)}
     />
   )
 }

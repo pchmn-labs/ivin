@@ -1,22 +1,18 @@
 import { useAtom } from "@effect/atom-react"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
-import { createSessionAtom } from "../atoms/create-session.ts"
 import { newSessionModelAtom } from "../atoms/new-session-model.ts"
+import { useStartSession } from "../hooks/use-start-session.ts"
 import { MODELS } from "../rules/models.ts"
+import { NewSessionButton } from "./new-session-button.tsx"
 
 export function NewSessionControls({ projectPath }: { projectPath: string }) {
-  const [, createSession] = useAtom(createSessionAtom)
   const [model, setModel] = useAtom(newSessionModelAtom)
+  const startSession = useStartSession()
 
   return (
     <>
-      <IconButton
-        icon="new-session"
-        label="New session"
-        tooltip={`New session · ${model}`}
-        onClick={() => createSession({ projectPath, model })}
-      />
+      <NewSessionButton projectPath={projectPath} icon="new-session" size="md" />
       <Menu
         align="end"
         trigger={<IconButton icon="chevron-down" label="Model for the next session" size="sm" />}
@@ -25,7 +21,7 @@ export function NewSessionControls({ projectPath }: { projectPath: string }) {
           ...(name === model && { icon: "check" as const }),
           onSelect: () => {
             setModel(name)
-            createSession({ projectPath, model: name })
+            void startSession(projectPath, name)
           },
         }))}
       />

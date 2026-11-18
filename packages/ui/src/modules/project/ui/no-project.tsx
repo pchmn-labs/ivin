@@ -3,12 +3,12 @@ import { AsyncResult } from "effect/reactivity"
 import { Button } from "../../../core/components/button/button.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
-import { openProjectsAtom } from "../atoms/list-projects.ts"
+import { projectsAtom } from "../atoms/list-projects.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
 import "./no-project.css"
 
 export function NoProject() {
-  const status = useAtomValue(openProjectsAtom.status)
+  const status = useAtomValue(projectsAtom.status)
   const { openFolder } = useOpenFolder()
   const message = AsyncResult.isInitial(status)
     ? "Loading the projects…"

@@ -138,7 +138,9 @@ export function SessionList({
   const list = sessionsOf(projectPath)
   useAtomMount(list.ids)
   const sessions = useAtomValue(list.items)
-  const { tabs, selectedSessionId } = useAtomValue(tabsOf(projectPath).value)
+  const tabsState = tabsOf(projectPath)
+  const { tabs, selectedSessionId } = useAtomValue(tabsState.value)
+  const tabsLoaded = useAtomValue(tabsState.loaded)
   const created = useAtomValue(createSessionAtom)
   const byId = new Map(sessions.map((session) => [session.id, session]))
   const open = tabs.flatMap((tab) => byId.get(tab.sessionId) ?? [])
@@ -151,9 +153,11 @@ export function SessionList({
           Could not create the session
         </Text>
       )}
-      {tabs.length === 0 && (
+      {tabsLoaded && tabs.length === 0 && (
         <p className="iv-session-list__empty">
-          No sessions in {projectName} yet. Start one with New session.
+          {sessions.length === 0
+            ? `No sessions in ${projectName} yet. Start one with New session.`
+            : "No session open. Start one with New session."}
         </p>
       )}
       <div className="iv-session-list__scroll">

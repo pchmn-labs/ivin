@@ -24,6 +24,8 @@ export interface FakeServer {
   // Opens a project, or a session's tab, as the server would.
   readonly openProject: (path: string) => void
   readonly openTab: (sessionId: string) => void
+  // Makes the next tab.list wait until `release` is called.
+  readonly holdNextTabList: () => { readonly release: () => void }
   readonly tabOrder: (projectPath: string) => ReadonlyArray<string>
 }
 
@@ -40,6 +42,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   let nextId = 1
   let hold: { readonly wait: Promise<boolean> } | null = null
   let holdReorder: { readonly wait: Promise<boolean> } | null = null
+  let holdTabList: Promise<void> | null = null
 
   const openProjects = (): OpenProjects => ({ projects: [...projects], selectedPath })
   const tabsOf = (projectPath: string) => tabs.filter((tab) => tab.projectPath === projectPath)
@@ -122,7 +125,10 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
         return openProjects()
       }),
     "tab.list": ({ projectPath }: { projectPath: string }) =>
-      Effect.sync(() => projectTabs(projectPath)),
+      Effect.promise(async () => {
+        await holdTabList
+        return projectTabs(projectPath)
+      }),
     "tab.open": ({ sessionId }: { sessionId: string }) =>
       Effect.suspend((): Effect.Effect<ProjectTabs, SessionNotFound | ProjectNotOpen> => {
         const session = sessions.get(sessionId)
@@ -298,6 +304,11 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
     },
     openProject: (path) => void Effect.runSync(client["project.open"]({ path })),
     openTab: (sessionId) => void Effect.runSync(client["tab.open"]({ sessionId })),
+    holdNextTabList: () => {
+      let release!: () => void
+      holdTabList = new Promise<void>((resolve) => (release = resolve))
+      return { release }
+    },
     tabOrder: (projectPath) => tabsOf(projectPath).map((tab) => tab.sessionId),
   }
 }

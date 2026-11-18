@@ -43,6 +43,8 @@
   --iv-radius-lg: 10px;
   --iv-radius-card: 10px;
   --iv-radius-tab: 8px;
+  --iv-radius-rail-button: 8px;
+  --iv-line-bold: 2px;
   --iv-radius-pill: 999px;
 
   --iv-traffic-lights-width: 78px;
@@ -66,6 +68,7 @@
 
   --iv-duration-fast: 120ms;
   --iv-duration-base: 180ms;
+  --iv-duration-press: 160ms;
   --iv-duration-spin: 900ms;
   --iv-duration-pulse: 1600ms;
   --iv-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
