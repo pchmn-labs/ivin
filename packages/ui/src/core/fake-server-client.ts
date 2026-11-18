@@ -22,7 +22,7 @@ export interface FakeServer {
   readonly setStatus: (sessionId: string, status: SessionStatus) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   readonly sentMessages: ReadonlyArray<{ readonly workingFolder?: WorkingFolderChoice }>
-  // Makes every sendMessage fail as git would, with this message; null sends again.
+  // Makes every sendMessage fail as git would, storing this message; null sends again.
   readonly failWorktreeWith: (gitMessage: string | null) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
   readonly holdNextSend: () => { readonly release: () => void; readonly fail: () => void }
@@ -281,12 +281,20 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
           session === undefined
             ? Effect.fail(new SessionNotFound({ sessionId: input.sessionId }))
             : worktreeFailure !== null
-              ? Effect.fail(
-                  new WorktreeNotCreated({
+              ? Effect.sync(() =>
+                  publish({
+                    id: `error-${nextId++}`,
                     sessionId: input.sessionId,
-                    reason: "git",
-                    gitMessage: worktreeFailure,
+                    position: itemsOf(input.sessionId).length,
+                    type: "error",
+                    message: worktreeFailure!,
                   }),
+                ).pipe(
+                  Effect.andThen(
+                    Effect.fail(
+                      new WorktreeNotCreated({ sessionId: input.sessionId, reason: "git" }),
+                    ),
+                  ),
                 )
               : Effect.succeed(session),
       ).pipe(

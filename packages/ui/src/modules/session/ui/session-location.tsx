@@ -15,7 +15,7 @@ export function SessionLocation({
       className="iv-session-location"
       data-compact={compact || undefined}
       data-testid="session-location"
-      title={session.workingFolder}
+      title={session.workingFolder || undefined}
     >
       <span className="iv-session-location__item">
         <Icon name={session.inWorktree ? "worktree" : "folder"} size={12} />

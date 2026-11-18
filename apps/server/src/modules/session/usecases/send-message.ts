@@ -12,8 +12,11 @@ import { SessionFeed } from "./session-feed.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
 
-const reasonOf = (tag: "GitError" | "FetchTimedOut" | "NoDefaultBranch") =>
-  tag === "GitError" ? "git" : tag === "FetchTimedOut" ? "fetch_timed_out" : "no_default_branch"
+const REASONS = {
+  GitError: "git",
+  FetchTimedOut: "fetch_timed_out",
+  NoDefaultBranch: "no_default_branch",
+} as const
 
 const moveToNewWorktree = (session: Session, branch: string | null) =>
   Effect.gen(function* () {
@@ -26,17 +29,14 @@ const moveToNewWorktree = (session: Session, branch: string | null) =>
     yield* setStatus("preparing_worktree")
     const created = yield* createWorktree(session.projectPath, session.id, branch).pipe(
       Effect.tapError((error) =>
-        runs
-          .record(session, { type: "error", message: error.message, raw: null })
-          .pipe(Effect.andThen(setStatus("failed"))),
+        // Git's own output goes to the transcript as written, like a harness error.
+        (error._tag === "GitError"
+          ? runs.record(session, { type: "error", message: error.message, raw: null })
+          : Effect.void
+        ).pipe(Effect.andThen(setStatus("failed"))),
       ),
       Effect.mapError(
-        (error) =>
-          new WorktreeNotCreated({
-            sessionId: session.id,
-            reason: reasonOf(error._tag),
-            gitMessage: error._tag === "GitError" ? error.message : null,
-          }),
+        (error) => new WorktreeNotCreated({ sessionId: session.id, reason: REASONS[error._tag] }),
       ),
     )
     yield* store.setWorkingFolder(session.id, created.path, created.branch)

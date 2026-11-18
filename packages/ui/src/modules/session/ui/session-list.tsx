@@ -73,7 +73,9 @@ function SessionRow({
           </span>
         }
         title={<span data-testid="session-title">{session.title}</span>}
-        subtitle={<SessionLocation session={session} compact />}
+        {...(session.branch !== null && {
+          subtitle: <SessionLocation session={session} compact />,
+        })}
         meta={<RelativeTime at={session.lastActivityAt} />}
         actions={
           <Menu

@@ -1,5 +1,5 @@
 import { Clock, Context, Data, Effect, Layer } from "effect"
-import { isFetchRecent } from "../rules/worktree-base.ts"
+import { isFetchRecent } from "../rules/fetch-reuse.ts"
 import { Git, type GitError } from "./git.ts"
 
 const FETCH_TIMEOUT = "30 seconds"
@@ -13,7 +13,6 @@ export class FetchTimedOut extends Data.TaggedError("FetchTimedOut")<{}> {
 export class OriginFetch extends Context.Service<
   OriginFetch,
   {
-    // Skipped when the repository's last successful fetch is younger than two minutes.
     readonly fetch: (repo: string) => Effect.Effect<void, GitError | FetchTimedOut>
   }
 >()("ivin/server/OriginFetch") {}

@@ -47,7 +47,7 @@
 
 /* The surface's rule flattens every field; the branch name keeps a visible box. */
 .iv-composer__surface .iv-composer__branch .iv-field {
-  width: 200px;
+  width: auto;
   height: var(--iv-control-sm);
   border-color: var(--iv-border-strong);
   font-size: var(--iv-text-sm);

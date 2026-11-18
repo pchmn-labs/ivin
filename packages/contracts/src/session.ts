@@ -47,10 +47,10 @@ export type WorkingFolderChoice = typeof WorkingFolderChoice.Type
 export const WorktreeFailure = Schema.Literals(["git", "fetch_timed_out", "no_default_branch"])
 export type WorktreeFailure = typeof WorktreeFailure.Type
 
-// `gitMessage` is git's output when `reason` is `git`.
+// With `reason: "git"`, git's output is in the session's transcript.
 export class WorktreeNotCreated extends Schema.TaggedError<WorktreeNotCreated>()(
   "WorktreeNotCreated",
-  { sessionId: Schema.String, reason: WorktreeFailure, gitMessage: Schema.NullOr(Schema.String) },
+  { sessionId: Schema.String, reason: WorktreeFailure },
 ) {}
 
 export const SessionRpcs = RpcGroup.make(

@@ -193,10 +193,11 @@ test("a worktree that git cannot create stores git's error, and no run starts", 
   )
 
   expect(error).toMatchObject({ _tag: "WorktreeNotCreated", reason: "git" })
-  expect(error._tag === "WorktreeNotCreated" && error.gitMessage).toContain("already exists")
   expect(starts).toEqual([])
   expect(session).toMatchObject({ workingFolder: project, started: false, status: "failed" })
-  expect(items.map((i) => i.type)).toEqual(["error"])
+  expect(items).toMatchObject([
+    { type: "error", message: expect.stringContaining("already exists") },
+  ])
 })
 
 test("a session outside a git repository has no branch", async () => {

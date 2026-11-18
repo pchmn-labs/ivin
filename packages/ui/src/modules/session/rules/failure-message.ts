@@ -11,9 +11,12 @@ const isTag = <E extends { readonly _tag: string }>(error: unknown, tag: E["_tag
   errorTag(error) === tag
 
 const WORKTREE_FAILURES: Record<WorktreeFailure, ActionFailure> = {
-  git: { text: "The worktree was not created. Fix what git reports, then retry.", retryable: true },
+  git: {
+    text: "The worktree was not created. Fix what git reports in the transcript, then retry.",
+    retryable: true,
+  },
   fetch_timed_out: {
-    text: "The worktree was not created: fetching origin took more than 30 seconds. Check the connection, then retry.",
+    text: "The worktree was not created: fetching origin took too long. Check the connection, then retry.",
     retryable: true,
   },
   no_default_branch: {
@@ -22,8 +25,7 @@ const WORKTREE_FAILURES: Record<WorktreeFailure, ActionFailure> = {
   },
 }
 
-// `detail` is git's own output, shown as is.
-export const sendMessageFailure = (error: unknown): ActionFailure & { detail?: string } => {
+export const sendMessageFailure = (error: unknown): ActionFailure => {
   if (isTag<SessionNotFound>(error, "SessionNotFound")) {
     return {
       text: "This session no longer exists, so the message was not sent. Start a new session to send it.",
@@ -31,8 +33,7 @@ export const sendMessageFailure = (error: unknown): ActionFailure & { detail?: s
     }
   }
   if (isTag<WorktreeNotCreated>(error, "WorktreeNotCreated")) {
-    const { reason, gitMessage } = error as WorktreeNotCreated
-    return { ...WORKTREE_FAILURES[reason], ...(gitMessage !== null && { detail: gitMessage }) }
+    return WORKTREE_FAILURES[(error as WorktreeNotCreated).reason]
   }
   return { text: "The message was not sent.", retryable: true }
 }

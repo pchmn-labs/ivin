@@ -731,8 +731,7 @@ test("watching a project's sessions starts with every current session of the pro
 
 test("closing the server closes every run at once, not one after the other", async () => {
   const closed: string[] = []
-  const started = Date.now()
-  await withServer(
+  const started = await withServer(
     newDatabase(),
     [[running], [running], [running], [running]],
     [],

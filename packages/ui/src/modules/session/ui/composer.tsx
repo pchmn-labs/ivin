@@ -11,7 +11,6 @@ import { ErrorMessage } from "../../../core/components/error-message/error-messa
 import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { TextArea, TextField } from "../../../core/components/text-field/text-field.tsx"
-import { CodeBlock } from "../../../core/components/code-block/code-block.tsx"
 import { Select } from "../../../core/components/select/select.tsx"
 import { SessionLocation } from "./session-location.tsx"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
@@ -25,9 +24,7 @@ import "./composer.css"
 export function Composer({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
   const [text, setText] = useState("")
   const root = useRef<HTMLDivElement>(null)
-  const [failure, setFailure] = useState<
-    (ActionFailure & { message: string; detail?: string }) | null
-  >(null)
+  const [failure, setFailure] = useState<(ActionFailure & { message: string }) | null>(null)
   const [folderKind, setFolderKind] = useState<WorkingFolderChoice["kind"]>("checkout")
   const [branchName, setBranchName] = useState("")
   const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
@@ -44,7 +41,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     const workingFolder: WorkingFolderChoice | undefined = !choosing
       ? undefined
       : folderKind === "worktree"
-        ? { kind: "worktree", branch: branchName.trim() === "" ? null : branchName.trim() }
+        ? { kind: "worktree", branch: branchName.trim() || null }
         : { kind: "checkout" }
     void send({
       projectPath,
@@ -78,7 +75,6 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
             message={failure.text}
             {...(failure.retryable && { onRetry: () => sendText(failure.message) })}
           />
-          {failure.detail !== undefined && <CodeBlock text={failure.detail} />}
         </div>
       )}
       {session && <Slot slot="composer.above" props={{ session, isEmptyComposer }} />}
@@ -152,7 +148,15 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         </Stack>
       </div>
       <div className="iv-composer__statusline">
-        {session && <SessionLocation session={session} />}
+        {session && (
+          <SessionLocation
+            session={
+              choosing && folderKind === "worktree"
+                ? { inWorktree: true, branch: branchName.trim() || null, workingFolder: "" }
+                : session
+            }
+          />
+        )}
         <div className="iv-composer__status-slot" data-testid="composer-status">
           <Slot slot="composer.status" props={{ sessionId }} />
         </div>

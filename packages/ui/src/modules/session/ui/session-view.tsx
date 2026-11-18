@@ -6,6 +6,7 @@ import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
+import { statusLabel } from "../rules/status-label.ts"
 import { Composer } from "./composer.tsx"
 import "./session-view.css"
 
@@ -27,7 +28,7 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
         <div className="iv-session-view__preparing" data-testid="preparing-worktree">
           <Icon name="loader" size={14} />
           <Text size="sm" tone="muted">
-            Preparing worktree…
+            {statusLabel(status)}
           </Text>
         </div>
       )}

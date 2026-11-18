@@ -107,3 +107,11 @@ test("each row shows its branch, and whether it runs in the checkout or a worktr
   await expect.element(rows.nth(1)).toHaveTextContent("Worktreefeat/login")
   await expect.element(rows.nth(0)).toHaveTextContent("Checkoutmain")
 })
+
+test("a session outside a git repository has no branch line", async () => {
+  const server = await setup(["One"])
+  server.sessions.set("s1", { ...server.sessions.get("s1")!, branch: null })
+  server.setStatus("s1", "working")
+  await expect.element(page.getByTestId("session-status")).toHaveTextContent("Working")
+  expect(page.getByTestId("session-location").query()).toBeNull()
+})

@@ -401,7 +401,7 @@ test("an empty branch name lets the server generate one, and the checkout sends 
   ])
 })
 
-test("a worktree git cannot create shows git's message and keeps the message and the choice", async () => {
+test("a worktree git cannot create shows git's message in the transcript and keeps the message and the choice", async () => {
   const server = await mountNewSession()
   server.failWorktreeWith("fatal: a branch named 'taken' already exists")
   await page.getByRole("combobox", { name: "Working folder" }).selectOptions("worktree")
@@ -412,9 +412,20 @@ test("a worktree git cannot create shows git's message and keeps the message and
   const alert = page.getByTestId("composer-alert")
   await expect.element(alert).toBeVisible()
   expect(alert.element().textContent).toMatch(/^The worktree was not created/)
-  expect(alert.element().textContent).toMatch(/fatal: a branch named 'taken' already exists$/)
+  await expect
+    .element(page.getByText("fatal: a branch named 'taken' already exists", { exact: true }))
+    .toBeVisible()
   await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("go")
   await expect.element(page.getByRole("textbox", { name: "Branch name" })).toHaveValue("taken")
+})
+
+test("with New worktree chosen, the status line shows a worktree on the branch being typed", async () => {
+  await mountNewSession()
+  const location = page.getByTestId("session-location")
+  await page.getByRole("combobox", { name: "Working folder" }).selectOptions("worktree")
+  await expect.element(location).toHaveTextContent("Worktree")
+  await page.getByRole("textbox", { name: "Branch name" }).fill("feat/x")
+  await expect.element(location).toHaveTextContent("Worktreefeat/x")
 })
 
 test("a session preparing its worktree says so under the transcript until the run starts", async () => {
