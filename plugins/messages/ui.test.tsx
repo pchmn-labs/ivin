@@ -48,12 +48,9 @@ test("a user message stays plain text", async () => {
   await expect.element(page.getByText("**not bold**")).toBeVisible()
 })
 
-test("thinking is folded until opened", async () => {
+test("thinking is not shown", async () => {
   await mount({ ...base, type: "thinking", text: "secret reasoning" })
-  await expect.element(page.getByText("Thinking")).toBeVisible()
-  await expect.element(page.getByText("secret reasoning")).not.toBeVisible()
-  await page.getByText("Thinking").click()
-  await expect.element(page.getByText("secret reasoning")).toBeVisible()
+  expect(page.getByText("secret reasoning").query()).toBeNull()
 })
 
 test("an error item is shown as an alert", async () => {

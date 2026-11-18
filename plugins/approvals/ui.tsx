@@ -12,8 +12,6 @@ import {
 import type { ApprovalItem, SlotProps } from "@ivin/plugin-api/ui"
 import { formatInput } from "./rules/format-input.ts"
 
-const DECISION_LABELS = { allow: "Allowed", deny: "Denied" } as const
-
 const OPTIONS = [
   { id: "allow", label: "Allow" },
   { id: "deny", label: "Deny", hint: "Esc" },
@@ -22,13 +20,14 @@ const OPTIONS = [
 const firstLine = (text: string) => text.split("\n", 1)[0] ?? ""
 
 function ApprovalRecord({ item }: SlotProps["transcript.approval"]) {
-  if (item.decision === null) return null
+  // An allowed call shows as its tool row; only a denial needs a trace.
+  if (item.decision !== "deny") return null
   const input = formatInput(item.name, item.input)
   return (
     <Stack direction="row" gap={2} align="center">
-      <Icon name={item.decision === "allow" ? "check" : "x"} size={14} />
+      <Icon name="x" size={14} />
       <Text size="sm" tone="muted" truncate title={input} data-testid="approval-decision">
-        {DECISION_LABELS[item.decision]}:{" "}
+        Denied:{" "}
         <Text as="span" size="sm" mono>
           {firstLine(input)}
         </Text>

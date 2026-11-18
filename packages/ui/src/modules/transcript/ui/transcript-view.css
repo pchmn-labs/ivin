@@ -17,6 +17,12 @@
   padding: var(--iv-space-2) 0;
 }
 
+/* A plugin may render nothing for an item; Virtuoso breaks on zero-height rows. */
+.iv-transcript__item:empty {
+  height: 1px;
+  padding: 0;
+}
+
 .iv-transcript__empty {
   display: flex;
   align-items: center;

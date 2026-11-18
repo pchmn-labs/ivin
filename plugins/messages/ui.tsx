@@ -1,25 +1,9 @@
-import { Block, Disclosure, Icon, Markdown, Stack, Text, defineUi } from "@ivin/plugin-api/ui"
+import { Block, Markdown, Text, defineUi } from "@ivin/plugin-api/ui"
 import type { SlotProps } from "@ivin/plugin-api/ui"
 
 function Message({ item }: SlotProps["transcript.message"]) {
-  if (item.type === "thinking") {
-    return (
-      <Disclosure
-        summary={
-          <Stack as="span" direction="row" gap={2} align="center">
-            <Icon name="brain" size={14} />
-            <Text size="sm" tone="muted">
-              Thinking
-            </Text>
-          </Stack>
-        }
-      >
-        <Text as="p" size="sm" tone="muted" italic preWrap>
-          {item.text}
-        </Text>
-      </Disclosure>
-    )
-  }
+  // Thinking stays in the transcript data but is not shown, as in the Claude CLI.
+  if (item.type === "thinking") return null
   if (item.type === "interruption") {
     return (
       <Text as="p" size="sm" tone="faint" italic>

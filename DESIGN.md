@@ -384,7 +384,7 @@ A keyboard-first single choice inside a sheet: 36px options with 6px corners, 2p
 Menus have 10px corners, 4px padding and 28px items with 4px corners; the highlighted item takes the active wash and destructive items are red. Tooltips are 12px text with 4px corners. Dialogs are at most 420px wide, with 20px padding, a 16px semibold title, a muted description and right-aligned actions. All three fade and scale from 0.97 (120ms for menus and tooltips, 180ms for dialogs) on `cubic-bezier(0.22, 1, 0.36, 1)`, and reduced motion removes it.
 
 ### Disclosure and Code
-Disclosures (thinking, tool output) use a muted summary with a chevron that rotates 90 degrees when open. A tool call is one row: chevron, the tool's icon (terminal for Bash, file for Read, pencil for edits, a wrench otherwise), its name and its mono argument; a spinner while it runs, a red "failed" when it fails, nothing once it succeeds. Its input and output open under the chevron. Code blocks use the deep ground, 12px mono and 6px corners, and scroll past 240px.
+Disclosures (tool output) use a muted summary with a chevron that rotates 90 degrees when open. A tool call is one row: chevron, the tool's icon (terminal for Bash, file for Read, pencil for edits, a wrench otherwise), its name and its mono argument; a spinner while it runs, a red "failed" when it fails, nothing once it succeeds. Its input and output open under the chevron. Thinking is not shown, and an approval leaves a trace in the transcript only when denied: "Denied:" and the command on one muted line. Code blocks use the deep ground, 12px mono and 6px corners, and scroll past 240px.
 
 ### Pending designs
 Decided but not built, because the data they need does not exist yet. Build them this way when it arrives.

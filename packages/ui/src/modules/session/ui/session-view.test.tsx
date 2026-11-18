@@ -180,7 +180,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
   expect(server.sessions.get("s1")?.status).toBe("working")
 })
 
-test("a pending approval shows a sheet on the composer that Enter answers, leaving a record", async () => {
+test("a pending approval shows a sheet on the composer that Enter allows, leaving no record", async () => {
   const server = await mountSession("waiting")
   server.pushItem({
     id: "a0",
@@ -197,7 +197,9 @@ test("a pending approval shows a sheet on the composer that Enter answers, leavi
   await page.getByRole("textbox", { name: "Message" }).click()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByText("Approval needed")).not.toBeInTheDocument()
-  await expect.element(page.getByTestId("approval-decision")).toHaveTextContent("Allowed: git push")
+  await expect.element(page.getByTestId("transcript-item")).toHaveAttribute("data-type", "approval")
+  expect(page.getByTestId("approval-decision").query()).toBeNull()
+  expect(page.getByTestId("transcript-item").element().getBoundingClientRect().height).toBe(1)
 })
 
 const pushApproval = (server: Awaited<ReturnType<typeof mountSession>>) =>
