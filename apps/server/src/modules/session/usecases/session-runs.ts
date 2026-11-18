@@ -32,7 +32,7 @@ export class SessionRuns extends Context.Service<
     ) => Effect.Effect<void, ApprovalNotOpen>
     // No-op with no run.
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
-    // Ends the agent's process; the next message starts a new run that resumes the conversation. No-op with no run.
+    // No-op with no run.
     readonly stop: (sessionId: string) => Effect.Effect<void>
   }
 >()("ivin/server/SessionRuns") {}

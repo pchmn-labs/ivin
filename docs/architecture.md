@@ -134,7 +134,7 @@ The terms are defined in [`GLOSSARY.md`](../GLOSSARY.md). What the design adds t
 - An annotation looks like `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
 - The open projects, their order, the selected project, the tabs, their order and each project's selected tab are stored in SQLite and restored at launch.
 - A tab stores its project and its position, so a single bar for all projects can later be a view over the same rows.
-- Closing a tab, or the project it belongs to, ends its session's agent process when `tabs.stopAgentOnClose` is on; the next message starts a new process that resumes the conversation. The UI asks first when the agent is working or waiting.
+- Closing a tab, or the project it belongs to, ends its session's agent process when `tabs.stopAgentOnClose` is on; the next message starts a new process that resumes the conversation. The tab bar asks first when the agent is working or waiting; closing a project does not ask.
 
 The server is the source of truth and persists to SQLite; the renderer holds a read model fed by RPC streams, in atoms that the plugin hooks wrap (see [UI state](#ui-state)). Plugin storage is a namespaced key-value store in the same database.
 
