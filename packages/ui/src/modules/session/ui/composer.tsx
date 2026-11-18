@@ -2,6 +2,8 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Exit } from "effect"
 import { useRef, useState } from "react"
 import { Slot } from "../../../app/slot-renderer.tsx"
+import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
+import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
@@ -29,6 +31,9 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     void send({ projectPath, sessionId, text }).then((exit) => setFailed(Exit.isFailure(exit)))
     setText("")
   }
+  useCommandHandler("composer.send", submit)
+  const sendHint = useKeyHint("Send", "composer.send")
+  const interruptHint = useKeyHint("Interrupt", "session.interrupt")
 
   const isEmptyComposer = (target: EventTarget | null) =>
     text === "" &&
@@ -36,7 +41,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     target.closest(".iv-composer") === root.current
 
   return (
-    <div className="iv-composer" ref={root}>
+    <div className="iv-composer" ref={root} data-keybinding-area="composer">
       {failed && (
         <div className="iv-composer__alert">
           <Text role="alert" tone="danger">
@@ -52,11 +57,6 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
           rows={2}
           value={text}
           onChange={(event) => setText(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return
-            event.preventDefault()
-            submit()
-          }}
         />
         <Stack direction="row" align="center" justify="between" gap={2}>
           {session && (
@@ -80,7 +80,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
             <IconButton
               icon="square"
               label="Interrupt"
-              tooltip="Interrupt (Esc)"
+              tooltip={interruptHint}
               variant="secondary"
               onClick={() => interrupt({ projectPath, sessionId })}
             />
@@ -88,7 +88,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
             <IconButton
               icon="send"
               label="Send"
-              tooltip="Send (Enter)"
+              tooltip={sendHint}
               variant="primary"
               disabled={text.trim() === ""}
               onClick={submit}

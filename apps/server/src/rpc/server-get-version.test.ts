@@ -6,6 +6,7 @@ import { ServerRpcs } from "@ivin/contracts/server"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 
 test("server.getVersion answers with the version the server was built with", async () => {
   const program = Effect.gen(function* () {
@@ -17,6 +18,7 @@ test("server.getVersion answers with the version the server was built with", asy
         Layer.provide(layerServices),
         Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
         Layer.provide(layerDatabase(":memory:")),
+        Layer.provide(layerKeybindingsFileOf([])),
         Layer.provide(layerScripted([])),
       ),
     ),

@@ -12,6 +12,8 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
   const ctx: UiContext = {
     pluginId: "messages",
     slots: { add: (_slot, component) => void (Message = component as typeof Message) },
+    commands: { register: () => undefined },
+    keybindings: { add: () => undefined },
   }
   activate(ctx)
   const host = {

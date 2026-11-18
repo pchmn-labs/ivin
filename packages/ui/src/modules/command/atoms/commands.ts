@@ -1,0 +1,23 @@
+import { Atom } from "effect/reactivity"
+
+export interface Command {
+  readonly id: string
+  readonly title: string
+  readonly pluginId: string | null
+}
+
+export interface CommandHandler {
+  readonly commandId: string
+  readonly run: () => void
+  readonly pluginId: string | null
+}
+
+export const coreCommands: ReadonlyArray<Command> = [
+  { id: "sidebar.toggle", title: "Toggle sidebar", pluginId: null },
+  { id: "session.interrupt", title: "Interrupt", pluginId: null },
+  { id: "composer.send", title: "Send", pluginId: null },
+]
+
+export const commandsAtom = Atom.make<ReadonlyArray<Command>>(coreCommands).pipe(Atom.keepAlive)
+
+export const commandHandlersAtom = Atom.make<ReadonlyArray<CommandHandler>>([]).pipe(Atom.keepAlive)

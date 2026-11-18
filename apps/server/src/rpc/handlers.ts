@@ -2,6 +2,7 @@ import { Rpcs } from "@ivin/contracts/rpcs"
 import { Effect, Layer, Stream } from "effect"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
+import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
 import { layerSqliteProjectStore } from "../modules/project/adapters/sqlite-project-store.ts"
 import { closeProject } from "../modules/project/usecases/close-project.ts"
 import { listProjects } from "../modules/project/usecases/list-projects.ts"
@@ -62,6 +63,7 @@ export const handlers = Rpcs.toLayer(
   logFailures(
     Rpcs.of({
       "server.getVersion": () => getVersion,
+      "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
       "project.open": ({ path }) => openProject(path),
       "project.close": ({ path }) => closeProject(path),

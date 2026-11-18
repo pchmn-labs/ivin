@@ -313,6 +313,8 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 
 Plus non-visual contributions: `commands` (command palette), `keybindings`, `themes`, `fileIcons`, `editorExtensions` (CodeMirror), `fileOpeners` (HTML preview).
 
+A UI command and its default keybinding are declared with `ctx.commands.register("prs.refresh", { title, run })` and `ctx.keybindings.add({ key: "mod+r", command: "prs.refresh", when: "sessionList" })`. The core lists its own commands and default keybindings in the `command` and `keybinding` modules, and a mounted component runs a core command that needs its state (the composer runs `composer.send`). One keyboard handler on the window finds the keybinding for a key: an area is an element marked `data-keybinding-area="<name>"`, the areas around the focus are tried from the closest out, then the keybindings with no area. It ignores a key a control already used (`defaultPrevented`) or an input method is composing. The server watches `~/.ivin/keybindings.json` and streams it (`keybinding.watch`); the UI merges it over the defaults ([ADR-0003](adr/0003-keyboard-shortcuts-are-keybindings-to-commands.md)).
+
 ```tsx
 import { defineUi, useAnnotations, useSession } from "@ivin/plugin-api/ui"
 

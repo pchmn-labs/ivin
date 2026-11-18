@@ -12,6 +12,8 @@ const mount = async (item: ToolCallItem) => {
   const ctx: UiContext = {
     pluginId: "tool-calls",
     slots: { add: (_slot, component) => void (ToolCall = component as typeof ToolCall) },
+    commands: { register: () => undefined },
+    keybindings: { add: () => undefined },
   }
   activate(ctx)
   const host = {

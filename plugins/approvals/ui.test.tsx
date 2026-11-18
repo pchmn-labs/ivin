@@ -28,6 +28,8 @@ const mount = async (
   const ctx: UiContext = {
     pluginId: "approvals",
     slots: { add: (slot, component) => void (slots[slot] = component as ComponentType<never>) },
+    commands: { register: () => undefined },
+    keybindings: { add: () => undefined },
   }
   activate(ctx)
   const Record = slots["transcript.approval"] as ComponentType<SlotProps["transcript.approval"]>

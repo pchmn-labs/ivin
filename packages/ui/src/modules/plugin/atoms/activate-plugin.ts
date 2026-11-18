@@ -1,5 +1,8 @@
-import type { AtomRegistry } from "effect/reactivity"
+import type { Atom, AtomRegistry } from "effect/reactivity"
 import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
+import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
+import { addCommandHandler } from "../../command/atoms/run-command.ts"
+import { defaultKeybindingsAtom } from "../../keybinding/atoms/keybindings.ts"
 import { contributionsAtom } from "./contributions.ts"
 
 export interface UiPluginEntry {
@@ -12,11 +15,19 @@ export const activatePlugin = (
   { manifest, activate }: UiPluginEntry,
 ): (() => void) => {
   const pluginId = manifest.id
-  const removeOwn = () =>
+  const removeFrom = <T extends { readonly pluginId: string | null }>(
+    atom: Atom.Writable<ReadonlyArray<T>>,
+  ) =>
     registry.set(
-      contributionsAtom,
-      registry.get(contributionsAtom).filter((c) => c.pluginId !== pluginId),
+      atom,
+      registry.get(atom).filter((item) => item.pluginId !== pluginId),
     )
+  const removeOwn = () => {
+    removeFrom(contributionsAtom)
+    removeFrom(commandsAtom)
+    removeFrom(commandHandlersAtom)
+    removeFrom(defaultKeybindingsAtom)
+  }
 
   const ctx: UiContext = {
     pluginId,
@@ -38,6 +49,21 @@ export const activatePlugin = (
           },
         ])
       },
+    },
+    commands: {
+      register: (id, { title, run }) => {
+        const current = registry.get(commandsAtom)
+        if (current.some((c) => c.id === id)) throw new Error(`Command ${id} already exists`)
+        registry.set(commandsAtom, [...current, { id, title, pluginId }])
+        addCommandHandler(registry, id, run, pluginId)
+      },
+    },
+    keybindings: {
+      add: ({ key, command, when }) =>
+        registry.set(defaultKeybindingsAtom, [
+          ...registry.get(defaultKeybindingsAtom),
+          { key, command, when: when ?? null, pluginId },
+        ]),
     },
   }
 
