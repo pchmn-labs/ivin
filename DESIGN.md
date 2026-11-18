@@ -266,7 +266,7 @@ The palette is green-tinted neutrals, one yew-green accent, one cursor red, six 
 - **Deep Ground** (`--iv-bg-subtle`): code blocks, subtle blocks and table headers.
 - **Raised Ground** (`--iv-bg-raised`): controls, the composer, the action sheet, menus, tooltips and dialogs.
 - **Hover Wash / Active Wash** (`--iv-bg-hover`, `--iv-bg-active`): translucent washes (green in dark, olive in light) for hover, press, the selected row, the selected option, the current project, the highlighted menu item and inline code.
-- **Hairline / Strong Hairline** (`--iv-border`, `--iv-border-strong`): dividers, the project bar's top edge and block borders (hairline); the sidebar card, controls, overlays, the composer and the action sheet, and scrollbar thumbs (strong).
+- **Hairline / Strong Hairline** (`--iv-border`, `--iv-border-strong`): dividers, the project bar's top edge, the sidebar card and block borders (hairline); controls, overlays, the composer and the action sheet, and scrollbar thumbs (strong).
 - **Text / Muted / Faint** (`--iv-text`, `--iv-text-muted`, `--iv-text-faint`): primary copy; secondary copy, ghost buttons and the composer's model; metadata, group labels, key hints, placeholders, timestamps and the idle status.
 
 ### Named Rules
@@ -311,7 +311,7 @@ Spacing is a 4px grid (`--iv-space-1` to `--iv-space-10`). Layout gaps go throug
 
 ## Elevation & Depth
 
-The app is flat at rest. Depth comes from four ground tones and 1px hairlines. The sidebar card reads as floating because it is inset from the window edges, sits on its own card ground and carries a strong hairline; it casts no shadow. The action sheet docks onto the composer and shares its edge rather than rising above it. Only things that float above the window cast a shadow: menus, tooltips and dialogs. A dialog adds a dim backdrop (`--iv-backdrop`, set per theme) and a strong hairline.
+The app is flat at rest. Depth comes from four ground tones and 1px hairlines. The sidebar card reads as floating because it is inset from the window edges, sits on its own card ground and carries a hairline; it casts no shadow. The action sheet docks onto the composer and shares its edge rather than rising above it. Only things that float above the window cast a shadow: menus, tooltips and dialogs. A dialog adds a dim backdrop (`--iv-backdrop`, set per theme) and a strong hairline.
 
 ### Shadow Vocabulary
 - **Overlay** (`--iv-shadow-overlay`): menus, tooltips and dialogs. In dark, `0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3)`; in light, the same shape in a soft green-black.
