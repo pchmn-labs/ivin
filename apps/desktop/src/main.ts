@@ -11,7 +11,9 @@ import { join } from "node:path"
 import { PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
 
 const devUrl = process.env["IVIN_DEV_URL"]
-const background = process.env["IVIN_BACKGROUND"] === "1"
+const openInBackground = process.env["IVIN_BACKGROUND"] === "1"
+// Set before ready: after it, macOS has already activated the app and shown its Dock icon.
+if (openInBackground && process.platform === "darwin") app.setActivationPolicy("accessory")
 
 // The server bundle sits at the same place inside the app (asar included) as in the repo.
 const serverEntry = app.isPackaged
@@ -27,8 +29,6 @@ process.on("uncaughtException", (error) => {
 let server: UtilityProcess
 
 const createWindow = async () => {
-  // Must precede the window: macOS activates the app when its first window shows.
-  if (background && process.platform === "darwin") app.setActivationPolicy("accessory")
   const window = new BrowserWindow({
     width: 960,
     height: 640,
@@ -45,7 +45,7 @@ const createWindow = async () => {
       sandbox: true,
     },
   })
-  window.once("ready-to-show", () => (background ? window.showInactive() : window.show()))
+  window.once("ready-to-show", () => (openInBackground ? window.showInactive() : window.show()))
   if (devUrl) {
     // The Vite dev server may start after the window opens.
     window.webContents.on("did-fail-load", () => setTimeout(() => void window.loadURL(devUrl), 500))
