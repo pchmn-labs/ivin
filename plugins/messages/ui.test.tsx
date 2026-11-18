@@ -20,7 +20,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     useSession: () => undefined,
     useSessions: () => [],
     useTranscript: () => [],
-    useAnswerApproval: () => async () => {},
+    useAnswerApproval: () => async () => undefined,
     components: hostComponents,
   }
   await render(

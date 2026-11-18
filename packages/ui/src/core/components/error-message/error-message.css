@@ -1,0 +1,19 @@
+.iv-error-message {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  min-width: 0;
+  color: var(--iv-danger);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
+}
+
+.iv-error-message__icon {
+  display: inline-flex;
+  flex: none;
+}
+
+.iv-error-message__text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

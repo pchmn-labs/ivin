@@ -179,6 +179,12 @@ export interface OptionListProps {
   readonly autoFocus?: boolean
 }
 
+export interface ErrorMessageProps {
+  readonly message: string
+  readonly onRetry?: () => void
+  readonly "data-testid"?: string
+}
+
 export interface HostComponents {
   readonly Button: ComponentType<ButtonProps>
   readonly IconButton: ComponentType<IconButtonProps>
@@ -195,6 +201,7 @@ export interface HostComponents {
   readonly Markdown: ComponentType<MarkdownProps>
   readonly ActionSheet: ComponentType<ActionSheetProps>
   readonly OptionList: ComponentType<OptionListProps>
+  readonly ErrorMessage: ComponentType<ErrorMessageProps>
 }
 
 const hostComponent =
@@ -217,3 +224,4 @@ export const StatusMark = hostComponent((c) => c.StatusMark)
 export const Markdown = hostComponent((c) => c.Markdown)
 export const ActionSheet = hostComponent((c) => c.ActionSheet)
 export const OptionList = hostComponent((c) => c.OptionList)
+export const ErrorMessage = hostComponent((c) => c.ErrorMessage)

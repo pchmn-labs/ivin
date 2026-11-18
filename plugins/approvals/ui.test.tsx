@@ -165,13 +165,29 @@ test("a denied approval leaves one line and an allowed one leaves none", async (
   await expect.element(page.getByRole("radio", { name: "Allow" })).not.toBeInTheDocument()
 })
 
-test("a failed answer shows an error and lets the user try again", async () => {
-  const answer = vi.fn().mockRejectedValueOnce(new Error("not open")).mockResolvedValue(undefined)
+test("a failed answer shows its message, and Retry sends the same answer", async () => {
+  const answer = vi
+    .fn()
+    .mockResolvedValueOnce({ text: "Your answer was not sent.", retry: true })
+    .mockResolvedValue(undefined)
+  await mount([approval(null)], answer)
+  await page.getByRole("radio", { name: /^Deny/ }).click()
+  const alert = page.getByRole("alert")
+  await expect.element(alert.getByText("Your answer was not sent.")).toBeVisible()
+  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeEnabled()
+  await alert.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
+  expect(answer).toHaveBeenCalledTimes(2)
+  expect(answer).toHaveBeenLastCalledWith({ requestId: "r1", allow: false })
+})
+
+test("a failure a retry cannot fix shows no Retry", async () => {
+  const answer = vi
+    .fn()
+    .mockResolvedValue({ text: "This approval was already answered.", retry: false })
   await mount([approval(null)], answer)
   await page.getByRole("radio", { name: "Allow" }).click()
-  await expect.element(page.getByTestId("approval-error")).toBeVisible()
-  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeEnabled()
-  await page.getByRole("radio", { name: "Allow" }).click()
-  await expect.element(page.getByTestId("approval-error")).not.toBeInTheDocument()
-  expect(answer).toHaveBeenCalledTimes(2)
+  const alert = page.getByRole("alert")
+  await expect.element(alert.getByText("This approval was already answered.")).toBeVisible()
+  expect(alert.getByRole("button", { name: "Retry" }).query()).toBeNull()
 })

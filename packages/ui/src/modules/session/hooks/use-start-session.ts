@@ -1,13 +1,20 @@
 import { useAtomSet } from "@effect/atom-react"
-import { Exit } from "effect"
+import { Cause, Exit } from "effect"
 import { openTabAtom } from "../../tab/atoms/open-tab.ts"
 import { createSessionAtom } from "../atoms/create-session.ts"
+import { startSessionFailureAtom } from "../atoms/start-session-failure.ts"
+import { createSessionFailure } from "../rules/failure-message.ts"
 
 export function useStartSession() {
   const createSession = useAtomSet(createSessionAtom, { mode: "promiseExit" })
   const openTab = useAtomSet(openTabAtom)
+  const setFailure = useAtomSet(startSessionFailureAtom)
   return async (projectPath: string, model: string) => {
+    setFailure(null)
     const exit = await createSession({ projectPath, model })
     if (Exit.isSuccess(exit)) openTab({ sessionId: exit.value.id })
+    else if (!Cause.hasInterruptsOnly(exit.cause)) {
+      setFailure({ projectPath, model, failure: createSessionFailure(Cause.squash(exit.cause)) })
+    }
   }
 }

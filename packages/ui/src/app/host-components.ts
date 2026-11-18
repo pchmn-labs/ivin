@@ -4,6 +4,7 @@ import { Block } from "../core/components/block/block.tsx"
 import { Button, IconButton } from "../core/components/button/button.tsx"
 import { CodeBlock } from "../core/components/code-block/code-block.tsx"
 import { Dialog } from "../core/components/dialog/dialog.tsx"
+import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
 import { Disclosure } from "../core/components/disclosure/disclosure.tsx"
 import { Icon } from "../core/components/icon/icon.tsx"
 import { Menu } from "../core/components/menu/menu.tsx"
@@ -30,4 +31,5 @@ export const hostComponents = {
   Markdown,
   ActionSheet,
   OptionList,
+  ErrorMessage,
 } satisfies HostComponents
