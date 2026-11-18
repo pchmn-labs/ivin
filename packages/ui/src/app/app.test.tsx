@@ -195,3 +195,17 @@ test("tabs shrink together when the bar runs out of room, down to a minimum", as
   await vi.waitFor(() => expect(width()).toBeLessThan(narrow))
   expect(width()).toBe(180)
 })
+
+test("a middle click on a tab closes it without selecting it", async () => {
+  await page.viewport(1400, 800)
+  const server = await mountApp()
+  await expect.element(page.getByRole("tab")).toHaveLength(2)
+
+  await page.getByRole("tab", { name: /First/ }).click({ button: "middle" })
+
+  await expect.element(page.getByRole("tab")).toHaveLength(1)
+  await vi.waitFor(() => expect(server.tabOrder("/dev/ivin")).toEqual(["s2"]))
+  await expect
+    .element(page.getByRole("tab", { name: /Second/ }))
+    .toHaveAttribute("aria-selected", "true")
+})
