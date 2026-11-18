@@ -26,14 +26,9 @@
   display: flex;
   flex: none;
   align-items: center;
-  height: 40px;
+  height: var(--iv-space-10);
   padding: 0 var(--iv-space-2) 0 5px;
   -webkit-app-region: drag;
-}
-
-.iv-app__lights {
-  flex: none;
-  width: var(--iv-traffic-lights-width);
 }
 
 .iv-app__card-body {

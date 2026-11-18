@@ -199,3 +199,36 @@ test("a pending approval shows a sheet on the composer that Enter answers, leavi
   await expect.element(page.getByText("Approval needed")).not.toBeInTheDocument()
   await expect.element(page.getByTestId("approval-decision")).toHaveTextContent("Allowed: git push")
 })
+
+const pushApproval = (server: Awaited<ReturnType<typeof mountSession>>) =>
+  server.pushItem({
+    id: "a0",
+    sessionId: "s1",
+    position: 0,
+    type: "approval",
+    requestId: "r1",
+    toolCallId: null,
+    name: "Bash",
+    input: { command: "git push" },
+    decision: null,
+  })
+
+test("Enter with the focus on the page body does not answer an approval", async () => {
+  const server = await mountSession("waiting")
+  pushApproval(server)
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+  ;(document.activeElement as HTMLElement | null)?.blur()
+  await userEvent.keyboard("{Enter}")
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+})
+
+test("Enter in a composer with text sends the message and leaves the approval open", async () => {
+  const server = await mountSession("waiting")
+  pushApproval(server)
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+  await page.getByRole("textbox", { name: "Message" }).fill("also this")
+  await userEvent.keyboard("{Enter}")
+  await expect.element(page.getByText("also this", { exact: true })).toBeVisible()
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+})

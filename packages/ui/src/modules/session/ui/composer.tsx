@@ -1,6 +1,6 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Exit } from "effect"
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { Button } from "../../../core/components/button/button.tsx"
 import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
@@ -17,6 +17,7 @@ import "./composer.css"
 
 export function Composer({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
   const [text, setText] = useState("")
+  const root = useRef<HTMLDivElement>(null)
   const [failed, setFailed] = useState(false)
   const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
   const interrupt = useAtomSet(interruptSessionAtom)
@@ -30,8 +31,13 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     setText("")
   }
 
+  const isEmptyComposer = (target: EventTarget | null) =>
+    text === "" &&
+    target instanceof HTMLTextAreaElement &&
+    target.closest(".iv-composer") === root.current
+
   return (
-    <div className="iv-composer">
+    <div className="iv-composer" ref={root}>
       {failed && (
         <div className="iv-composer__alert">
           <Text role="alert" tone="danger">
@@ -39,7 +45,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
           </Text>
         </div>
       )}
-      {session && <Slot slot="composer.above" props={{ session }} />}
+      {session && <Slot slot="composer.above" props={{ session, isEmptyComposer }} />}
       <div className="iv-composer__surface">
         <TextArea
           label="Message"

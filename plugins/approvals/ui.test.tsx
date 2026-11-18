@@ -17,6 +17,9 @@ import { activate } from "./ui.tsx"
 
 const session = { id: "s1" } as Session
 
+const isEmptyComposer = (target: EventTarget | null) =>
+  target instanceof HTMLTextAreaElement && target.value === ""
+
 const mount = async (
   items: ReadonlyArray<TranscriptItem>,
   answer = vi.fn().mockResolvedValue(undefined),
@@ -41,7 +44,7 @@ const mount = async (
       {items.map((item) =>
         item.type === "approval" ? <Record key={item.id} item={item} sessionId="s1" /> : null,
       )}
-      <Sheet session={session} />
+      <Sheet session={session} isEmptyComposer={isEmptyComposer} />
       <textarea aria-label="Message" />
     </UiHostProvider>,
   )
@@ -132,6 +135,22 @@ test("a composer with text keeps its keys", async () => {
   await userEvent.keyboard("{ArrowDown}{Enter}{Escape}")
   await expect.element(page.getByRole("radio", { name: "Allow" })).toBeChecked()
   expect(answer).not.toHaveBeenCalled()
+})
+
+test("Enter with the focus on the page body answers nothing", async () => {
+  const answer = await mount([approval(null)])
+  ;(document.activeElement as HTMLElement | null)?.blur()
+  await userEvent.keyboard("{Enter}{Escape}")
+  expect(answer).not.toHaveBeenCalled()
+})
+
+test("an answered approval keeps to one line, truncated, with the full text in the title", async () => {
+  const long = approval("allow")
+  await mount([{ ...long, input: { command: "echo first\necho second" } }])
+  const record = page.getByTestId("approval-decision")
+  await expect.element(record).toHaveTextContent("Allowed: echo first")
+  await expect.element(record).not.toHaveTextContent("second")
+  await expect.element(record).toHaveAttribute("title", "echo first\necho second")
 })
 
 test.each([

@@ -48,6 +48,8 @@
   --iv-row-height: 30px;
   --iv-content-width: 760px;
 
+  --iv-opacity-disabled: 0.45;
+
   --iv-duration-fast: 120ms;
   --iv-duration-base: 180ms;
   --iv-duration-spin: 900ms;

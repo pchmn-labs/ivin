@@ -19,7 +19,10 @@ export interface SlotProps {
   "transcript.toolCall": { readonly item: ToolCallItem; readonly sessionId: string }
   "transcript.approval": { readonly item: ApprovalItem; readonly sessionId: string }
   "composer.status": { readonly sessionId: string }
-  "composer.above": { readonly session: Session }
+  "composer.above": {
+    readonly session: Session
+    readonly isEmptyComposer: (target: EventTarget | null) => boolean
+  }
 }
 export type SlotName = keyof SlotProps
 

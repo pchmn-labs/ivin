@@ -19,7 +19,7 @@
 }
 
 .iv-select__control:disabled {
-  opacity: 0.45;
+  opacity: var(--iv-opacity-disabled);
 }
 
 .iv-select__chevron {

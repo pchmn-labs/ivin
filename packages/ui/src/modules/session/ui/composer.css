@@ -41,7 +41,6 @@
   font-size: var(--iv-text-sm);
 }
 
-/* A sheet docked above the composer takes its top edge. */
 .iv-composer:has(.iv-action-sheet) .iv-composer__surface {
   border-top-left-radius: 0;
   border-top-right-radius: 0;

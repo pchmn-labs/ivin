@@ -1,7 +1,8 @@
-import { useAtom } from "@effect/atom-react"
+import { useAtom, useAtomValue } from "@effect/atom-react"
 import { useEffect } from "react"
 import { selectedSessionIdAtom } from "../atoms/selected-session.ts"
 import { sessionHistoryAtom } from "../atoms/session-history.ts"
+import { sessionsOf } from "../atoms/list-sessions.ts"
 import {
   canGoBack,
   canGoForward,
@@ -11,13 +12,20 @@ import {
   visit,
 } from "../rules/session-history.ts"
 
-export function useSessionHistory() {
-  const [selectedId, select] = useAtom(selectedSessionIdAtom)
+export function useRecordSessionVisits() {
+  const selectedId = useAtomValue(selectedSessionIdAtom)
   const [history, setHistory] = useAtom(sessionHistoryAtom)
 
   useEffect(() => {
     if (selectedId !== null) setHistory(visit(history, selectedId))
   }, [selectedId, history, setHistory])
+}
+
+export function useSessionHistory(projectPath: string) {
+  const [, select] = useAtom(selectedSessionIdAtom)
+  const [history, setHistory] = useAtom(sessionHistoryAtom)
+  const ids = useAtomValue(sessionsOf(projectPath).ids)
+  const exists = (id: string) => ids.includes(id)
 
   const move = (next: typeof history) => {
     setHistory(next)
@@ -25,9 +33,9 @@ export function useSessionHistory() {
   }
 
   return {
-    canGoBack: canGoBack(history),
-    canGoForward: canGoForward(history),
-    goBack: () => move(goBack(history)),
-    goForward: () => move(goForward(history)),
+    canGoBack: canGoBack(history, exists),
+    canGoForward: canGoForward(history, exists),
+    goBack: () => move(goBack(history, exists)),
+    goForward: () => move(goForward(history, exists)),
   }
 }

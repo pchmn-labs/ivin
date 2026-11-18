@@ -19,22 +19,33 @@ const OPTIONS = [
   { id: "deny", label: "Deny", hint: "Esc" },
 ]
 
+const firstLine = (text: string) => text.split("\n", 1)[0] ?? ""
+
 function ApprovalRecord({ item }: SlotProps["transcript.approval"]) {
   if (item.decision === null) return null
+  const input = formatInput(item.name, item.input)
   return (
     <Stack direction="row" gap={2} align="center">
       <Icon name={item.decision === "allow" ? "check" : "x"} size={14} />
-      <Text size="sm" tone="muted" data-testid="approval-decision">
+      <Text size="sm" tone="muted" truncate title={input} data-testid="approval-decision">
         {DECISION_LABELS[item.decision]}:{" "}
         <Text as="span" size="sm" mono>
-          {formatInput(item.name, item.input)}
+          {firstLine(input)}
         </Text>
       </Text>
     </Stack>
   )
 }
 
-function PendingSheet({ sessionId, item }: { sessionId: string; item: ApprovalItem }) {
+function PendingSheet({
+  sessionId,
+  item,
+  isEmptyComposer,
+}: {
+  sessionId: string
+  item: ApprovalItem
+  isEmptyComposer: SlotProps["composer.above"]["isEmptyComposer"]
+}) {
   const answer = useAnswerApproval(sessionId)
   const [choice, setChoice] = useState("allow")
   const [sending, setSending] = useState(false)
@@ -67,6 +78,7 @@ function PendingSheet({ sessionId, item }: { sessionId: string; item: ApprovalIt
         onEscape={() => respond("deny")}
         submitOnClick
         disabled={sending}
+        keyboardSource={isEmptyComposer}
       />
       {failed && (
         <Text size="sm" tone="danger" role="alert" data-testid="approval-error">
@@ -77,12 +89,19 @@ function PendingSheet({ sessionId, item }: { sessionId: string; item: ApprovalIt
   )
 }
 
-function ApprovalSheet({ session }: SlotProps["composer.above"]) {
+function ApprovalSheet({ session, isEmptyComposer }: SlotProps["composer.above"]) {
   const pending = useTranscript(session.id)
     .filter((item): item is ApprovalItem => item.type === "approval" && item.decision === null)
     .at(-1)
   if (pending === undefined) return null
-  return <PendingSheet key={pending.requestId} sessionId={session.id} item={pending} />
+  return (
+    <PendingSheet
+      key={pending.requestId}
+      sessionId={session.id}
+      item={pending}
+      isEmptyComposer={isEmptyComposer}
+    />
+  )
 }
 
 export const activate = defineUi((ctx) => {

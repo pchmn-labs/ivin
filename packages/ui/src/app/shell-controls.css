@@ -5,3 +5,8 @@
   gap: 2px;
   -webkit-app-region: no-drag;
 }
+
+.iv-shell-controls__lights {
+  flex: none;
+  width: var(--iv-traffic-lights-width);
+}

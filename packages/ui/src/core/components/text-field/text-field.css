@@ -17,7 +17,7 @@
 }
 
 .iv-field:disabled {
-  opacity: 0.45;
+  opacity: var(--iv-opacity-disabled);
 }
 
 .iv-field--input {

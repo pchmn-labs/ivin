@@ -41,3 +41,11 @@ test("an empty history has no current session and cannot move", () => {
   expect(canGoBack(emptyHistory)).toBe(false)
   expect(canGoForward(emptyHistory)).toBe(false)
 })
+
+test("back and forward skip sessions that no longer exist", () => {
+  const exists = (id: string) => id !== "b"
+  const history = visited("a", "b", "c")
+  expect(currentOf(goBack(history, exists))).toBe("a")
+  expect(currentOf(goForward(goBack(history, exists), exists))).toBe("c")
+  expect(canGoBack(visited("b", "c"), exists)).toBe(false)
+})

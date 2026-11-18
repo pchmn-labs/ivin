@@ -13,6 +13,7 @@ export function OptionList({
   onEscape,
   submitOnClick = false,
   disabled = false,
+  keyboardSource,
 }: OptionListProps) {
   const root = useRef<HTMLDivElement>(null)
   const buttons = useRef(new Map<string, HTMLButtonElement>())
@@ -22,12 +23,8 @@ export function OptionList({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.isComposing) return
       const target = event.target
-      // The composer keeps focus while a sheet is open, so its empty textarea drives the list too.
-      const driven =
-        (target instanceof Node && root.current?.contains(target)) ||
-        (target instanceof HTMLTextAreaElement && target.value === "") ||
-        target === document.body
-      if (!driven) return
+      const inList = target instanceof Node && root.current?.contains(target) === true
+      if (!inList && keyboardSource?.(target) !== true) return
 
       const index = options.findIndex((option) => option.id === value)
       if (event.key === "ArrowDown" || event.key === "ArrowUp") {
@@ -38,8 +35,7 @@ export function OptionList({
           ]
         if (next === undefined) return
         onChange(next.id)
-        if (target instanceof Node && root.current?.contains(target))
-          buttons.current.get(next.id)?.focus()
+        if (inList) buttons.current.get(next.id)?.focus()
       } else if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
         onSubmit(value)
@@ -48,9 +44,10 @@ export function OptionList({
         onEscape()
       }
     }
-    document.addEventListener("keydown", onKeyDown)
-    return () => document.removeEventListener("keydown", onKeyDown)
-  }, [disabled, options, value, onChange, onSubmit, onEscape])
+    // Capture phase: runs before a field's own handler can empty itself and change who drives the list.
+    document.addEventListener("keydown", onKeyDown, true)
+    return () => document.removeEventListener("keydown", onKeyDown, true)
+  }, [disabled, options, value, onChange, onSubmit, onEscape, keyboardSource])
 
   return (
     <div className="iv-option-list" role="radiogroup" aria-label={label} ref={root}>

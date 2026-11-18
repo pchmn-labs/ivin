@@ -33,6 +33,7 @@ export function Button({
 export function IconButton({
   icon,
   label,
+  tooltip = label,
   size = "md",
   variant = "ghost",
   onClick,
@@ -40,7 +41,7 @@ export function IconButton({
   ...rest
 }: IconButtonProps) {
   return (
-    <Tooltip content={label}>
+    <Tooltip content={tooltip}>
       <button
         {...rest}
         type="button"

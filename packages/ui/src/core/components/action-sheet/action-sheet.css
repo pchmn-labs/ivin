@@ -1,10 +1,10 @@
 .iv-action-sheet {
-  padding: var(--iv-space-3) var(--iv-space-3) 10px;
+  padding: var(--iv-space-3) var(--iv-space-3);
   border: 1px solid var(--iv-border-strong);
   border-bottom: 0;
   border-radius: var(--iv-radius-lg) var(--iv-radius-lg) 0 0;
   background: var(--iv-bg-raised);
-  animation: iv-sheet-in 200ms var(--iv-ease-out) both;
+  animation: iv-sheet-in var(--iv-duration-base) var(--iv-ease-out) both;
 }
 
 .iv-action-sheet[data-tone="danger"] {
@@ -55,6 +55,6 @@
 @keyframes iv-sheet-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(var(--iv-space-2));
   }
 }

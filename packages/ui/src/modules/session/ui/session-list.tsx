@@ -139,6 +139,7 @@ export function SessionList({
           <IconButton
             icon="new-session"
             label="New session"
+            tooltip={`New session · ${model}`}
             onClick={() => createSession({ projectPath, model })}
           />
           <Menu

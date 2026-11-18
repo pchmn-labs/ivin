@@ -33,7 +33,7 @@
 }
 
 .iv-option-list__option:disabled {
-  opacity: 0.45;
+  opacity: var(--iv-opacity-disabled);
 }
 
 .iv-option-list__label {

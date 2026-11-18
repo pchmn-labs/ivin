@@ -297,7 +297,7 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 | `transcript.inline` | markdown node | inline code links, issue mentions |
 | `transcript.approval` | approval item (tool, input, decision), session id | allow or deny a tool the agent asks to run |
 | `composer.status` | session id | tokens, cost, branch PR |
-| `composer.above` | session | approval sheet (built in, `approvals/sheet`), queued messages, detail sheets; a danger sheet squares the composer's top corners and dashes its top border |
+| `composer.above` | session, `isEmptyComposer(target)` (lets a sheet take keys from the empty composer) | approval sheet (built in, `approvals/sheet`), queued messages, detail sheets; a danger sheet squares the composer's top corners and dashes its top border |
 | `composer.suggest` | trigger char, query | `#` issues, `@../` paths, `/` commands |
 | `session.badge` | session | linked PR/issue icon in the sidebar and tabs |
 | `session.card` | session | hover card sections |

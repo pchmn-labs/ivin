@@ -15,12 +15,27 @@ export const visit = (history: SessionHistory, sessionId: string): SessionHistor
   return { entries, index: entries.length - 1 }
 }
 
-export const canGoBack = (history: SessionHistory) => history.index > 0
+const nextIndex = (history: SessionHistory, step: 1 | -1, exists: (id: string) => boolean) => {
+  for (let i = history.index + step; i >= 0 && i < history.entries.length; i += step) {
+    if (exists(history.entries[i]!)) return i
+  }
+  return null
+}
 
-export const canGoForward = (history: SessionHistory) => history.index < history.entries.length - 1
+const always = (_id: string) => true
 
-export const goBack = (history: SessionHistory): SessionHistory =>
-  canGoBack(history) ? { ...history, index: history.index - 1 } : history
+export const canGoBack = (history: SessionHistory, exists = always) =>
+  nextIndex(history, -1, exists) !== null
 
-export const goForward = (history: SessionHistory): SessionHistory =>
-  canGoForward(history) ? { ...history, index: history.index + 1 } : history
+export const canGoForward = (history: SessionHistory, exists = always) =>
+  nextIndex(history, 1, exists) !== null
+
+export const goBack = (history: SessionHistory, exists = always): SessionHistory => {
+  const index = nextIndex(history, -1, exists)
+  return index === null ? history : { ...history, index }
+}
+
+export const goForward = (history: SessionHistory, exists = always): SessionHistory => {
+  const index = nextIndex(history, 1, exists)
+  return index === null ? history : { ...history, index }
+}

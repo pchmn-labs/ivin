@@ -1,3 +1,4 @@
+// Must match the [data-hue] rules in ../ui/project-creature.css.
 export const HUE_COUNT = 6
 
 export interface Creature {
@@ -14,7 +15,6 @@ const hashName = (name: string) => {
   return h
 }
 
-// An 8x8 sprite mirrored left to right, with a fixed body so every name gets a recognisable creature.
 export const creature = (name: string): Creature => {
   let h = hashName(name)
   const random = () => {

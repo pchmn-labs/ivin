@@ -36,7 +36,7 @@
 }
 
 .iv-menu__item[data-disabled] {
-  opacity: 0.45;
+  opacity: var(--iv-opacity-disabled);
 }
 
 .iv-menu__item--danger {

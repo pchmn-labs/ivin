@@ -15,7 +15,7 @@
 }
 
 .iv-button:disabled {
-  opacity: 0.45;
+  opacity: var(--iv-opacity-disabled);
 }
 
 .iv-button--md {

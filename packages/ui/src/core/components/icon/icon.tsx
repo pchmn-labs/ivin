@@ -15,7 +15,6 @@ import {
   NotePencil,
   PencilSimple,
   Plus,
-  Question,
   SidebarSimple,
   Sparkle,
   Stop,
@@ -57,7 +56,6 @@ const icons = {
   "arrow-right": ArrowRight,
   "panel-left": SidebarSimple,
   "new-session": NotePencil,
-  question: Question,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {

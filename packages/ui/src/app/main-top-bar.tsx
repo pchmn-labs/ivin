@@ -5,27 +5,29 @@ import { selectedSessionIdAtom } from "../modules/session/atoms/selected-session
 import { ShellControls, type ShellControlsProps } from "./shell-controls.tsx"
 import "./main-top-bar.css"
 
+function SessionTitle({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
+  const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
+  if (!session) return null
+  return (
+    <Text weight="medium" size="sm" truncate data-testid="session-header-title">
+      {session.title}
+    </Text>
+  )
+}
+
 export function MainTopBar({
   projectPath,
   controls,
 }: {
-  projectPath: string
+  projectPath: string | null
   controls: ShellControlsProps | null
 }) {
   const sessionId = useAtomValue(selectedSessionIdAtom)
-  const session = useAtomValue(sessionsOf(projectPath).item(sessionId ?? ""))
   return (
     <header className="iv-main-top-bar">
-      {controls && (
-        <>
-          <span className="iv-main-top-bar__lights" aria-hidden="true" />
-          <ShellControls {...controls} />
-        </>
-      )}
-      {session && (
-        <Text weight="medium" size="sm" truncate data-testid="session-header-title">
-          {session.title}
-        </Text>
+      {controls && <ShellControls {...controls} />}
+      {projectPath !== null && sessionId !== null && (
+        <SessionTitle projectPath={projectPath} sessionId={sessionId} />
       )}
     </header>
   )

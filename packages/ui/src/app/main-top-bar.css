@@ -4,13 +4,8 @@
   align-items: center;
   gap: var(--iv-space-2);
   min-width: 0;
-  height: 40px;
+  height: var(--iv-space-10);
   margin-top: var(--iv-space-2);
   padding: 0 var(--iv-space-3) 0 var(--iv-space-2);
   -webkit-app-region: drag;
-}
-
-.iv-main-top-bar__lights {
-  flex: none;
-  width: var(--iv-traffic-lights-width);
 }

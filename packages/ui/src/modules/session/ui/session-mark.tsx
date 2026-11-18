@@ -8,7 +8,7 @@ export function SessionMark({ status, label }: { status: SessionStatus; label: s
       <ClaudeMark />
       <span className="iv-session-mark__overlay" aria-hidden="true">
         {status === "waiting" && (
-          <svg width="11" height="11" viewBox="0 0 12 12">
+          <svg viewBox="0 0 12 12">
             <circle cx="6" cy="6" r="6" fill="currentColor" />
             <path
               d="M6 3.1v3.6"

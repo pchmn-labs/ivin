@@ -27,7 +27,6 @@ export type IconName =
   | "arrow-right"
   | "panel-left"
   | "new-session"
-  | "question"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"
@@ -49,6 +48,7 @@ export interface ButtonProps {
 export interface IconButtonProps {
   readonly icon: IconName
   readonly label: string
+  readonly tooltip?: string
   readonly size?: ButtonSize
   readonly variant?: ButtonVariant
   readonly onClick?: () => void
@@ -103,6 +103,7 @@ export interface TextProps {
   readonly italic?: boolean
   readonly preWrap?: boolean
   readonly truncate?: boolean
+  readonly title?: string
   readonly role?: string
   readonly "data-testid"?: string
   readonly children?: ReactNode
@@ -173,6 +174,7 @@ export interface OptionListProps {
   readonly onEscape?: () => void
   readonly submitOnClick?: boolean
   readonly disabled?: boolean
+  readonly keyboardSource?: (target: EventTarget | null) => boolean
 }
 
 export interface HostComponents {
