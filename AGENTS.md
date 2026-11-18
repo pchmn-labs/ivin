@@ -37,7 +37,7 @@ To run ivin, show it to the user or capture its screens, use the `launch-ivin` s
 
 ### Running tests
 
-While building, run the test files you touch. Run `pnpm check` once, before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI.
+While building, run the test files you touch: `pnpm test <path>…`. Run `pnpm check` once, before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI.
 
 ### Grilling
 
