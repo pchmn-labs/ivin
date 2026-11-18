@@ -171,7 +171,7 @@ Targets, checked in CI on every PR: idle memory of all processes, cold start to 
 - **Everything long-lived is scoped.** Child processes, watchers, subscriptions and timers live in an Effect `Scope` (server) or in the plugin's `ctx` (plugins), closed with their session, tab or plugin.
 - **Bounded streams.** Harness and RPC streams have bounded buffers with backpressure; a slow renderer drops to snapshots instead of queuing events.
 - **Shared, paused polling.** Polling goes through one scheduler, `ctx.poll` for plugins: deduplicated per key and paused while the window is hidden. A plugin stops polling what can no longer change, such as a merged PR.
-- **Lazy plugins.** A plugin's UI half is imported when one of its slots first renders; its server half when its first event or command fires, unless it declares `"activation": "startup"`.
+- **Lazy plugins.** A plugin's UI half is imported when one of its slots first renders; its server half when it first receives an event or runs a command, unless it declares `"activation": "startup"`.
 - **One renderer.** No extra `BrowserWindow` or `WebContentsView` per tab; Vite code-splits views so unused ones are never parsed.
 - **Leak test.** A Playwright scenario opens and closes 50 sessions, switches tabs and reloads a plugin 20 times, forces GC, and fails if heap or open handles grow past a threshold.
 
@@ -192,7 +192,7 @@ interface HarnessRun {
 }
 ```
 
-- Claude: `-p --output-format stream-json --input-format stream-json --verbose --include-partial-messages --thinking-display summarized --model <model>`, permission prompts over stdio. Without `--thinking-display summarized`, thinking arrives empty. Codex: `app-server` JSON-RPC. ACP: one generic client for Cursor, Devin, Grok, Hermes and others.
+- Claude: `-p --output-format stream-json --input-format stream-json --verbose --include-partial-messages --thinking-display summarized --model <model>`, approvals over stdio. Without `--thinking-display summarized`, thinking arrives empty. Codex: `app-server` JSON-RPC. ACP: one generic client for Cursor, Devin, Grok, Hermes and others.
 - Reference implementations: T3 Code's provider layer and MonoCode's `src/integrations/harness`. Both are read before writing a provider, for the protocol details and edge cases they already solved (flags, message shapes, approval flow, resume, interrupts). Code is copied or adapted where it fits ivin's interfaces, with attribution; neither is a dependency, and nothing requires matching their structure or their Effect version.
 - The server picks the provider from `IVIN_HARNESS`, `claude` when unset; tests and the CI smoke run set it to `scripted`, which replays a recorded transcript and never spawns an agent. `scripted-approval` replays the same transcript, then a turn that waits for an approval; `pnpm --filter @ivin/desktop shot` uses it. An unpackaged main process loads the renderer from `packages/ui/dist`.
 - With `IVIN_BACKGROUND=1` the desktop app opens without taking focus: no Dock icon on macOS, window shown inactive. The e2e launch helper sets it.
@@ -234,7 +234,7 @@ Plugin directories, loaded in this order (a later one with the same `id` overrid
 
 ### Project plugin trust
 
-A project plugin lives inside the agent's working directory, so an agent allowed to edit files, or a `git pull`, could otherwise turn a file write into code execution outside the harness's permission system. Trust is therefore given to a **content hash** of the plugin directory, not to the repo: any change leaves the previous trusted version running and asks again, showing the diff. An agent iterating on a plugin without a prompt per edit works in `~/.ivin/plugins/`, which is outside its working directory and so behind the harness's own permission prompt.
+A project plugin lives inside the agent's working directory, so an agent allowed to edit files, or a `git pull`, could otherwise turn a file write into code execution outside the harness's permission system. Trust is therefore given to a **content hash** of the plugin directory, not to the repo: any change leaves the previous trusted version running and asks again, showing the diff. An agent iterating on a plugin without a prompt per edit works in `~/.ivin/plugins/`, which is outside its working directory and so behind an approval.
 
 ### Loading
 
