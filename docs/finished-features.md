@@ -14,7 +14,7 @@ A feature is finished when its whole path works, not only the path where everyth
 ## Errors
 
 - The spec lists how each action can fail: the server is unreachable, the harness exits, a file is missing or invalid, a git command fails…
-- A failure shows where the user acted: under the message field for a message that could not be sent, on the session row for a failed session. Only failures of the whole app, such as losing the server, show in the window shell.
+- A failure shows where the user acted: under the message field for a message that could not be sent, on the session row for a failed session. Only failures of the whole app, such as losing the server, show in the window shell. A failure with no place on screen shows as a temporary notification.
 - The message says what failed and what the user can do next, in the glossary's words: "The message was not sent. Check that Claude Code is installed, then retry." Never "Something went wrong", never the raw error, which is logged instead.
 - A failure keeps what the user typed or chose.
 - A failure that a second try can fix offers a retry.
