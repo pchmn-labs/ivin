@@ -40,7 +40,7 @@
   --iv-radius-sm: 4px;
   --iv-radius-md: 6px;
   --iv-radius-lg: 10px;
-  --iv-radius-card: 12px;
+  --iv-radius-card: 10px;
 
   --iv-traffic-lights-width: 70px;
   --iv-control-sm: 24px;
@@ -57,6 +57,7 @@
   --iv-bg: #0f1613;
   --iv-bg-subtle: #0b110e;
   --iv-bg-raised: #18211c;
+  --iv-bg-card: #151e19;
   --iv-bg-hover: rgba(169, 217, 160, 0.06);
   --iv-bg-active: rgba(169, 217, 160, 0.11);
   --iv-border: rgba(214, 235, 220, 0.08);
@@ -79,28 +80,28 @@
   --iv-project-hue-4: #cf9d80;
   --iv-project-hue-5: #7fc0ba;
   --iv-bubble: color-mix(in srgb, var(--iv-accent) 14%, var(--iv-bg-raised));
-  --iv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.25);
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    --iv-bg: #f8faf7;
-    --iv-bg-subtle: #f2f5f1;
-    --iv-bg-raised: #ffffff;
-    --iv-bg-hover: rgba(23, 62, 43, 0.05);
-    --iv-bg-active: rgba(23, 62, 43, 0.09);
-    --iv-border: rgba(11, 35, 24, 0.1);
-    --iv-border-strong: rgba(11, 35, 24, 0.18);
-    --iv-text: #10201a;
-    --iv-text-muted: #4f6157;
-    --iv-text-faint: #5d6f63;
-    --iv-accent: #2e6b3e;
-    --iv-accent-hover: #255a33;
+    --iv-bg: #eeede2;
+    --iv-bg-subtle: #e9e8db;
+    --iv-bg-raised: #f7f6ee;
+    --iv-bg-card: #e4e4d5;
+    --iv-bg-hover: rgba(42, 56, 28, 0.05);
+    --iv-bg-active: rgba(42, 56, 28, 0.09);
+    --iv-border: rgba(42, 56, 28, 0.12);
+    --iv-border-strong: rgba(42, 56, 28, 0.2);
+    --iv-text: #1c2a1f;
+    --iv-text-muted: #4f5a49;
+    --iv-text-faint: #5b6555;
+    --iv-accent: #2f6a3c;
+    --iv-accent-hover: #265833;
     --iv-accent-contrast: #ffffff;
-    --iv-danger: #c8402a;
-    --iv-danger-subtle: rgba(200, 64, 42, 0.1);
-    --iv-focus-ring: #2e6b3e;
+    --iv-danger: #b8432b;
+    --iv-danger-subtle: rgba(184, 67, 43, 0.1);
+    --iv-focus-ring: #2f6a3c;
     --iv-backdrop: rgba(11, 35, 24, 0.32);
     --iv-shadow-overlay: 0 8px 24px rgba(11, 35, 24, 0.14), 0 2px 6px rgba(11, 35, 24, 0.08);
     --iv-project-hue-0: #3f7a4c;
@@ -110,7 +111,6 @@
     --iv-project-hue-4: #93593a;
     --iv-project-hue-5: #2f7570;
     --iv-bubble: color-mix(in srgb, var(--iv-accent) 16%, var(--iv-bg-raised));
-    --iv-shadow-card: 0 1px 2px rgba(11, 35, 24, 0.06), 0 6px 20px rgba(11, 35, 24, 0.06);
     color-scheme: light;
   }
 }
@@ -119,6 +119,7 @@
   --iv-bg: #0f1613;
   --iv-bg-subtle: #0b110e;
   --iv-bg-raised: #18211c;
+  --iv-bg-card: #151e19;
   --iv-bg-hover: rgba(169, 217, 160, 0.06);
   --iv-bg-active: rgba(169, 217, 160, 0.11);
   --iv-border: rgba(214, 235, 220, 0.08);
@@ -141,27 +142,27 @@
   --iv-project-hue-4: #cf9d80;
   --iv-project-hue-5: #7fc0ba;
   --iv-bubble: color-mix(in srgb, var(--iv-accent) 14%, var(--iv-bg-raised));
-  --iv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.25);
   color-scheme: dark;
 }
 
 :root[data-theme="forest-light"] {
-  --iv-bg: #f8faf7;
-  --iv-bg-subtle: #f2f5f1;
-  --iv-bg-raised: #ffffff;
-  --iv-bg-hover: rgba(23, 62, 43, 0.05);
-  --iv-bg-active: rgba(23, 62, 43, 0.09);
-  --iv-border: rgba(11, 35, 24, 0.1);
-  --iv-border-strong: rgba(11, 35, 24, 0.18);
-  --iv-text: #10201a;
-  --iv-text-muted: #4f6157;
-  --iv-text-faint: #5d6f63;
-  --iv-accent: #2e6b3e;
-  --iv-accent-hover: #255a33;
+  --iv-bg: #eeede2;
+  --iv-bg-subtle: #e9e8db;
+  --iv-bg-raised: #f7f6ee;
+  --iv-bg-card: #e4e4d5;
+  --iv-bg-hover: rgba(42, 56, 28, 0.05);
+  --iv-bg-active: rgba(42, 56, 28, 0.09);
+  --iv-border: rgba(42, 56, 28, 0.12);
+  --iv-border-strong: rgba(42, 56, 28, 0.2);
+  --iv-text: #1c2a1f;
+  --iv-text-muted: #4f5a49;
+  --iv-text-faint: #5b6555;
+  --iv-accent: #2f6a3c;
+  --iv-accent-hover: #265833;
   --iv-accent-contrast: #ffffff;
-  --iv-danger: #c8402a;
-  --iv-danger-subtle: rgba(200, 64, 42, 0.1);
-  --iv-focus-ring: #2e6b3e;
+  --iv-danger: #b8432b;
+  --iv-danger-subtle: rgba(184, 67, 43, 0.1);
+  --iv-focus-ring: #2f6a3c;
   --iv-backdrop: rgba(11, 35, 24, 0.32);
   --iv-shadow-overlay: 0 8px 24px rgba(11, 35, 24, 0.14), 0 2px 6px rgba(11, 35, 24, 0.08);
   --iv-project-hue-0: #3f7a4c;
@@ -171,6 +172,5 @@
   --iv-project-hue-4: #93593a;
   --iv-project-hue-5: #2f7570;
   --iv-bubble: color-mix(in srgb, var(--iv-accent) 16%, var(--iv-bg-raised));
-  --iv-shadow-card: 0 1px 2px rgba(11, 35, 24, 0.06), 0 6px 20px rgba(11, 35, 24, 0.06);
   color-scheme: light;
 }

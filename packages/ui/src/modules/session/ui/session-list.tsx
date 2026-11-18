@@ -6,7 +6,6 @@ import type { Session } from "@ivin/contracts/session"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
-import { Select } from "../../../core/components/select/select.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { createSessionAtom } from "../atoms/create-session.ts"
@@ -136,17 +135,27 @@ export function SessionList({
         <h1 className="iv-session-list__project" data-testid="project-name" title={projectPath}>
           {projectName}
         </h1>
-        <Select
-          label="Model"
-          value={model}
-          onChange={(value) => setModel(value as Model)}
-          options={MODELS.map((name) => ({ value: name, label: name }))}
-        />
-        <IconButton
-          icon="new-session"
-          label="New session"
-          onClick={() => createSession({ projectPath, model })}
-        />
+        <span className="iv-session-list__new">
+          <IconButton
+            icon="new-session"
+            label="New session"
+            onClick={() => createSession({ projectPath, model })}
+          />
+          <Menu
+            align="end"
+            trigger={
+              <IconButton icon="chevron-down" label="Model for the next session" size="sm" />
+            }
+            items={MODELS.map((name) => ({
+              label: name,
+              ...(name === model && { icon: "check" as const }),
+              onSelect: () => {
+                setModel(name)
+                createSession({ projectPath, model: name })
+              },
+            }))}
+          />
+        </span>
       </div>
       {AsyncResult.isFailure(created) && (
         <Text role="alert" tone="danger">

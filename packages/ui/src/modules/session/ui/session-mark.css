@@ -1,5 +1,5 @@
 .iv-session-mark {
-  --iv-mark-ring: var(--iv-bg-subtle);
+  --iv-mark-ring: var(--iv-bg-card);
 
   position: relative;
   display: grid;

@@ -16,17 +16,22 @@ const setup = async () => {
   return server
 }
 
-test("a new session uses sonnet unless another model is picked", async () => {
+test("a new session uses sonnet until another model is picked, then keeps it", async () => {
   const server = await setup()
   await page.getByRole("button", { name: "New session" }).click()
   await vi.waitFor(() =>
     expect([...server.sessions.values()].map((s) => s.model)).toEqual(["sonnet"]),
   )
 
-  await page.getByRole("combobox", { name: "Model" }).selectOptions("opus")
-  await page.getByRole("button", { name: "New session" }).click()
+  await page.getByRole("button", { name: "Model for the next session" }).click()
+  await page.getByRole("menuitem", { name: "opus" }).click()
   await vi.waitFor(() =>
     expect([...server.sessions.values()].map((s) => s.model)).toEqual(["sonnet", "opus"]),
+  )
+
+  await page.getByRole("button", { name: "New session" }).click()
+  await vi.waitFor(() =>
+    expect([...server.sessions.values()].map((s) => s.model)).toEqual(["sonnet", "opus", "opus"]),
   )
 })
 

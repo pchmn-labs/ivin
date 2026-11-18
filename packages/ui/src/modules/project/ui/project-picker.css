@@ -26,7 +26,7 @@
 }
 
 .iv-project-rail__project[aria-current="true"] {
-  background: var(--iv-bg-raised);
+  background: var(--iv-bg-active);
   box-shadow: 0 0 0 1px var(--iv-border);
 }
 
@@ -39,8 +39,8 @@
   padding: 0 4px;
   border-radius: 8px;
   background: var(--iv-danger);
-  box-shadow: 0 0 0 2px var(--iv-bg-subtle);
-  color: var(--iv-bg-subtle);
+  box-shadow: 0 0 0 2px var(--iv-bg-card);
+  color: var(--iv-bg-card);
   font-size: var(--iv-text-xs);
   line-height: 16px;
   font-weight: var(--iv-weight-semibold);

@@ -17,10 +17,9 @@
   min-height: 0;
   margin: var(--iv-space-2) 0 var(--iv-space-2) var(--iv-space-2);
   overflow: hidden;
-  border: 1px solid var(--iv-border);
+  border: 1px solid var(--iv-border-strong);
   border-radius: var(--iv-radius-card);
-  background: var(--iv-bg-subtle);
-  box-shadow: var(--iv-shadow-card);
+  background: var(--iv-bg-card);
 }
 
 .iv-app__card-top {
