@@ -51,10 +51,8 @@ test("a user message stays plain text", async () => {
 test("thinking is folded until opened", async () => {
   await mount({ ...base, type: "thinking", text: "secret reasoning" })
   await expect.element(page.getByText("Thinking")).toBeVisible()
-  const details = document.querySelector("details")!
-  expect(details.open).toBe(false)
+  await expect.element(page.getByText("secret reasoning")).not.toBeVisible()
   await page.getByText("Thinking").click()
-  expect(details.open).toBe(true)
   await expect.element(page.getByText("secret reasoning")).toBeVisible()
 })
 

@@ -2,6 +2,8 @@ import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
+import { hostComponents } from "../../packages/ui/src/app/host-components.ts"
+import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { SlotProps, ToolCallItem, UiContext } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
@@ -12,7 +14,18 @@ const mount = async (item: ToolCallItem) => {
     slots: { add: (_slot, component) => void (ToolCall = component as typeof ToolCall) },
   }
   activate(ctx)
-  await render(<ToolCall item={item} sessionId="s1" />)
+  const host = {
+    useSession: () => undefined,
+    useSessions: () => [],
+    useTranscript: () => [],
+    useAnswerApproval: () => async () => {},
+    components: hostComponents,
+  }
+  await render(
+    <UiHostProvider host={host}>
+      <ToolCall item={item} sessionId="s1" />
+    </UiHostProvider>,
+  )
 }
 
 const tool = (status: ToolCallItem["status"], output: string | null): ToolCallItem => ({
@@ -44,13 +57,13 @@ test.each([
 })
 
 test("a long result is folded behind a preview", async () => {
-  const output = Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n")
-  await mount(tool("done", output))
-  await expect.element(page.getByTestId("tool-output")).toBeVisible()
-  const details = document.querySelector<HTMLDetailsElement>('[data-testid="tool-output"]')!
-  expect(details.open).toBe(false)
-  expect(details.querySelector("summary")?.textContent).toBe("line 0\nline 1\nline 2")
-  expect(details.querySelector("pre")?.checkVisibility()).toBe(false)
-  details.open = true
-  expect(details.querySelector("pre")?.checkVisibility()).toBe(true)
+  const text = Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n")
+  await mount(tool("done", text))
+  const output = page.getByTestId("tool-output")
+  await expect.element(output).toBeVisible()
+  expect(output.element().querySelector("summary")?.textContent).toBe("line 0\nline 1\nline 2")
+  const code = output.element().querySelector("pre")!
+  expect(code.checkVisibility()).toBe(false)
+  output.element().querySelector("summary")!.click()
+  expect(code.checkVisibility()).toBe(true)
 })

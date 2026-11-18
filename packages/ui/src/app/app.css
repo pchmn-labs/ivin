@@ -1,0 +1,27 @@
+.iv-app {
+  display: grid;
+  grid-template-columns: 52px 260px minmax(0, 1fr);
+  height: 100%;
+  overflow: hidden;
+}
+
+.iv-app--empty {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+
+.iv-app__sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-3);
+  min-height: 0;
+  padding: var(--iv-space-3);
+  background: var(--iv-bg-subtle);
+  border-right: 1px solid var(--iv-border);
+}
+
+.iv-app__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}

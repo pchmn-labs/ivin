@@ -1,5 +1,14 @@
 import { useState } from "react"
-import { defineUi, useAnswerApproval } from "@ivin/plugin-api/ui"
+import {
+  Block,
+  Button,
+  CodeBlock,
+  Icon,
+  Stack,
+  Text,
+  defineUi,
+  useAnswerApproval,
+} from "@ivin/plugin-api/ui"
 import type { SlotProps } from "@ivin/plugin-api/ui"
 import { formatInput } from "./rules/format-input.ts"
 
@@ -21,34 +30,51 @@ function Approval({ item, sessionId }: SlotProps["transcript.approval"]) {
   }
 
   return (
-    <div>
-      <p style={{ margin: 0 }}>
-        <strong>{item.name}</strong>
-      </p>
-      <pre style={{ margin: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>
-        {formatInput(item.input)}
-      </pre>
-      {item.decision === null ? (
-        <div>
-          <p style={{ margin: 0 }}>Claude is waiting for your approval</p>
-          <button data-testid="approval-allow" disabled={clicked} onClick={() => respond(true)}>
-            Allow
-          </button>{" "}
-          <button data-testid="approval-deny" disabled={clicked} onClick={() => respond(false)}>
-            Deny
-          </button>
-          {failed && (
-            <p data-testid="approval-error" role="alert" style={{ margin: 0 }}>
-              Could not send your answer
-            </p>
-          )}
-        </div>
-      ) : (
-        <p data-testid="approval-decision" style={{ margin: 0 }}>
-          {DECISION_LABELS[item.decision]}
-        </p>
-      )}
-    </div>
+    <Block tone="accent">
+      <Stack gap={3}>
+        <Text weight="medium">{item.name}</Text>
+        <CodeBlock text={formatInput(item.input)} />
+        {item.decision === null ? (
+          <Stack gap={2}>
+            <Text size="sm" tone="muted">
+              Claude is waiting for your approval
+            </Text>
+            <Stack direction="row" gap={2}>
+              <Button
+                variant="primary"
+                size="sm"
+                data-testid="approval-allow"
+                disabled={clicked}
+                onClick={() => respond(true)}
+              >
+                Allow
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                data-testid="approval-deny"
+                disabled={clicked}
+                onClick={() => respond(false)}
+              >
+                Deny
+              </Button>
+            </Stack>
+            {failed && (
+              <Text size="sm" tone="danger" role="alert" data-testid="approval-error">
+                Could not send your answer
+              </Text>
+            )}
+          </Stack>
+        ) : (
+          <Stack direction="row" gap={2} align="center">
+            <Icon name={item.decision === "allow" ? "check" : "x"} size={14} />
+            <Text weight="medium" data-testid="approval-decision">
+              {DECISION_LABELS[item.decision]}
+            </Text>
+          </Stack>
+        )}
+      </Stack>
+    </Block>
   )
 }
 

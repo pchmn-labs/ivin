@@ -2,20 +2,29 @@ import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { DateTime } from "effect"
 import { useState } from "react"
+import { Button, IconButton } from "../../../core/design/button.tsx"
+import { ListRow } from "../../../core/design/list-row.tsx"
+import { Menu } from "../../../core/design/menu.tsx"
+import { Select } from "../../../core/design/select.tsx"
+import { StatusMark } from "../../../core/design/status-mark.tsx"
+import { Text } from "../../../core/design/text.tsx"
+import { TextField } from "../../../core/design/text-field.tsx"
 import { createSessionAtom } from "../atoms/create-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
+import { useNow } from "../hooks/use-now.ts"
 import { DEFAULT_MODEL, MODELS, type Model } from "../rules/models.ts"
+import { relativeTime } from "../rules/relative-time.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import { renameSessionAtom } from "../atoms/rename-session.ts"
 import { selectedSessionIdAtom } from "../atoms/selected-session.ts"
-
-const formatter = new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "short" })
+import "./session-list.css"
 
 function SessionRow({ projectPath, id }: { projectPath: string; id: string }) {
   const session = useAtomValue(sessionsOf(projectPath).item(id))
   const [selectedId, select] = useAtom(selectedSessionIdAtom)
   const renameSession = useAtomSet(renameSessionAtom)
   const [draft, setDraft] = useState<string | null>(null)
+  const now = useNow()
   if (!session) return null
 
   const commit = () => {
@@ -26,29 +35,11 @@ function SessionRow({ projectPath, id }: { projectPath: string; id: string }) {
     setDraft(null)
   }
 
-  return (
-    <li data-testid="session-item">
-      {draft === null ? (
-        <>
-          <button
-            type="button"
-            aria-current={selectedId === id}
-            onClick={() => select(id)}
-            style={{ textAlign: "left" }}
-          >
-            <span data-testid="session-title">{session.title}</span>{" "}
-            <small data-testid="session-status">{statusLabel(session.status)}</small>{" "}
-            <time dateTime={DateTime.formatIso(session.lastActivityAt)}>
-              {formatter.format(DateTime.toEpochMillis(session.lastActivityAt))}
-            </time>
-          </button>
-          <button type="button" onClick={() => setDraft(session.title)}>
-            Rename
-          </button>
-        </>
-      ) : (
-        <input
-          aria-label="Session title"
+  if (draft !== null) {
+    return (
+      <li data-testid="session-item" className="iv-session-list__edit">
+        <TextField
+          label="Session title"
           autoFocus
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -61,7 +52,37 @@ function SessionRow({ projectPath, id }: { projectPath: string; id: string }) {
             }
           }}
         />
-      )}
+      </li>
+    )
+  }
+
+  const label = statusLabel(session.status)
+  return (
+    <li>
+      <ListRow
+        data-testid="session-item"
+        selected={selectedId === id}
+        aria-current={selectedId === id}
+        onSelect={() => select(id)}
+        leading={
+          <span data-testid="session-status">
+            <StatusMark status={session.status} label={label} />
+          </span>
+        }
+        title={<span data-testid="session-title">{session.title}</span>}
+        meta={
+          <time dateTime={DateTime.formatIso(session.lastActivityAt)}>
+            {relativeTime(DateTime.toEpochMillis(session.lastActivityAt), now)}
+          </time>
+        }
+        actions={
+          <Menu
+            align="end"
+            trigger={<IconButton icon="ellipsis" label="Session actions" size="sm" />}
+            items={[{ label: "Rename", icon: "pencil", onSelect: () => setDraft(session.title) }]}
+          />
+        }
+      />
     </li>
   )
 }
@@ -73,23 +94,24 @@ export function SessionList({ projectPath }: { projectPath: string }) {
   const [model, setModel] = useState<Model>(DEFAULT_MODEL)
 
   return (
-    <nav aria-label="Sessions">
-      <select
-        aria-label="Model"
-        value={model}
-        onChange={(event) => setModel(event.target.value as Model)}
-      >
-        {MODELS.map((name) => (
-          <option key={name} value={name}>
-            {name}
-          </option>
-        ))}
-      </select>{" "}
-      <button type="button" onClick={() => createSession({ projectPath, model })}>
-        New session
-      </button>
-      {AsyncResult.isFailure(created) && <p role="alert">Could not create the session</p>}
-      <ul style={{ listStyle: "none", padding: 0 }}>
+    <nav className="iv-session-list" aria-label="Sessions">
+      <div className="iv-session-list__toolbar">
+        <Button icon="plus" onClick={() => createSession({ projectPath, model })}>
+          New session
+        </Button>
+        <Select
+          label="Model"
+          value={model}
+          onChange={(value) => setModel(value as Model)}
+          options={MODELS.map((name) => ({ value: name, label: name }))}
+        />
+      </div>
+      {AsyncResult.isFailure(created) && (
+        <Text role="alert" tone="danger">
+          Could not create the session
+        </Text>
+      )}
+      <ul className="iv-session-list__rows">
         {ids.map((id) => (
           <SessionRow key={id} projectPath={projectPath} id={id} />
         ))}

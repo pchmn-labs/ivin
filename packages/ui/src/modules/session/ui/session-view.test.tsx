@@ -172,7 +172,8 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
       </PluginsProvider>
     </RegistryProvider>,
   )
-  await page.getByRole("button", { name: "Rename" }).click()
+  await page.getByRole("button", { name: "Session actions" }).click()
+  await page.getByRole("menuitem", { name: "Rename" }).click()
   await userEvent.keyboard("{Escape}")
   await expect.element(page.getByRole("textbox", { name: "Session title" })).not.toBeInTheDocument()
   await new Promise((resolve) => setTimeout(resolve, 200))

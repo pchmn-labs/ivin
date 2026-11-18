@@ -2,11 +2,17 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Exit } from "effect"
 import { useState } from "react"
 import { Slot } from "../../../app/slot-renderer.tsx"
+import { Button } from "../../../core/design/button.tsx"
+import { Stack } from "../../../core/design/stack.tsx"
+import { StatusMark } from "../../../core/design/status-mark.tsx"
+import { Text } from "../../../core/design/text.tsx"
+import { TextArea } from "../../../core/design/text-field.tsx"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import { sendMessageAtom } from "../atoms/send-message.ts"
+import "./composer.css"
 
 export function Composer({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
   const [text, setText] = useState("")
@@ -24,35 +30,49 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   }
 
   return (
-    <div>
-      {session && (
-        <p data-testid="composer-session-status" style={{ margin: 0 }}>
-          {statusLabel(session.status)}
-        </p>
+    <div className="iv-composer">
+      {failed && (
+        <div className="iv-composer__alert">
+          <Text role="alert" tone="danger">
+            The message was not sent
+          </Text>
+        </div>
       )}
-      {failed && <p role="alert">The message was not sent</p>}
-      <textarea
-        aria-label="Message"
-        rows={3}
-        style={{ width: "100%", boxSizing: "border-box" }}
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return
-          event.preventDefault()
-          submit()
-        }}
-      />
-      <button type="button" onClick={submit}>
-        Send
-      </button>
-      {running && (
-        <button type="button" onClick={() => interrupt({ projectPath, sessionId })}>
-          Interrupt
-        </button>
-      )}
-      <div data-testid="composer-status">
-        <Slot slot="composer.status" props={{ sessionId }} />
+      <div className="iv-composer__surface">
+        <TextArea
+          label="Message"
+          placeholder="Message Claude"
+          rows={2}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return
+            event.preventDefault()
+            submit()
+          }}
+        />
+        <Stack direction="row" align="center" justify="between" gap={2}>
+          <Stack direction="row" align="center" gap={3}>
+            {session && (
+              <span data-testid="composer-session-status">
+                <StatusMark status={session.status} label={statusLabel(session.status)} showLabel />
+              </span>
+            )}
+            <div data-testid="composer-status">
+              <Slot slot="composer.status" props={{ sessionId }} />
+            </div>
+          </Stack>
+          <Stack direction="row" align="center" gap={2}>
+            {running && (
+              <Button icon="square" onClick={() => interrupt({ projectPath, sessionId })}>
+                Interrupt
+              </Button>
+            )}
+            <Button variant="primary" icon="send" onClick={submit}>
+              Send
+            </Button>
+          </Stack>
+        </Stack>
       </div>
     </div>
   )
