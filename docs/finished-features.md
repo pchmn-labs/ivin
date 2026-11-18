@@ -1,35 +1,18 @@
-# Finished features: what every user-facing feature includes
+# Finished features: the level every user-facing feature reaches
 
-A feature is finished when its whole path works, not only the path where everything goes right. These rules apply to anything a user sees or triggers. A spec or a ticket answers Keyboard, Errors and States below, and its "Done when" checks the answers.
+A feature ships finished, as it would be for someone who uses ivin all day, not as a demo of the case where everything goes right. The goal is that result; this page only lists what is most often forgotten, and a feature that meets every point but still feels unfinished is not done.
 
-## Keyboard
+Before calling a feature done, use it as that person would: with the keyboard only, with nothing in it, with far too much in it, with the server gone, with a slow harness. Fix what feels wrong, or open a ticket for it.
 
-- Every action a user repeats has a shortcut, and every action can be reached without the mouse.
-- A shortcut has a command id, such as `session.interrupt` for Escape, so the user can change its key in `~/.ivin/keybindings.json` (see [the architecture](architecture.md#files)) once the app reads that file.
-- A shortcut does nothing when the event was already handled (`defaultPrevented`) or when a text field needs the key.
-- `⌘` on macOS, `Ctrl` elsewhere.
-- A button or menu item with a shortcut shows it in its tooltip or menu row.
-- Focus is always visible, and lands somewhere useful after a dialog, a menu or a panel opens or closes.
+## Often forgotten
 
-## Errors
-
-- The spec lists how each action can fail: the server is unreachable, the harness exits, a file is missing or invalid, a git command fails…
-- A failure shows where the user acted: under the message field for a message that could not be sent, on the session row for a failed session. Only failures of the whole app, such as losing the server, show in the window shell.
-- The message says what failed and what the user can do next, in the glossary's words: "The message was not sent. Check that Claude Code is installed, then retry." Never "Something went wrong", never the raw error, which is logged instead.
-- A failure keeps what the user typed or chose.
-- A failure that a second try can fix offers a retry.
-- Nothing fails silently, including work that runs in the background.
-
-## States
-
-Besides the normal case, each screen handles:
-
-- **loading**, shown only when it lasts long enough to notice;
-- **empty**, with the next step to take ("No sessions yet", next to the New session button);
-- **failed**, as in [Errors](#errors);
-- **long content**: long names, many items, text that does not fit.
+- **Keyboard.** An action the user repeats has a keybinding to a command, which the user can change ([ADR-0003](adr/0003-keyboard-shortcuts-are-keybindings-to-commands.md)). Focus stays visible and lands somewhere useful after a dialog, a menu or a panel opens or closes.
+- **Failures.** A spec or a ticket lists how each action can fail. Each failure shows next to where the user acted, says what failed and what to do next, keeps what the user typed or chose, and offers a retry when a second try can work ([ADR-0004](adr/0004-the-ui-writes-error-messages-and-the-server-logs-raw-errors.md)). Never a raw error, never silence.
+- **States.** Loading, empty (with the next step to take), failed, and long content: long names, many items, text that does not fit.
+- **Speed.** The feature stays fast with a long transcript, many sessions and an answer streaming in, following [Responsiveness](architecture.md#responsiveness) and [Performance and memory](architecture.md#performance-and-memory). A path that could get slow has a perf test.
+- **What the user was doing survives** a session switch or a lost server: a draft, a scroll position, a selection.
 
 ## Done
 
 - No `TODO`, placeholder text or control that does nothing is merged. What is left for later is a ticket, linked from the pull request.
-- The pull request's test plan walks through the keyboard path and at least one failure, not only the normal case.
+- The pull request's test plan is that use of the feature, as described at the top.
