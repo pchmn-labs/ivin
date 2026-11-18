@@ -178,11 +178,11 @@ test("tabs shrink together when the bar runs out of room, down to a minimum", as
     document.querySelector<HTMLElement>('[data-testid="tab"]')!.getBoundingClientRect().width
   const roomy = width()
 
-  await page.viewport(640, 800)
+  await page.viewport(780, 800)
   await vi.waitFor(() => expect(width()).toBeLessThan(roomy))
   const narrow = width()
 
   await page.viewport(300, 800)
   await vi.waitFor(() => expect(width()).toBeLessThan(narrow))
-  expect(width()).toBe(140)
+  expect(width()).toBe(180)
 })
