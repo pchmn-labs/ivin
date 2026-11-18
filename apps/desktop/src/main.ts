@@ -7,6 +7,7 @@ import {
   utilityProcess,
   type UtilityProcess,
 } from "electron"
+import { homedir } from "node:os"
 import { join } from "node:path"
 import { PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
 
@@ -96,7 +97,12 @@ void app.whenReady().then(() => {
   if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
   server = utilityProcess.fork(
     serverEntry,
-    ["--database", join(app.getPath("userData"), "ivin.db")],
+    [
+      "--database",
+      join(app.getPath("userData"), "ivin.db"),
+      "--log",
+      join(homedir(), ".ivin", "logs", "ivin.log"),
+    ],
     { serviceName: "ivin-server", stdio: "inherit" },
   )
   server.once("exit", () => {

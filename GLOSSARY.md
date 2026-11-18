@@ -56,6 +56,10 @@ One thing a plugin adds to ivin: a component in a slot, a command, a keybinding,
 **Command**:
 An action with an id and a title that the user, a keybinding, the CLI or a plugin can run.
 
+**Log**:
+The file `~/.ivin/logs/ivin.log`, one JSON line per raw error of the server or the UI, written for the agent debugging ivin. A plugin's errors are not in it.
+_Avoid_: error log, journal
+
 **Keybinding**:
 A key mapped to a command, possibly limited to one area of the window.
 _Avoid_: hotkey

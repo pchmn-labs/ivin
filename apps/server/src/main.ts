@@ -2,6 +2,7 @@ import { demoApprovalScript, demoScript, layerClaude, layerScripted } from "@ivi
 import { Cause, Effect, Fiber, Layer } from "effect"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
+import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerServices } from "./rpc/handlers.ts"
 import { serveOverPort } from "./rpc/serve.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
@@ -20,15 +21,17 @@ const { parentPort } = process as unknown as {
 }
 
 const {
-  values: { database: databasePath },
-} = parseArgs({ options: { database: { type: "string" } }, strict: false })
+  values: { database: databasePath, log: logPath },
+} = parseArgs({ options: { database: { type: "string" }, log: { type: "string" } }, strict: false })
 
 const fail = (message: string): never => {
   process.stderr.write(`${message}\n`)
   process.exit(1)
 }
 if (typeof databasePath !== "string") fail("Missing --database <path>")
+if (typeof logPath !== "string") fail("Missing --log <path>")
 const path = databasePath as string
+const layerLogger = layerErrorLogFile(logPath as string)
 
 const harnessId = process.env["IVIN_HARNESS"] ?? "claude"
 const layerHarnesses = {
@@ -61,7 +64,9 @@ parentPort.on("message", ({ data, ports: [port] }) => {
 // Stores, feeds and runs are built once here: every port, and so every window reload, shares them.
 const startup = Effect.gen(function* () {
   const context = yield* Layer.build(
-    layerServices.pipe(Layer.provideMerge(Layer.mergeAll(layerDatabase(path), layerHarness))),
+    layerServices.pipe(
+      Layer.provideMerge(Layer.mergeAll(layerDatabase(path), layerHarness, layerLogger)),
+    ),
   )
   serve = (port) => {
     const server = serveOverPort(
@@ -80,6 +85,7 @@ const startup = Effect.gen(function* () {
 
 const startupFiber = Effect.runFork(
   startup.pipe(
+    Effect.provide(layerLogger),
     Effect.catchTag("DatabaseSchemaTooNew", (error) => Effect.sync(() => fail(error.message))),
     Effect.catchCause((cause) => Effect.sync(() => fail(Cause.pretty(cause)))),
   ),
