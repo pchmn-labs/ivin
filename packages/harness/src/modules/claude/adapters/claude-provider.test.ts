@@ -147,7 +147,7 @@ setInterval(() => {}, 1000)`,
           yield* harness.interrupt
           yield* Effect.promise(() =>
             vi.waitFor(() => expect(existsSync(log) && readFileSync(log, "utf8")).toContain("\n"), {
-              timeout: 5_000,
+              timeout: 800,
             }),
           )
         }).pipe(Effect.provide(layerClaude), Effect.scoped),
@@ -243,7 +243,7 @@ setInterval(() => {}, 1000)`,
         }).pipe(Effect.provide(layerClaudeWith("100 millis")), Effect.scoped),
       )
 
-      expect(Date.now() - started).toBeLessThan(900)
+      expect(Date.now() - started).toBeLessThan(500)
     },
   )
 })

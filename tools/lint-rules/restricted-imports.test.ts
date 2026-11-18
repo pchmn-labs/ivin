@@ -35,7 +35,7 @@ const lintAll = (cases: [string, string, string][]) => {
   )
   const { diagnostics } = JSON.parse(run.stdout) as { diagnostics: Diagnostic[] }
   paths.forEach((path, i) => {
-    fixturePath.set(cases[i]![0] + cases[i]![1], path)
+    fixturePath.set(`${cases[i]![0]}|${cases[i]![1]}`, path)
     lintOutput.set(
       path,
       diagnostics
@@ -184,7 +184,7 @@ const allowed: [string, string, string][] = [
 ]
 
 const restrictedImports = (file: string, what: string): string[] =>
-  lintOutput.get(fixturePath.get(file + what)!)!
+  lintOutput.get(fixturePath.get(`${file}|${what}`)!)!
 
 describe("restricted imports", () => {
   beforeAll(() => lintAll([...forbidden, ...allowed]))
