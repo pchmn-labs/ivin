@@ -85,6 +85,12 @@ export const migrations: readonly Migration[] = [
       SELECT id, project_path, ROW_NUMBER() OVER (ORDER BY last_activity_at DESC, created_at DESC) - 1
       FROM sessions WHERE project_path IN (SELECT path FROM open_projects)`,
   },
+  {
+    version: 7,
+    sql: `ALTER TABLE sessions ADD COLUMN working_folder TEXT NOT NULL DEFAULT '';
+    ALTER TABLE sessions ADD COLUMN branch TEXT;
+    UPDATE sessions SET working_folder = project_path`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

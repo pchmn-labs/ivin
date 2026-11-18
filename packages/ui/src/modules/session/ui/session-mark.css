@@ -23,7 +23,8 @@
   display: block;
 }
 
-.iv-session-mark[data-status="working"] .iv-session-mark__overlay {
+.iv-session-mark[data-status="working"] .iv-session-mark__overlay,
+.iv-session-mark[data-status="preparing_worktree"] .iv-session-mark__overlay {
   width: 10px;
   height: 10px;
   border: 1.5px solid var(--iv-status-working);

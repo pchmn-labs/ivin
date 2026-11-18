@@ -12,6 +12,7 @@ import { renameSessionAtom } from "../atoms/rename-session.ts"
 import { openTabAtom } from "../../tab/atoms/open-tab.ts"
 import { tabsOf } from "../../tab/atoms/list-tabs.ts"
 import { RelativeTime } from "./relative-time.tsx"
+import { SessionLocation } from "./session-location.tsx"
 import { SessionMark } from "./session-mark.tsx"
 import "./session-list.css"
 
@@ -72,6 +73,7 @@ function SessionRow({
           </span>
         }
         title={<span data-testid="session-title">{session.title}</span>}
+        subtitle={<SessionLocation session={session} compact />}
         meta={<RelativeTime at={session.lastActivityAt} />}
         actions={
           <Menu

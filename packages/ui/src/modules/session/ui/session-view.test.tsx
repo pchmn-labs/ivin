@@ -49,6 +49,10 @@ test("the transcript renders through the plugins and the status line shows the u
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status: "idle",
@@ -78,6 +82,10 @@ const mountSession = async (status: "idle" | "working" | "waiting") => {
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status,
@@ -127,7 +135,7 @@ test("the composer accepts a message while the session works", async () => {
   await page.getByRole("textbox", { name: "Message" }).fill("also this")
   await page.getByRole("button", { name: "Send" }).click()
   await expect.element(page.getByText("also this", { exact: true })).toBeVisible()
-  await vi.waitFor(() => expect(server.sessions.get("s1")?.title).toBe("also this"))
+  await vi.waitFor(() => expect(server.sentMessages).toHaveLength(1))
 })
 
 test("a message that fails to send stays in the composer, and Retry sends it", async () => {
@@ -148,7 +156,7 @@ test("a message that fails to send stays in the composer, and Retry sends it", a
   await expect.element(page.getByText("keep me", { exact: true })).toBeVisible()
   await expect.element(field).toHaveValue("")
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
-  await vi.waitFor(() => expect(server.sessions.get("s1")?.title).toBe("keep me"))
+  await vi.waitFor(() => expect(server.sentMessages).toHaveLength(2))
 })
 
 test("a message to a session the server no longer has says so, with no Retry", async () => {
@@ -174,6 +182,10 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status: "working",
@@ -290,6 +302,10 @@ test("Escape closes an open menu without interrupting the session", async () => 
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status: "working",
@@ -319,4 +335,96 @@ test("Enter on the focused Interrupt button presses it rather than running compo
   await page.getByRole("button", { name: "Interrupt" }).element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
+})
+
+const mountNewSession = async () => {
+  const server = makeFakeServer()
+  const at = DateTime.makeUnsafe(0)
+  server.sessions.set("s1", {
+    id: "s1",
+    projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: false,
+    title: "New session",
+    model: "sonnet",
+    status: "idle",
+    createdAt: at,
+    lastActivityAt: at,
+  })
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <SessionView projectPath="/p" sessionId="s1" />
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+  return server
+}
+
+test("the working folder choice and branch name show only before the first message", async () => {
+  const server = await mountNewSession()
+  const choice = page.getByRole("combobox", { name: "Working folder" })
+  await expect.element(choice).toHaveValue("checkout")
+  expect(page.getByRole("textbox", { name: "Branch name" }).query()).toBeNull()
+  await expect.element(page.getByTestId("session-location")).toHaveTextContent("Checkoutmain")
+
+  await choice.selectOptions("worktree")
+  await page.getByRole("textbox", { name: "Branch name" }).fill("feat/login")
+  await page.getByRole("textbox", { name: "Message" }).fill("go")
+  await page.getByRole("button", { name: "Send" }).click()
+
+  await expect.element(choice).not.toBeInTheDocument()
+  await expect.element(page.getByRole("textbox", { name: "Branch name" })).not.toBeInTheDocument()
+  await expect.element(page.getByTestId("session-location")).toHaveTextContent("Worktreefeat/login")
+  expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
+    { kind: "worktree", branch: "feat/login" },
+  ])
+})
+
+test("an empty branch name lets the server generate one, and the checkout sends no branch", async () => {
+  const server = await mountNewSession()
+  await page.getByRole("combobox", { name: "Working folder" }).selectOptions("worktree")
+  await page.getByRole("textbox", { name: "Message" }).fill("go")
+  await page.getByRole("button", { name: "Send" }).click()
+  await expect
+    .element(page.getByRole("combobox", { name: "Working folder" }))
+    .not.toBeInTheDocument()
+  await page.getByRole("textbox", { name: "Message" }).fill("again")
+  await page.getByRole("button", { name: "Send" }).click()
+
+  await vi.waitFor(() => expect(server.sentMessages).toHaveLength(2))
+  expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
+    { kind: "worktree", branch: null },
+    undefined,
+  ])
+})
+
+test("a worktree git cannot create shows git's message and keeps the message and the choice", async () => {
+  const server = await mountNewSession()
+  server.failWorktreeWith("fatal: a branch named 'taken' already exists")
+  await page.getByRole("combobox", { name: "Working folder" }).selectOptions("worktree")
+  await page.getByRole("textbox", { name: "Branch name" }).fill("taken")
+  await page.getByRole("textbox", { name: "Message" }).fill("go")
+  await page.getByRole("button", { name: "Send" }).click()
+
+  const alert = page.getByTestId("composer-alert")
+  await expect.element(alert).toBeVisible()
+  expect(alert.element().textContent).toMatch(/^The worktree was not created/)
+  expect(alert.element().textContent).toMatch(/fatal: a branch named 'taken' already exists$/)
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("go")
+  await expect.element(page.getByRole("textbox", { name: "Branch name" })).toHaveValue("taken")
+})
+
+test("a session preparing its worktree says so under the transcript until the run starts", async () => {
+  const server = await mountNewSession()
+  await page.getByRole("textbox", { name: "Message" }).fill("go")
+  server.setStatus("s1", "preparing_worktree")
+  const preparing = page.getByTestId("preparing-worktree")
+  await expect.element(preparing).toBeVisible()
+  expect(preparing.element().textContent).toBe("Preparing worktree…")
+  await expect.element(page.getByRole("button", { name: "Send" })).toBeDisabled()
+  server.setStatus("s1", "working")
+  await expect.element(preparing).not.toBeInTheDocument()
 })

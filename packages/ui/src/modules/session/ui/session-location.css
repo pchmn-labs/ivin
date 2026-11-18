@@ -1,0 +1,31 @@
+.iv-session-location {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-4);
+  min-width: 0;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+  white-space: nowrap;
+}
+
+.iv-session-location[data-compact] {
+  gap: var(--iv-space-1);
+}
+
+.iv-session-location__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  min-width: 0;
+}
+
+.iv-session-location__branch {
+  overflow: hidden;
+  font-family: var(--iv-font-mono);
+}
+
+.iv-session-location__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

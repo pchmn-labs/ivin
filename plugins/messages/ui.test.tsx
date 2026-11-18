@@ -66,3 +66,27 @@ test("an interruption is shown as a short note", async () => {
   await mount({ ...base, type: "interruption" })
   await expect.element(page.getByText("Interrupted")).toBeVisible()
 })
+
+const worktree = {
+  ...base,
+  type: "working_folder" as const,
+  path: "/repo/.worktrees/feat-login",
+  inWorktree: true,
+  branch: "feat/login",
+  cause: "creation" as const,
+}
+
+test("a new worktree names its branch and folder", async () => {
+  await mount({ ...worktree, worktreesIgnored: true })
+  await expect.element(page.getByText("Started in a new worktree on")).toBeVisible()
+  await expect.element(page.getByText("feat/login")).toBeVisible()
+  await expect.element(page.getByText("/repo/.worktrees/feat-login")).toBeVisible()
+  expect(page.getByText(/not ignored by git/).query()).toBeNull()
+})
+
+test("a new worktree under a .worktrees/ that git does not ignore says what to add", async () => {
+  await mount({ ...worktree, worktreesIgnored: false })
+  const note = page.getByText(/not ignored by git/)
+  await expect.element(note).toBeVisible()
+  expect(note.element().textContent).toContain("Add .worktrees/ to .gitignore")
+})

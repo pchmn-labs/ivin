@@ -4,6 +4,8 @@ import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { isRunning } from "../rules/is-running.ts"
+import { Icon } from "../../../core/components/icon/icon.tsx"
+import { Text } from "../../../core/components/text/text.tsx"
 import { Composer } from "./composer.tsx"
 import "./session-view.css"
 
@@ -21,6 +23,14 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
       <div className="iv-session-view__transcript">
         <TranscriptView key={sessionId} sessionId={sessionId} />
       </div>
+      {status === "preparing_worktree" && (
+        <div className="iv-session-view__preparing" data-testid="preparing-worktree">
+          <Icon name="loader" size={14} />
+          <Text size="sm" tone="muted">
+            Preparing worktree…
+          </Text>
+        </div>
+      )}
       <Composer key={sessionId} projectPath={projectPath} sessionId={sessionId} />
     </div>
   )

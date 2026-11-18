@@ -12,6 +12,11 @@ export class SessionStore extends Context.Service<
     readonly setTitleIfUnset: (id: string, title: string) => Effect.Effect<void>
     readonly providerSessionId: (id: string) => Effect.Effect<string | null>
     readonly setProviderSessionId: (id: string, providerSessionId: string) => Effect.Effect<void>
+    readonly setWorkingFolder: (
+      id: string,
+      workingFolder: string,
+      branch: string | null,
+    ) => Effect.Effect<void>
     readonly setStatus: (id: string, status: SessionStatus) => Effect.Effect<void>
     // No run survives a connection, so a session left working or waiting is idle again.
     readonly resetRunning: Effect.Effect<void>

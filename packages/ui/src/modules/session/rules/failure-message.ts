@@ -1,17 +1,41 @@
-import type { ApprovalNotOpen, SessionNotFound } from "@ivin/contracts/session"
+import type {
+  ApprovalNotOpen,
+  SessionNotFound,
+  WorktreeFailure,
+  WorktreeNotCreated,
+} from "@ivin/contracts/session"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 
 const isTag = <E extends { readonly _tag: string }>(error: unknown, tag: E["_tag"]) =>
   errorTag(error) === tag
 
-export const sendMessageFailure = (error: unknown): ActionFailure =>
-  isTag<SessionNotFound>(error, "SessionNotFound")
-    ? {
-        text: "This session no longer exists, so the message was not sent. Start a new session to send it.",
-        retryable: false,
-      }
-    : { text: "The message was not sent.", retryable: true }
+const WORKTREE_FAILURES: Record<WorktreeFailure, ActionFailure> = {
+  git: { text: "The worktree was not created. Fix what git reports, then retry.", retryable: true },
+  fetch_timed_out: {
+    text: "The worktree was not created: fetching origin took more than 30 seconds. Check the connection, then retry.",
+    retryable: true,
+  },
+  no_default_branch: {
+    text: "The worktree was not created: origin has no main, master or default branch to start from. Pick Checkout to send the message.",
+    retryable: false,
+  },
+}
+
+// `detail` is git's own output, shown as is.
+export const sendMessageFailure = (error: unknown): ActionFailure & { detail?: string } => {
+  if (isTag<SessionNotFound>(error, "SessionNotFound")) {
+    return {
+      text: "This session no longer exists, so the message was not sent. Start a new session to send it.",
+      retryable: false,
+    }
+  }
+  if (isTag<WorktreeNotCreated>(error, "WorktreeNotCreated")) {
+    const { reason, gitMessage } = error as WorktreeNotCreated
+    return { ...WORKTREE_FAILURES[reason], ...(gitMessage !== null && { detail: gitMessage }) }
+  }
+  return { text: "The message was not sent.", retryable: true }
+}
 
 export const createSessionFailure = (_error: unknown): ActionFailure => ({
   text: "The session was not created.",

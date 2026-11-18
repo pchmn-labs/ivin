@@ -31,12 +31,30 @@
 
 .iv-composer__statusline {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: var(--iv-space-4);
   min-height: var(--iv-space-6);
   align-items: center;
   padding: 0 var(--iv-space-2);
   color: var(--iv-text-faint);
   font-size: var(--iv-text-xs);
+}
+
+.iv-composer__status-slot {
+  margin-left: auto;
+  flex: none;
+}
+
+/* The surface's rule flattens every field; the branch name keeps a visible box. */
+.iv-composer__surface .iv-composer__branch .iv-field {
+  width: 200px;
+  height: var(--iv-control-sm);
+  border-color: var(--iv-border-strong);
+  font-size: var(--iv-text-sm);
+}
+
+.iv-composer__surface .iv-composer__branch .iv-field:focus-visible {
+  border-color: var(--iv-focus-ring);
 }
 
 .iv-composer__alert {

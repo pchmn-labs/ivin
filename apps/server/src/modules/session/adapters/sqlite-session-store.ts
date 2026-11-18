@@ -6,6 +6,9 @@ import { SessionStore } from "../usecases/session-store.ts"
 interface SessionRow {
   id: string
   project_path: string
+  working_folder: string
+  branch: string | null
+  started: number
   title: string
   model: string
   status: SessionStatus
@@ -16,6 +19,10 @@ interface SessionRow {
 const toSession = (row: SessionRow): Session => ({
   id: row.id,
   projectPath: row.project_path,
+  workingFolder: row.working_folder,
+  inWorktree: row.working_folder !== row.project_path,
+  branch: row.branch,
+  started: row.started === 1,
   title: row.title,
   model: row.model,
   status: row.status,
@@ -23,7 +30,10 @@ const toSession = (row: SessionRow): Session => ({
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
 })
 
-const columns = "id, project_path, title, model, status, created_at, last_activity_at"
+const columns = `id, project_path, working_folder, branch, title, model, status, created_at,
+  last_activity_at, EXISTS (
+    SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
+  ) AS started`
 
 export const layerSqliteSessionStore = Layer.effect(SessionStore)(
   Effect.gen(function* () {
@@ -32,11 +42,14 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
       insert: (session) =>
         Effect.sync(() => {
           db.prepare(
-            `INSERT INTO sessions (id, project_path, title, model, status, created_at, last_activity_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO sessions (id, project_path, working_folder, branch, title, model, status,
+               created_at, last_activity_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           ).run(
             session.id,
             session.projectPath,
+            session.workingFolder,
+            session.branch,
             session.title,
             session.model,
             session.status,
@@ -83,6 +96,14 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         Effect.sync(() => {
           db.prepare("UPDATE sessions SET provider_session_id = ? WHERE id = ?").run(
             providerSessionId,
+            id,
+          )
+        }),
+      setWorkingFolder: (id, workingFolder, branch) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET working_folder = ?, branch = ? WHERE id = ?").run(
+            workingFolder,
+            branch,
             id,
           )
         }),

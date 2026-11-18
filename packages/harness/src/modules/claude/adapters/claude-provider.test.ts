@@ -222,7 +222,7 @@ test("start names a project folder that does not exist", async () => {
     }).pipe(Effect.provide(layerClaude), Effect.scoped),
   )
 
-  expect(JSON.stringify(exit)).toContain("The project folder does not exist: /does/not/exist")
+  expect(JSON.stringify(exit)).toContain("The working folder does not exist: /does/not/exist")
 })
 
 test("closing the scope returns within a bound when a grandchild holds the pipes open", async () => {

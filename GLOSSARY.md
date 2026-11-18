@@ -8,15 +8,19 @@ The terms ivin's code, docs and tickets use.
 A folder, or a `.code-workspace` holding several folders, with its settings. Several projects are open at once in a window, in order; one is selected, and each has its own tab bar.
 _Avoid_: workspace, repo
 
-**Main checkout**:
-The project folder itself, as opposed to its worktrees.
+**Checkout**:
+The project folder's own git working copy, as opposed to its worktrees.
 
 **Worktree**:
-A separate git checkout of a project folder, on its own branch, that a session can run in so it does not share files with other sessions.
+A linked git worktree of the project's repository, on its own branch, that a session can run in so it does not share files with other sessions. ivin creates them under `<project>/.worktrees/`.
 _Avoid_: workspace, clone
 
+**Working folder**:
+Where a session's agent runs: the checkout or one worktree. Several sessions may share one.
+_Avoid_: cwd, workspace
+
 **Session**:
-One agent conversation, bound to a project folder, a cwd (main checkout or worktree), a branch, a harness and a model. Its status is working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript.
+One agent conversation, bound to a project folder, a working folder, a branch, a harness and a model. Its status is preparing worktree, working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript.
 _Avoid_: conversation, chat, thread
 
 **Harness**:

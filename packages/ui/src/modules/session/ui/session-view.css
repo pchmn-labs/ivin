@@ -17,3 +17,14 @@
   align-items: center;
   justify-content: center;
 }
+
+.iv-session-view__preparing {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  width: 100%;
+  max-width: var(--iv-content-width);
+  margin: 0 auto;
+  padding: var(--iv-space-2) var(--iv-space-6);
+  color: var(--iv-text-muted);
+}

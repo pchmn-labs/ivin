@@ -34,6 +34,8 @@ export class SessionRuns extends Context.Service<
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
     // No-op with no run.
     readonly stop: (sessionId: string) => Effect.Effect<void>
+    // Appends to the transcript with or without a run.
+    readonly record: (session: Session, event: HarnessEvent) => Effect.Effect<void>
   }
 >()("ivin/server/SessionRuns") {}
 
@@ -163,7 +165,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
         const harness = yield* provider
           .start({
             sessionId: session.id,
-            cwd: session.projectPath,
+            cwd: session.workingFolder,
             model: session.model,
             providerSessionId: storedProviderSessionId,
           })
@@ -272,6 +274,14 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           // Closing the run's scope also interrupts the fiber that would have set the status.
           return run ? run.end.pipe(Effect.andThen(setStatus(sessionId, "idle"))) : Effect.void
         }),
+      record: (session, event) =>
+        starting.withPermits(1)(
+          Effect.suspend(
+            () =>
+              runs.get(session.id)?.record(event) ??
+              makeWriter(session).pipe(Effect.flatMap((writer) => writer.record(event))),
+          ),
+        ),
     }
   }),
 )

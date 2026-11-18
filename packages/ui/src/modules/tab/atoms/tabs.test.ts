@@ -86,6 +86,10 @@ const seeded = () => {
     server.sessions.set(id, {
       id,
       projectPath: project,
+      workingFolder: project,
+      inWorktree: false,
+      branch: "main",
+      started: true,
       title: id,
       model: "sonnet",
       status: "idle",

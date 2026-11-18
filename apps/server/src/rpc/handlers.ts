@@ -30,11 +30,15 @@ import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlit
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
+import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
+import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
 
 export const layerServices = Layer.mergeAll(layerSessionRuns, layerCurrentSettings).pipe(
   Layer.provideMerge(layerSessionFeed),
+  Layer.provideMerge(layerOriginFetch),
   Layer.provideMerge(
     Layer.mergeAll(
+      layerGitCli,
       layerSqliteProjectStore,
       layerSqliteSessionStore,
       layerSqliteTabStore,
@@ -79,8 +83,8 @@ export const handlers = Rpcs.toLayer(
       "session.create": ({ projectPath, model }) => createSession(projectPath, model),
       "session.list": ({ projectPath }) => listSessions(projectPath),
       "session.rename": ({ sessionId, title }) => renameSession(sessionId, title),
-      "session.sendMessage": ({ sessionId, messageId, text }) =>
-        sendMessage(sessionId, messageId, text),
+      "session.sendMessage": ({ sessionId, messageId, text, workingFolder }) =>
+        sendMessage(sessionId, messageId, text, workingFolder),
       "session.answerApproval": ({ sessionId, requestId, allow }) =>
         answerApproval(sessionId, requestId, allow),
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),

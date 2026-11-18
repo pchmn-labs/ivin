@@ -20,6 +20,8 @@ export type IconName =
   | "loader"
   | "copy"
   | "git-branch"
+  | "folder"
+  | "worktree"
   | "brain"
   | "wrench"
   | "user"
@@ -153,6 +155,7 @@ export interface StatusMarkProps {
 export interface ListRowProps {
   readonly leading?: ReactNode
   readonly title: ReactNode
+  readonly subtitle?: ReactNode
   readonly meta?: ReactNode
   readonly selected?: boolean
   readonly attention?: boolean
