@@ -50,7 +50,7 @@
 }
 
 .iv-session-list__label[data-needs-you] {
-  color: var(--iv-danger);
+  color: var(--iv-status-waiting);
 }
 
 .iv-session-list__count {

@@ -17,11 +17,6 @@
   background: color-mix(in srgb, var(--iv-accent) 8%, transparent);
 }
 
-.iv-block--attention {
-  border-color: var(--iv-danger);
-  background: var(--iv-bg-raised);
-}
-
 .iv-block--danger {
   border-color: color-mix(in srgb, var(--iv-danger) 40%, transparent);
   background: var(--iv-danger-subtle);

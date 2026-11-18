@@ -38,7 +38,7 @@
   height: 16px;
   padding: 0 4px;
   border-radius: 8px;
-  background: var(--iv-danger);
+  background: var(--iv-status-waiting);
   box-shadow: 0 0 0 2px var(--iv-bg-card);
   color: var(--iv-bg-card);
   font-size: var(--iv-text-xs);
