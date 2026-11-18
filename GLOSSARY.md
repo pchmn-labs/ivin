@@ -41,7 +41,7 @@ _Avoid_: permission, permission prompt
 Typed, namespaced metadata attached to a session or a project, written by plugins, the CLI or the agent.
 
 **Tab**:
-Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Its sub-views (files, diff, terminal) come later.
+Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Its sub-views (files, diff, terminal) come later. A session with no tab is **inactive**, listed under "Inactive sessions" in the sidebar.
 
 **Plugin**:
 A folder with a manifest and up to two halves, a server half and a UI half, that adds a feature to ivin through the plugin API. ivin's own features are plugins too.

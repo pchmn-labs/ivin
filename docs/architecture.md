@@ -134,6 +134,7 @@ The terms are defined in [`GLOSSARY.md`](../GLOSSARY.md). What the design adds t
 - An annotation looks like `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
 - The open projects, their order, the selected project, the tabs, their order and each project's selected tab are stored in SQLite and restored at launch.
 - A tab stores its project and its position, so a single bar for all projects can later be a view over the same rows.
+- Closing a tab, or the project it belongs to, ends its session's agent process when `tabs.stopAgentOnClose` is on; the next message starts a new process that resumes the conversation. The tab bar asks first when the agent is working or waiting; closing a project does not ask.
 
 The server is the source of truth and persists to SQLite; the renderer holds a read model fed by RPC streams, in atoms that the plugin hooks wrap (see [UI state](#ui-state)). Plugin storage is a namespaced key-value store in the same database.
 
@@ -305,7 +306,7 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 | `composer.suggest` | trigger char, query | `#` issues, `@../` paths, `/` commands |
 | `session.badge` | session | linked PR/issue icon in the sidebar and tabs |
 | `session.card` | session | hover card sections |
-| `sidebar.section` | — | Inactive sessions, Working panel, custom panels |
+| `sidebar.section` | — | Inactive sessions, Working panel, custom panels; rendered under the selected project's sessions |
 | `sidebar.panel` | — | a whole sidebar tab (Files, Changes…) |
 | `tab.decoration` | tab | git status colour, session icon |
 | `view` | params | a full tab view |
@@ -329,7 +330,7 @@ function PrBadge({ sessionId }: { sessionId: string }) {
 }
 ```
 
-Hooks available to plugin components: `useSession`, `useSessions`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Button`, `IconButton`, `Icon`, `Menu`, `Dialog`, `Tooltip`, `Text`, `Stack`, `Block`, `Disclosure`, `CodeBlock`, `StatusMark`, `Markdown`, `ActionSheet`, `OptionList`) so plugins look native; the host supplies them, so a plugin never imports a UI library ([ADR-0002](adr/0002-design-system-on-base-ui-and-css-custom-properties.md)).
+Hooks available to plugin components: `useSession`, `useSessions`, `useTabs` (the selected project's), `useOpenTab`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Button`, `IconButton`, `Icon`, `Menu`, `Dialog`, `Tooltip`, `Text`, `Stack`, `Block`, `Disclosure`, `CodeBlock`, `StatusMark`, `Markdown`, `ActionSheet`, `OptionList`, `ListRow`, `SessionMark`, `RelativeTime`) so plugins look native; the host supplies them, so a plugin never imports a UI library ([ADR-0002](adr/0002-design-system-on-base-ui-and-css-custom-properties.md)).
 
 ### Plugins building on plugins
 
@@ -367,6 +368,15 @@ Plugins declare no dependency on each other: that would bring load order, cascad
 ```
 
 Writes go through a temp file and a rename, so the app never reads a half-written file. An invalid file keeps the last valid version and reports the parse error (`ivin doctor`).
+
+The server reads `settings.json` and streams it (`setting.watch`). Its settings so far, both on by default:
+
+```jsonc
+{
+  "tabs": { "stopAgentOnClose": true },
+  "worktrees": { "removeOnTabClose": true },
+}
+```
 
 ### CLI
 
@@ -423,7 +433,7 @@ This table lists what the fork added, not what it sits on. The base app MonoCode
 
 ### Window shell
 
-The sidebar is a floating card inset from the window edges: a header row (macOS traffic lights, a sidebar toggle on ⌘\, back and forward over the sessions opened in this window, kept in memory), then a body split into a project rail and the list column. The rail has one button per open project in their order (its creature, with the count of sessions waiting on the user), the open-folder button (native folder dialog) and the connection status at its bottom. The list column has a head with the selected project's name, New session with its model menu, and a menu with Close project; under it the project's sessions that have an open tab, in tab order, grouped "Needs you" then "Sessions". The main area sits on the plain app background; the slim top bar is the selected project's tab bar, where each tab shows its session's title and state, has a close button, and reorders by drag. Under it the selected tab shows its session (transcript and composer); a project with no tab shows an empty message. With the card hidden, the toggle and arrows move to the top left of the main bar.
+The sidebar is a floating card inset from the window edges: a header row (macOS traffic lights, a sidebar toggle on ⌘\, back and forward over the sessions opened in this window, kept in memory), then a body split into a project rail and the list column. The rail has one button per open project in their order (its creature, with the count of sessions waiting on the user), the open-folder button (native folder dialog) and the connection status at its bottom. The list column has a head with the selected project's name, New session with its model menu, and a menu with Close project; under it the project's sessions that have an open tab, in tab order, grouped "Needs you" then "Sessions", then the `sidebar.section` contributions, such as the folded "Inactive sessions". The main area sits on the plain app background; the slim top bar is the selected project's tab bar, where each tab shows its session's title and state, has a close button, and reorders by drag. Under it the selected tab shows its session (transcript and composer); a project with no tab shows an empty message. With the card hidden, the toggle and arrows move to the top left of the main bar.
 
 A project is a pixel creature (8x8, mirrored, generated from its name, one of six `--iv-project-hue-*` hues). A session row is the harness mark with a status overlay; a project button shows how many of its sessions wait on the user, and a session waiting on the user is outlined. The Claude mark keeps its brand orange, the one colour outside the tokens.
 

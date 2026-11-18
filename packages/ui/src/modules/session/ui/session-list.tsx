@@ -1,19 +1,17 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { DateTime } from "effect"
 import { useState } from "react"
 import type { Session } from "@ivin/contracts/session"
+import { Slot } from "../../../app/slot-renderer.tsx"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { sessionsOf } from "../atoms/list-sessions.ts"
-import { useNow } from "../../../shared/use-now.ts"
 import { groupSessions } from "../rules/group-sessions.ts"
-import { relativeTime } from "../rules/relative-time.ts"
-import { statusLabel } from "../rules/status-label.ts"
 import { renameSessionAtom } from "../atoms/rename-session.ts"
 import { openTabAtom } from "../../tab/atoms/open-tab.ts"
 import { tabsOf } from "../../tab/atoms/list-tabs.ts"
+import { RelativeTime } from "./relative-time.tsx"
 import { SessionMark } from "./session-mark.tsx"
 import "./session-list.css"
 
@@ -30,7 +28,6 @@ function SessionRow({
   const openTab = useAtomSet(openTabAtom)
   const renameSession = useAtomSet(renameSessionAtom)
   const [draft, setDraft] = useState<string | null>(null)
-  const now = useNow()
 
   const commit = () => {
     const title = draft?.trim()
@@ -71,15 +68,11 @@ function SessionRow({
         onSelect={() => openTab({ sessionId: id })}
         leading={
           <span data-testid="session-status">
-            <SessionMark status={session.status} label={statusLabel(session.status)} />
+            <SessionMark status={session.status} />
           </span>
         }
         title={<span data-testid="session-title">{session.title}</span>}
-        meta={
-          <time dateTime={DateTime.formatIso(session.lastActivityAt)}>
-            {relativeTime(DateTime.toEpochMillis(session.lastActivityAt), now)}
-          </time>
-        }
+        meta={<RelativeTime at={session.lastActivityAt} />}
         actions={
           <Menu
             align="end"
@@ -165,6 +158,7 @@ export function SessionList({
           projectPath={projectPath}
           selectedId={selectedSessionId}
         />
+        <Slot slot="sidebar.section" props={{}} />
       </div>
     </nav>
   )

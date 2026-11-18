@@ -8,10 +8,15 @@ export function Disclosure({
   summary,
   children,
   defaultOpen = false,
+  variant = "default",
   "data-testid": testId,
 }: DisclosureProps) {
   return (
-    <details className="iv-disclosure" open={defaultOpen} data-testid={testId}>
+    <details
+      className={variant === "section" ? "iv-disclosure iv-disclosure--section" : "iv-disclosure"}
+      open={defaultOpen}
+      data-testid={testId}
+    >
       <summary
         className="iv-disclosure__summary"
         // Chromium shows the focus ring on a clicked summary; only the keyboard should focus it.

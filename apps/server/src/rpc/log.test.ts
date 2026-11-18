@@ -8,6 +8,7 @@ import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { layerErrorLogFile } from "../modules/log/adapters/error-log-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { Database } from "../shared/adapters/database.ts"
@@ -31,6 +32,7 @@ const withServer = <A, E>(
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
           Layer.provide(layerKeybindingsFileOf([])),
+          Layer.provide(layerSettingsFileOf([])),
           Layer.provide(layerScripted([])),
         ),
       ),

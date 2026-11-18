@@ -2,6 +2,7 @@ import { SessionNotFound } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { selectionAfterRemoval } from "../../../shared/rules/selection-after-removal.ts"
 import { SessionStore } from "../../session/usecases/session-store.ts"
+import { stopAgentOnTabClose } from "../../session/usecases/stop-agent-on-tab-close.ts"
 import { listTabs } from "./list-tabs.ts"
 import { TabStore } from "./tab-store.ts"
 
@@ -20,5 +21,6 @@ export const closeTab = (sessionId: string) =>
       const order = before.tabs.map((tab) => tab.sessionId)
       yield* store.select(tab.projectPath, selectionAfterRemoval(order, sessionId))
     }
+    yield* stopAgentOnTabClose([sessionId])
     return yield* listTabs(tab.projectPath)
   })

@@ -6,6 +6,7 @@ import { layerServices } from "../rpc/handlers.ts"
 import { serveOverPort } from "../rpc/serve.ts"
 import { layerDatabase } from "./adapters/database.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 
 test("serves the rpc group over a message port", async () => {
   const { port1, port2 } = new MessageChannel()
@@ -26,6 +27,7 @@ test("serves the rpc group over a message port", async () => {
           Layer.provide(layerServices),
           Layer.provide(layerDatabase(":memory:")),
           Layer.provide(layerKeybindingsFileOf([])),
+          Layer.provide(layerSettingsFileOf([])),
           Layer.provide(layerScripted([])),
         ),
       )

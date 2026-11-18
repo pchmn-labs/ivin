@@ -1,6 +1,7 @@
-import { layerScripted } from "@ivin/harness"
+import { layerScripted, type ScriptedElement } from "@ivin/harness"
 import { Rpcs } from "@ivin/contracts/rpcs"
-import { Effect, Layer } from "effect"
+import type { HarnessOutput } from "@ivin/contracts/transcript"
+import { Effect, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
@@ -9,6 +10,7 @@ import { runMigrations } from "../shared/adapters/migrations.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { handlers, layerServices } from "./handlers.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 
 const newDatabase = () => {
   const db = new DatabaseSync(":memory:")
@@ -16,9 +18,17 @@ const newDatabase = () => {
   return db
 }
 
+interface Harness {
+  readonly settings?: ReadonlyArray<string | null>
+  readonly turns?: readonly (readonly ScriptedElement[])[]
+  // Receives the session id of each run whose agent stopped.
+  readonly closed?: string[]
+}
+
 const withServer = <A, E>(
   db: DatabaseSync,
   use: (client: Effect.Success<ReturnType<typeof makeClient>>) => Effect.Effect<A, E>,
+  { settings = [], turns = [], closed = [] }: Harness = {},
 ) =>
   Effect.runPromise(
     makeClient().pipe(
@@ -29,7 +39,8 @@ const withServer = <A, E>(
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
           Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerScripted([])),
+          Layer.provide(layerSettingsFileOf(settings)),
+          Layer.provide(layerScripted(turns, { closed })),
         ),
       ),
       Effect.scoped,
@@ -202,4 +213,118 @@ test("tabs, their order and each project's selected tab are back after a restart
   expect(second.tabs.map((t) => t.sessionId)).toEqual([ids.other])
   expect(second.selectedSessionId).toBe(ids.other)
   expect(open.selectedPath).toBe("/a/second")
+})
+
+const running: HarnessOutput = { type: "status", status: "running", raw: null }
+const working = [running, { type: "assistant_text", text: "Working", raw: null }] as const
+
+const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
+  Effect.gen(function* () {
+    for (let attempt = 0; attempt < 200; attempt++) {
+      const value = yield* read
+      if (done(value)) return value
+      yield* Effect.sleep("5 millis")
+    }
+    return yield* Effect.die("The condition was never met")
+  })
+
+const statusOf = (client: Client, sessionId: string) =>
+  client["session.list"]({ projectPath: "/a/first" }).pipe(
+    Effect.map((sessions) => sessions.find((s) => s.id === sessionId)?.status),
+  )
+
+const currentSettings = (client: Client) =>
+  client["setting.watch"]().pipe(
+    Stream.take(1),
+    Stream.runHead,
+    Effect.map((head) => (head._tag === "Some" ? head.value : null)),
+  )
+
+// Closes the tab of a session whose agent is working, once the settings file reads as `settingsAre` says.
+const closeWorkingTab = (
+  settings: ReadonlyArray<string | null>,
+  settingsAre: (stop: boolean, problem: string | null) => boolean,
+) => {
+  const closed: string[] = []
+  return withServer(
+    newDatabase(),
+    (client) =>
+      Effect.gen(function* () {
+        yield* until(
+          currentSettings(client),
+          (current) =>
+            current !== null &&
+            settingsAre(current.settings.tabs.stopAgentOnClose, current.problem?.reason ?? null),
+        )
+        const [sessionId] = yield* barOf(client, 1)
+        yield* client["session.sendMessage"]({ sessionId: sessionId!, messageId: "m1", text: "go" })
+        yield* until(statusOf(client, sessionId!), (status) => status === "working")
+        const tabs = yield* client["tab.close"]({ sessionId: sessionId! })
+        yield* Effect.sleep("20 millis")
+        return {
+          sessionId: sessionId!,
+          tabs,
+          status: yield* statusOf(client, sessionId!),
+          closed: [...closed],
+        }
+      }),
+    { settings, turns: [working], closed },
+  )
+}
+
+test("closing a tab stops its session's agent, and the session is idle", async () => {
+  const { sessionId, tabs, status, closed } = await closeWorkingTab([null], (stop) => stop)
+
+  expect(tabs.tabs).toEqual([])
+  expect(closed).toEqual([sessionId])
+  expect(status).toBe("idle")
+})
+
+test("closing a tab leaves the agent running when settings.json turns stopping off", async () => {
+  const { tabs, status, closed } = await closeWorkingTab(
+    [`{ "tabs": { "stopAgentOnClose": false } }`],
+    (stop) => !stop,
+  )
+
+  expect(tabs.tabs).toEqual([])
+  expect(closed).toEqual([])
+  expect(status).toBe("working")
+})
+
+test("a change to settings.json is read again: turning stopping back on stops the agent", async () => {
+  const { sessionId, closed } = await closeWorkingTab(
+    [`{ "tabs": { "stopAgentOnClose": false } }`, `{ "tabs": { "stopAgentOnClose": true } }`],
+    (stop) => stop,
+  )
+
+  expect(closed).toEqual([sessionId])
+})
+
+test("an invalid settings.json keeps the previous settings", async () => {
+  const { status, closed } = await closeWorkingTab(
+    [`{ "tabs": { "stopAgentOnClose": false } }`, `{ "tabs": `],
+    (stop, problem) => !stop && problem === "notJson",
+  )
+
+  expect(closed).toEqual([])
+  expect(status).toBe("working")
+})
+
+test("closing a project stops the agents of its tabs", async () => {
+  const closed: string[] = []
+  const { sessionId } = await withServer(
+    newDatabase(),
+    (client) =>
+      Effect.gen(function* () {
+        const [sessionId] = yield* barOf(client, 1)
+        yield* client["session.sendMessage"]({ sessionId: sessionId!, messageId: "m1", text: "go" })
+        yield* until(statusOf(client, sessionId!), (status) => status === "working")
+        yield* client["project.close"]({ path: "/a/first" })
+        yield* until(statusOf(client, sessionId!), (status) => status === "idle")
+        return { sessionId: sessionId! }
+      }),
+    { turns: [working], closed },
+  )
+
+  expect(closed).toEqual([sessionId])
 })

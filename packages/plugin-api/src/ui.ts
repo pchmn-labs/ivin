@@ -1,11 +1,12 @@
 import { createElement } from "react"
 import type { ComponentType, ReactNode } from "react"
 import type { Session } from "@ivin/contracts/session"
+import type { Tab } from "@ivin/contracts/tab"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
 import type { ActionFailure, UiHost } from "./host-context.ts"
 
-export type { Session, TranscriptItem }
+export type { Session, Tab, TranscriptItem }
 export type MessageItem = Extract<TranscriptItem, { type: "message" }>
 export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
@@ -23,6 +24,8 @@ export interface SlotProps {
     readonly session: Session
     readonly isEmptyComposer: (target: EventTarget | null) => boolean
   }
+  // A section at the bottom of the selected project's sidebar column.
+  "sidebar.section": Record<string, never>
 }
 export type SlotName = keyof SlotProps
 
@@ -76,5 +79,7 @@ export const UiHostProvider = ({ host, children }: { host: UiHost; children?: Re
 
 export const useSession = (sessionId: string) => useHost().useSession(sessionId)
 export const useSessions = () => useHost().useSessions()
+export const useTabs = () => useHost().useTabs()
+export const useOpenTab = () => useHost().useOpenTab()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)

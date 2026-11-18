@@ -4,6 +4,7 @@ import { Effect, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { expect, test } from "vitest"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
 import { handlers, layerServices } from "./handlers.ts"
@@ -21,6 +22,7 @@ const watchWhileFileIs = (texts: ReadonlyArray<string | null>) =>
           Layer.provide(layerDatabase(":memory:")),
           Layer.provide(layerScripted([])),
           Layer.provide(layerKeybindingsFileOf(texts)),
+          Layer.provide(layerSettingsFileOf([])),
         ),
       ),
       Effect.scoped,

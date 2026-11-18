@@ -4,6 +4,7 @@ import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
+import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
 import { layerServices } from "./rpc/handlers.ts"
 import { serveOverPort } from "./rpc/serve.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
@@ -77,6 +78,7 @@ const startup = Effect.gen(function* () {
           layerHarness,
           layerLogger,
           layerFsKeybindingsFile(ivinHome),
+          layerFsSettingsFile(ivinHome),
         ),
       ),
     ),

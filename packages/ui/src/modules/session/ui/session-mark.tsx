@@ -1,8 +1,9 @@
-import type { SessionStatus } from "@ivin/contracts/session"
+import type { SessionMarkProps } from "@ivin/plugin-api/ui"
 import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
+import { statusLabel } from "../rules/status-label.ts"
 import "./session-mark.css"
 
-export function SessionMark({ status, label }: { status: SessionStatus; label: string }) {
+export function SessionMark({ status }: SessionMarkProps) {
   return (
     <span className="iv-session-mark" data-status={status}>
       <ClaudeMark />
@@ -20,7 +21,7 @@ export function SessionMark({ status, label }: { status: SessionStatus; label: s
           </svg>
         )}
       </span>
-      <span className="iv-visually-hidden">{label}</span>
+      <span className="iv-visually-hidden">{statusLabel(status)}</span>
     </span>
   )
 }

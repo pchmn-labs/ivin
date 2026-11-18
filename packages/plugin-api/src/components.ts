@@ -1,5 +1,6 @@
 import { createElement } from "react"
 import type { ComponentType, ReactElement, ReactNode } from "react"
+import type { Session } from "@ivin/contracts/session"
 import { useHost } from "./host-context.ts"
 
 export type IconName =
@@ -132,6 +133,8 @@ export interface BlockProps {
 export interface DisclosureProps {
   readonly summary: ReactNode
   readonly defaultOpen?: boolean
+  // "section" heads a group of rows in a list, such as a sidebar section.
+  readonly variant?: "default" | "section"
   readonly "data-testid"?: string
   readonly children?: ReactNode
 }
@@ -145,6 +148,28 @@ export interface StatusMarkProps {
   readonly status: "working" | "waiting" | "idle" | "failed"
   readonly label: string
   readonly showLabel?: boolean
+}
+
+export interface ListRowProps {
+  readonly leading?: ReactNode
+  readonly title: ReactNode
+  readonly meta?: ReactNode
+  readonly selected?: boolean
+  readonly attention?: boolean
+  readonly onSelect?: () => void
+  readonly actions?: ReactNode
+  readonly "aria-current"?: "page" | "true" | boolean
+  readonly "data-testid"?: string
+}
+
+// The session's harness mark, with its status over it and as its accessible name.
+export interface SessionMarkProps {
+  readonly status: Session["status"]
+}
+
+// "now", "5 min", "3 d"…, kept current while shown.
+export interface RelativeTimeProps {
+  readonly at: Session["lastActivityAt"]
 }
 
 export interface MarkdownProps {
@@ -202,6 +227,9 @@ export interface HostComponents {
   readonly ActionSheet: ComponentType<ActionSheetProps>
   readonly OptionList: ComponentType<OptionListProps>
   readonly ErrorMessage: ComponentType<ErrorMessageProps>
+  readonly ListRow: ComponentType<ListRowProps>
+  readonly SessionMark: ComponentType<SessionMarkProps>
+  readonly RelativeTime: ComponentType<RelativeTimeProps>
 }
 
 const hostComponent =
@@ -225,3 +253,6 @@ export const Markdown = hostComponent((c) => c.Markdown)
 export const ActionSheet = hostComponent((c) => c.ActionSheet)
 export const OptionList = hostComponent((c) => c.OptionList)
 export const ErrorMessage = hostComponent((c) => c.ErrorMessage)
+export const ListRow = hostComponent((c) => c.ListRow)
+export const SessionMark = hostComponent((c) => c.SessionMark)
+export const RelativeTime = hostComponent((c) => c.RelativeTime)

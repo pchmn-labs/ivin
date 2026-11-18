@@ -19,6 +19,8 @@ import { sendMessage } from "../modules/session/usecases/send-message.ts"
 import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
 import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
+import { layerCurrentSettings } from "../modules/setting/usecases/current-settings.ts"
+import { watchSettings } from "../modules/setting/usecases/watch-settings.ts"
 import { layerSqliteTabStore } from "../modules/tab/adapters/sqlite-tab-store.ts"
 import { closeTab } from "../modules/tab/usecases/close-tab.ts"
 import { listTabs } from "../modules/tab/usecases/list-tabs.ts"
@@ -29,7 +31,7 @@ import { getItems } from "../modules/transcript/usecases/get-items.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
 
-export const layerServices = layerSessionRuns.pipe(
+export const layerServices = Layer.mergeAll(layerSessionRuns, layerCurrentSettings).pipe(
   Layer.provideMerge(layerSessionFeed),
   Layer.provideMerge(
     Layer.mergeAll(
@@ -65,6 +67,7 @@ export const handlers = Rpcs.toLayer(
       "server.getVersion": () => getVersion,
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
+      "setting.watch": () => watchSettings,
       "project.open": ({ path }) => openProject(path),
       "project.close": ({ path }) => closeProject(path),
       "project.select": ({ path }) => selectProject(path),

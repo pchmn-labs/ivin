@@ -32,6 +32,8 @@ export class SessionRuns extends Context.Service<
     ) => Effect.Effect<void, ApprovalNotOpen>
     // No-op with no run.
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
+    // No-op with no run.
+    readonly stop: (sessionId: string) => Effect.Effect<void>
   }
 >()("ivin/server/SessionRuns") {}
 
@@ -264,6 +266,12 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             )
         }),
       interrupt: (sessionId) => Effect.suspend(() => runs.get(sessionId)?.interrupt ?? Effect.void),
+      stop: (sessionId) =>
+        Effect.suspend(() => {
+          const run = runs.get(sessionId)
+          // Closing the run's scope also interrupts the fiber that would have set the status.
+          return run ? run.end.pipe(Effect.andThen(setStatus(sessionId, "idle"))) : Effect.void
+        }),
     }
   }),
 )

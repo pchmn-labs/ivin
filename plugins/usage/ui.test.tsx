@@ -41,6 +41,8 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
   const host = {
     useSession: () => undefined,
     useSessions: () => [],
+    useTabs: () => [],
+    useOpenTab: () => () => {},
     useTranscript: () => items,
     useAnswerApproval: () => async () => undefined,
     components: hostComponents,
