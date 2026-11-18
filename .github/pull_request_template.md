@@ -40,7 +40,7 @@
 
 ## Screenshots
 
-<!-- Only when the PR visibly changes a screen: one or two captures that show it. Delete this section otherwise. -->
+<!-- Only when the PR changes a screen enough that a reviewer wants to see it: one or two captures, uploaded as the launch-ivin skill says. Delete this section otherwise. -->
 
 ## Test plan
 

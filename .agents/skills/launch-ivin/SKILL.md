@@ -21,7 +21,7 @@ To see another state, add a step to `apps/desktop/scripts/shot.ts`; the helpers 
 
 ## In a pull request
 
-A pull request that visibly changes a screen shows it under its Screenshots section; any other pull request deletes that section. Pick the one or two `shot` PNGs of the branch that show the change, then run `.agents/skills/launch-ivin/pr-shots.sh <png>...` from the branch. It pushes them to the `pr-screenshots` branch, outside the code, and prints the Markdown to paste into the body.
+The template's Screenshots section says when a pull request needs one. Pick the one or two `shot` PNGs of the branch that show the change, then run `.agents/skills/launch-ivin/pr-shots.sh <png>...` from the branch. It pushes them to `pr-screenshots`, a branch that holds only screenshots and is never merged, and prints the Markdown to paste into the body. When no step of `shot` shows the change, delete the section rather than add a step for it.
 
 ## Other tools
 
