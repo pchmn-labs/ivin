@@ -6,7 +6,12 @@ export {
   type StartInput,
   type UserMessage,
 } from "./shared/harness-provider.ts"
-export { demoAnswer, demoScript, demoUsage } from "./modules/scripted/adapters/demo-script.ts"
+export {
+  demoAnswer,
+  demoApprovalScript,
+  demoScript,
+  demoUsage,
+} from "./modules/scripted/adapters/demo-script.ts"
 export {
   layerScripted,
   scriptedFailure,

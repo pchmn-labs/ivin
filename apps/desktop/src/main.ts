@@ -19,7 +19,9 @@ if (openInBackground && process.platform === "darwin") app.setActivationPolicy("
 const serverEntry = app.isPackaged
   ? join(app.getAppPath(), "server/main.js")
   : join(import.meta.dirname, "../../server/dist/main.js")
-const rendererEntry = join(app.getAppPath(), "renderer/index.html")
+const rendererEntry = app.isPackaged
+  ? join(app.getAppPath(), "renderer/index.html")
+  : join(import.meta.dirname, "../../../packages/ui/dist/index.html")
 
 process.on("uncaughtException", (error) => {
   console.error(error)

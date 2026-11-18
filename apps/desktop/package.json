@@ -9,6 +9,7 @@
     "dev": "vp pack && IVIN_DEV_URL=http://localhost:5173 electron .",
     "build": "vp pack",
     "package": "electron-builder --config electron-builder.yml",
+    "shot": "pnpm --filter @ivin/server --filter @ivin/ui build && vp pack && node scripts/shot.ts",
     "e2e": "playwright test --config e2e/playwright.config.ts",
     "typecheck": "tsc --noEmit"
   },
