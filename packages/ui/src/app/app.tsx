@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { ProjectColumn } from "../modules/project/ui/project-column.tsx"
@@ -14,6 +14,8 @@ import { builtinPlugins } from "./builtin-plugins.ts"
 import { MainTopBar } from "./main-top-bar.tsx"
 import { ShellControls } from "./shell-controls.tsx"
 import { getVersionAtom } from "../modules/server/atoms/get-version.ts"
+import { useCommandHandler } from "../modules/command/hooks/use-command-handler.ts"
+import { KeybindingsFileProblem } from "../modules/keybinding/ui/keybindings-file-problem.tsx"
 import "./app.css"
 
 export function App() {
@@ -25,17 +27,7 @@ export function App() {
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [])
   useRecordSessionVisits()
   useReportUncaughtErrors()
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "\\") {
-        event.preventDefault()
-        toggleSidebar()
-      }
-    }
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [toggleSidebar])
+  useCommandHandler("sidebar.toggle", toggleSidebar, projectPath !== null)
 
   const connection = AsyncResult.match(result, {
     onInitial: () => ({ state: "connecting", text: "Connecting to the server…" }),
@@ -57,6 +49,7 @@ export function App() {
           <main className="iv-app__main">
             <MainTopBar projectPath={null} controls={null} />
             <OpenFolderError />
+            <KeybindingsFileProblem />
             <NoProject />
           </main>
           <div className="iv-app__corner">{version}</div>
@@ -86,6 +79,7 @@ export function App() {
               }
             />
             <OpenFolderError />
+            <KeybindingsFileProblem />
             <TabView projectPath={projectPath} />
           </main>
         </div>

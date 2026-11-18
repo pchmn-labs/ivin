@@ -42,10 +42,16 @@ export const launchPackagedApp = (
     env: options.fakeClaudeBin
       ? {
           ...process.env,
+          IVIN_HOME: join(userDataDir, ".ivin"),
           IVIN_BACKGROUND: "1",
           IVIN_HARNESS: "claude",
           PATH: `${options.fakeClaudeBin}${delimiter}${process.env["PATH"] ?? ""}`,
         }
-      : { ...process.env, IVIN_BACKGROUND: "1", IVIN_HARNESS: "scripted" },
+      : {
+          ...process.env,
+          IVIN_HOME: join(userDataDir, ".ivin"),
+          IVIN_BACKGROUND: "1",
+          IVIN_HARNESS: "scripted",
+        },
   })
 }

@@ -1,4 +1,5 @@
 import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
+import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session, SessionStatus } from "@ivin/contracts/session"
@@ -29,6 +30,8 @@ export interface FakeServer {
   // Makes the next tab.list wait until `release` is called.
   readonly holdNextTabList: () => { readonly release: () => void }
   readonly tabOrder: (projectPath: string) => ReadonlyArray<string>
+  // Streams the user's keybindings to `keybinding.watch`, as after a change to the file.
+  readonly setUserKeybindings: (state: UserKeybindings) => void
 }
 
 export const makeFakeServer = (options: { readonly project?: Project } = {}): FakeServer => {
@@ -40,6 +43,8 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   const transcripts = new Map<string, Array<TranscriptItem>>()
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
   const sessionChanges = Effect.runSync(PubSub.unbounded<Session>())
+  let userKeybindings: UserKeybindings = { keybindings: [], problem: null }
+  const keybindingChanges = Effect.runSync(PubSub.unbounded<UserKeybindings>())
   let clock = 1_000
   let nextId = 1
   let hold: { readonly wait: Promise<boolean> } | null = null
@@ -104,6 +109,12 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   const client = {
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
+    "keybinding.watch": () =>
+      Stream.unwrap(
+        Effect.map(PubSub.subscribe(keybindingChanges), (subscription) =>
+          Stream.make(userKeybindings).pipe(Stream.concat(Stream.fromSubscription(subscription))),
+        ),
+      ),
     "project.list": () => Effect.sync(openProjects),
     "project.open": ({ path }: { path: string }) =>
       Effect.sync(() => {
@@ -315,5 +326,9 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
       return { release }
     },
     tabOrder: (projectPath) => tabsOf(projectPath).map((tab) => tab.sessionId),
+    setUserKeybindings: (state) => {
+      userKeybindings = state
+      Effect.runSync(PubSub.publish(keybindingChanges, state))
+    },
   }
 }

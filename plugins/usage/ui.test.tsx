@@ -31,6 +31,8 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
       add: (slot, component) =>
         void added.push({ slot, component: component as ComponentType<never> }),
     },
+    commands: { register: () => undefined },
+    keybindings: { add: () => undefined },
   }
   activate(ctx)
   const Status = added.find((a) => a.slot === "composer.status")!.component as ComponentType<

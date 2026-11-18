@@ -7,6 +7,9 @@ import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { App } from "./app.tsx"
 
+const mac = navigator.platform.includes("Mac")
+const mod = mac ? "Meta" : "Control"
+
 const mountApp = async (
   titles: readonly [string, string] = ["First", "Second"],
   options: { otherProject?: boolean } = {},
@@ -52,8 +55,57 @@ test("the sidebar card holds the project and its sessions, and the toggle hides 
   await expect.element(page.getByRole("complementary")).not.toBeInTheDocument()
   await expect.element(page.getByRole("button", { name: "Toggle sidebar" })).toBeVisible()
 
-  await userEvent.keyboard("{Control>}\\{/Control}")
+  await userEvent.keyboard(`{${mod}>}\\{/${mod}}`)
   await expect.element(page.getByRole("complementary")).toBeVisible()
+})
+
+test("the sidebar toggle shows its key in its tooltip", async () => {
+  await mountApp()
+  await page.getByRole("button", { name: "Toggle sidebar" }).hover()
+  await expect
+    .element(page.getByText(mac ? "Toggle sidebar (⌘\\)" : "Toggle sidebar (Ctrl+\\)"))
+    .toBeVisible()
+})
+
+test("keybindings.json moves the sidebar toggle to mod+b while the app runs", async () => {
+  const server = await mountApp()
+  await expect.element(page.getByRole("complementary")).toBeVisible()
+  server.setUserKeybindings({
+    keybindings: [
+      { key: "mod+b", command: "sidebar.toggle", when: null },
+      { key: "mod+\\", command: "-sidebar.toggle", when: null },
+    ],
+    problem: null,
+  })
+  await page.getByRole("button", { name: "Toggle sidebar" }).hover()
+  await expect
+    .element(page.getByText(mac ? "Toggle sidebar (⌘B)" : "Toggle sidebar (Ctrl+B)"))
+    .toBeVisible()
+
+  await userEvent.keyboard(`{${mod}>}\\{/${mod}}`)
+  await new Promise((resolve) => setTimeout(resolve, 100))
+  await expect.element(page.getByRole("complementary")).toBeVisible()
+  await userEvent.keyboard(`{${mod}>}b{/${mod}}`)
+  await expect.element(page.getByRole("complementary")).not.toBeInTheDocument()
+})
+
+test("an invalid keybindings.json is reported and keeps the previous keybindings", async () => {
+  const server = await mountApp()
+  const moved = [
+    { key: "mod+b", command: "sidebar.toggle", when: null },
+    { key: "mod+\\", command: "-sidebar.toggle", when: null },
+  ]
+  server.setUserKeybindings({ keybindings: moved, problem: null })
+  server.setUserKeybindings({ keybindings: moved, problem: { reason: "notJson", entry: null } })
+  await expect
+    .element(page.getByRole("alert").getByText(/keybindings\.json is not valid JSON\./))
+    .toBeVisible()
+
+  await userEvent.keyboard(`{${mod}>}b{/${mod}}`)
+  await expect.element(page.getByRole("complementary")).not.toBeInTheDocument()
+
+  server.setUserKeybindings({ keybindings: [], problem: null })
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
 })
 
 test("back and forward walk the sessions opened in this window", async () => {

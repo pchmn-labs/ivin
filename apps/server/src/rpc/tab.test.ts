@@ -8,6 +8,7 @@ import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 
 const newDatabase = () => {
   const db = new DatabaseSync(":memory:")
@@ -27,6 +28,7 @@ const withServer = <A, E>(
           Layer.provide(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
+          Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerScripted([])),
         ),
       ),

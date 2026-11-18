@@ -1,4 +1,5 @@
 import { IconButton } from "../core/components/button/button.tsx"
+import { useKeyHint } from "../modules/keybinding/hooks/use-key-hint.ts"
 import { useSessionHistory } from "../modules/session/hooks/use-session-history.ts"
 import "./shell-controls.css"
 
@@ -10,12 +11,14 @@ export interface ShellControlsProps {
 
 export function ShellControls({ projectPath, sidebarOpen, onToggleSidebar }: ShellControlsProps) {
   const history = useSessionHistory(projectPath)
+  const toggleHint = useKeyHint("Toggle sidebar", "sidebar.toggle")
   return (
     <div className="iv-shell-controls" data-sidebar={sidebarOpen ? "open" : "closed"}>
       <span className="iv-shell-controls__lights" aria-hidden="true" />
       <IconButton
         icon="panel-left"
         label="Toggle sidebar"
+        tooltip={toggleHint}
         size="sm"
         aria-expanded={sidebarOpen}
         onClick={onToggleSidebar}

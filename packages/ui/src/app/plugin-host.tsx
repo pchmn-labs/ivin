@@ -8,6 +8,7 @@ import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
 import { hostComponents } from "./host-components.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
+import { useKeyboardHandler } from "../modules/keybinding/hooks/use-keyboard-handler.ts"
 
 const NO_PROJECT = ""
 
@@ -37,6 +38,7 @@ export function PluginsProvider({
   children: ReactNode
 }) {
   const registry = useContext(RegistryContext)
+  useKeyboardHandler()
   // Children wait for activation so a virtual list never measures rows that have no contributions yet.
   const [active, setActive] = useState(false)
   useEffect(() => {

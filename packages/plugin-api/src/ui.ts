@@ -33,6 +33,19 @@ export interface SlotOptions {
   readonly tool?: string
 }
 
+export interface CommandOptions {
+  readonly title: string
+  readonly run: () => void
+}
+
+export interface KeybindingOptions {
+  // `mod` is ⌘ on macOS and Ctrl elsewhere: "mod+shift+p", "escape".
+  readonly key: string
+  readonly command: string
+  // An area of the window, such as "composer"; everywhere when absent.
+  readonly when?: string
+}
+
 export interface UiContext {
   readonly pluginId: string
   readonly slots: {
@@ -41,6 +54,13 @@ export interface UiContext {
       component: ComponentType<SlotProps[S]>,
       options?: SlotOptions,
     ) => void
+  }
+  readonly commands: {
+    register: (id: string, command: CommandOptions) => void
+  }
+  // A default keybinding, which the user's ~/.ivin/keybindings.json can change.
+  readonly keybindings: {
+    add: (keybinding: KeybindingOptions) => void
   }
 }
 

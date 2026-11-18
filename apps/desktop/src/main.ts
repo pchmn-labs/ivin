@@ -93,6 +93,8 @@ app.on("will-quit", (event) => {
   server.postMessage({ type: "shutdown" })
 })
 
+const ivinHome = process.env["IVIN_HOME"] ?? join(homedir(), ".ivin")
+
 void app.whenReady().then(() => {
   if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
   server = utilityProcess.fork(
@@ -101,7 +103,9 @@ void app.whenReady().then(() => {
       "--database",
       join(app.getPath("userData"), "ivin.db"),
       "--log",
-      join(homedir(), ".ivin", "logs", "ivin.log"),
+      join(ivinHome, "logs", "ivin.log"),
+      "--home",
+      ivinHome,
     ],
     { serviceName: "ivin-server", stdio: "inherit" },
   )

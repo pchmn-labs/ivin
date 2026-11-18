@@ -220,3 +220,64 @@ test("Enter in a composer with text sends the message and leaves the approval op
   await expect.element(page.getByText("also this", { exact: true })).toBeVisible()
   await expect.element(page.getByText("Approval needed")).toBeVisible()
 })
+
+test("with composer.send moved to mod+enter and enter removed, Enter inserts a new line", async () => {
+  const server = await mountSession("idle")
+  server.setUserKeybindings({
+    keybindings: [
+      { key: "mod+enter", command: "composer.send", when: "composer" },
+      { key: "enter", command: "-composer.send", when: "composer" },
+    ],
+    problem: null,
+  })
+  const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
+  const field = page.getByRole("textbox", { name: "Message" })
+  await field.click()
+  await userEvent.keyboard("one{Enter}two")
+  await expect.element(field).toHaveValue("one\ntwo")
+  await page.getByRole("button", { name: "Send" }).hover()
+  await expect.element(page.getByText(/^Send \((⌘|Ctrl\+)Enter\)$/)).toBeVisible()
+
+  await field.click()
+  await userEvent.keyboard(`{${mod}>}{Enter}{/${mod}}`)
+  await expect.element(field).toHaveValue("")
+  await expect.element(page.getByTestId("transcript-item")).toBeVisible()
+})
+
+test("Shift+Enter in the composer inserts a new line and does not send", async () => {
+  await mountSession("idle")
+  const field = page.getByRole("textbox", { name: "Message" })
+  await field.click()
+  await userEvent.keyboard("one{Shift>}{Enter}{/Shift}two")
+  await expect.element(field).toHaveValue("one\ntwo")
+})
+
+test("Escape closes an open menu without interrupting the session", async () => {
+  const server = makeFakeServer()
+  const at = DateTime.makeUnsafe(0)
+  server.sessions.set("s1", {
+    id: "s1",
+    projectPath: "/p",
+    title: "t",
+    model: "sonnet",
+    status: "working",
+    createdAt: at,
+    lastActivityAt: at,
+  })
+  server.openProject("/p")
+  server.openTab("s1")
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <SessionList projectPath="/p" projectName="p" />
+        <SessionView projectPath="/p" sessionId="s1" />
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+  await page.getByRole("button", { name: "Session actions" }).click()
+  await expect.element(page.getByRole("menuitem", { name: "Rename" })).toBeVisible()
+  await userEvent.keyboard("{Escape}")
+  await expect.element(page.getByRole("menuitem", { name: "Rename" })).not.toBeInTheDocument()
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  expect(server.sessions.get("s1")?.status).toBe("working")
+})

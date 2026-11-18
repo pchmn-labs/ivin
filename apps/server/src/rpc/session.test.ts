@@ -17,6 +17,7 @@ import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 
 const turn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: { from: "scripted" } },
@@ -51,6 +52,7 @@ const withServer = <A, E>(
           Layer.provide(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
+          Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerScripted(turns, { reportSession: true, ...options, sent })),
         ),
       ),
@@ -659,6 +661,7 @@ test("a run started by one client is seen, interrupted and continued by another,
           Layer.provideMerge(
             Layer.mergeAll(
               Layer.succeed(Database)(db),
+              layerKeybindingsFileOf([]),
               layerScripted([[running, said("Working")], [said("Noted")]], { sent, interrupted }),
             ),
           ),

@@ -3,6 +3,7 @@ import { Cause, Effect, Fiber, Layer } from "effect"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
+import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
 import { layerServices } from "./rpc/handlers.ts"
 import { serveOverPort } from "./rpc/serve.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
@@ -21,8 +22,11 @@ const { parentPort } = process as unknown as {
 }
 
 const {
-  values: { database: databasePath, log: logPath },
-} = parseArgs({ options: { database: { type: "string" }, log: { type: "string" } }, strict: false })
+  values: { database: databasePath, log: logPath, home: homePath },
+} = parseArgs({
+  options: { database: { type: "string" }, log: { type: "string" }, home: { type: "string" } },
+  strict: false,
+})
 
 const fail = (message: string): never => {
   process.stderr.write(`${message}\n`)
@@ -32,6 +36,8 @@ if (typeof databasePath !== "string") fail("Missing --database <path>")
 if (typeof logPath !== "string") fail("Missing --log <path>")
 const path = databasePath as string
 const layerLogger = layerErrorLogFile(logPath as string)
+if (typeof homePath !== "string") fail("Missing --home <path>, the folder of the user's files")
+const ivinHome = homePath as string
 
 const harnessId = process.env["IVIN_HARNESS"] ?? "claude"
 const layerHarnesses = {
@@ -65,7 +71,14 @@ parentPort.on("message", ({ data, ports: [port] }) => {
 const startup = Effect.gen(function* () {
   const context = yield* Layer.build(
     layerServices.pipe(
-      Layer.provideMerge(Layer.mergeAll(layerDatabase(path), layerHarness, layerLogger)),
+      Layer.provideMerge(
+        Layer.mergeAll(
+          layerDatabase(path),
+          layerHarness,
+          layerLogger,
+          layerFsKeybindingsFile(ivinHome),
+        ),
+      ),
     ),
   )
   serve = (port) => {
