@@ -40,38 +40,30 @@ const tool = (status: ToolCallItem["status"], output: string | null): ToolCallIt
   output,
 })
 
-test("a tool call shows its name, input and result", async () => {
+test("a tool call shows its icon, name and input on one row, its result behind the chevron", async () => {
   await mount(tool("done", "file contents"))
-  await expect.element(page.getByText("Read")).toBeVisible()
-  await expect.element(page.getByText("/a.ts")).toBeVisible()
+  const row = page.getByTestId("tool-output").element().querySelector("summary")!
+  expect(row.textContent).toBe("Read/a.ts")
   await expect.element(page.getByText("file contents")).not.toBeVisible()
-  await page.getByText("Output").click()
+  await page.getByText("Read").click()
   await expect.element(page.getByText("file contents")).toBeVisible()
 })
 
-test.each([
-  ["running", "running"],
-  ["done", "succeeded"],
-  ["error", "failed"],
-] as const)("a %s tool call reads %s", async (status, label) => {
-  await mount(tool(status, status === "running" ? null : "out"))
-  await expect.element(page.getByTestId("tool-status")).toHaveTextContent(label)
-})
-
-test("a long result is folded behind a preview", async () => {
-  const text = Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n")
-  await mount(tool("done", text))
-  const output = page.getByTestId("tool-output")
-  await expect.element(output).toBeVisible()
-  expect(output.element().querySelector("summary")?.textContent).toBe("line 0\nline 1\nline 2")
-  const code = output.element().querySelector("pre")!
-  expect(code.checkVisibility()).toBe(false)
-  output.element().querySelector("summary")!.click()
-  expect(code.checkVisibility()).toBe(true)
+test("a running tool call shows a spinner, a failed one says so, a finished one shows nothing", async () => {
+  await mount(tool("running", null))
+  await expect
+    .element(page.getByTestId("tool-status").getByRole("img", { name: "running" }))
+    .toBeVisible()
+  await mount({ ...tool("error", "boom"), id: "i1" })
+  await expect.element(page.getByText("failed")).toBeVisible()
+  await mount({ ...tool("done", "out"), id: "i2", name: "Bash", input: { command: "ls" } })
+  expect(
+    page.getByText("ls").element().closest("summary")?.querySelector('[data-testid="tool-status"]'),
+  ).toBeNull()
 })
 
 test("a tool without a main argument shows its full input in the folded details", async () => {
   await mount({ ...tool("done", "out"), name: "Custom", input: { a: 1 } })
-  await page.getByText("Output").click()
+  await page.getByText("Custom").click()
   await expect.element(page.getByText(/"a": 1/)).toBeVisible()
 })

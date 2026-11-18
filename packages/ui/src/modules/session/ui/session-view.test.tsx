@@ -71,7 +71,7 @@ test("the transcript renders through the plugins and the status line shows the u
   )
 
   await expect.element(page.getByText("hello", { exact: true })).toBeVisible()
-  await expect.element(page.getByTestId("tool-status")).toHaveTextContent("succeeded")
+  await expect.element(page.getByTestId("tool-output")).toBeVisible()
   expect(document.querySelectorAll('[data-testid="transcript-item"]')).toHaveLength(2)
   await expect
     .element(page.getByTestId("composer-status"))
@@ -105,7 +105,7 @@ const mountSession = async (status: "idle" | "working" | "waiting") => {
   return server
 }
 
-test("the status shows above the composer and follows the server", async () => {
+test("the composer announces the status and follows the server", async () => {
   const server = await mountSession("idle")
   await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
   server.setStatus("s1", "waiting")
@@ -116,7 +116,7 @@ test("the status shows above the composer and follows the server", async () => {
 
 test("the Interrupt button shows only while the session works and interrupts it", async () => {
   const server = await mountSession("idle")
-  await expect.element(page.getByTestId("composer-session-status")).toBeVisible()
+  await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
   expect(page.getByRole("button", { name: "Interrupt" }).query()).toBeNull()
 
   server.setStatus("s1", "working")

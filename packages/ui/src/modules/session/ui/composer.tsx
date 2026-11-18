@@ -5,7 +5,6 @@ import { Slot } from "../../../app/slot-renderer.tsx"
 import { Button } from "../../../core/components/button/button.tsx"
 import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
-import { StatusMark } from "../../../core/components/status-mark/status-mark.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { TextArea } from "../../../core/components/text-field/text-field.tsx"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
@@ -68,8 +67,13 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
               </span>
             )}
             {session && (
-              <span data-testid="composer-session-status">
-                <StatusMark status={session.status} label={statusLabel(session.status)} showLabel />
+              // The state shows on the session mark; screen readers hear it from here.
+              <span
+                className="iv-visually-hidden"
+                role="status"
+                data-testid="composer-session-status"
+              >
+                {statusLabel(session.status)}
               </span>
             )}
             <div data-testid="composer-status">

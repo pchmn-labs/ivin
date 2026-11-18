@@ -46,14 +46,7 @@ function Message({ item }: SlotProps["transcript.message"]) {
       </Block>
     )
   }
-  return (
-    <Stack gap={1}>
-      <Text size="xs" tone="muted" weight="medium">
-        Claude
-      </Text>
-      <Markdown text={item.text} />
-    </Stack>
-  )
+  return <Markdown text={item.text} />
 }
 
 export const activate = defineUi((ctx) => {

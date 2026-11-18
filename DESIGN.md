@@ -288,8 +288,8 @@ The palette is green-tinted neutrals, one yew-green accent, one cursor red, six 
 - **Title Large** (600, 16px/24px): dialog titles and level-2 Markdown headings.
 - **Title** (600, 14px/20px): the project name at the head of the session list and level-3/4 Markdown headings.
 - **Body** (400, 13px/20px): the default for the whole app: transcript text, row titles, options, controls.
-- **Label** (500, 12px/16px): small buttons, field labels, tooltips, status labels, the session title in the main title bar, the composer's model, tool arguments and tool status.
-- **Caption** (500, 11px/16px): the "Claude" speaker label, the session group labels with their counts, the project badge (600), and key hints in the action sheet and option list.
+- **Label** (500, 12px/16px): small buttons, field labels, tooltips, status labels, the session title in the main title bar, the composer's model, tool arguments and a failed tool's status.
+- **Caption** (500, 11px/16px): the session group labels with their counts, the project badge (600), and key hints in the action sheet and option list.
 - **Mono** (400, 12px/20px): code blocks, tool arguments, file paths and the approval detail (clamped to three lines). Inline code is 0.92em.
 
 Weights are 400, 500 and 600 only. Times, counts and costs use tabular figures.
@@ -348,7 +348,7 @@ Phosphor icons at regular weight, 16px by default and 14px inline with small tex
 ### Blocks
 - **Use:** the box for a transcript item. 1px hairline, 6px corners, padding 8, 12 or 16px.
 - **Tones:** plain (transparent); subtle (deep ground, the default); accent (yew at 8% fill and 40% border); danger (red wash and a 40% red border, for errors); bubble (the user's message, see below).
-- **Bubble:** the user's message, full column width, no border, 10px by 12px padding, on the bubble colour, with the 10/10/4/10 corner shape. Claude's answer is never a bubble: it is a "Claude" caption over plain Markdown.
+- **Bubble:** the user's message, full column width, no border, 10px by 12px padding, on the bubble colour, with the 10/10/4/10 corner shape. Claude's answer is never a bubble: it is plain Markdown with no speaker label.
 
 ### Inputs / Fields
 - **Style:** raised ground, strong hairline, 6px corners, 28px tall. The text area grows with its content up to 240px. Placeholders are faint.
@@ -363,7 +363,7 @@ Phosphor icons at regular weight, 16px by default and 14px inline with small tex
 The signature of the session list: the 16px Claude mark with a small circular overlay at its bottom-right, cut out from the card ground by a ring of the card colour. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px red disc with a "!". Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
 
 ### Status Mark
-The labelled status in the composer. Working is a 6px yew dot pulsing over 1.6s (`--iv-duration-pulse`). Waiting is a larger 8px red dot. Idle is a faint 1.5px ring. Failed is red. It always carries a label, visible or hidden.
+A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv-duration-pulse`). Waiting is a larger 8px red dot. Idle is a faint 1.5px ring. Failed is red. It always carries a label, visible or hidden.
 
 ### Navigation
 - **Project rail:** project creatures in 32px buttons with 10px corners, a red pill badge (16px tall, 11px semibold tabular count, ringed in the card colour) for waiting sessions, the open-folder icon button and the connection dot (faint, yew when connected, red when failed). A tooltip on the right names the project, its path and its waiting count.
@@ -372,7 +372,7 @@ The labelled status in the composer. Working is a 6px yew dot pulsing over 1.6s 
 - **Tabs:** 32px tall, muted 500-weight labels, a 2px yew underline on the active tab, over a hairline.
 
 ### Composer
-A raised 10px-corner surface with a strong hairline, docked at the bottom of the centred column. The text field sits flat inside it, and the whole surface takes the focus ring colour when focused. Below the field: the session's model, its status and usage on the left, Interrupt (secondary, while running) and Send (primary) on the right. Plugins can dock a sheet on its top edge through the `composer.above` slot.
+A raised 10px-corner surface with a strong hairline, docked at the bottom of the centred column. The text field sits flat inside it, and the whole surface takes the focus ring colour when focused. Below the field: the session's model and usage on the left (the status shows only on the session mark, with a hidden label here for screen readers), Interrupt (secondary, while running) and Send (primary) on the right. Plugins can dock a sheet on its top edge through the `composer.above` slot.
 
 ### Action Sheet
 A raised panel docked on the composer's top edge: 10px top corners, no bottom border, and the composer's top corners go square so the two read as one surface. It slides up 8px and fades in over 180ms (`--iv-duration-base`) on `--iv-ease-out`. A head row carries an optional muted icon, a 500-weight title and a mono detail clamped to three lines; a faint caption hint sits below the content. In the danger tone the outline turns to the dashed red outline, the composer's top edge turns dashed red with it, and the title turns red.
@@ -384,7 +384,7 @@ A keyboard-first single choice inside a sheet: 36px options with 6px corners, 2p
 Menus have 10px corners, 4px padding and 28px items with 4px corners; the highlighted item takes the active wash and destructive items are red. Tooltips are 12px text with 4px corners. Dialogs are at most 420px wide, with 20px padding, a 16px semibold title, a muted description and right-aligned actions. All three fade and scale from 0.97 (120ms for menus and tooltips, 180ms for dialogs) on `cubic-bezier(0.22, 1, 0.36, 1)`, and reduced motion removes it.
 
 ### Disclosure and Code
-Disclosures (thinking, tool output) use a muted summary with a chevron that rotates 90 degrees when open. Code blocks use the deep ground, 12px mono and 6px corners, and scroll past 240px.
+Disclosures (thinking, tool output) use a muted summary with a chevron that rotates 90 degrees when open. A tool call is one row: chevron, the tool's icon (terminal for Bash, file for Read, pencil for edits, a wrench otherwise), its name and its mono argument; a spinner while it runs, a red "failed" when it fails, nothing once it succeeds. Its input and output open under the chevron. Code blocks use the deep ground, 12px mono and 6px corners, and scroll past 240px.
 
 ### Pending designs
 Decided but not built, because the data they need does not exist yet. Build them this way when it arrives.
