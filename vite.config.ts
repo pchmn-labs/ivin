@@ -6,6 +6,7 @@ export default defineConfig({
       {
         test: {
           name: "node",
+          testTimeout: 1000,
           setupFiles: ["tools/test-setup/hide-real-claude.ts"],
           include: [
             "apps/*/src/**/*.test.ts",

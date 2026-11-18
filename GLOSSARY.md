@@ -24,3 +24,10 @@ Typed, namespaced metadata attached to a session or a project, written by plugin
 
 **Tab**:
 Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Its sub-views (files, diff, terminal) come later.
+
+**Command**:
+An action with an id and a title that the user, a keybinding, the CLI or a plugin can run.
+
+**Keybinding**:
+A key mapped to a command, possibly limited to one area of the window.
+_Avoid_: hotkey

@@ -13,7 +13,7 @@ about: A deliverable an agent can pick up and demo on its own
 
 ## Done when
 
-<!-- Checks a reviewer can run, the green commands included. -->
+<!-- Checks a reviewer can run, the green commands included. A user-facing ticket also checks what docs/finished-features.md asks. -->
 
 - [ ]
 - [ ]

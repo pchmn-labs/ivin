@@ -1,0 +1,22 @@
+---
+name: launch-ivin
+description: Launch ivin to show it to the user or to screenshot it yourself. Use when running or screenshotting ivin, or checking a change in the real app.
+---
+
+# Launch ivin
+
+## The user sees it
+
+Run `pnpm dev` in the background, then tell the user the app is up so they switch to it themselves.
+
+## You see it
+
+Run `pnpm --filter @ivin/desktop shot` (about 10 s). It plays a scenario ending on a tool call waiting for approval, and prints the path of one window-only PNG per step in `apps/desktop/shots/`.
+
+Read one PNG at a time: each is a full-resolution capture, and several at once overflow the context.
+
+To see another state, add a step to `apps/desktop/scripts/shot.ts`; the helpers of `apps/desktop/e2e/` drive the window.
+
+## Other tools
+
+Only `shot` captures the window: `screencapture` shows the wallpaper and `osascript` fails, because the terminal has neither the Screen Recording nor the Accessibility permission. `pnpm package` takes minutes and belongs to the e2e tests.

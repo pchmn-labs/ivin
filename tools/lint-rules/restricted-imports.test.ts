@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process"
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join, resolve } from "node:path"
-import { afterAll, describe, expect, test } from "vitest"
+import { afterAll, beforeAll, describe, expect, test } from "vitest"
 
 const root = resolve(import.meta.dirname, "../..")
 const adr = "docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
@@ -16,21 +16,33 @@ writeFileSync(join(sandbox, ".oxlintrc.json"), JSON.stringify(config))
 
 afterAll(() => rmSync(sandbox, { recursive: true, force: true }))
 
-const restrictedImports = (file: string, source: string): string[] => {
-  const path = join(sandbox, file)
-  mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, source)
+type Diagnostic = { code: string; message: string; help?: string; filename: string }
+
+// One lint run for every fixture: a run per case costs about a second under load.
+const lintOutput = new Map<string, string[]>()
+const fixturePath = new Map<string, string>()
+const lintAll = (cases: [string, string, string][]) => {
+  const paths = cases.map(([file, , source], i) => {
+    const path = join(sandbox, file.replace(/(\.\w+)$/, `-${i}$1`))
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(path, source)
+    return path
+  })
   const run = spawnSync(
     join(root, "node_modules/.bin/vp"),
-    ["lint", "-c", join(sandbox, ".oxlintrc.json"), "-f", "json", path],
-    { encoding: "utf8" },
+    ["lint", "-c", join(sandbox, ".oxlintrc.json"), "-f", "json", ...paths],
+    { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 },
   )
-  const { diagnostics } = JSON.parse(run.stdout) as {
-    diagnostics: { code: string; message: string; help?: string }[]
-  }
-  return diagnostics
-    .filter((d) => d.code === "eslint(no-restricted-imports)")
-    .map((d) => `${d.message} ${d.help ?? ""}`)
+  const { diagnostics } = JSON.parse(run.stdout) as { diagnostics: Diagnostic[] }
+  paths.forEach((path, i) => {
+    fixturePath.set(`${cases[i]![0]}|${cases[i]![1]}`, path)
+    lintOutput.set(
+      path,
+      diagnostics
+        .filter((d) => d.code === "eslint(no-restricted-imports)" && d.filename === path)
+        .map((d) => `${d.message} ${d.help ?? ""}`),
+    )
+  })
 }
 
 const forbidden: [string, string, string][] = [
@@ -171,19 +183,24 @@ const allowed: [string, string, string][] = [
   ["plugins/demo/index.ts", "its own files", `import { a } from "./util.ts"\nexport { a }\n`],
 ]
 
+const restrictedImports = (file: string, what: string): string[] =>
+  lintOutput.get(fixturePath.get(`${file}|${what}`)!)!
+
 describe("restricted imports", () => {
+  beforeAll(() => lintAll([...forbidden, ...allowed]))
+
   test("a file under rules/ importing node:fs fails with a message citing ADR-0001", () => {
-    const [message] = restrictedImports("modules/session/rules/node-fs.ts", forbidden[0]![2])
+    const [message] = restrictedImports(forbidden[0]![0], forbidden[0]![1])
     expect(message).toContain(adr)
   })
 
-  test.each(forbidden)("%s may not import %s", (file, _what, source) => {
-    const messages = restrictedImports(file, source)
+  test.each(forbidden)("%s may not import %s", (file, what) => {
+    const messages = restrictedImports(file, what)
     expect(messages).toHaveLength(1)
     expect(messages[0]).toContain(adr)
   })
 
-  test.each(allowed)("%s may import %s", (file, _what, source) => {
-    expect(restrictedImports(file, source)).toEqual([])
+  test.each(allowed)("%s may import %s", (file, what) => {
+    expect(restrictedImports(file, what)).toEqual([])
   })
 })

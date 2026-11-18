@@ -194,7 +194,8 @@ interface HarnessRun {
 
 - Claude: `-p --output-format stream-json --input-format stream-json --verbose --include-partial-messages --thinking-display summarized --model <model>`, permission prompts over stdio. Without `--thinking-display summarized`, thinking arrives empty. Codex: `app-server` JSON-RPC. ACP: one generic client for Cursor, Devin, Grok, Hermes and others.
 - Reference implementations: T3 Code's provider layer and MonoCode's `src/integrations/harness`. Both are read before writing a provider, for the protocol details and edge cases they already solved (flags, message shapes, approval flow, resume, interrupts). Code is copied or adapted where it fits ivin's interfaces, with attribution; neither is a dependency, and nothing requires matching their structure or their Effect version.
-- The server picks the provider from `IVIN_HARNESS`, `claude` when unset; tests and the CI smoke run set it to `scripted`, which replays a recorded transcript and never spawns an agent.
+- The server picks the provider from `IVIN_HARNESS`, `claude` when unset; tests and the CI smoke run set it to `scripted`, which replays a recorded transcript and never spawns an agent. `scripted-approval` replays the same transcript, then a turn that waits for an approval; `pnpm --filter @ivin/desktop shot` uses it. An unpackaged main process loads the renderer from `packages/ui/dist`.
+- With `IVIN_BACKGROUND=1` the desktop app opens without taking focus: no Dock icon on macOS, window shown inactive. The e2e launch helper sets it.
 - Every spawned agent gets `IVIN_SESSION_ID` and `IVIN_SOCKET` in its environment, so `ivin` commands run by the agent apply to its own session with no argument.
 - Plugins can amend a spawn (`harness.beforeSpawn`: extra args, env, MCP servers, appended system prompt) and observe every event (`transcript.onEvent`).
 - `transcript.onEvent` is an observer: events are forwarded to the plugin host after they are persisted, and a slow plugin only delays itself.
@@ -352,7 +353,8 @@ Plugins declare no dependency on each other: that would bring load order, cascad
 ```
 ~/.ivin/
   settings.json        JSONC, watched
-  keybindings.json
+  keybindings.json     watched, key → command, see ADR-0003
+  logs/ivin.log        raw errors from the server and the UI, see ADR-0004
   themes/<id>.json     colours + CSS overriding the `--iv-` variables; filename is the id
   plugins/<id>/
   cache/plugins/       compiled bundles, by content hash
@@ -375,6 +377,7 @@ ivin plugin list | reload <id> | logs <id> | new <id>
 ivin plugin check <id>                                  # type-check against the plugin API
 ivin plugin enable|disable <id>
 ivin run <command> [--args json]                        # any plugin command
+ivin logs                                               # raw errors of the server and the UI, ADR-0004
 ivin doctor
 ivin --safe                                             # start with user and project plugins disabled
 ```

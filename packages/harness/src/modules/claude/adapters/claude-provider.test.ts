@@ -4,7 +4,7 @@ import { join } from "node:path"
 import { Effect, Stream } from "effect"
 import { expect, test, vi } from "vitest"
 import { HarnessProvider } from "../../../shared/harness-provider.ts"
-import { layerClaude } from "./claude-provider.ts"
+import { layerClaude, layerClaudeWith } from "./claude-provider.ts"
 
 // Spawns the real `claude` CLI and calls the API; kept out of CI.
 const real = process.env["IVIN_TEST_CLAUDE"] === "1" ? test : test.skip
@@ -147,7 +147,7 @@ setInterval(() => {}, 1000)`,
           yield* harness.interrupt
           yield* Effect.promise(() =>
             vi.waitFor(() => expect(existsSync(log) && readFileSync(log, "utf8")).toContain("\n"), {
-              timeout: 5_000,
+              timeout: 800,
             }),
           )
         }).pipe(Effect.provide(layerClaude), Effect.scoped),
@@ -179,16 +179,15 @@ setInterval(() => {}, 1000)`,
             model: "haiku",
             providerSessionId: null,
           })
-          yield* Effect.sleep("500 millis")
-        }).pipe(Effect.provide(layerClaude), Effect.scoped),
+          yield* Effect.promise(() => vi.waitFor(() => expect(existsSync(pidFile)).toBe(true)))
+        }).pipe(Effect.provide(layerClaudeWith("100 millis")), Effect.scoped),
       )
 
       const pid = Number(readFileSync(pidFile, "utf8"))
-      await new Promise((resolve) => setTimeout(resolve, 200))
-      expect(() => process.kill(pid, 0)).toThrow()
+      await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow())
     },
   )
-}, 15_000)
+})
 
 test("start fails with plain words when claude is not on the PATH", async () => {
   const path = process.env["PATH"]
@@ -240,11 +239,11 @@ setInterval(() => {}, 1000)`,
             model: "haiku",
             providerSessionId: null,
           })
-          yield* Effect.sleep("500 millis")
-        }).pipe(Effect.provide(layerClaude), Effect.scoped),
+          yield* Effect.sleep("200 millis")
+        }).pipe(Effect.provide(layerClaudeWith("100 millis")), Effect.scoped),
       )
 
-      expect(Date.now() - started).toBeLessThan(3_000)
+      expect(Date.now() - started).toBeLessThan(500)
     },
   )
-}, 15_000)
+})
