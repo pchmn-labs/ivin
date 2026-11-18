@@ -31,7 +31,10 @@ const applyDeltas = (writer: EntityWriter<TranscriptItem>, batch: ReadonlyArray<
   })
 
 export const transcriptOf = strongFamily((sessionId: string) => {
-  const paging = Atom.make<Paging>({ loaded: false, hasBefore: false, prepended: 0 })
+  // Kept alive: the feed writes it before anything reads it, and an unread node is dropped.
+  const paging = Atom.keepAlive(
+    Atom.make<Paging>({ loaded: false, hasBefore: false, prepended: 0 }),
+  )
   const list = makeEntityList({
     id: (item: TranscriptItem) => item.id,
     compare: (a, b) => a.position - b.position,
@@ -81,7 +84,6 @@ export const transcriptOf = strongFamily((sessionId: string) => {
         }),
     },
   })
-  // Reading `paging` first keeps it alive before the feed, which sets it, starts.
   // Usage items feed the status line and have no row; the same array while the ids are the same keeps the list from re-rendering.
   let rowIds: ReadonlyArray<string> = []
   const visibleIds = Atom.readable((get) => {
@@ -90,6 +92,10 @@ export const transcriptOf = strongFamily((sessionId: string) => {
     rowIds = next
     return next
   })
-  const view = Atom.readable((get) => ({ ...get(paging), ids: get(visibleIds) }))
+  const view = Atom.readable((get) => {
+    // Read after the feed starts: its first write to `paging` would otherwise rebuild this atom, and the feed with it.
+    const ids = get(visibleIds)
+    return { ...get(paging), ids }
+  })
   return { list, paging, view }
 })
