@@ -9,6 +9,7 @@ import {
   finishedEventId,
   type StreamedBlock,
 } from "../../transcript/rules/streamed-block.ts"
+import { logError } from "../../log/usecases/log-error.ts"
 import { ItemFeed } from "../../transcript/usecases/item-feed.ts"
 import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
 import { SessionFeed } from "./session-feed.ts"
@@ -145,7 +146,8 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           )
 
         const fail = (error: HarnessError) =>
-          record({ type: "error", message: error.message, raw: null }).pipe(
+          logError("harness run", error).pipe(
+            Effect.andThen(record({ type: "error", message: error.message, raw: null })),
             Effect.andThen(setStatus(session.id, "failed")),
           )
 

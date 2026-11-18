@@ -1,4 +1,5 @@
 import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
+import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session, SessionStatus } from "@ivin/contracts/session"
 import type { ProjectTabs } from "@ivin/contracts/tab"
@@ -10,6 +11,7 @@ import { ServerClient } from "./server-client.ts"
 export interface FakeServer {
   readonly layer: Layer.Layer<ServerClient>
   readonly sessions: Map<string, Session>
+  readonly errorReports: Array<ErrorReport>
   // Adds an item to a transcript as the server would, and streams it to watchers.
   readonly pushItem: (item: TranscriptItem) => void
   // Streams any change (a delta, say) to watchers without storing it.
@@ -43,6 +45,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   let hold: { readonly wait: Promise<boolean> } | null = null
   let holdReorder: { readonly wait: Promise<boolean> } | null = null
   let holdTabList: Promise<void> | null = null
+  const errorReports: Array<ErrorReport> = []
 
   const openProjects = (): OpenProjects => ({ projects: [...projects], selectedPath })
   const tabsOf = (projectPath: string) => tabs.filter((tab) => tab.projectPath === projectPath)
@@ -100,6 +103,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
 
   const client = {
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
+    "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
     "project.list": () => Effect.sync(openProjects),
     "project.open": ({ path }: { path: string }) =>
       Effect.sync(() => {
@@ -288,6 +292,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   return {
     layer: Layer.succeed(ServerClient)(client as unknown as ServerClient["Service"]),
     sessions,
+    errorReports,
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
     setStatus: (sessionId, status) => void saveSession({ ...sessions.get(sessionId)!, status }),

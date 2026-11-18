@@ -6,6 +6,7 @@ import { selectedProjectAtom } from "../modules/project/atoms/selected-project.t
 import { ProjectColumn } from "../modules/project/ui/project-column.tsx"
 import { ProjectRail } from "../modules/project/ui/project-rail.tsx"
 import { NoProject, OpenFolderError } from "../modules/project/ui/no-project.tsx"
+import { useReportUncaughtErrors } from "../modules/log/hooks/use-report-uncaught-errors.ts"
 import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
 import { TabView } from "../modules/tab/ui/tab-view.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
@@ -23,6 +24,7 @@ export function App() {
 
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [])
   useRecordSessionVisits()
+  useReportUncaughtErrors()
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
