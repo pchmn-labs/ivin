@@ -3,6 +3,7 @@ import { Exit } from "effect"
 import { useState } from "react"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { Button } from "../../../core/components/button/button.tsx"
+import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { StatusMark } from "../../../core/components/status-mark/status-mark.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
@@ -38,6 +39,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
           </Text>
         </div>
       )}
+      {session && <Slot slot="composer.above" props={{ session }} />}
       <div className="iv-composer__surface">
         <TextArea
           label="Message"
@@ -53,6 +55,12 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         />
         <Stack direction="row" align="center" justify="between" gap={2}>
           <Stack direction="row" align="center" gap={3}>
+            {session && (
+              <span className="iv-composer__model" data-testid="composer-model">
+                <ClaudeMark size={14} />
+                {session.model}
+              </span>
+            )}
             {session && (
               <span data-testid="composer-session-status">
                 <StatusMark status={session.status} label={statusLabel(session.status)} showLabel />

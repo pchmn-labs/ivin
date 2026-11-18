@@ -1,4 +1,5 @@
 import type { HostComponents } from "@ivin/plugin-api/ui"
+import { ActionSheet } from "../core/components/action-sheet/action-sheet.tsx"
 import { Block } from "../core/components/block/block.tsx"
 import { Button, IconButton } from "../core/components/button/button.tsx"
 import { CodeBlock } from "../core/components/code-block/code-block.tsx"
@@ -6,6 +7,7 @@ import { Dialog } from "../core/components/dialog/dialog.tsx"
 import { Disclosure } from "../core/components/disclosure/disclosure.tsx"
 import { Icon } from "../core/components/icon/icon.tsx"
 import { Menu } from "../core/components/menu/menu.tsx"
+import { OptionList } from "../core/components/option-list/option-list.tsx"
 import { Stack } from "../core/components/stack/stack.tsx"
 import { StatusMark } from "../core/components/status-mark/status-mark.tsx"
 import { Text } from "../core/components/text/text.tsx"
@@ -26,4 +28,6 @@ export const hostComponents = {
   CodeBlock,
   StatusMark,
   Markdown,
+  ActionSheet,
+  OptionList,
 } satisfies HostComponents

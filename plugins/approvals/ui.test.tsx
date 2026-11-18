@@ -1,87 +1,155 @@
 import { expect, test, vi } from "vitest"
-import { page } from "vitest/browser"
+import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
 import { hostComponents } from "../../packages/ui/src/app/host-components.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type { ApprovalItem, SlotProps, UiContext, UiHost } from "@ivin/plugin-api/ui"
+import type {
+  ApprovalItem,
+  Session,
+  SlotName,
+  SlotProps,
+  TranscriptItem,
+  UiContext,
+  UiHost,
+} from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
-const mount = async (item: ApprovalItem, answer = vi.fn().mockResolvedValue(undefined)) => {
-  let Approval!: ComponentType<SlotProps["transcript.approval"]>
+const session = { id: "s1" } as Session
+
+const mount = async (
+  items: ReadonlyArray<TranscriptItem>,
+  answer = vi.fn().mockResolvedValue(undefined),
+) => {
+  const slots: Partial<Record<SlotName, ComponentType<never>>> = {}
   const ctx: UiContext = {
     pluginId: "approvals",
-    slots: { add: (_slot, component) => void (Approval = component as typeof Approval) },
+    slots: { add: (slot, component) => void (slots[slot] = component as ComponentType<never>) },
   }
   activate(ctx)
+  const Record = slots["transcript.approval"] as ComponentType<SlotProps["transcript.approval"]>
+  const Sheet = slots["composer.above"] as ComponentType<SlotProps["composer.above"]>
   const host: UiHost = {
     useSession: () => undefined,
     useSessions: () => [],
-    useTranscript: () => [],
+    useTranscript: () => items,
     useAnswerApproval: () => answer,
     components: hostComponents,
   }
   await render(
     <UiHostProvider host={host}>
-      <Approval item={item} sessionId="s1" />
+      {items.map((item) =>
+        item.type === "approval" ? <Record key={item.id} item={item} sessionId="s1" /> : null,
+      )}
+      <Sheet session={session} />
+      <textarea aria-label="Message" />
     </UiHostProvider>,
   )
   return answer
 }
 
-const approval = (decision: ApprovalItem["decision"]): ApprovalItem => ({
-  id: "i0",
+const approval = (decision: ApprovalItem["decision"], requestId = "r1"): ApprovalItem => ({
+  id: `i-${requestId}`,
   sessionId: "s1",
   position: 0,
   type: "approval",
-  requestId: "r1",
+  requestId,
   toolCallId: "t0",
   name: "Bash",
-  input: { command: "ls" },
+  input: { command: "pnpm test" },
   decision,
 })
 
-test("a pending approval shows the tool, its input and the buttons", async () => {
-  await mount(approval(null))
-  await expect.element(page.getByText("Bash")).toBeVisible()
-  await expect.element(page.getByText("ls", { exact: true })).toBeVisible()
-  await expect.element(page.getByText("Claude is waiting for your approval")).toBeVisible()
-  await expect.element(page.getByTestId("approval-allow")).toBeVisible()
-  await expect.element(page.getByTestId("approval-deny")).toBeVisible()
+test("a pending approval docks a sheet with the command and the two options", async () => {
+  await mount([approval(null)])
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+  await expect.element(page.getByText("pnpm test", { exact: true })).toBeVisible()
+  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeChecked()
+  await expect.element(page.getByRole("radio", { name: /^Deny/ })).not.toBeChecked()
+  await expect.element(page.getByText("↑↓ to choose, Enter to answer, Esc to deny")).toBeVisible()
+  await expect.element(page.getByTestId("approval-decision")).not.toBeInTheDocument()
 })
 
-test("Allow answers the request with allow, once", async () => {
-  const answer = await mount(approval(null))
-  const allow = page.getByTestId("approval-allow")
-  await allow.click()
-  await expect.element(allow).toBeDisabled()
-  await expect.element(page.getByTestId("approval-deny")).toBeDisabled()
+test("no pending approval means no sheet", async () => {
+  await mount([approval("allow")])
+  await expect.element(page.getByTestId("approval-sheet")).not.toBeInTheDocument()
+})
+
+test("clicking Allow answers allow, once", async () => {
+  const answer = await mount([approval(null)])
+  await page.getByRole("radio", { name: "Allow" }).click()
+  await expect.element(page.getByRole("radio", { name: /^Deny/ })).toBeDisabled()
   expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: true })
 })
 
-test("Deny answers the request with deny", async () => {
-  const answer = await mount(approval(null))
-  await page.getByTestId("approval-deny").click()
+test("clicking Deny answers deny", async () => {
+  const answer = await mount([approval(null)])
+  await page.getByRole("radio", { name: /^Deny/ }).click()
   expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
 })
 
+test("the arrows move the choice and Enter answers it", async () => {
+  const answer = await mount([approval(null)])
+  page.getByRole("radio", { name: "Allow" }).element().focus()
+  await userEvent.keyboard("{ArrowDown}")
+  await expect.element(page.getByRole("radio", { name: /^Deny/ })).toBeChecked()
+  await expect.element(page.getByRole("radio", { name: /^Deny/ })).toHaveFocus()
+  await userEvent.keyboard("{ArrowUp}")
+  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeChecked()
+  await userEvent.keyboard("{ArrowDown}{Enter}")
+  expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
+})
+
+test("Esc denies", async () => {
+  const answer = await mount([approval(null)])
+  page.getByRole("radio", { name: "Allow" }).element().focus()
+  await userEvent.keyboard("{Escape}")
+  expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
+})
+
+test("the arrows, Enter and Esc work from the empty composer", async () => {
+  const answer = await mount([approval(null)])
+  const composer = page.getByRole("textbox", { name: "Message" })
+  await composer.click()
+  await userEvent.keyboard("{ArrowDown}")
+  await expect.element(page.getByRole("radio", { name: /^Deny/ })).toBeChecked()
+  await expect.element(composer).toHaveFocus()
+  await userEvent.keyboard("{Enter}")
+  expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
+})
+
+test("Esc from the empty composer denies", async () => {
+  const answer = await mount([approval(null)])
+  await page.getByRole("textbox", { name: "Message" }).click()
+  await userEvent.keyboard("{Escape}")
+  expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
+})
+
+test("a composer with text keeps its keys", async () => {
+  const answer = await mount([approval(null)])
+  const composer = page.getByRole("textbox", { name: "Message" })
+  await composer.fill("hello")
+  await userEvent.keyboard("{ArrowDown}{Enter}{Escape}")
+  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeChecked()
+  expect(answer).not.toHaveBeenCalled()
+})
+
 test.each([
-  ["allow", "Allowed"],
-  ["deny", "Denied"],
-] as const)("an answered approval reads %s and has no buttons", async (decision, label) => {
-  await mount(approval(decision))
-  await expect.element(page.getByTestId("approval-decision")).toHaveTextContent(label)
-  await expect.element(page.getByTestId("approval-allow")).not.toBeInTheDocument()
-  await expect.element(page.getByTestId("approval-deny")).not.toBeInTheDocument()
+  ["allow", "Allowed: pnpm test"],
+  ["deny", "Denied: pnpm test"],
+] as const)("an answered approval leaves one line, %s", async (decision, text) => {
+  await mount([approval(decision)])
+  await expect.element(page.getByTestId("approval-decision")).toHaveTextContent(text)
+  await expect.element(page.getByRole("radio", { name: "Allow" })).not.toBeInTheDocument()
 })
 
 test("a failed answer shows an error and lets the user try again", async () => {
   const answer = vi.fn().mockRejectedValueOnce(new Error("not open")).mockResolvedValue(undefined)
-  await mount(approval(null), answer)
-  await page.getByTestId("approval-allow").click()
+  await mount([approval(null)], answer)
+  await page.getByRole("radio", { name: "Allow" }).click()
   await expect.element(page.getByTestId("approval-error")).toBeVisible()
-  await expect.element(page.getByTestId("approval-allow")).toBeEnabled()
-  await page.getByTestId("approval-allow").click()
+  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeEnabled()
+  await page.getByRole("radio", { name: "Allow" }).click()
   await expect.element(page.getByTestId("approval-error")).not.toBeInTheDocument()
   expect(answer).toHaveBeenCalledTimes(2)
 })

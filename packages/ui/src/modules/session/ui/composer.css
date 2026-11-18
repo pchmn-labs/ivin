@@ -32,3 +32,22 @@
 .iv-composer__alert {
   padding-bottom: var(--iv-space-2);
 }
+
+.iv-composer__model {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+}
+
+/* A sheet docked above the composer takes its top edge. */
+.iv-composer:has(.iv-action-sheet) .iv-composer__surface {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.iv-composer:has(.iv-action-sheet[data-tone="danger"]) .iv-composer__surface {
+  border-top-style: dashed;
+  border-top-color: var(--iv-danger-outline);
+}
