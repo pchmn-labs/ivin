@@ -24,14 +24,9 @@
 }
 
 .iv-project-rail__footer {
+  display: flex;
   margin-top: auto;
-  max-width: 100%;
-  padding: 0 var(--iv-space-1);
-  color: var(--iv-text-faint);
-  font-size: var(--iv-text-xs);
-  line-height: var(--iv-text-xs-lh);
-  text-align: center;
-  overflow-wrap: anywhere;
+  padding: var(--iv-space-2);
 }
 
 .iv-project-title {

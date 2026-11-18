@@ -113,7 +113,7 @@ export interface StackProps {
 }
 
 export interface BlockProps {
-  readonly tone?: "plain" | "subtle" | "accent" | "danger"
+  readonly tone?: "plain" | "subtle" | "accent" | "attention" | "danger"
   readonly padding?: 2 | 3 | 4
   readonly role?: string
   readonly "data-testid"?: string

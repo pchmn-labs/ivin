@@ -66,7 +66,7 @@
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme]) {
-    --iv-bg: #fbfcfa;
+    --iv-bg: #f8faf7;
     --iv-bg-subtle: #f2f5f1;
     --iv-bg-raised: #ffffff;
     --iv-bg-hover: rgba(23, 62, 43, 0.05);
@@ -75,7 +75,7 @@
     --iv-border-strong: rgba(11, 35, 24, 0.18);
     --iv-text: #10201a;
     --iv-text-muted: #4f6157;
-    --iv-text-faint: #687a6e;
+    --iv-text-faint: #5d6f63;
     --iv-accent: #2e6b3e;
     --iv-accent-hover: #255a33;
     --iv-accent-contrast: #ffffff;
@@ -109,7 +109,7 @@
 }
 
 :root[data-theme="forest-light"] {
-  --iv-bg: #fbfcfa;
+  --iv-bg: #f8faf7;
   --iv-bg-subtle: #f2f5f1;
   --iv-bg-raised: #ffffff;
   --iv-bg-hover: rgba(23, 62, 43, 0.05);
@@ -118,7 +118,7 @@
   --iv-border-strong: rgba(11, 35, 24, 0.18);
   --iv-text: #10201a;
   --iv-text-muted: #4f6157;
-  --iv-text-faint: #687a6e;
+  --iv-text-faint: #5d6f63;
   --iv-accent: #2e6b3e;
   --iv-accent-hover: #255a33;
   --iv-accent-contrast: #ffffff;

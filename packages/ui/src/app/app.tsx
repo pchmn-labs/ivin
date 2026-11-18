@@ -1,5 +1,6 @@
 import { useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
+import { Tooltip } from "../core/ui/tooltip/tooltip.tsx"
 import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
 import {
   NoProject,
@@ -18,14 +19,17 @@ export function App() {
   const result = useAtomValue(getVersionAtom)
   const project = useAtomValue(getCurrentProjectAtom)
   const projectPath = AsyncResult.isSuccess(project) ? (project.value?.path ?? null) : null
+  const connection = AsyncResult.match(result, {
+    onInitial: () => ({ state: "connecting", text: "Connecting to the server…" }),
+    onFailure: () => ({ state: "failed", text: "The server did not answer" }),
+    onSuccess: ({ value }) => ({ state: "connected", text: `Server ${value}` }),
+  })
   const version = (
-    <span data-testid="server-version">
-      {AsyncResult.match(result, {
-        onInitial: () => "Connecting to the server…",
-        onFailure: () => "The server did not answer",
-        onSuccess: ({ value }) => `Server ${value}`,
-      })}
-    </span>
+    <Tooltip content={connection.text} side="right">
+      <span className="iv-connection" data-state={connection.state} data-testid="server-version">
+        <span className="iv-visually-hidden">{connection.text}</span>
+      </span>
+    </Tooltip>
   )
   return (
     <PluginsProvider plugins={builtinPlugins}>

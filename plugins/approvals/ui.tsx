@@ -30,13 +30,13 @@ function Approval({ item, sessionId }: SlotProps["transcript.approval"]) {
   }
 
   return (
-    <Block tone="accent">
+    <Block tone={item.decision === null ? "attention" : "plain"}>
       <Stack gap={3}>
         <Text weight="medium">{item.name}</Text>
-        <CodeBlock text={formatInput(item.input)} />
+        <CodeBlock text={formatInput(item.name, item.input)} />
         {item.decision === null ? (
           <Stack gap={2}>
-            <Text size="sm" tone="muted">
+            <Text size="sm" tone="danger" weight="medium">
               Claude is waiting for your approval
             </Text>
             <Stack direction="row" gap={2}>

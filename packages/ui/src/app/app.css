@@ -25,3 +25,19 @@
   min-width: 0;
   min-height: 0;
 }
+
+.iv-connection {
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--iv-text-faint);
+}
+
+.iv-connection[data-state="connected"] {
+  background: var(--iv-accent);
+}
+
+.iv-connection[data-state="failed"] {
+  background: var(--iv-danger);
+}

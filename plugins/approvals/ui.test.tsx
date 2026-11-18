@@ -44,7 +44,7 @@ const approval = (decision: ApprovalItem["decision"]): ApprovalItem => ({
 test("a pending approval shows the tool, its input and the buttons", async () => {
   await mount(approval(null))
   await expect.element(page.getByText("Bash")).toBeVisible()
-  await expect.element(page.getByText('{"command":"ls"}')).toBeVisible()
+  await expect.element(page.getByText("ls", { exact: true })).toBeVisible()
   await expect.element(page.getByText("Claude is waiting for your approval")).toBeVisible()
   await expect.element(page.getByTestId("approval-allow")).toBeVisible()
   await expect.element(page.getByTestId("approval-deny")).toBeVisible()

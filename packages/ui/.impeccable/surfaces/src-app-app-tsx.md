@@ -15,7 +15,9 @@ Constraints: dark and light forest themes from day one; every colour and size is
 
 Reference products (craft bar, not world): Linear, Zed, Raycast, Cursor / Claude desktop. Linear for everything but density: fewer facts on screen, simple.
 
-Open: the multi-project rail behaviour and tabs come with #32.
+Built differently from the first viewport: a session's model is chosen when the session is created and cannot change, so it sits beside "New session" in the sidebar and as a fact in the session header, not in the composer.
+
+Open: the multi-project rail behaviour and tabs come with #32; keyboard shortcuts for approvals wait for the keybindings file (`~/.ivin/keybindings.json`).
 
 ## Direction contract
 

@@ -35,7 +35,7 @@ const tool = (status: ToolCallItem["status"], output: string | null): ToolCallIt
   type: "tool_call",
   toolCallId: "t0",
   name: "Read",
-  input: { path: "/a.ts" },
+  input: { file_path: "/a.ts" },
   status,
   output,
 })
@@ -43,7 +43,9 @@ const tool = (status: ToolCallItem["status"], output: string | null): ToolCallIt
 test("a tool call shows its name, input and result", async () => {
   await mount(tool("done", "file contents"))
   await expect.element(page.getByText("Read")).toBeVisible()
-  await expect.element(page.getByText('{"path":"/a.ts"}')).toBeVisible()
+  await expect.element(page.getByText("/a.ts")).toBeVisible()
+  await expect.element(page.getByText("file contents")).not.toBeVisible()
+  await page.getByText("Output").click()
   await expect.element(page.getByText("file contents")).toBeVisible()
 })
 
@@ -66,4 +68,10 @@ test("a long result is folded behind a preview", async () => {
   expect(code.checkVisibility()).toBe(false)
   output.element().querySelector("summary")!.click()
   expect(code.checkVisibility()).toBe(true)
+})
+
+test("a tool without a main argument shows its full input in the folded details", async () => {
+  await mount({ ...tool("done", "out"), name: "Custom", input: { a: 1 } })
+  await page.getByText("Output").click()
+  await expect.element(page.getByText(/"a": 1/)).toBeVisible()
 })
