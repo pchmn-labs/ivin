@@ -106,7 +106,7 @@ packages/             what is imported
     core/             design system (`components/<component>/`, `theme/`), the RPC client service
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
-tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`
+tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`, `test-setup/` runs before every `node` test
 plugins/<id>/         built-in plugins, same format as user plugins; `rules/` beside the two halves when one has logic
 docs/
 ```

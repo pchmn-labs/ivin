@@ -47,6 +47,8 @@ Every other direction is a convention nothing checks: `ui/` reads `hooks/` and `
 
 Beside the file they test, as `<file>.test.ts`. `rules/` are called directly; each package's file says how the other layers are tested.
 
+The `node` test project puts a failing `claude` first on the PATH, so a test that spawns Claude Code puts its own fake before it. `IVIN_TEST_CLAUDE=1` runs against the installed CLI.
+
 ## Flat packages
 
 No modules and no layers; one file per concern, kebab-case.
