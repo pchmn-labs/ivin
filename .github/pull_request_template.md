@@ -38,6 +38,10 @@
 
 </details>
 
+## Screenshots
+
+<!-- Only when the PR visibly changes a screen: one or two captures that show it. Delete this section otherwise. -->
+
 ## Test plan
 
 <!-- Step-by-step instructions to verify this works. A user-facing change follows docs/finished-features.md. -->
