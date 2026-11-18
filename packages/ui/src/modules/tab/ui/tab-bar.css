@@ -12,7 +12,7 @@
   display: flex;
   flex: 0 1 auto;
   align-items: center;
-  gap: var(--iv-space-half);
+  gap: var(--iv-space-1);
   min-width: 0;
   height: 100%;
   overflow-x: auto;
@@ -28,10 +28,9 @@
 
   position: relative;
   display: flex;
-  flex: 0 1 auto;
+  flex: 0 1 var(--iv-tab-width);
   align-items: center;
   min-width: var(--iv-tab-min-width);
-  max-width: var(--iv-tab-max-width);
   height: var(--iv-tab-height);
   border-radius: var(--iv-radius-tab);
   transition: background-color var(--iv-duration-fast) ease-out;
@@ -136,9 +135,9 @@
 }
 
 .iv-tab-bar__item[data-drop="before"]::before {
-  left: calc(-1 * var(--iv-space-half));
+  left: calc((var(--iv-space-1) + var(--iv-space-half)) / -2);
 }
 
 .iv-tab-bar__item[data-drop="after"]::before {
-  right: calc(-1 * var(--iv-space-half));
+  right: calc((var(--iv-space-1) + var(--iv-space-half)) / -2);
 }
