@@ -9,6 +9,8 @@ description: Launch ivin to show it to the user or to screenshot it yourself. Us
 
 Run `pnpm dev` in the background, then tell the user the app is up so they switch to it themselves.
 
+To try a session by hand, open `ivin-playground`, a folder beside the main checkout, as the project (`git init` it when missing). A session runs a real agent in its project folder, leaving its files and its Claude Code history there, so the playground keeps them out of the ivin repo.
+
 ## You see it
 
 Run `pnpm --filter @ivin/desktop shot` (about 10 s). It plays a scenario ending on a tool call waiting for approval, and prints the path of one window-only PNG per step in `apps/desktop/shots/`.
