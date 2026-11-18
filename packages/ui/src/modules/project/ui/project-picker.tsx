@@ -6,7 +6,9 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { getCurrentProjectAtom } from "../atoms/get-current-project.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
-import { initials } from "../rules/initials.ts"
+import { sessionsOf } from "../../session/atoms/list-sessions.ts"
+import { groupSessions } from "../../session/rules/group-sessions.ts"
+import { ProjectCreature } from "./project-creature.tsx"
 import "./project-picker.css"
 
 export function ProjectRail({ footer }: { footer: React.ReactNode }) {
@@ -16,34 +18,37 @@ export function ProjectRail({ footer }: { footer: React.ReactNode }) {
 
   return (
     <nav className="iv-project-rail" aria-label="Projects">
-      {project && (
-        <>
-          <Tooltip side="right" content={`${project.name} · ${project.path}`}>
-            <button
-              type="button"
-              className="iv-project-rail__project"
-              aria-label={project.name}
-              aria-current="true"
-            >
-              {initials(project.name)}
-            </button>
-          </Tooltip>
-          <IconButton icon="folder-open" label="Open folder…" onClick={openFolder} />
-        </>
-      )}
-      <div className="iv-project-rail__footer">{footer}</div>
+      {project && <ProjectButton name={project.name} path={project.path} />}
+      <div className="iv-project-rail__footer">
+        <IconButton icon="plus" label="Open folder…" size="sm" onClick={openFolder} />
+        {footer}
+      </div>
     </nav>
   )
 }
 
-export function ProjectTitle() {
-  const current = useAtomValue(getCurrentProjectAtom)
-  const project = AsyncResult.isSuccess(current) ? current.value : null
-  if (!project) return null
+function ProjectButton({ name, path }: { name: string; path: string }) {
+  const sessions = useAtomValue(sessionsOf(path).items)
+  const waiting = groupSessions(sessions).needsYou.length
+  const label = waiting === 0 ? name : `${name} · ${waiting} waiting for you`
   return (
-    <h1 className="iv-project-title" data-testid="project-name" title={project.path}>
-      {project.name}
-    </h1>
+    <div className="iv-project-rail__item">
+      <Tooltip side="right" content={`${label} · ${path}`}>
+        <button
+          type="button"
+          className="iv-project-rail__project"
+          aria-label={label}
+          aria-current="true"
+        >
+          <ProjectCreature name={name} />
+        </button>
+      </Tooltip>
+      {waiting > 0 && (
+        <span className="iv-project-rail__badge" aria-hidden="true" data-testid="project-waiting">
+          {waiting}
+        </span>
+      )}
+    </div>
   )
 }
 

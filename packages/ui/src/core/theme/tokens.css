@@ -3,6 +3,7 @@
   --iv-status-waiting: var(--iv-danger);
   --iv-status-idle: var(--iv-text-faint);
   --iv-status-failed: var(--iv-danger);
+  --iv-danger-outline: color-mix(in srgb, var(--iv-danger) 60%, transparent);
 
   --iv-font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
@@ -39,7 +40,9 @@
   --iv-radius-sm: 4px;
   --iv-radius-md: 6px;
   --iv-radius-lg: 10px;
+  --iv-radius-card: 12px;
 
+  --iv-traffic-lights-width: 70px;
   --iv-control-sm: 24px;
   --iv-control-md: 28px;
   --iv-row-height: 30px;
@@ -69,6 +72,14 @@
   --iv-focus-ring: #a9d9a0;
   --iv-backdrop: rgba(5, 10, 8, 0.5);
   --iv-shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --iv-project-hue-0: #8fbf98;
+  --iv-project-hue-1: #8fadd6;
+  --iv-project-hue-2: #d2b273;
+  --iv-project-hue-3: #bc98cc;
+  --iv-project-hue-4: #cf9d80;
+  --iv-project-hue-5: #7fc0ba;
+  --iv-bubble: color-mix(in srgb, var(--iv-accent) 14%, var(--iv-bg-raised));
+  --iv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.25);
   color-scheme: dark;
 }
 
@@ -92,6 +103,14 @@
     --iv-focus-ring: #2e6b3e;
     --iv-backdrop: rgba(11, 35, 24, 0.32);
     --iv-shadow-overlay: 0 8px 24px rgba(11, 35, 24, 0.14), 0 2px 6px rgba(11, 35, 24, 0.08);
+    --iv-project-hue-0: #3f7a4c;
+    --iv-project-hue-1: #3d6496;
+    --iv-project-hue-2: #87661a;
+    --iv-project-hue-3: #76508e;
+    --iv-project-hue-4: #93593a;
+    --iv-project-hue-5: #2f7570;
+    --iv-bubble: color-mix(in srgb, var(--iv-accent) 16%, var(--iv-bg-raised));
+    --iv-shadow-card: 0 1px 2px rgba(11, 35, 24, 0.06), 0 6px 20px rgba(11, 35, 24, 0.06);
     color-scheme: light;
   }
 }
@@ -115,6 +134,14 @@
   --iv-focus-ring: #a9d9a0;
   --iv-backdrop: rgba(5, 10, 8, 0.5);
   --iv-shadow-overlay: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --iv-project-hue-0: #8fbf98;
+  --iv-project-hue-1: #8fadd6;
+  --iv-project-hue-2: #d2b273;
+  --iv-project-hue-3: #bc98cc;
+  --iv-project-hue-4: #cf9d80;
+  --iv-project-hue-5: #7fc0ba;
+  --iv-bubble: color-mix(in srgb, var(--iv-accent) 14%, var(--iv-bg-raised));
+  --iv-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.25);
   color-scheme: dark;
 }
 
@@ -137,5 +164,13 @@
   --iv-focus-ring: #2e6b3e;
   --iv-backdrop: rgba(11, 35, 24, 0.32);
   --iv-shadow-overlay: 0 8px 24px rgba(11, 35, 24, 0.14), 0 2px 6px rgba(11, 35, 24, 0.08);
+  --iv-project-hue-0: #3f7a4c;
+  --iv-project-hue-1: #3d6496;
+  --iv-project-hue-2: #87661a;
+  --iv-project-hue-3: #76508e;
+  --iv-project-hue-4: #93593a;
+  --iv-project-hue-5: #2f7570;
+  --iv-bubble: color-mix(in srgb, var(--iv-accent) 16%, var(--iv-bg-raised));
+  --iv-shadow-card: 0 1px 2px rgba(11, 35, 24, 0.06), 0 6px 20px rgba(11, 35, 24, 0.06);
   color-scheme: light;
 }

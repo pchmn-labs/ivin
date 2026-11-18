@@ -10,7 +10,7 @@ const setup = async () => {
   const server = makeFakeServer()
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <SessionList projectPath="/p" />
+      <SessionList projectPath="/p" projectName="p" />
     </RegistryProvider>,
   )
   return server
@@ -39,4 +39,20 @@ test("each row shows the session status and follows the server", async () => {
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Working")
   server.setStatus("session-1", "failed")
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Failed")
+})
+
+test("sessions waiting on the user sit in their own group above the others", async () => {
+  const server = await setup()
+  await page.getByRole("button", { name: "New session" }).click()
+  await page.getByRole("button", { name: "New session" }).click()
+  await vi.waitFor(() => expect(server.sessions.size).toBe(2))
+  await expect.element(page.getByRole("region", { name: "Needs you" })).not.toBeInTheDocument()
+
+  server.setStatus("session-1", "waiting")
+  const needsYou = page.getByRole("region", { name: "Needs you" })
+  await expect.element(needsYou).toBeVisible()
+  await expect.element(needsYou.getByTestId("session-status")).toHaveTextContent("Waiting for you")
+  await expect
+    .element(page.getByRole("region", { name: "Sessions" }).getByTestId("session-item"))
+    .toHaveLength(1)
 })

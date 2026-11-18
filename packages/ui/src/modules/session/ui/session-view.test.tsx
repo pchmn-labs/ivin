@@ -78,7 +78,7 @@ test("the transcript renders through the plugins and the status line shows the u
     .toHaveTextContent("1,540 tokens · $0.0123")
 })
 
-const mountSession = async (status: "idle" | "working") => {
+const mountSession = async (status: "idle" | "working" | "waiting") => {
   const server = makeFakeServer()
   const at = DateTime.makeUnsafe(0)
   server.sessions.set("s1", {
@@ -167,7 +167,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
       ]}
     >
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionList projectPath="/p" />
+        <SessionList projectPath="/p" projectName="p" />
         <SessionView projectPath="/p" />
       </PluginsProvider>
     </RegistryProvider>,
@@ -178,4 +178,24 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
   await expect.element(page.getByRole("textbox", { name: "Session title" })).not.toBeInTheDocument()
   await new Promise((resolve) => setTimeout(resolve, 200))
   expect(server.sessions.get("s1")?.status).toBe("working")
+})
+
+test("a pending approval shows a sheet on the composer that Enter answers, leaving a record", async () => {
+  const server = await mountSession("waiting")
+  server.pushItem({
+    id: "a0",
+    sessionId: "s1",
+    position: 0,
+    type: "approval",
+    requestId: "r1",
+    toolCallId: null,
+    name: "Bash",
+    input: { command: "git push" },
+    decision: null,
+  })
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+  await page.getByRole("textbox", { name: "Message" }).click()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(page.getByText("Approval needed")).not.toBeInTheDocument()
+  await expect.element(page.getByTestId("approval-decision")).toHaveTextContent("Allowed: git push")
 })

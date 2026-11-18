@@ -1,0 +1,29 @@
+.iv-project-creature {
+  display: block;
+  flex: none;
+  shape-rendering: crispEdges;
+}
+
+.iv-project-creature[data-hue="0"] {
+  color: var(--iv-project-hue-0);
+}
+
+.iv-project-creature[data-hue="1"] {
+  color: var(--iv-project-hue-1);
+}
+
+.iv-project-creature[data-hue="2"] {
+  color: var(--iv-project-hue-2);
+}
+
+.iv-project-creature[data-hue="3"] {
+  color: var(--iv-project-hue-3);
+}
+
+.iv-project-creature[data-hue="4"] {
+  color: var(--iv-project-hue-4);
+}
+
+.iv-project-creature[data-hue="5"] {
+  color: var(--iv-project-hue-5);
+}

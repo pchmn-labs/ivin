@@ -15,6 +15,11 @@
   background: var(--iv-bg-active);
 }
 
+.iv-list-row[data-attention] {
+  outline: 1px dashed var(--iv-danger-outline);
+  outline-offset: -1px;
+}
+
 .iv-list-row__main {
   display: flex;
   flex: 1;

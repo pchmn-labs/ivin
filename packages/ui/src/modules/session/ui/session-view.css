@@ -5,15 +5,6 @@
   min-height: 0;
 }
 
-.iv-session-view__header {
-  display: flex;
-  align-items: baseline;
-  gap: var(--iv-space-2);
-  min-width: 0;
-  padding: var(--iv-space-3) var(--iv-space-6);
-  border-bottom: 1px solid var(--iv-border);
-}
-
 .iv-session-view__transcript {
   position: relative;
   flex: 1;

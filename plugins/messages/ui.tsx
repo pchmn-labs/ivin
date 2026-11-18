@@ -39,15 +39,10 @@ function Message({ item }: SlotProps["transcript.message"]) {
   }
   if (item.role === "user") {
     return (
-      <Block tone="subtle">
-        <Stack gap={1}>
-          <Text size="xs" tone="muted" weight="medium">
-            You
-          </Text>
-          <Text as="p" preWrap>
-            {item.text}
-          </Text>
-        </Stack>
+      <Block tone="bubble">
+        <Text as="p" preWrap>
+          {item.text}
+        </Text>
       </Block>
     )
   }

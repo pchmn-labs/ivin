@@ -1,0 +1,7 @@
+.iv-shell-controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+}

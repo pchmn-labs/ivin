@@ -1,0 +1,9 @@
+.iv-harness-mark {
+  display: block;
+  flex: none;
+}
+
+/* Claude's brand orange: the one colour outside the tokens, because it is the harness's mark. */
+.iv-harness-mark--claude {
+  color: #d97757;
+}

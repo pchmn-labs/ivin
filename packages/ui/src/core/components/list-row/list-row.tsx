@@ -6,6 +6,7 @@ export interface ListRowProps {
   readonly title: ReactNode
   readonly meta?: ReactNode
   readonly selected?: boolean
+  readonly attention?: boolean
   readonly onSelect?: () => void
   readonly actions?: ReactNode
   readonly "aria-current"?: "page" | "true" | boolean
@@ -17,13 +18,19 @@ export function ListRow({
   title,
   meta,
   selected = false,
+  attention = false,
   onSelect,
   actions,
   "aria-current": ariaCurrent,
   "data-testid": testId,
 }: ListRowProps) {
   return (
-    <div className="iv-list-row" data-selected={selected || undefined} data-testid={testId}>
+    <div
+      className="iv-list-row"
+      data-selected={selected || undefined}
+      data-attention={attention || undefined}
+      data-testid={testId}
+    >
       <button
         type="button"
         className="iv-list-row__main"

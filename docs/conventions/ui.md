@@ -36,3 +36,7 @@ packages/ui/src/
 - `rules/`: called directly.
 - `atoms/`: in an atom registry, with a fake RPC client.
 - `hooks/` and `ui/`: Vitest browser mode, with the same fake RPC client.
+
+## Colour
+
+Every colour is a `--iv-` token, with one exception: a harness mark keeps its brand colour (Claude's orange, in `core/components/harness-mark/harness-mark.css`).

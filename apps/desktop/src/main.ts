@@ -30,6 +30,8 @@ const createWindow = async () => {
     width: 960,
     height: 640,
     show: false,
+    // The sidebar card holds the traffic lights, so macOS draws them over the page.
+    ...(process.platform === "darwin" && { titleBarStyle: "hiddenInset" as const }),
     webPreferences: {
       preload: join(import.meta.dirname, "preload.cjs"),
       contextIsolation: true,

@@ -1,22 +1,47 @@
 .iv-app {
   display: grid;
-  grid-template-columns: 52px 260px minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   height: 100%;
   overflow: hidden;
 }
 
 .iv-app--empty {
-  grid-template-columns: 52px minmax(0, 1fr);
+  position: relative;
+  grid-template-columns: minmax(0, 1fr);
 }
 
-.iv-app__sidebar {
+.iv-app__card {
   display: flex;
   flex-direction: column;
-  gap: var(--iv-space-3);
+  width: 300px;
   min-height: 0;
-  padding: var(--iv-space-3);
+  margin: var(--iv-space-2) 0 var(--iv-space-2) var(--iv-space-2);
+  overflow: hidden;
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-card);
   background: var(--iv-bg-subtle);
-  border-right: 1px solid var(--iv-border);
+  box-shadow: var(--iv-shadow-card);
+}
+
+.iv-app__card-top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--iv-space-2) 0 5px;
+  -webkit-app-region: drag;
+}
+
+.iv-app__lights {
+  flex: none;
+  width: var(--iv-traffic-lights-width);
+}
+
+.iv-app__card-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 44px minmax(0, 1fr);
+  min-height: 0;
 }
 
 .iv-app__main {
@@ -24,6 +49,13 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+
+.iv-app__corner {
+  position: absolute;
+  bottom: var(--iv-space-3);
+  left: var(--iv-space-3);
+  display: flex;
 }
 
 .iv-connection {

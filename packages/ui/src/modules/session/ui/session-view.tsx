@@ -25,26 +25,10 @@ export function SessionView({ projectPath }: { projectPath: string }) {
 
   return (
     <div className="iv-session-view">
-      <SessionHeader projectPath={projectPath} sessionId={sessionId} />
       <div className="iv-session-view__transcript">
         <TranscriptView key={sessionId} sessionId={sessionId} />
       </div>
       <Composer key={sessionId} projectPath={projectPath} sessionId={sessionId} />
     </div>
-  )
-}
-
-function SessionHeader({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
-  const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
-  if (!session) return null
-  return (
-    <header className="iv-session-view__header">
-      <Text weight="medium" truncate>
-        {session.title}
-      </Text>
-      <Text size="sm" tone="faint" data-testid="session-model">
-        {session.model}
-      </Text>
-    </header>
   )
 }
