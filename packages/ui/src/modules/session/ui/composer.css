@@ -1,0 +1,62 @@
+.iv-composer {
+  width: 100%;
+  max-width: var(--iv-content-width);
+  margin: 0 auto;
+  padding: 0 var(--iv-space-6) var(--iv-space-1);
+}
+
+.iv-composer__surface {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-2);
+  padding: var(--iv-space-2);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+}
+
+.iv-composer__surface:focus-within {
+  border-color: var(--iv-focus-ring);
+}
+
+/* The surface carries the border and focus state, so the field sits flat inside it. */
+.iv-composer__surface .iv-field {
+  border-color: transparent;
+  background: transparent;
+}
+
+.iv-composer__surface .iv-field:focus-visible {
+  outline: none;
+}
+
+.iv-composer__statusline {
+  display: flex;
+  justify-content: flex-end;
+  min-height: var(--iv-space-6);
+  align-items: center;
+  padding: 0 var(--iv-space-2);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}
+
+.iv-composer__alert {
+  padding-bottom: var(--iv-space-2);
+}
+
+.iv-composer__model {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+}
+
+.iv-composer:has(.iv-action-sheet) .iv-composer__surface {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.iv-composer:has(.iv-action-sheet[data-tone="danger"]) .iv-composer__surface {
+  border-top-style: dashed;
+  border-top-color: var(--iv-danger-outline);
+}

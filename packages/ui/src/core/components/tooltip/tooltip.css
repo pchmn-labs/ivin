@@ -1,0 +1,19 @@
+.iv-tooltip {
+  padding: var(--iv-space-1) var(--iv-space-2);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-sm);
+  background: var(--iv-bg-raised);
+  color: var(--iv-text);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
+  box-shadow: var(--iv-shadow-overlay);
+  transition:
+    opacity var(--iv-duration-fast) var(--iv-ease-out),
+    transform var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-tooltip[data-starting-style],
+.iv-tooltip[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}

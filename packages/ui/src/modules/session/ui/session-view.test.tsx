@@ -71,14 +71,14 @@ test("the transcript renders through the plugins and the status line shows the u
   )
 
   await expect.element(page.getByText("hello", { exact: true })).toBeVisible()
-  await expect.element(page.getByTestId("tool-status")).toHaveTextContent("succeeded")
+  await expect.element(page.getByTestId("tool-output")).toBeVisible()
   expect(document.querySelectorAll('[data-testid="transcript-item"]')).toHaveLength(2)
   await expect
     .element(page.getByTestId("composer-status"))
     .toHaveTextContent("1,540 tokens · $0.0123")
 })
 
-const mountSession = async (status: "idle" | "working") => {
+const mountSession = async (status: "idle" | "working" | "waiting") => {
   const server = makeFakeServer()
   const at = DateTime.makeUnsafe(0)
   server.sessions.set("s1", {
@@ -105,7 +105,7 @@ const mountSession = async (status: "idle" | "working") => {
   return server
 }
 
-test("the status shows above the composer and follows the server", async () => {
+test("the composer announces the status and follows the server", async () => {
   const server = await mountSession("idle")
   await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
   server.setStatus("s1", "waiting")
@@ -116,7 +116,7 @@ test("the status shows above the composer and follows the server", async () => {
 
 test("the Interrupt button shows only while the session works and interrupts it", async () => {
   const server = await mountSession("idle")
-  await expect.element(page.getByTestId("composer-session-status")).toBeVisible()
+  await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
   expect(page.getByRole("button", { name: "Interrupt" }).query()).toBeNull()
 
   server.setStatus("s1", "working")
@@ -167,14 +167,70 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
       ]}
     >
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionList projectPath="/p" />
+        <SessionList projectPath="/p" projectName="p" />
         <SessionView projectPath="/p" />
       </PluginsProvider>
     </RegistryProvider>,
   )
-  await page.getByRole("button", { name: "Rename" }).click()
+  await page.getByRole("button", { name: "Session actions" }).click()
+  await page.getByRole("menuitem", { name: "Rename" }).click()
   await userEvent.keyboard("{Escape}")
   await expect.element(page.getByRole("textbox", { name: "Session title" })).not.toBeInTheDocument()
   await new Promise((resolve) => setTimeout(resolve, 200))
   expect(server.sessions.get("s1")?.status).toBe("working")
+})
+
+test("a pending approval shows a sheet on the composer that Enter allows, leaving no record", async () => {
+  const server = await mountSession("waiting")
+  server.pushItem({
+    id: "a0",
+    sessionId: "s1",
+    position: 0,
+    type: "approval",
+    requestId: "r1",
+    toolCallId: null,
+    name: "Bash",
+    input: { command: "git push" },
+    decision: null,
+  })
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+  await page.getByRole("textbox", { name: "Message" }).click()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(page.getByText("Approval needed")).not.toBeInTheDocument()
+  await expect.element(page.getByTestId("transcript-item")).toHaveAttribute("data-type", "approval")
+  expect(page.getByTestId("approval-decision").query()).toBeNull()
+  expect(page.getByTestId("transcript-item").element().getBoundingClientRect().height).toBe(1)
+})
+
+const pushApproval = (server: Awaited<ReturnType<typeof mountSession>>) =>
+  server.pushItem({
+    id: "a0",
+    sessionId: "s1",
+    position: 0,
+    type: "approval",
+    requestId: "r1",
+    toolCallId: null,
+    name: "Bash",
+    input: { command: "git push" },
+    decision: null,
+  })
+
+test("Enter with the focus on the page body does not answer an approval", async () => {
+  const server = await mountSession("waiting")
+  pushApproval(server)
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+  ;(document.activeElement as HTMLElement | null)?.blur()
+  await userEvent.keyboard("{Enter}")
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+})
+
+test("Enter in a composer with text sends the message and leaves the approval open", async () => {
+  const server = await mountSession("waiting")
+  pushApproval(server)
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
+  await page.getByRole("textbox", { name: "Message" }).fill("also this")
+  await userEvent.keyboard("{Enter}")
+  await expect.element(page.getByText("also this", { exact: true })).toBeVisible()
+  await expect.element(page.getByText("Approval needed")).toBeVisible()
 })

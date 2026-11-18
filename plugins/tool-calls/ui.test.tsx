@@ -2,6 +2,8 @@ import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
+import { hostComponents } from "../../packages/ui/src/app/host-components.ts"
+import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { SlotProps, ToolCallItem, UiContext } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
@@ -12,7 +14,18 @@ const mount = async (item: ToolCallItem) => {
     slots: { add: (_slot, component) => void (ToolCall = component as typeof ToolCall) },
   }
   activate(ctx)
-  await render(<ToolCall item={item} sessionId="s1" />)
+  const host = {
+    useSession: () => undefined,
+    useSessions: () => [],
+    useTranscript: () => [],
+    useAnswerApproval: () => async () => {},
+    components: hostComponents,
+  }
+  await render(
+    <UiHostProvider host={host}>
+      <ToolCall item={item} sessionId="s1" />
+    </UiHostProvider>,
+  )
 }
 
 const tool = (status: ToolCallItem["status"], output: string | null): ToolCallItem => ({
@@ -22,35 +35,35 @@ const tool = (status: ToolCallItem["status"], output: string | null): ToolCallIt
   type: "tool_call",
   toolCallId: "t0",
   name: "Read",
-  input: { path: "/a.ts" },
+  input: { file_path: "/a.ts" },
   status,
   output,
 })
 
-test("a tool call shows its name, input and result", async () => {
+test("a tool call shows its icon, name and input on one row, its result behind the chevron", async () => {
   await mount(tool("done", "file contents"))
-  await expect.element(page.getByText("Read")).toBeVisible()
-  await expect.element(page.getByText('{"path":"/a.ts"}')).toBeVisible()
+  const row = page.getByTestId("tool-output").element().querySelector("summary")!
+  expect(row.textContent).toBe("Read/a.ts")
+  await expect.element(page.getByText("file contents")).not.toBeVisible()
+  await page.getByText("Read").click()
   await expect.element(page.getByText("file contents")).toBeVisible()
 })
 
-test.each([
-  ["running", "running"],
-  ["done", "succeeded"],
-  ["error", "failed"],
-] as const)("a %s tool call reads %s", async (status, label) => {
-  await mount(tool(status, status === "running" ? null : "out"))
-  await expect.element(page.getByTestId("tool-status")).toHaveTextContent(label)
+test("a running tool call shows a spinner, a failed one says so, a finished one shows nothing", async () => {
+  await mount(tool("running", null))
+  await expect
+    .element(page.getByTestId("tool-status").getByRole("img", { name: "running" }))
+    .toBeVisible()
+  await mount({ ...tool("error", "boom"), id: "i1" })
+  await expect.element(page.getByText("failed")).toBeVisible()
+  await mount({ ...tool("done", "out"), id: "i2", name: "Bash", input: { command: "ls" } })
+  expect(
+    page.getByText("ls").element().closest("summary")?.querySelector('[data-testid="tool-status"]'),
+  ).toBeNull()
 })
 
-test("a long result is folded behind a preview", async () => {
-  const output = Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n")
-  await mount(tool("done", output))
-  await expect.element(page.getByTestId("tool-output")).toBeVisible()
-  const details = document.querySelector<HTMLDetailsElement>('[data-testid="tool-output"]')!
-  expect(details.open).toBe(false)
-  expect(details.querySelector("summary")?.textContent).toBe("line 0\nline 1\nline 2")
-  expect(details.querySelector("pre")?.checkVisibility()).toBe(false)
-  details.open = true
-  expect(details.querySelector("pre")?.checkVisibility()).toBe(true)
+test("a tool without a main argument shows its full input in the folded details", async () => {
+  await mount({ ...tool("done", "out"), name: "Custom", input: { a: 1 } })
+  await page.getByText("Custom").click()
+  await expect.element(page.getByText(/"a": 1/)).toBeVisible()
 })

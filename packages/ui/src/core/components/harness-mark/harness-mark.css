@@ -1,0 +1,8 @@
+.iv-harness-mark {
+  display: block;
+  flex: none;
+}
+
+.iv-harness-mark--claude {
+  color: #d97757;
+}

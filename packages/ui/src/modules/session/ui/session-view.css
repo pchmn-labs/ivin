@@ -1,0 +1,19 @@
+.iv-session-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.iv-session-view__transcript {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+}
+
+.iv-session-view__empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}

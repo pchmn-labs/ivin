@@ -1,0 +1,13 @@
+.iv-code-block {
+  max-height: 240px;
+  margin: 0;
+  padding: var(--iv-space-2) var(--iv-space-3);
+  overflow: auto;
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-bg-subtle);
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-md-lh);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

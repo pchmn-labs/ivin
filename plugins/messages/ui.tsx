@@ -1,40 +1,36 @@
-import { Markdown, defineUi } from "@ivin/plugin-api/ui"
+import { Block, Markdown, Text, defineUi } from "@ivin/plugin-api/ui"
 import type { SlotProps } from "@ivin/plugin-api/ui"
 
 function Message({ item }: SlotProps["transcript.message"]) {
-  if (item.type === "thinking") {
-    return (
-      <details>
-        <summary>Thinking</summary>
-        <p style={{ margin: 0, whiteSpace: "pre-wrap", fontStyle: "italic" }}>{item.text}</p>
-      </details>
-    )
-  }
+  // Thinking stays in the transcript data but is not shown, as in the Claude CLI.
+  if (item.type === "thinking") return null
   if (item.type === "interruption") {
-    return <p style={{ margin: 0, fontStyle: "italic", opacity: 0.7 }}>Interrupted</p>
+    return (
+      <Text as="p" size="sm" tone="faint" italic>
+        Interrupted
+      </Text>
+    )
   }
   if (item.type === "error") {
     return (
-      <p role="alert" style={{ margin: 0, color: "crimson" }}>
-        <strong>Error:</strong> {item.message}
-      </p>
+      <Block tone="danger" role="alert">
+        <Text weight="medium" tone="danger">
+          Error:
+        </Text>{" "}
+        <Text tone="danger">{item.message}</Text>
+      </Block>
     )
   }
   if (item.role === "user") {
     return (
-      <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-        <strong>You</strong>
-        <br />
-        <span>{item.text}</span>
-      </p>
+      <Block tone="bubble">
+        <Text as="p" preWrap>
+          {item.text}
+        </Text>
+      </Block>
     )
   }
-  return (
-    <div>
-      <strong>Assistant</strong>
-      <Markdown text={item.text} />
-    </div>
-  )
+  return <Markdown text={item.text} />
 }
 
 export const activate = defineUi((ctx) => {

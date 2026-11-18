@@ -1,0 +1,58 @@
+.iv-session-mark {
+  --iv-mark-ring: var(--iv-bg-card);
+
+  position: relative;
+  display: grid;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+}
+
+.iv-session-mark__overlay {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: none;
+  border-radius: 50%;
+  background: var(--iv-mark-ring);
+  line-height: 0;
+}
+
+.iv-session-mark:not([data-status="idle"]) .iv-session-mark__overlay {
+  display: block;
+}
+
+.iv-session-mark[data-status="working"] .iv-session-mark__overlay {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--iv-status-working);
+  border-right-color: transparent;
+  animation: iv-spin var(--iv-duration-spin) linear infinite;
+}
+
+.iv-session-mark[data-status="waiting"] .iv-session-mark__overlay {
+  width: 11px;
+  height: 11px;
+  color: var(--iv-status-waiting);
+}
+
+.iv-session-mark[data-status="failed"] .iv-session-mark__overlay {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--iv-status-failed);
+}
+
+.iv-session-mark__glyph {
+  stroke: var(--iv-mark-ring);
+}
+
+.iv-session-mark__glyph-fill {
+  fill: var(--iv-mark-ring);
+}
+
+.iv-session-mark__overlay svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

@@ -1,0 +1,24 @@
+.iv-shell-controls {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.iv-shell-controls > :not(.iv-shell-controls__lights) {
+  -webkit-app-region: no-drag;
+}
+
+/* In the sidebar card the toggle follows the traffic lights and the arrows sit at its right edge. */
+.iv-shell-controls[data-sidebar="open"] {
+  flex: 1;
+}
+
+.iv-shell-controls__lights {
+  flex: none;
+  width: var(--iv-traffic-lights-width);
+}
+
+.iv-shell-controls[data-sidebar="open"] > .iv-shell-controls__lights + * {
+  margin-right: auto;
+}

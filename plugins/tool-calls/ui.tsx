@@ -1,33 +1,44 @@
-import { defineUi } from "@ivin/plugin-api/ui"
-import type { SlotProps } from "@ivin/plugin-api/ui"
-import { foldText, formatInput } from "./rules/tool-output.ts"
+import { CodeBlock, Disclosure, Icon, Stack, Text, defineUi } from "@ivin/plugin-api/ui"
+import type { SlotProps, ToolCallItem } from "@ivin/plugin-api/ui"
+import { mainArgument, prettyInput } from "./rules/tool-output.ts"
+import { toolIcon } from "./rules/tool-icon.ts"
 
-const STATUS_LABELS = { running: "running", done: "succeeded", error: "failed" } as const
-
-const preStyle = { margin: 0, whiteSpace: "pre-wrap", overflowWrap: "anywhere" } as const
-
-function FoldedText({ text, label, testId }: { text: string; label?: string; testId?: string }) {
-  const { folded, preview } = foldText(text)
-  const pre = <pre style={preStyle}>{text}</pre>
-  if (!folded) return pre
+function ToolHeader({ item, main }: { item: ToolCallItem; main: string | null }) {
   return (
-    <details data-testid={testId}>
-      <summary>{label ?? <span style={{ whiteSpace: "pre-wrap" }}>{preview}</span>}</summary>
-      {pre}
-    </details>
+    <Stack as="span" direction="row" gap={2} align="center" grow>
+      <Icon name={toolIcon(item.name)} size={14} />
+      <Text weight="medium">{item.name}</Text>
+      <Stack as="span" grow>
+        <Text size="sm" tone="muted" mono truncate>
+          {main ?? ""}
+        </Text>
+      </Stack>
+      {item.status === "running" && (
+        <Text size="sm" tone="muted" data-testid="tool-status">
+          <Icon name="loader" size={12} label="running" />
+        </Text>
+      )}
+      {item.status === "error" && (
+        <Text size="sm" tone="danger" data-testid="tool-status">
+          failed
+        </Text>
+      )}
+    </Stack>
   )
 }
 
 function ToolCall({ item }: SlotProps["transcript.toolCall"]) {
+  const main = mainArgument(item.name, item.input)
+  const showInput = main === null && item.input !== undefined
+  const header = <ToolHeader item={item} main={main} />
+  if (item.output === null && !showInput) return header
   return (
-    <div>
-      <p style={{ margin: 0 }}>
-        <strong>{item.name}</strong>{" "}
-        <span data-testid="tool-status">{STATUS_LABELS[item.status]}</span>
-      </p>
-      <FoldedText text={formatInput(item.input)} label="Input" />
-      {item.output !== null && <FoldedText text={item.output} testId="tool-output" />}
-    </div>
+    <Disclosure data-testid="tool-output" summary={header}>
+      <Stack gap={2}>
+        {showInput && <CodeBlock text={prettyInput(item.input)} />}
+        {item.output !== null && <CodeBlock text={item.output} />}
+      </Stack>
+    </Disclosure>
   )
 }
 

@@ -1,4 +1,5 @@
 import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
+import type { Project } from "@ivin/contracts/project"
 import type { Session, SessionStatus } from "@ivin/contracts/session"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
 import { ServerClient } from "./server-client.ts"
@@ -17,7 +18,8 @@ export interface FakeServer {
   readonly holdNextSend: () => { readonly release: () => void; readonly fail: () => void }
 }
 
-export const makeFakeServer = (): FakeServer => {
+export const makeFakeServer = (options: { readonly project?: Project } = {}): FakeServer => {
+  let project: Project | null = options.project ?? null
   const sessions = new Map<string, Session>()
   const transcripts = new Map<string, Array<TranscriptItem>>()
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
@@ -68,6 +70,13 @@ export const makeFakeServer = (): FakeServer => {
     })
 
   const client = {
+    "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
+    "project.getCurrent": () => Effect.sync(() => project),
+    "project.open": ({ path }: { path: string }) =>
+      Effect.sync(() => {
+        project = { path, name: path.split("/").at(-1)!, lastOpenedAt: tick() }
+        return project
+      }),
     "session.create": ({ projectPath, model }: { projectPath: string; model: string }) =>
       Effect.sync(() => {
         const at = tick()

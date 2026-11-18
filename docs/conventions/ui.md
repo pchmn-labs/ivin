@@ -11,7 +11,10 @@ packages/ui/src/
     hooks/              what needs a mounted component: use- in the filename and in every export
     adapters/           browser APIs and stores outside the RPC: clipboard, local storage, drag and drop
     ui/                 components
-  core/                 design system, theme, the RPC client service
+  core/
+    components/<name>/  design system: <name>.tsx, <name>.css, its test
+    theme/              the --iv- tokens and base styles
+    server-client.ts    the RPC client service
 ```
 
 | Layer | Test of membership |
@@ -26,9 +29,14 @@ packages/ui/src/
 - A mutation atom is named for the server use case it calls: `atoms/rename-session.ts` for `usecases/rename-session.ts`.
 - A module has the server's name for the subject.
 - A file that needs a mock to reach one of its functions holds two layers: split it.
+- A component's styles live in a `.css` file beside it, with `iv-` classes and `--iv-` tokens only; no inline `style`. A screen in `modules/<subject>/ui/` does the same.
 
 ## Tests
 
 - `rules/`: called directly.
 - `atoms/`: in an atom registry, with a fake RPC client.
 - `hooks/` and `ui/`: Vitest browser mode, with the same fake RPC client.
+
+## Colour
+
+Every colour is a `--iv-` token, with one exception: a harness mark keeps its brand colour (Claude's orange, in `core/components/harness-mark/harness-mark.css`).

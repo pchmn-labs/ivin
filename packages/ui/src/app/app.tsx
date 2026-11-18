@@ -1,40 +1,93 @@
 import { useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
+import { useCallback, useEffect, useState } from "react"
+import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
-import { ProjectPicker } from "../modules/project/ui/project-picker.tsx"
+import { NoProject, OpenFolderError, ProjectBar } from "../modules/project/ui/project-picker.tsx"
 import { SessionList } from "../modules/session/ui/session-list.tsx"
+import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
 import { SessionView } from "../modules/session/ui/session-view.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
+import { MainTopBar } from "./main-top-bar.tsx"
+import { ShellControls } from "./shell-controls.tsx"
 import { getVersionAtom } from "../modules/server/atoms/get-version.ts"
+import "./app.css"
 
 export function App() {
   const result = useAtomValue(getVersionAtom)
   const project = useAtomValue(getCurrentProjectAtom)
-  const projectPath = AsyncResult.isSuccess(project) ? (project.value?.path ?? null) : null
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const current = AsyncResult.isSuccess(project) ? project.value : null
+  const projectPath = current?.path ?? null
+
+  const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [])
+  useRecordSessionVisits()
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "\\") {
+        event.preventDefault()
+        toggleSidebar()
+      }
+    }
+    window.addEventListener("keydown", onKeyDown)
+    return () => window.removeEventListener("keydown", onKeyDown)
+  }, [toggleSidebar])
+
+  const connection = AsyncResult.match(result, {
+    onInitial: () => ({ state: "connecting", text: "Connecting to the server…" }),
+    onFailure: () => ({ state: "failed", text: "The server did not answer" }),
+    onSuccess: ({ value }) => ({ state: "connected", text: `Server ${value}` }),
+  })
+  const version = (
+    <Tooltip content={connection.text} side="right">
+      <span className="iv-connection" data-state={connection.state} data-testid="server-version">
+        <span className="iv-visually-hidden">{connection.text}</span>
+      </span>
+    </Tooltip>
+  )
+
   return (
     <PluginsProvider plugins={builtinPlugins}>
-      <main>
-        <h1>ivin</h1>
-        <ProjectPicker />
-        {projectPath !== null && (
-          <div style={{ display: "flex", gap: "1rem" }}>
-            <div style={{ width: "16rem" }}>
-              <SessionList projectPath={projectPath} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <SessionView projectPath={projectPath} />
-            </div>
-          </div>
-        )}
-        <p data-testid="server-version">
-          {AsyncResult.match(result, {
-            onInitial: () => "Connecting to the server…",
-            onFailure: () => "The server did not answer",
-            onSuccess: ({ value }) => `Server ${value}`,
-          })}
-        </p>
-      </main>
+      {current === null || projectPath === null ? (
+        <div className="iv-app iv-app--empty">
+          <main className="iv-app__main">
+            <MainTopBar projectPath={null} controls={null} />
+            <OpenFolderError />
+            <NoProject />
+          </main>
+          <div className="iv-app__corner">{version}</div>
+        </div>
+      ) : (
+        <div className="iv-app" data-sidebar={sidebarOpen ? "open" : "closed"}>
+          {sidebarOpen && (
+            <aside className="iv-app__card" aria-label="Projects and sessions">
+              <div className="iv-app__card-top">
+                <ShellControls
+                  projectPath={projectPath}
+                  sidebarOpen={sidebarOpen}
+                  onToggleSidebar={toggleSidebar}
+                />
+              </div>
+              <div className="iv-app__card-body">
+                <SessionList projectPath={projectPath} projectName={current.name} />
+              </div>
+              <ProjectBar footer={version} />
+            </aside>
+          )}
+          <main className="iv-app__main">
+            <MainTopBar
+              projectPath={projectPath}
+              controls={
+                sidebarOpen ? null : { projectPath, sidebarOpen, onToggleSidebar: toggleSidebar }
+              }
+            />
+            <OpenFolderError />
+            <SessionView projectPath={projectPath} />
+          </main>
+        </div>
+      )}
     </PluginsProvider>
   )
 }

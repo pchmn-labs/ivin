@@ -2,9 +2,9 @@ import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
+import { hostComponents } from "../../packages/ui/src/app/host-components.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { SlotProps, UiContext } from "@ivin/plugin-api/ui"
-import { Markdown } from "../../packages/ui/src/modules/transcript/ui/markdown.tsx"
 import { activate } from "./ui.tsx"
 
 const mount = async (item: SlotProps["transcript.message"]["item"]) => {
@@ -19,7 +19,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     useSessions: () => [],
     useTranscript: () => [],
     useAnswerApproval: () => async () => {},
-    Markdown,
+    components: hostComponents,
   }
   await render(
     <UiHostProvider host={host}>
@@ -48,14 +48,9 @@ test("a user message stays plain text", async () => {
   await expect.element(page.getByText("**not bold**")).toBeVisible()
 })
 
-test("thinking is folded until opened", async () => {
+test("thinking is not shown", async () => {
   await mount({ ...base, type: "thinking", text: "secret reasoning" })
-  await expect.element(page.getByText("Thinking")).toBeVisible()
-  const details = document.querySelector("details")!
-  expect(details.open).toBe(false)
-  await page.getByText("Thinking").click()
-  expect(details.open).toBe(true)
-  await expect.element(page.getByText("secret reasoning")).toBeVisible()
+  expect(page.getByText("secret reasoning").query()).toBeNull()
 })
 
 test("an error item is shown as an alert", async () => {

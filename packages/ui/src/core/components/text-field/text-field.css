@@ -1,0 +1,46 @@
+.iv-field {
+  width: 100%;
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-bg-raised);
+  color: var(--iv-text);
+  transition: border-color var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-field::placeholder {
+  color: var(--iv-text-faint);
+}
+
+.iv-field:focus-visible {
+  border-color: var(--iv-focus-ring);
+  outline-offset: -1px;
+}
+
+.iv-field:disabled {
+  opacity: var(--iv-opacity-disabled);
+}
+
+.iv-field--input {
+  height: var(--iv-control-md);
+  padding: 0 var(--iv-space-2);
+}
+
+.iv-field--area {
+  min-height: var(--iv-control-md);
+  max-height: 240px;
+  padding: 5px var(--iv-space-2);
+  field-sizing: content;
+  resize: none;
+}
+
+.iv-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-1);
+}
+
+.iv-field-label__text {
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+  font-weight: var(--iv-weight-medium);
+}

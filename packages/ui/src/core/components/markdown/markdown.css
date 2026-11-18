@@ -1,0 +1,113 @@
+.iv-markdown {
+  overflow-wrap: anywhere;
+}
+
+.iv-markdown > :first-child {
+  margin-top: 0;
+}
+
+.iv-markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.iv-markdown p,
+.iv-markdown ul,
+.iv-markdown ol,
+.iv-markdown pre,
+.iv-markdown blockquote,
+.iv-markdown table {
+  margin: 0 0 var(--iv-space-3);
+}
+
+.iv-markdown h1,
+.iv-markdown h2,
+.iv-markdown h3,
+.iv-markdown h4 {
+  margin: var(--iv-space-6) 0 var(--iv-space-2);
+  font-weight: var(--iv-weight-semibold);
+}
+
+.iv-markdown h1 {
+  font-size: var(--iv-text-2xl);
+  line-height: var(--iv-text-2xl-lh);
+}
+
+.iv-markdown h2 {
+  font-size: var(--iv-text-xl);
+  line-height: var(--iv-text-xl-lh);
+}
+
+.iv-markdown h3,
+.iv-markdown h4 {
+  font-size: var(--iv-text-lg);
+  line-height: var(--iv-text-lg-lh);
+}
+
+.iv-markdown ul,
+.iv-markdown ol {
+  padding-left: var(--iv-space-5);
+}
+
+.iv-markdown li + li {
+  margin-top: var(--iv-space-1);
+}
+
+.iv-markdown code {
+  padding: 1px var(--iv-space-1);
+  border-radius: var(--iv-radius-sm);
+  background: var(--iv-bg-active);
+  font-size: 0.92em;
+}
+
+.iv-markdown pre {
+  max-height: 360px;
+  padding: var(--iv-space-2) var(--iv-space-3);
+  overflow: auto;
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-bg-subtle);
+  line-height: var(--iv-text-md-lh);
+}
+
+.iv-markdown pre code {
+  padding: 0;
+  background: none;
+  font-size: var(--iv-text-sm);
+}
+
+.iv-markdown a {
+  color: var(--iv-accent);
+  text-underline-offset: 2px;
+}
+
+.iv-markdown blockquote {
+  padding: 0 var(--iv-space-3);
+  border-left: 1px solid var(--iv-border-strong);
+  color: var(--iv-text-muted);
+}
+
+.iv-markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-markdown th,
+.iv-markdown td {
+  padding: var(--iv-space-1) var(--iv-space-3);
+  border: 1px solid var(--iv-border);
+  text-align: left;
+}
+
+.iv-markdown th {
+  background: var(--iv-bg-subtle);
+  font-weight: var(--iv-weight-semibold);
+}
+
+.iv-markdown hr {
+  margin: var(--iv-space-4) 0;
+  border: 0;
+  border-top: 1px solid var(--iv-border);
+}

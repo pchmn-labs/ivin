@@ -1,0 +1,31 @@
+.iv-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.iv-select__control {
+  height: var(--iv-control-md);
+  padding: 0 var(--iv-space-6) 0 var(--iv-space-2);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-bg-raised);
+  appearance: none;
+  transition: border-color var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-select__control:hover:not(:disabled) {
+  background: var(--iv-bg-hover);
+}
+
+.iv-select__control:disabled {
+  opacity: var(--iv-opacity-disabled);
+}
+
+.iv-select__chevron {
+  position: absolute;
+  right: var(--iv-space-2);
+  display: inline-flex;
+  color: var(--iv-text-muted);
+  pointer-events: none;
+}

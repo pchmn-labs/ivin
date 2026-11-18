@@ -103,7 +103,7 @@ packages/             what is imported
       hooks/          what needs a mounted component
       adapters/       browser APIs and stores outside the RPC
       ui/
-    core/             design system, theme, the RPC client service
+    core/             design system (`components/<component>/`, `theme/`), the RPC client service
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
 tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`
@@ -297,7 +297,7 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 | `transcript.inline` | markdown node | inline code links, issue mentions |
 | `transcript.approval` | approval item (tool, input, decision), session id | allow or deny a tool the agent asks to run |
 | `composer.status` | session id | tokens, cost, branch PR |
-| `composer.above` | session | approval sheet, queued messages, detail sheets |
+| `composer.above` | session, `isEmptyComposer(target)` (lets a sheet take keys from the empty composer) | approval sheet (built in, `approvals/sheet`), queued messages, detail sheets; a danger sheet squares the composer's top corners and dashes its top border |
 | `composer.suggest` | trigger char, query | `#` issues, `@../` paths, `/` commands |
 | `session.badge` | session | linked PR/issue icon in the sidebar and tabs |
 | `session.card` | session | hover card sections |
@@ -323,7 +323,7 @@ function PrBadge({ sessionId }: { sessionId: string }) {
 }
 ```
 
-Hooks available to plugin components: `useSession`, `useSessions`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Icon`, `Pill`, `HoverCard`, `Menu`, `Markdown`…) so plugins look native; the host supplies them, so a plugin never imports a UI library.
+Hooks available to plugin components: `useSession`, `useSessions`, `useTranscript` (items), `useAnnotations`, `useStorage`, `useSettings`, `useCommand`, plus the design system components (`Button`, `IconButton`, `Icon`, `Menu`, `Dialog`, `Tooltip`, `Text`, `Stack`, `Block`, `Disclosure`, `CodeBlock`, `StatusMark`, `Markdown`, `ActionSheet`, `OptionList`) so plugins look native; the host supplies them, so a plugin never imports a UI library ([ADR-0002](adr/0002-design-system-on-base-ui-and-css-custom-properties.md)).
 
 ### Plugins building on plugins
 
@@ -350,7 +350,7 @@ Plugins declare no dependency on each other: that would bring load order, cascad
 ~/.ivin/
   settings.json        JSONC, watched
   keybindings.json
-  themes/<id>.json     colours + CSS; filename is the id
+  themes/<id>.json     colours + CSS overriding the `--iv-` variables; filename is the id
   plugins/<id>/
   cache/plugins/       compiled bundles, by content hash
   run/ivin.sock
@@ -412,6 +412,14 @@ This table lists what the fork added, not what it sits on. The base app MonoCode
 | Sidebar & layout | inactive sessions, Working panel, Monos collapse, stacked side panels, swap side panels, session sub-tabs, dock follows session | `sidebar.*`, `view`, layout API |
 | Files & editor | explorer reveal and toolbar, code fonts, VS Code keys, tsgo navigation, HTML preview, tab git status, worktree icons, branch picker fetch and worktrees, code workspaces, project on-save commands | `editorExtensions`, `fileOpeners`, `fileIcons`, `tab.decoration`, project settings |
 | Look | Gruvbox theme, tab dividers | `themes`, `fileIcons` |
+
+### Window shell
+
+The sidebar is a floating card inset from the window edges: a header row (macOS traffic lights, a sidebar toggle on ⌘\, back and forward over the sessions opened in this window, kept in memory), then the project's session list, and a project bar at the bottom (project icons with their waiting count, open folder, connection status). The main area sits on the plain app background under a slim top bar showing the active session's title; tabs take that bar in milestone 2. With the card hidden, the toggle and arrows move to the top left of the main bar.
+
+A project is a pixel creature (8x8, mirrored, generated from its name, one of six `--iv-project-hue-*` hues). A session row is the harness mark with a status overlay; the sessions waiting on the user form a "Needs you" group above "Sessions". The Claude mark keeps its brand orange, the one colour outside the tokens.
+
+The prototype these come from is kept in [`docs/design/app-shell-prototype.html`](design/app-shell-prototype.html). Pending, waiting on a settings screen: a Column sidebar view (the projects as a column on the card's left edge) and Letter project icons, both alternatives to the bottom project bar and Pixel icons that ship now. Pending, waiting on server data: the PR icon with checks, branch and worktree in the status line, background tasks, tabs.
 
 Layout features (stacked or swapped panels, sub-tabs) are where the slot model is weakest; expect to grow a small layout API (`ctx.layout.registerPanel`, panel placement settings) while porting them.
 

@@ -9,10 +9,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@base-ui/react": "^1.9.0",
     "@effect/atom-react": "4.1.4",
     "@ivin/contracts": "workspace:*",
     "@ivin/plugin-api": "workspace:*",
     "@ivin/state": "workspace:*",
+    "@phosphor-icons/react": "^2.1.10",
     "effect": "4.1.4",
     "marked": "^18.2.1",
     "react": "19.3.1",

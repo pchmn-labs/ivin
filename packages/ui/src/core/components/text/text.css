@@ -1,0 +1,76 @@
+.iv-text {
+  margin: 0;
+}
+
+.iv-text--xs {
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+}
+
+.iv-text--sm {
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
+}
+
+.iv-text--md {
+  font-size: var(--iv-text-md);
+  line-height: var(--iv-text-md-lh);
+}
+
+.iv-text--lg {
+  font-size: var(--iv-text-lg);
+  line-height: var(--iv-text-lg-lh);
+}
+
+.iv-text--default {
+  color: var(--iv-text);
+}
+
+.iv-text--muted {
+  color: var(--iv-text-muted);
+}
+
+.iv-text--faint {
+  color: var(--iv-text-faint);
+}
+
+.iv-text--danger {
+  color: var(--iv-danger);
+}
+
+.iv-text--accent {
+  color: var(--iv-accent);
+}
+
+.iv-text--regular {
+  font-weight: var(--iv-weight-regular);
+}
+
+.iv-text--medium {
+  font-weight: var(--iv-weight-medium);
+}
+
+.iv-text--semibold {
+  font-weight: var(--iv-weight-semibold);
+}
+
+.iv-text--mono {
+  font-family: var(--iv-font-mono);
+}
+
+.iv-text--italic {
+  font-style: italic;
+}
+
+.iv-text--pre-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.iv-text--truncate {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
