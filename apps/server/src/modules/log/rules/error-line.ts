@@ -1,6 +1,6 @@
 export type ErrorSource = "server" | "ui"
 
-export interface ErrorLine {
+interface ErrorLine {
   readonly time: string
   readonly source: ErrorSource
   readonly action: string
@@ -15,7 +15,7 @@ const field = (value: unknown, key: string): string | undefined => {
   return typeof found === "string" && found !== "" ? found : undefined
 }
 
-export const describeError = (error: unknown): Pick<ErrorLine, "type" | "message" | "stack"> => {
+const describeError = (error: unknown): Pick<ErrorLine, "type" | "message" | "stack"> => {
   const stack = field(error, "stack")
   return {
     type: field(error, "_tag") ?? field(error, "name") ?? typeof error,

@@ -10,7 +10,6 @@ const errorLogFile = (path: string) =>
     const source: ErrorSource = annotations["source"] === "ui" ? "ui" : "server"
     const action = typeof annotations["action"] === "string" ? annotations["action"] : "unknown"
     const error = Array.isArray(message) ? message[0] : message
-    // A log that cannot be written is dropped: it must never change how the failed action ends.
     try {
       mkdirSync(dirname(path), { recursive: true })
       appendFileSync(path, `${errorLine(date, source, action, error)}\n`)

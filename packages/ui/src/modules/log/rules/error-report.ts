@@ -18,9 +18,9 @@ export const errorReport = (action: string, error: unknown): ErrorReport => {
   }
 }
 
+// Matches unbundled plugin sources only: the packaged build merges plugins into the app bundle.
 const pluginPath = /\/plugins\/[^/]+\//
 
-// Plugins are bundled with the app, so their source path is the only sign of where an error was thrown.
 export const thrownByPlugin = (filename: string | undefined, error: unknown): boolean => {
   if (filename !== undefined && pluginPath.test(filename)) return true
   const firstFrame = field(error, "stack")
