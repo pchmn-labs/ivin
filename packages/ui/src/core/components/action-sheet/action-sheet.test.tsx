@@ -29,3 +29,16 @@ test("the optional parts are left out when absent", async () => {
   expect(sheet.element().querySelector(".iv-action-sheet__detail")).toBeNull()
   expect(sheet.element().querySelector(".iv-action-sheet__hint")).toBeNull()
 })
+
+test("a click on the sheet outside its controls focuses its first control", async () => {
+  await render(
+    <ActionSheet title="Approval needed" detail="pnpm test">
+      <button type="button" tabIndex={-1}>
+        Skipped
+      </button>
+      <button type="button">Answer</button>
+    </ActionSheet>,
+  )
+  await page.getByText("pnpm test").click()
+  await expect.element(page.getByRole("button", { name: "Answer" })).toHaveFocus()
+})

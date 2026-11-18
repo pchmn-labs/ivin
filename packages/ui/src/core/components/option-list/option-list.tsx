@@ -4,6 +4,11 @@ import "./option-list.css"
 
 export type { OptionListProps }
 
+const isTextField = (element: Element | null) =>
+  element instanceof HTMLTextAreaElement ||
+  element instanceof HTMLInputElement ||
+  (element instanceof HTMLElement && element.isContentEditable)
+
 export function OptionList({
   label,
   options,
@@ -14,9 +19,16 @@ export function OptionList({
   submitOnClick = false,
   disabled = false,
   keyboardSource,
+  autoFocus = false,
 }: OptionListProps) {
   const root = useRef<HTMLDivElement>(null)
   const buttons = useRef(new Map<string, HTMLButtonElement>())
+
+  useEffect(() => {
+    if (!autoFocus || isTextField(document.activeElement)) return
+    root.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus()
+    // Only on mount: a later render must not pull the focus back.
+  }, [])
 
   useEffect(() => {
     if (disabled) return

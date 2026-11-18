@@ -175,6 +175,8 @@ export interface OptionListProps {
   readonly submitOnClick?: boolean
   readonly disabled?: boolean
   readonly keyboardSource?: (target: EventTarget | null) => boolean
+  /** Focuses the checked option on mount, unless a text field holds the focus. */
+  readonly autoFocus?: boolean
 }
 
 export interface HostComponents {

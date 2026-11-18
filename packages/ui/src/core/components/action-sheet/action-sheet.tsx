@@ -4,6 +4,9 @@ import "./action-sheet.css"
 
 export type { ActionSheetProps }
 
+const INTERACTIVE = "button, a, input, textarea, select, [tabindex]"
+const TABBABLE = 'button:not([disabled]):not([tabindex="-1"]), [tabindex="0"]'
+
 export function ActionSheet({
   tone = "neutral",
   icon,
@@ -20,6 +23,13 @@ export function ActionSheet({
       role="group"
       aria-label={title}
       data-testid={testId}
+      onMouseDown={(event) => {
+        if (!(event.target instanceof Element) || event.target.closest(INTERACTIVE) !== null) return
+        const control = event.currentTarget.querySelector<HTMLElement>(TABBABLE)
+        if (control === null) return
+        event.preventDefault()
+        control.focus()
+      }}
     >
       <div className="iv-action-sheet__head">
         {icon === undefined ? null : <Icon name={icon} size={16} />}

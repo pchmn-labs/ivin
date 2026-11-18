@@ -79,6 +79,7 @@ function PendingSheet({
         submitOnClick
         disabled={sending}
         keyboardSource={isEmptyComposer}
+        autoFocus
       />
       {failed && (
         <Text size="sm" tone="danger" role="alert" data-testid="approval-error">

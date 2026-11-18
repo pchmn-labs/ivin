@@ -105,3 +105,26 @@ test("with submitOnClick a click submits that option", async () => {
   await radio(/^Deny/).click()
   expect(onSubmit).toHaveBeenCalledExactlyOnceWith("deny")
 })
+
+test("autoFocus focuses the checked option on mount, unless a text field holds the focus", async () => {
+  const AutoFocused = () => (
+    <OptionList
+      label="Answer"
+      options={OPTIONS}
+      value="allow"
+      onChange={() => {}}
+      onSubmit={() => {}}
+      autoFocus
+    />
+  )
+  const first = await render(<AutoFocused />)
+  await expect.element(radio("Allow")).toHaveFocus()
+  await first.unmount()
+
+  const field = document.createElement("textarea")
+  document.body.append(field)
+  field.focus()
+  await render(<AutoFocused />)
+  expect(document.activeElement).toBe(field)
+  field.remove()
+})
