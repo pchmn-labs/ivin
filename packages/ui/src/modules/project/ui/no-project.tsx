@@ -1,9 +1,11 @@
 import { useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { Button } from "../../../core/components/button/button.tsx"
+import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { projectsAtom } from "../atoms/list-projects.ts"
+import { openFolderFailureAtom } from "../atoms/open-folder-failure.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
 import "./no-project.css"
 
@@ -28,13 +30,16 @@ export function NoProject() {
 }
 
 export function OpenFolderError() {
-  const { opened } = useOpenFolder()
-  if (!AsyncResult.isFailure(opened)) return null
+  const failed = useAtomValue(openFolderFailureAtom)
+  const { retry } = useOpenFolder()
+  if (failed === null) return null
+  const { path, failure } = failed
   return (
     <div className="iv-open-folder-error">
-      <Text role="alert" tone="danger">
-        Could not open the folder
-      </Text>
+      <ErrorMessage
+        message={failure.text}
+        {...(failure.retryable && { onRetry: () => retry(path) })}
+      />
     </div>
   )
 }

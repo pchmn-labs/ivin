@@ -67,3 +67,7 @@
 .iv-connection[data-state="failed"] {
   background: var(--iv-danger);
 }
+
+.iv-app__alert {
+  padding: var(--iv-space-2) var(--iv-space-4);
+}

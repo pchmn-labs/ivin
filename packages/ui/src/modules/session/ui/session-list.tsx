@@ -1,14 +1,11 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { AsyncResult } from "effect/reactivity"
 import { DateTime } from "effect"
 import { useState } from "react"
 import type { Session } from "@ivin/contracts/session"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
-import { Text } from "../../../core/components/text/text.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
-import { createSessionAtom } from "../atoms/create-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useNow } from "../../../shared/use-now.ts"
 import { groupSessions } from "../rules/group-sessions.ts"
@@ -141,18 +138,12 @@ export function SessionList({
   const tabsState = tabsOf(projectPath)
   const { tabs, selectedSessionId } = useAtomValue(tabsState.value)
   const tabsLoaded = useAtomValue(tabsState.loaded)
-  const created = useAtomValue(createSessionAtom)
   const byId = new Map(sessions.map((session) => [session.id, session]))
   const open = tabs.flatMap((tab) => byId.get(tab.sessionId) ?? [])
   const { needsYou, others } = groupSessions(open)
 
   return (
     <nav className="iv-session-list" aria-label="Sessions">
-      {AsyncResult.isFailure(created) && (
-        <Text role="alert" tone="danger">
-          Could not create the session
-        </Text>
-      )}
       {tabsLoaded && tabs.length === 0 && (
         <p className="iv-session-list__empty">
           {sessions.length === 0

@@ -38,4 +38,6 @@ export const sendMessageAtom = serverRuntime.fn<{
       reconcile: (session) => sessionsOf(projectPath).upsert([session]),
     })(client["session.sendMessage"]({ sessionId, messageId, text }))
   }),
+  // A second message sent before the first is answered would otherwise cancel the first.
+  { concurrent: true },
 )

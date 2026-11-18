@@ -1,6 +1,7 @@
 import { useState } from "react"
 import {
   ActionSheet,
+  ErrorMessage,
   Icon,
   OptionList,
   Stack,
@@ -9,7 +10,7 @@ import {
   useAnswerApproval,
   useTranscript,
 } from "@ivin/plugin-api/ui"
-import type { ApprovalItem, SlotProps } from "@ivin/plugin-api/ui"
+import type { ActionFailure, ApprovalItem, SlotProps } from "@ivin/plugin-api/ui"
 import { formatInput } from "./rules/format-input.ts"
 
 const OPTIONS = [
@@ -48,14 +49,15 @@ function PendingSheet({
   const answer = useAnswerApproval(sessionId)
   const [choice, setChoice] = useState("allow")
   const [sending, setSending] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [failure, setFailure] = useState<(ActionFailure & { id: string }) | null>(null)
 
   const respond = (id: string) => {
     if (sending) return
     setSending(true)
-    setFailed(false)
-    answer({ requestId: item.requestId, allow: id === "allow" }).catch(() => {
-      setFailed(true)
+    setFailure(null)
+    void answer({ requestId: item.requestId, allow: id === "allow" }).then((failed) => {
+      if (failed === undefined) return
+      setFailure({ id, ...failed })
       setSending(false)
     })
   }
@@ -80,10 +82,11 @@ function PendingSheet({
         keyboardSource={isEmptyComposer}
         autoFocus
       />
-      {failed && (
-        <Text size="sm" tone="danger" role="alert" data-testid="approval-error">
-          Could not send your answer
-        </Text>
+      {failure && (
+        <ErrorMessage
+          message={failure.text}
+          {...(failure.retryable && { onRetry: () => respond(failure.id) })}
+        />
       )}
     </ActionSheet>
   )

@@ -3,7 +3,7 @@ import type { ComponentType, ReactNode } from "react"
 import type { Session } from "@ivin/contracts/session"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
-import type { UiHost } from "./host-context.ts"
+import type { ActionFailure, UiHost } from "./host-context.ts"
 
 export type { Session, TranscriptItem }
 export type MessageItem = Extract<TranscriptItem, { type: "message" }>
@@ -68,7 +68,7 @@ export type UiPlugin = (ctx: UiContext) => void
 
 export const defineUi = (activate: UiPlugin): UiPlugin => activate
 
-export type { UiHost }
+export type { ActionFailure, UiHost }
 export * from "./components.ts"
 
 export const UiHostProvider = ({ host, children }: { host: UiHost; children?: ReactNode }) =>

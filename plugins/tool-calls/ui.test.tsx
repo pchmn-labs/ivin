@@ -20,7 +20,7 @@ const mount = async (item: ToolCallItem) => {
     useSession: () => undefined,
     useSessions: () => [],
     useTranscript: () => [],
-    useAnswerApproval: () => async () => {},
+    useAnswerApproval: () => async () => undefined,
     components: hostComponents,
   }
   await render(

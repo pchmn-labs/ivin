@@ -130,6 +130,38 @@ test("the composer accepts a message while the session works", async () => {
   await vi.waitFor(() => expect(server.sessions.get("s1")?.title).toBe("also this"))
 })
 
+test("a message that fails to send stays in the composer, and Retry sends it", async () => {
+  const server = await mountSession("idle")
+  const send = server.holdNextSend()
+  const field = page.getByRole("textbox", { name: "Message" })
+  await field.fill("keep me")
+  await page.getByRole("button", { name: "Send" }).click()
+  await expect.element(field).toHaveValue("")
+
+  send.fail()
+  const alert = page.getByRole("alert")
+  await expect.element(alert.getByText("The message was not sent.")).toBeVisible()
+  await expect.element(field).toHaveValue("keep me")
+  expect(server.errorReports.map((report) => report.action)).toContain("session.sendMessage")
+
+  await alert.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByText("keep me", { exact: true })).toBeVisible()
+  await expect.element(field).toHaveValue("")
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.title).toBe("keep me"))
+})
+
+test("a message to a session the server no longer has says so, with no Retry", async () => {
+  const server = await mountSession("idle")
+  server.sessions.delete("s1")
+  await page.getByRole("textbox", { name: "Message" }).fill("hello")
+  await page.getByRole("button", { name: "Send" }).click()
+  const alert = page.getByRole("alert")
+  await expect.element(alert.getByText(/^This session no longer exists/)).toBeVisible()
+  expect(alert.getByRole("button", { name: "Retry" }).query()).toBeNull()
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("hello")
+})
+
 test("Escape interrupts a working session wherever the focus is", async () => {
   await mountSession("working")
   await userEvent.keyboard("{Escape}")

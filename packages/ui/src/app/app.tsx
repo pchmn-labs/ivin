@@ -1,6 +1,7 @@
 import { useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { useCallback, useState } from "react"
+import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { ProjectColumn } from "../modules/project/ui/project-column.tsx"
@@ -8,6 +9,7 @@ import { ProjectRail } from "../modules/project/ui/project-rail.tsx"
 import { NoProject, OpenFolderError } from "../modules/project/ui/no-project.tsx"
 import { useReportUncaughtErrors } from "../modules/log/hooks/use-report-uncaught-errors.ts"
 import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
+import { StartSessionError } from "../modules/session/ui/start-session-error.tsx"
 import { TabView } from "../modules/tab/ui/tab-view.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
@@ -31,7 +33,10 @@ export function App() {
 
   const connection = AsyncResult.match(result, {
     onInitial: () => ({ state: "connecting", text: "Connecting to the server…" }),
-    onFailure: () => ({ state: "failed", text: "The server did not answer" }),
+    onFailure: () => ({
+      state: "failed",
+      text: "ivin's server is not answering. Quit and reopen ivin.",
+    }),
     onSuccess: ({ value }) => ({ state: "connected", text: `Server ${value}` }),
   })
   const version = (
@@ -41,6 +46,12 @@ export function App() {
       </span>
     </Tooltip>
   )
+  // The desktop app does not restart a lost server, so a retry cannot work.
+  const serverLost = connection.state === "failed" && (
+    <div className="iv-app__alert">
+      <ErrorMessage message={connection.text} />
+    </div>
+  )
 
   return (
     <PluginsProvider plugins={builtinPlugins}>
@@ -48,6 +59,7 @@ export function App() {
         <div className="iv-app iv-app--empty">
           <main className="iv-app__main">
             <MainTopBar projectPath={null} controls={null} />
+            {serverLost}
             <OpenFolderError />
             <KeybindingsFileProblem />
             <NoProject />
@@ -78,7 +90,9 @@ export function App() {
                 sidebarOpen ? null : { projectPath, sidebarOpen, onToggleSidebar: toggleSidebar }
               }
             />
+            {serverLost}
             <OpenFolderError />
+            <StartSessionError projectPath={projectPath} />
             <KeybindingsFileProblem />
             <TabView projectPath={projectPath} />
           </main>

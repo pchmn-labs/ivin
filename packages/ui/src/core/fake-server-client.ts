@@ -32,6 +32,8 @@ export interface FakeServer {
   readonly tabOrder: (projectPath: string) => ReadonlyArray<string>
   // Streams the user's keybindings to `keybinding.watch`, as after a change to the file.
   readonly setUserKeybindings: (state: UserKeybindings) => void
+  // Makes the next call of this RPC die, as a lost connection would.
+  readonly failNextCall: (rpc: string) => void
 }
 
 export const makeFakeServer = (options: { readonly project?: Project } = {}): FakeServer => {
@@ -51,6 +53,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   let holdReorder: { readonly wait: Promise<boolean> } | null = null
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
+  const failing = new Set<string>()
 
   const openProjects = (): OpenProjects => ({ projects: [...projects], selectedPath })
   const tabsOf = (projectPath: string) => tabs.filter((tab) => tab.projectPath === projectPath)
@@ -232,31 +235,40 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
         return renamed
       }),
     "session.sendMessage": (input: { sessionId: string; messageId: string; text: string }) =>
-      Effect.promise(async () => {
-        if (hold) {
-          const ok = await hold.wait
-          hold = null
-          if (!ok) throw new Error("send failed")
-        }
-        const session = sessions.get(input.sessionId)!
-        const items = itemsOf(input.sessionId)
-        const isFirstMessage = items.length === 0
-        publish({
-          id: input.messageId,
-          sessionId: input.sessionId,
-          position: items.length,
-          type: "message",
-          role: "user",
-          text: input.text,
-        })
-        const updated: Session = {
-          ...session,
-          status: "working",
-          title: isFirstMessage ? input.text : session.title,
-          lastActivityAt: tick(),
-        }
-        return saveSession(updated)
-      }),
+      Effect.flatMap(
+        Effect.promise(async () => {
+          if (hold) {
+            const ok = await hold.wait
+            hold = null
+            if (!ok) throw new Error("send failed")
+          }
+          return sessions.get(input.sessionId)
+        }),
+        (session) =>
+          session === undefined
+            ? Effect.fail(new SessionNotFound({ sessionId: input.sessionId }))
+            : Effect.succeed(session),
+      ).pipe(
+        Effect.map((session) => {
+          const items = itemsOf(input.sessionId)
+          const isFirstMessage = items.length === 0
+          publish({
+            id: input.messageId,
+            sessionId: input.sessionId,
+            position: items.length,
+            type: "message",
+            role: "user",
+            text: input.text,
+          })
+          const updated: Session = {
+            ...session,
+            status: "working",
+            title: isFirstMessage ? input.text : session.title,
+            lastActivityAt: tick(),
+          }
+          return saveSession(updated)
+        }),
+      ),
     "session.answerApproval": (input: { sessionId: string; requestId: string; allow: boolean }) =>
       Effect.sync(() => {
         const items = itemsOf(input.sessionId)
@@ -300,8 +312,18 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
       ),
   }
 
+  const failingClient = Object.fromEntries(
+    Object.entries(client).map(([rpc, call]) => [
+      rpc,
+      (...args: Array<unknown>) =>
+        failing.delete(rpc)
+          ? Effect.die(new Error(`${rpc} failed`))
+          : (call as (...a: Array<unknown>) => unknown)(...args),
+    ]),
+  )
+
   return {
-    layer: Layer.succeed(ServerClient)(client as unknown as ServerClient["Service"]),
+    layer: Layer.succeed(ServerClient)(failingClient as unknown as ServerClient["Service"]),
     sessions,
     errorReports,
     pushItem: publish,
@@ -330,5 +352,6 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
       userKeybindings = state
       Effect.runSync(PubSub.publish(keybindingChanges, state))
     },
+    failNextCall: (rpc) => void failing.add(rpc),
   }
 }

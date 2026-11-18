@@ -274,3 +274,50 @@ test("a key keybindings.json gives that ivin cannot read is reported", async () 
     )
     .toBeVisible()
 })
+
+test("a session that was not created shows why, and Retry creates it with the same model", async () => {
+  const server = await mountApp()
+  server.failNextCall("session.create")
+  await page.getByRole("main").getByRole("button", { name: "New session" }).click()
+  const alert = page.getByRole("alert")
+  await expect.element(alert.getByText("The session was not created.")).toBeVisible()
+  expect(server.errorReports.map((report) => report.action)).toContain("session.create")
+
+  await alert.getByRole("button", { name: "Retry" }).click()
+  await vi.waitFor(() => expect(server.sessions.size).toBe(3))
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
+  await expect.element(page.getByRole("tab")).toHaveLength(3)
+})
+
+test("a folder that was not opened shows why, and Retry opens the same folder", async () => {
+  Object.defineProperty(window, "ivin", {
+    configurable: true,
+    value: { pickFolder: () => Promise.resolve("/dev/other") },
+  })
+  const server = await mountApp()
+  server.failNextCall("project.open")
+  await page.getByRole("button", { name: "Open folder…" }).click()
+  const alert = page.getByRole("alert")
+  await expect.element(alert.getByText("The folder was not opened.")).toBeVisible()
+  expect(server.errorReports.map((report) => report.action)).toContain("project.open")
+
+  await alert.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
+})
+
+test("a server that does not answer is reported in the window, without a raw error", async () => {
+  const server = makeFakeServer()
+  server.failNextCall("server.getVersion")
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <App />
+    </RegistryProvider>,
+  )
+  await expect
+    .element(
+      page.getByRole("alert").getByText("ivin's server is not answering. Quit and reopen ivin."),
+    )
+    .toBeVisible()
+  expect(document.body.textContent).not.toContain("server.getVersion failed")
+})
