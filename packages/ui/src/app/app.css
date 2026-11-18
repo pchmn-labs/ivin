@@ -27,7 +27,7 @@
   flex: none;
   align-items: center;
   height: var(--iv-space-10);
-  padding: 0 var(--iv-space-2) 0 5px;
+  padding: 0 var(--iv-space-2) 0 0;
   -webkit-app-region: drag;
 }
 
