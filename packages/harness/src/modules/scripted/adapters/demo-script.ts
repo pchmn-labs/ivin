@@ -37,3 +37,38 @@ export const demoTurn: readonly HarnessOutput[] = [
 ]
 
 export const demoScript: readonly (readonly HarnessOutput[])[] = [demoTurn]
+
+export const demoApprovalTurn: readonly HarnessOutput[] = [
+  { type: "status", status: "running", raw: null },
+  { type: "assistant_text", text: "I need to run the tests to check.", raw: null },
+  {
+    type: "tool_call",
+    toolCallId: "demo-tool-2",
+    name: "Bash",
+    input: { command: "pnpm test" },
+    raw: null,
+  },
+  {
+    type: "approval_request",
+    requestId: "demo-approval-1",
+    toolCallId: "demo-tool-2",
+    name: "Bash",
+    input: { command: "pnpm test" },
+    raw: null,
+  },
+  {
+    type: "tool_result",
+    toolCallId: "demo-tool-2",
+    output: "3 files, all passed",
+    isError: false,
+    raw: null,
+  },
+  { type: "assistant_text", text: "The tests pass.", raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
+// A first turn that answers, then a second that waits for an approval.
+export const demoApprovalScript: readonly (readonly HarnessOutput[])[] = [
+  demoTurn,
+  demoApprovalTurn,
+]
