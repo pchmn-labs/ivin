@@ -33,7 +33,7 @@ Read `docs/finished-features.md` before specifying, ticketing or building anythi
 
 ### Launching ivin
 
-To run ivin, show it to the user or capture its screens, use the `launch-ivin` skill: its `shot` command is the way to capture them, for example to compare a change with its prototype.
+To run ivin, show it to the user, capture its screens or show a UI change in a pull request, use the `launch-ivin` skill: its `shot` command is the way to capture them, for example to compare a change with its prototype.
 
 ### Running tests
 

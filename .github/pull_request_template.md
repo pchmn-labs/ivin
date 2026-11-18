@@ -38,6 +38,10 @@
 
 </details>
 
+## Screenshots
+
+<!-- Only when the PR changes a screen enough that a reviewer wants to see it: one or two captures, uploaded as the launch-ivin skill says. Delete this section otherwise. -->
+
 ## Test plan
 
 <!-- Step-by-step instructions to verify this works. A user-facing change follows docs/finished-features.md. -->
