@@ -23,3 +23,4 @@ packages/harness/src/
 ## Tests
 
 - `rules/`: on recorded provider output kept as fixtures.
+- `adapters/`: the `node` test project takes every installed `claude` off the PATH, so a test that needs one puts a fake on it; `IVIN_TEST_CLAUDE=1` keeps the real CLI.
