@@ -28,8 +28,9 @@
 
   position: relative;
   display: flex;
-  flex: 0 1 var(--iv-tab-width);
+  flex: 0 1 auto;
   align-items: center;
+  width: var(--iv-tab-width);
   min-width: var(--iv-tab-min-width);
   height: var(--iv-tab-height);
   border-radius: var(--iv-radius-tab);

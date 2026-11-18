@@ -7,14 +7,14 @@ import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { App } from "./app.tsx"
 
-const mountApp = async () => {
+const mountApp = async (titles: readonly [string, string] = ["First", "Second"]) => {
   const server = makeFakeServer({
     project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
   const at = DateTime.makeUnsafe(0)
   for (const [id, title] of [
-    ["s1", "First"],
-    ["s2", "Second"],
+    ["s1", titles[0]],
+    ["s2", titles[1]],
   ] as const) {
     server.sessions.set(id, {
       id,
@@ -151,4 +151,38 @@ test("the plus after the tabs starts a session with the chosen model, and arrow 
   await vi.waitFor(() => expect(server.sessions.size).toBe(4))
   expect([...server.sessions.values()].at(-1)?.model).toBe("opus")
   await expect.element(page.getByRole("tab")).toHaveLength(4)
+})
+
+test("every tab has the same width, which hovering a tab does not change", async () => {
+  await page.viewport(1400, 800)
+  await mountApp(["Crée un fichier", "Lance la commande echo bonjour avec Bash"])
+  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  const widths = () =>
+    [...document.querySelectorAll<HTMLElement>('[data-testid="tab"]')].map(
+      (tab) => tab.getBoundingClientRect().width,
+    )
+  const before = widths()
+  expect(before[0]).toBe(before[1])
+
+  await page.getByRole("tab", { name: /Crée/ }).hover()
+  await expect.element(page.getByRole("button", { name: "Close Crée un fichier" })).toBeVisible()
+
+  expect(widths()).toEqual(before)
+})
+
+test("tabs shrink together when the bar runs out of room, down to a minimum", async () => {
+  await page.viewport(1400, 800)
+  await mountApp(["Crée un fichier", "Lance la commande echo bonjour avec Bash"])
+  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  const width = () =>
+    document.querySelector<HTMLElement>('[data-testid="tab"]')!.getBoundingClientRect().width
+  const roomy = width()
+
+  await page.viewport(640, 800)
+  await vi.waitFor(() => expect(width()).toBeLessThan(roomy))
+  const narrow = width()
+
+  await page.viewport(300, 800)
+  await vi.waitFor(() => expect(width()).toBeLessThan(narrow))
+  expect(width()).toBe(140)
 })
