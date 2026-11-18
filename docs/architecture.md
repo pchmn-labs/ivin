@@ -351,7 +351,8 @@ Plugins declare no dependency on each other: that would bring load order, cascad
 ```
 ~/.ivin/
   settings.json        JSONC, watched
-  keybindings.json
+  keybindings.json     watched, key → command, see ADR-0003
+  logs/ivin.log        raw errors from the server and the UI, see ADR-0004
   themes/<id>.json     colours + CSS overriding the `--iv-` variables; filename is the id
   plugins/<id>/
   cache/plugins/       compiled bundles, by content hash
@@ -374,6 +375,7 @@ ivin plugin list | reload <id> | logs <id> | new <id>
 ivin plugin check <id>                                  # type-check against the plugin API
 ivin plugin enable|disable <id>
 ivin run <command> [--args json]                        # any plugin command
+ivin logs                                               # raw errors of the server and the UI, ADR-0004
 ivin doctor
 ivin --safe                                             # start with user and project plugins disabled
 ```

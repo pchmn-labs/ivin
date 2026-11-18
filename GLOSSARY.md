@@ -24,3 +24,10 @@ Typed, namespaced metadata attached to a session or a project, written by plugin
 
 **Tab / pane layout**:
 The workspace tabs, holding session, file and plugin views.
+
+**Command**:
+An action with an id and a title that the user, a keybinding, the CLI or a plugin can run.
+
+**Keybinding**:
+A key mapped to a command, possibly limited to one area of the window.
+_Avoid_: hotkey
