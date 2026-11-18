@@ -12,7 +12,11 @@ export function Disclosure({
 }: DisclosureProps) {
   return (
     <details className="iv-disclosure" open={defaultOpen} data-testid={testId}>
-      <summary className="iv-disclosure__summary">
+      <summary
+        className="iv-disclosure__summary"
+        // Chromium shows the focus ring on a clicked summary; only the keyboard should focus it.
+        onMouseDown={(event) => event.preventDefault()}
+      >
         <span className="iv-disclosure__chevron">
           <Icon name="chevron-right" size={12} />
         </span>
