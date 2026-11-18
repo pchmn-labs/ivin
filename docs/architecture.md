@@ -106,7 +106,7 @@ packages/             what is imported
     core/             design system (`components/<component>/`, `theme/`), the RPC client service
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
-tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`
+tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`, `test-setup/` runs before every `node` test
 plugins/<id>/         built-in plugins, same format as user plugins; `rules/` beside the two halves when one has logic
 docs/
 ```
@@ -125,12 +125,15 @@ Tests sit beside the file they test, at three levels:
 
 ## Domain model
 
-- **Project**: a folder or a `.code-workspace` (several folders), with its settings. Several projects are open at once in a window: they are ordered, one is selected, and each has its own tab bar. The open projects, their order and the selection are stored in SQLite and restored at launch.
-- **Session**: one agent conversation, bound to a project folder, a cwd (checkout or worktree), a branch, a harness and a model. Has a status: working, waiting (on the user, such as an approval), idle or failed. Owns a transcript.
-- **Transcript**: an append-only list of normalised events (`user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `approval_decision`, `usage`, `status`, `error`, `interruption`…), each with a stable id, **owned by ivin**: every event is written to SQLite as it streams, never re-read from the provider's files. Token deltas are not events: they go to the renderer and are never stored, and the finished block is stored once, under the id its streamed copy had. Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
-- **Transcript items**: the read model derived from the events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled. Plugins render items; they don't re-derive them from events.
-- **Annotation**: typed, namespaced metadata attached to a session (or project), written by plugins, the CLI or the agent. Example: `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
-- **Tab**: belongs to one project and shows exactly one session, with its transcript and composer. It has a position in its project's bar, and the project remembers its selected tab. A session has at most one tab. There are no splits. Sub-views of a tab (files, diff, terminal) come later. A tab stores its project and position, so a single bar for all projects can later be a view over the same rows.
+The terms are defined in [`GLOSSARY.md`](../GLOSSARY.md). What the design adds to them:
+
+- Transcript events are `user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `approval_decision`, `usage`, `status`, `error`, `interruption`… Each is written to SQLite as it streams, never re-read from the provider's files.
+- Token deltas are not events: they go to the renderer and are never stored, and the finished block is stored once, under the id its streamed copy had.
+- Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
+- Plugins render transcript items; they don't re-derive them from events.
+- An annotation looks like `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
+- The open projects, their order, the selected project, the tabs, their order and each project's selected tab are stored in SQLite and restored at launch.
+- A tab stores its project and its position, so a single bar for all projects can later be a view over the same rows.
 
 The server is the source of truth and persists to SQLite; the renderer holds a read model fed by RPC streams, in atoms that the plugin hooks wrap (see [UI state](#ui-state)). Plugin storage is a namespaced key-value store in the same database.
 
