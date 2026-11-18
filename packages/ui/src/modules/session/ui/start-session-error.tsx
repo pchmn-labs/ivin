@@ -13,7 +13,7 @@ export function StartSessionError({ projectPath }: { projectPath: string }) {
     <div className="iv-start-session-error">
       <ErrorMessage
         message={failure.text}
-        {...(failure.retry && { onRetry: () => void startSession(projectPath, model) })}
+        {...(failure.retryable && { onRetry: () => void startSession(projectPath, model) })}
       />
     </div>
   )

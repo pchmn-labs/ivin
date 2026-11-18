@@ -3,10 +3,9 @@ import type { Session } from "@ivin/contracts/session"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import type { HostComponents } from "./components.ts"
 
-// The message to show for a failed action, and whether running it again can succeed.
 export interface ActionFailure {
   readonly text: string
-  readonly retry: boolean
+  readonly retryable: boolean
 }
 
 export interface UiHost {

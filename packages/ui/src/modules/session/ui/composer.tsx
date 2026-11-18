@@ -55,7 +55,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         <div className="iv-composer__alert">
           <ErrorMessage
             message={failure.text}
-            {...(failure.retry && { onRetry: () => sendText(failure.message) })}
+            {...(failure.retryable && { onRetry: () => sendText(failure.message) })}
           />
         </div>
       )}

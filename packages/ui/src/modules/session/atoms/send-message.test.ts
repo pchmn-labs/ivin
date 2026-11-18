@@ -55,3 +55,24 @@ test("a message the server rejects disappears again", async () => {
   await vi.waitFor(() => expect(registry.get(transcript.list.ids)).toEqual([]))
   expect(registry.get(sendMessageAtom)._tag).toBe("Failure")
 })
+
+test("a message sent while another is still on its way does not cancel it", async () => {
+  const { registry, server, transcript } = await setup()
+  const first = server.holdNextSend()
+
+  registry.set(sendMessageAtom, { projectPath: project, sessionId: "s1", text: "one" })
+  await vi.waitFor(() => expect(registry.get(transcript.list.ids)).toHaveLength(1))
+  registry.set(sendMessageAtom, { projectPath: project, sessionId: "s1", text: "two" })
+  first.release()
+
+  await vi.waitFor(
+    () =>
+      expect(
+        registry.get(transcript.list.ids).map((id) => {
+          const item = registry.get(transcript.list.item(id))
+          return item?.type === "message" ? item.text : null
+        }),
+      ).toEqual(["one", "two"]),
+    { timeout: 500 },
+  )
+})

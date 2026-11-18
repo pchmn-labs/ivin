@@ -9,18 +9,21 @@ export const sendMessageFailure = (error: unknown): ActionFailure =>
   isTag<SessionNotFound>(error, "SessionNotFound")
     ? {
         text: "This session no longer exists, so the message was not sent. Start a new session to send it.",
-        retry: false,
+        retryable: false,
       }
-    : { text: "The message was not sent.", retry: true }
+    : { text: "The message was not sent.", retryable: true }
 
 export const createSessionFailure = (_error: unknown): ActionFailure => ({
   text: "The session was not created.",
-  retry: true,
+  retryable: true,
 })
 
 export const answerApprovalFailure = (error: unknown): ActionFailure =>
   isTag<SessionNotFound>(error, "SessionNotFound")
-    ? { text: "This session no longer exists, so your answer was not sent.", retry: false }
+    ? { text: "This session no longer exists, so your answer was not sent.", retryable: false }
     : isTag<ApprovalNotOpen>(error, "ApprovalNotOpen")
-      ? { text: "This approval was already answered or has closed.", retry: false }
-      : { text: "Your answer was not sent.", retry: true }
+      ? {
+          text: "This approval is no longer open, so there is nothing left to answer.",
+          retryable: false,
+        }
+      : { text: "Your answer was not sent.", retryable: true }

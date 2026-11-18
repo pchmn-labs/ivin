@@ -36,7 +36,10 @@ export function OpenFolderError() {
   const { path, failure } = failed
   return (
     <div className="iv-open-folder-error">
-      <ErrorMessage message={failure.text} {...(failure.retry && { onRetry: () => retry(path) })} />
+      <ErrorMessage
+        message={failure.text}
+        {...(failure.retryable && { onRetry: () => retry(path) })}
+      />
     </div>
   )
 }

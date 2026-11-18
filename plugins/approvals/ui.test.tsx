@@ -168,7 +168,7 @@ test("a denied approval leaves one line and an allowed one leaves none", async (
 test("a failed answer shows its message, and Retry sends the same answer", async () => {
   const answer = vi
     .fn()
-    .mockResolvedValueOnce({ text: "Your answer was not sent.", retry: true })
+    .mockResolvedValueOnce({ text: "Your answer was not sent.", retryable: true })
     .mockResolvedValue(undefined)
   await mount([approval(null)], answer)
   await page.getByRole("radio", { name: /^Deny/ }).click()
@@ -184,7 +184,7 @@ test("a failed answer shows its message, and Retry sends the same answer", async
 test("a failure a retry cannot fix shows no Retry", async () => {
   const answer = vi
     .fn()
-    .mockResolvedValue({ text: "This approval was already answered.", retry: false })
+    .mockResolvedValue({ text: "This approval was already answered.", retryable: false })
   await mount([approval(null)], answer)
   await page.getByRole("radio", { name: "Allow" }).click()
   const alert = page.getByRole("alert")

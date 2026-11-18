@@ -85,7 +85,7 @@ function PendingSheet({
       {failure && (
         <ErrorMessage
           message={failure.text}
-          {...(failure.retry && { onRetry: () => respond(failure.id) })}
+          {...(failure.retryable && { onRetry: () => respond(failure.id) })}
         />
       )}
     </ActionSheet>
