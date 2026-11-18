@@ -227,7 +227,7 @@ components:
 
 **Creative North Star: "The Quiet Workbench"**
 
-ivin uses the layout every agent app ships: a project rail, a session list, a transcript, a composer. It is finished to the level of Linear, Zed and Raycast, with fewer facts per row than Linear. The look is calm and flat, built for a window that stays open all day. Neutrals are tinted from the app icon's forest greens. Yew green is the one accent. The icon's red cursor appears only when the user is needed or something failed.
+ivin uses the layout every agent app ships: a session list, a project bar, a transcript, a composer. It is finished to the level of Linear, Zed and Raycast, with fewer facts per row than Linear. The look is calm and flat, built for a window that stays open all day. Neutrals are tinted from the app icon's forest greens. Yew green is the one accent. The icon's red cursor appears only when the user is needed or something failed.
 
 All colours, sizes, radii and durations are `--iv-` CSS custom properties in `packages/ui/src/core/theme/tokens.css`. A theme changes the app by overriding those variables. The built-in theme is "forest", in a dark and a light variant, and follows the system appearance unless `data-theme` forces one. The dark variant is deep forest green; the light variant ("Mousse") is a warm moss-paper, with borders and washes in a warm olive ink. Plugins get the same components as the built-in screens, only through `@ivin/plugin-api`. The reasons are in `docs/adr/0002-design-system-on-base-ui-and-css-custom-properties.md`.
 
@@ -252,7 +252,7 @@ The palette is green-tinted neutrals, one yew-green accent, one cursor red, six 
 - **Bubble** (`--iv-bubble`): the user's message. Yew mixed into the raised ground (14% in dark, 16% in light), so the user's own words read as theirs without a second accent.
 
 ### Secondary
-- **Cursor Red** (`--iv-danger`): "waiting for you" and "failed" status, the "Needs you" group label, the project rail badge, the approval sheet title, errors, failed tool calls and destructive menu items. Taken from the red terminal cursor in the app icon.
+- **Cursor Red** (`--iv-danger`): "waiting for you" and "failed" status, the "Needs you" group label, the project bar badge, the approval sheet title, errors, failed tool calls and destructive menu items. Taken from the red terminal cursor in the app icon.
 - **Cursor Red Wash** (`--iv-danger-subtle`): the fill of error blocks and danger buttons.
 - **Cursor Red Outline** (`--iv-danger-outline`): cursor red at 60%, used only as a dashed 1px line around something the user must answer.
 
@@ -266,7 +266,7 @@ The palette is green-tinted neutrals, one yew-green accent, one cursor red, six 
 - **Deep Ground** (`--iv-bg-subtle`): code blocks, subtle blocks and table headers.
 - **Raised Ground** (`--iv-bg-raised`): controls, the composer, the action sheet, menus, tooltips and dialogs.
 - **Hover Wash / Active Wash** (`--iv-bg-hover`, `--iv-bg-active`): translucent washes (green in dark, olive in light) for hover, press, the selected row, the selected option, the current project, the highlighted menu item and inline code.
-- **Hairline / Strong Hairline** (`--iv-border`, `--iv-border-strong`): dividers, the rail's right edge and block borders (hairline); the sidebar card, controls, overlays, the composer and the action sheet, and scrollbar thumbs (strong).
+- **Hairline / Strong Hairline** (`--iv-border`, `--iv-border-strong`): dividers, the project bar's top edge and block borders (hairline); the sidebar card, controls, overlays, the composer and the action sheet, and scrollbar thumbs (strong).
 - **Text / Muted / Faint** (`--iv-text`, `--iv-text-muted`, `--iv-text-faint`): primary copy; secondary copy, ghost buttons and the composer's model; metadata, group labels, key hints, placeholders, timestamps and the idle status.
 
 ### Named Rules
@@ -301,7 +301,7 @@ Weights are 400, 500 and 600 only. Times, counts and costs use tabular figures.
 
 The window is a two-column grid. On the left, a floating sidebar card 300px wide, inset 8px from the top, bottom and left window edges. On the right, the main area on the forest ground. The sidebar toggle removes the card, and the main area then takes the full width. With no project open the window is a single centred column, with the connection dot in the bottom-left corner.
 
-The card stacks a 40px draggable top row and a body. The top row holds 70px of space for the macOS traffic lights (`--iv-traffic-lights-width`), then the shell controls: sidebar toggle, back and forward, as ghost icon buttons 2px apart. The body is a 44px project rail, closed by a hairline on its right, beside the session list. The rail holds the current project's pixel creature in a 32px button (active wash and a hairline ring when current), with a red count badge in its top-right corner for the sessions waiting on the user; at its foot sit the open-folder button and the connection dot.
+The card stacks a 40px draggable top row, a body and a project bar. The top row holds 70px of space for the macOS traffic lights (`--iv-traffic-lights-width`), then the shell controls: sidebar toggle, back and forward, as ghost icon buttons 2px apart. The body is the session list. The project bar closes the card at the bottom, under a hairline: the project's 16px pixel creature in a 32 by 28px button (active wash and a hairline ring when current), with a red count badge on its top-right corner for the sessions waiting on the user, then the open-folder button and the connection dot at the right end.
 
 The session list opens with a 36px head: the project's 16px creature, the project name, then New session with a small chevron beside it that opens the model menu for the next session. Below, sessions fall into two groups, "Needs you" first and "Sessions" after, each with a caption label and its count; an empty group is not shown. Rows are 2px apart inside 8px side padding.
 
@@ -323,9 +323,9 @@ A zero-blur `box-shadow` ring that stands in for a border (the current project's
 
 ## Shapes
 
-Corners are gently rounded in three sizes: 4px (`sm`) for menu items, tooltips, inline code and the bubble's tail corner; 6px (`md`) for buttons, fields, rows, options, blocks and code blocks; 10px (`lg`) for the composer, the action sheet, menus, dialogs, the rail's project button and scrollbar thumbs. Large surfaces that frame the app take `--iv-radius-card` (10px): the sidebar card and the bubble. The user's bubble is rounded on three corners and keeps a 4px corner at the bottom right, toward the user's side.
+Corners are gently rounded in three sizes: 4px (`sm`) for menu items, tooltips, inline code and the bubble's tail corner; 6px (`md`) for buttons, fields, rows, options, blocks and code blocks; 10px (`lg`) for the composer, the action sheet, menus, dialogs, and scrollbar thumbs. Large surfaces that frame the app take `--iv-radius-card` (10px): the sidebar card and the bubble. The user's bubble is rounded on three corners and keeps a 4px corner at the bottom right, toward the user's side.
 
-Borders are 1px. The one 2px line is the selected tab underline. Status marks and overlays on the session mark are circles; the project badge is a pill. Project creatures are 8 by 8 pixel grids drawn with crisp edges, at 20px in the rail and 16px in the list head.
+Borders are 1px. The one 2px line is the selected tab underline. Status marks and overlays on the session mark are circles; the project badge is a pill. Project creatures are 8 by 8 pixel grids drawn with crisp edges, at 16px in the project bar and the list head.
 
 ### Named Rules
 **The Dashed Red Rule.** A dashed 1px line in `--iv-danger-outline` means "the user must answer". It goes around a waiting session row and the approval sheet, and nowhere else. A solid red line means an error, not a question.
@@ -366,7 +366,7 @@ The signature of the session list: the 16px Claude mark with a small circular ov
 A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv-duration-pulse`). Waiting is a larger 8px red dot. Idle is a faint 1.5px ring. Failed is red. It always carries a label, visible or hidden.
 
 ### Navigation
-- **Project rail:** project creatures in 32px buttons with 10px corners, a red pill badge (16px tall, 11px semibold tabular count, ringed in the card colour) for waiting sessions, the open-folder icon button and the connection dot (faint, yew when connected, red when failed). A tooltip on the right names the project, its path and its waiting count.
+- **Project bar:** project creatures in 32 by 28px buttons with 6px corners, a red pill badge (16px tall, 11px semibold tabular count, ringed in the card colour) for waiting sessions, the open-folder icon button and the connection dot (faint, yew when connected, red when failed). A tooltip above names the project, its path and its waiting count.
 - **Session groups:** caption labels in faint text with a tabular count; "Needs you" is in cursor red.
 - **Model menu:** a small ghost chevron beside New session opens a menu of models; the current choice carries a check, and picking one starts a session with it. The composer then shows that session's model, fixed at creation, as muted 12px text beside a 14px Claude mark.
 - **Tabs:** 32px tall, muted 500-weight labels, a 2px yew underline on the active tab, over a hairline.
@@ -388,7 +388,7 @@ Disclosures (tool output) use a muted summary with a chevron that rotates 90 deg
 
 ### Pending designs
 Decided but not built, because the data they need does not exist yet. Build them this way when it arrives.
-- **Strip sidebar view and Letter project icons:** an alternative narrow sidebar and lettered project icons, chosen in a settings file that does not exist yet.
+- **Column sidebar view and Letter project icons:** the projects as a column inside the card's left edge instead of the bottom bar, and lettered project icons, chosen in a settings screen that does not exist yet. Once several projects can be open, the bar gets ‹ › arrows when it overflows.
 - **Question sheet:** an action sheet for a question from the agent, with a "?" overlay on the session mark in place of the "!". It waits for an answer contract richer than allow or deny.
 - **"Allow <rule> for this session":** a third approval option, waiting for the same contract.
 - **PR icon with checks colour:** a pull-request icon on a session whose colour follows its checks.

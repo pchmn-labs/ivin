@@ -3,7 +3,7 @@ import { AsyncResult } from "effect/reactivity"
 import { useCallback, useEffect, useState } from "react"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
-import { NoProject, OpenFolderError, ProjectRail } from "../modules/project/ui/project-picker.tsx"
+import { NoProject, OpenFolderError, ProjectBar } from "../modules/project/ui/project-picker.tsx"
 import { SessionList } from "../modules/session/ui/session-list.tsx"
 import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
 import { SessionView } from "../modules/session/ui/session-view.tsx"
@@ -71,9 +71,9 @@ export function App() {
                 />
               </div>
               <div className="iv-app__card-body">
-                <ProjectRail footer={version} />
                 <SessionList projectPath={projectPath} projectName={current.name} />
               </div>
+              <ProjectBar footer={version} />
             </aside>
           )}
           <main className="iv-app__main">
