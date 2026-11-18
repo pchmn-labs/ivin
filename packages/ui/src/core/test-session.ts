@@ -6,6 +6,10 @@ export const makeTestSession = (
   session: Pick<Session, "id" | "title"> & Partial<Session>,
 ): Session => ({
   projectPath: "/p",
+  workingFolder: session.projectPath ?? "/p",
+  inWorktree: false,
+  branch: "main",
+  started: true,
   model: "sonnet",
   status: "idle",
   createdAt: DateTime.makeUnsafe(0),

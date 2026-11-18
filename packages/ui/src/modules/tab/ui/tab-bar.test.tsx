@@ -23,6 +23,10 @@ const setup = async (status: SessionStatus, options: { stopAgentOnClose?: boolea
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "Fix the login",
     model: "sonnet",
     status,

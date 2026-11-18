@@ -11,6 +11,7 @@ import { DatabaseSync } from "node:sqlite"
 import { afterEach, beforeEach, expect, test } from "vitest"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
+import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServices } from "./handlers.ts"
@@ -75,6 +76,7 @@ const withServer = <A, E>(starts: StartInput[], use: (client: Client) => Effect.
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
           Layer.provide(layerKeybindingsFileOf([])),
+          Layer.provide(layerSettingsFileOf([])),
           Layer.provide(layerScripted([turn], { starts })),
         ),
       ),
