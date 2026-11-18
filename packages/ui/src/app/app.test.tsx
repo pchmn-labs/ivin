@@ -32,6 +32,7 @@ const mountApp = async (
       title,
       model: "sonnet",
       status: "idle",
+      statusChangedAt: at,
       createdAt: at,
       lastActivityAt: at,
     })

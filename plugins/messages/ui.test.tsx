@@ -19,6 +19,8 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
   const host = {
     useSession: () => undefined,
     useSessions: () => [],
+    useProjects: () => ({ projects: [], selectedPath: null }),
+    useSelectedSessionId: () => null,
     useTabs: () => [],
     useOpenTab: () => () => {},
     useTranscript: () => [],

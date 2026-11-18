@@ -39,6 +39,7 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
     title: "New session",
     model: "sonnet",
     status: "idle",
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   })

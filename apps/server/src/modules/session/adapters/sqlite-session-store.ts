@@ -12,6 +12,7 @@ interface SessionRow {
   title: string
   model: string
   status: SessionStatus
+  status_changed_at: number
   created_at: number
   last_activity_at: number
 }
@@ -26,12 +27,13 @@ const toSession = (row: SessionRow): Session => ({
   title: row.title,
   model: row.model,
   status: row.status,
+  statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
   createdAt: DateTime.makeUnsafe(row.created_at),
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
 })
 
-const columns = `id, project_path, working_folder, branch, title, model, status, created_at,
-  last_activity_at, EXISTS (
+const columns = `id, project_path, working_folder, branch, title, model, status, status_changed_at,
+  created_at, last_activity_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
   ) AS started`
 
@@ -43,8 +45,8 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         Effect.sync(() => {
           db.prepare(
             `INSERT INTO sessions (id, project_path, working_folder, branch, title, model, status,
-               created_at, last_activity_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+               status_changed_at, created_at, last_activity_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           ).run(
             session.id,
             session.projectPath,
@@ -53,6 +55,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             session.title,
             session.model,
             session.status,
+            DateTime.toEpochMillis(session.statusChangedAt),
             DateTime.toEpochMillis(session.createdAt),
             DateTime.toEpochMillis(session.lastActivityAt),
           )
@@ -107,13 +110,17 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             id,
           )
         }),
-      setStatus: (id, status) =>
+      setStatus: (id, status, at) =>
         Effect.sync(() => {
-          db.prepare("UPDATE sessions SET status = ? WHERE id = ?").run(status, id)
+          db.prepare(
+            `UPDATE sessions SET status = ?, status_changed_at = ?
+             WHERE id = ? AND status <> ?`,
+          ).run(status, DateTime.toEpochMillis(at), id, status)
         }),
       resetRunning: Effect.sync(() => {
         db.prepare(
-          "UPDATE sessions SET status = 'idle' WHERE status NOT IN ('idle', 'failed')",
+          `UPDATE sessions SET status = 'idle', status_changed_at = last_activity_at
+           WHERE status NOT IN ('idle', 'failed')`,
         ).run()
       }),
       touch: (id, at) =>

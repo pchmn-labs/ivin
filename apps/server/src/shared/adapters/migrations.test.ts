@@ -143,3 +143,18 @@ test("an existing session gets its project folder as its working folder, with no
     { working_folder: "/a/project", branch: null },
   ])
 })
+
+test("a session already stored counts its status as changed at its last activity", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 7)))
+  db.prepare(
+    `INSERT INTO sessions (id, project_path, title, created_at, last_activity_at)
+     VALUES ('s1', '/p', 't', 0, 42)`,
+  ).run()
+
+  Effect.runSync(runMigrations(db))
+
+  expect(db.prepare("SELECT status_changed_at FROM sessions").all()).toEqual([
+    { status_changed_at: 42 },
+  ])
+})

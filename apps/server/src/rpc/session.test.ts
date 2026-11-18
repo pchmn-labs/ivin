@@ -615,6 +615,33 @@ test("watching a project's sessions streams each status and title change", async
   expect(new Set(changes.map((s) => s.projectPath))).toEqual(new Set(["/p"]))
 })
 
+test("a session's status keeps the time it changed until it changes again", async () => {
+  const changes = await withServer(newDatabase(), [turn], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      const watching = yield* client["session.watch"]({ projectPath: "/p" }).pipe(
+        Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
+        Stream.runCollect,
+        Effect.forkChild,
+      )
+      yield* Effect.sleep("20 millis")
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      return yield* Fiber.join(watching)
+    }),
+  )
+  const changedAt = (status: string) =>
+    new Set(
+      changes
+        .filter((s) => s.status === status && s.title === "go")
+        .map((s) => s.statusChangedAt.epochMilliseconds),
+    )
+
+  expect(changes[0]!.statusChangedAt).toEqual(changes[0]!.createdAt)
+  expect(changes.filter((s) => s.status === "working").length).toBeGreaterThan(1)
+  expect(changedAt("working").size).toBe(1)
+  expect([...changedAt("idle")][0]).toBeGreaterThanOrEqual([...changedAt("working")][0]!)
+})
+
 test("a session left working by a previous server is idle again after a restart", async () => {
   const db = newDatabase()
   const id = await withServer(db, [[running, said("Working")]], [], (client) =>

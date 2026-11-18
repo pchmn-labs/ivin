@@ -4,6 +4,7 @@ import type { Session } from "@ivin/contracts/session"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
+import { ListSection } from "../../../core/components/list-section/list-section.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { sessionsOf } from "../atoms/list-sessions.ts"
@@ -106,21 +107,16 @@ function Group({
 }) {
   if (sessions.length === 0) return null
   return (
-    <section className="iv-session-list__group" aria-label={label}>
-      <h2 className="iv-session-list__label" data-needs-you={needsYou || undefined}>
-        {label} <span className="iv-session-list__count">{sessions.length}</span>
-      </h2>
-      <ul className="iv-session-list__rows">
-        {sessions.map((session) => (
-          <SessionRow
-            key={session.id}
-            projectPath={projectPath}
-            session={session}
-            selected={session.id === selectedId}
-          />
-        ))}
-      </ul>
-    </section>
+    <ListSection label={label} count={sessions.length} attention={needsYou}>
+      {sessions.map((session) => (
+        <SessionRow
+          key={session.id}
+          projectPath={projectPath}
+          session={session}
+          selected={session.id === selectedId}
+        />
+      ))}
+    </ListSection>
   )
 }
 

@@ -20,6 +20,7 @@ const setup = async () => {
     title: "New session",
     model: "sonnet",
     status: "idle",
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   })

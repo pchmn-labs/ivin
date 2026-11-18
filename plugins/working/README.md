@@ -1,0 +1,3 @@
+# working
+
+Lists, in the `sidebar.section` slot (contribution `working/panel`), every session of an open project that runs or waits for an approval, except the session on screen. Sessions waiting for an approval come under "Needs you", running ones under "Running"; each group goes project by project, longest in its status first. A row shows the session's status, title, project and how long it has been in that status. Clicking a row selects its project and opens its tab. The panel folds, and is absent when no session matches. Which sessions are listed, and in what order, is in `rules/working-sessions.ts`.

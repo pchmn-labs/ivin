@@ -170,6 +170,16 @@ export interface ListRowProps {
   readonly "data-testid"?: string
 }
 
+// A labelled list of rows; its children are `li` elements.
+export interface ListSectionProps {
+  readonly label: string
+  readonly count?: number
+  // Marks the label for sessions that wait on the user.
+  readonly attention?: boolean
+  readonly "data-testid"?: string
+  readonly children?: ReactNode
+}
+
 // The session's harness mark, with its status over it and as its accessible name.
 export interface SessionMarkProps {
   readonly status: Session["status"]
@@ -236,6 +246,7 @@ export interface HostComponents {
   readonly OptionList: ComponentType<OptionListProps>
   readonly ErrorMessage: ComponentType<ErrorMessageProps>
   readonly ListRow: ComponentType<ListRowProps>
+  readonly ListSection: ComponentType<ListSectionProps>
   readonly SessionMark: ComponentType<SessionMarkProps>
   readonly RelativeTime: ComponentType<RelativeTimeProps>
 }
@@ -262,5 +273,6 @@ export const ActionSheet = hostComponent((c) => c.ActionSheet)
 export const OptionList = hostComponent((c) => c.OptionList)
 export const ErrorMessage = hostComponent((c) => c.ErrorMessage)
 export const ListRow = hostComponent((c) => c.ListRow)
+export const ListSection = hostComponent((c) => c.ListSection)
 export const SessionMark = hostComponent((c) => c.SessionMark)
 export const RelativeTime = hostComponent((c) => c.RelativeTime)

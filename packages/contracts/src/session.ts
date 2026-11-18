@@ -23,6 +23,7 @@ export const Session = Schema.Struct({
   title: Schema.String,
   model: Schema.String,
   status: SessionStatus,
+  statusChangedAt: Schema.DateTimeUtcFromMillis,
   createdAt: Schema.DateTimeUtcFromMillis,
   lastActivityAt: Schema.DateTimeUtcFromMillis,
 })

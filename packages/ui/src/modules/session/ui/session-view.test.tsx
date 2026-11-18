@@ -56,6 +56,7 @@ test("the transcript renders through the plugins and the status line shows the u
     title: "t",
     model: "sonnet",
     status: "idle",
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   })
@@ -89,6 +90,7 @@ const mountSession = async (status: "idle" | "working" | "waiting") => {
     title: "t",
     model: "sonnet",
     status,
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   })
@@ -189,6 +191,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
     title: "t",
     model: "sonnet",
     status: "working",
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   })
@@ -309,6 +312,7 @@ test("Escape closes an open menu without interrupting the session", async () => 
     title: "t",
     model: "sonnet",
     status: "working",
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   })

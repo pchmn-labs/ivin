@@ -23,6 +23,7 @@ const setup = async (titles: ReadonlyArray<string>, options: { holdTabs?: boolea
       title,
       model: "sonnet",
       status: "idle",
+      statusChangedAt: at,
       createdAt: at,
       lastActivityAt: at,
     })

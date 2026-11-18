@@ -15,6 +15,7 @@ import { Text } from "../core/components/text/text.tsx"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { Markdown } from "../core/components/markdown/markdown.tsx"
 import { ListRow } from "../core/components/list-row/list-row.tsx"
+import { ListSection } from "../core/components/list-section/list-section.tsx"
 import { RelativeTime } from "../modules/session/ui/relative-time.tsx"
 import { SessionMark } from "../modules/session/ui/session-mark.tsx"
 
@@ -36,6 +37,7 @@ export const hostComponents = {
   OptionList,
   ErrorMessage,
   ListRow,
+  ListSection,
   SessionMark,
   RelativeTime,
 } satisfies HostComponents

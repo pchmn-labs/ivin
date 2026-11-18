@@ -91,6 +91,11 @@ export const migrations: readonly Migration[] = [
     ALTER TABLE sessions ADD COLUMN branch TEXT;
     UPDATE sessions SET working_folder = project_path`,
   },
+  {
+    version: 8,
+    sql: `ALTER TABLE sessions ADD COLUMN status_changed_at INTEGER NOT NULL DEFAULT 0;
+    UPDATE sessions SET status_changed_at = last_activity_at`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>
