@@ -23,6 +23,11 @@ export type IconName =
   | "wrench"
   | "user"
   | "sparkles"
+  | "arrow-left"
+  | "arrow-right"
+  | "panel-left"
+  | "new-session"
+  | "question"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"
@@ -48,6 +53,7 @@ export interface IconButtonProps {
   readonly variant?: ButtonVariant
   readonly onClick?: () => void
   readonly disabled?: boolean
+  readonly "aria-expanded"?: boolean
   readonly "data-testid"?: string
 }
 
@@ -115,7 +121,7 @@ export interface StackProps {
 }
 
 export interface BlockProps {
-  readonly tone?: "plain" | "subtle" | "accent" | "attention" | "danger"
+  readonly tone?: "plain" | "subtle" | "accent" | "attention" | "danger" | "bubble"
   readonly padding?: 2 | 3 | 4
   readonly role?: string
   readonly "data-testid"?: string
@@ -144,6 +150,31 @@ export interface MarkdownProps {
   readonly text: string
 }
 
+export interface ActionSheetProps {
+  readonly tone?: "danger" | "neutral"
+  readonly icon?: IconName
+  readonly title: string
+  readonly detail?: string
+  readonly hint?: string
+  readonly children?: ReactNode
+  readonly "data-testid"?: string
+}
+
+export interface OptionListProps {
+  readonly label: string
+  readonly options: ReadonlyArray<{
+    readonly id: string
+    readonly label: string
+    readonly hint?: string
+  }>
+  readonly value: string
+  readonly onChange: (id: string) => void
+  readonly onSubmit: (id: string) => void
+  readonly onEscape?: () => void
+  readonly submitOnClick?: boolean
+  readonly disabled?: boolean
+}
+
 export interface HostComponents {
   readonly Button: ComponentType<ButtonProps>
   readonly IconButton: ComponentType<IconButtonProps>
@@ -158,6 +189,8 @@ export interface HostComponents {
   readonly CodeBlock: ComponentType<CodeBlockProps>
   readonly StatusMark: ComponentType<StatusMarkProps>
   readonly Markdown: ComponentType<MarkdownProps>
+  readonly ActionSheet: ComponentType<ActionSheetProps>
+  readonly OptionList: ComponentType<OptionListProps>
 }
 
 const hostComponent =
@@ -178,3 +211,5 @@ export const Disclosure = hostComponent((c) => c.Disclosure)
 export const CodeBlock = hostComponent((c) => c.CodeBlock)
 export const StatusMark = hostComponent((c) => c.StatusMark)
 export const Markdown = hostComponent((c) => c.Markdown)
+export const ActionSheet = hostComponent((c) => c.ActionSheet)
+export const OptionList = hostComponent((c) => c.OptionList)
