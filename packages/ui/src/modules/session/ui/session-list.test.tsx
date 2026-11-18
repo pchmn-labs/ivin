@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
@@ -7,10 +8,12 @@ import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { SessionList } from "./session-list.tsx"
 
 const setup = async () => {
-  const server = makeFakeServer()
+  const server = makeFakeServer({
+    project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <SessionList projectPath="/p" projectName="p" />
+      <SessionList projectPath="/p" />
     </RegistryProvider>,
   )
   return server
@@ -46,18 +49,15 @@ test("each row shows the session status and follows the server", async () => {
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Failed")
 })
 
-test("sessions waiting on the user sit in their own group above the others", async () => {
+test("only sessions with an open tab are listed, and picking one selects its tab", async () => {
   const server = await setup()
   await page.getByRole("button", { name: "New session" }).click()
   await page.getByRole("button", { name: "New session" }).click()
-  await vi.waitFor(() => expect(server.sessions.size).toBe(2))
-  await expect.element(page.getByRole("region", { name: "Needs you" })).not.toBeInTheDocument()
+  await expect.element(page.getByTestId("session-item")).toHaveLength(2)
 
-  server.setStatus("session-1", "waiting")
-  const needsYou = page.getByRole("region", { name: "Needs you" })
-  await expect.element(needsYou).toBeVisible()
-  await expect.element(needsYou.getByTestId("session-status")).toHaveTextContent("Waiting for you")
+  await page.getByTestId("session-item").first().getByRole("button").first().click()
+  await vi.waitFor(() => expect(server.tabOrder("/p")).toEqual(["session-1", "session-2"]))
   await expect
-    .element(page.getByRole("region", { name: "Sessions" }).getByTestId("session-item"))
-    .toHaveLength(1)
+    .element(page.getByTestId("session-item").first().getByRole("button").first())
+    .toHaveAttribute("aria-current", "true")
 })

@@ -1,8 +1,10 @@
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { Layer } from "effect"
 import { layerSqliteProjectStore } from "../modules/project/adapters/sqlite-project-store.ts"
-import { getCurrentProject } from "../modules/project/usecases/get-current-project.ts"
+import { closeProject } from "../modules/project/usecases/close-project.ts"
+import { listProjects } from "../modules/project/usecases/list-projects.ts"
 import { openProject } from "../modules/project/usecases/open-project.ts"
+import { selectProject } from "../modules/project/usecases/select-project.ts"
 import { getVersion } from "../modules/server/usecases/get-version.ts"
 import { layerSqliteSessionStore } from "../modules/session/adapters/sqlite-session-store.ts"
 import { answerApproval } from "../modules/session/usecases/answer-approval.ts"
@@ -14,6 +16,11 @@ import { sendMessage } from "../modules/session/usecases/send-message.ts"
 import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
 import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
+import { layerSqliteTabStore } from "../modules/tab/adapters/sqlite-tab-store.ts"
+import { closeTab } from "../modules/tab/usecases/close-tab.ts"
+import { listTabs } from "../modules/tab/usecases/list-tabs.ts"
+import { openTab } from "../modules/tab/usecases/open-tab.ts"
+import { reorderTabs } from "../modules/tab/usecases/reorder-tabs.ts"
 import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlite-transcript-store.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
@@ -25,6 +32,7 @@ export const layerServices = layerSessionRuns.pipe(
     Layer.mergeAll(
       layerSqliteProjectStore,
       layerSqliteSessionStore,
+      layerSqliteTabStore,
       layerSqliteTranscriptStore,
       layerItemFeed,
     ),
@@ -34,7 +42,13 @@ export const layerServices = layerSessionRuns.pipe(
 export const handlers = Rpcs.toLayer({
   "server.getVersion": () => getVersion,
   "project.open": ({ path }) => openProject(path),
-  "project.getCurrent": () => getCurrentProject,
+  "project.close": ({ path }) => closeProject(path),
+  "project.select": ({ path }) => selectProject(path),
+  "project.list": () => listProjects,
+  "tab.open": ({ sessionId }) => openTab(sessionId),
+  "tab.close": ({ sessionId }) => closeTab(sessionId),
+  "tab.reorder": ({ projectPath, sessionIds }) => reorderTabs(projectPath, sessionIds),
+  "tab.list": ({ projectPath }) => listTabs(projectPath),
   "session.create": ({ projectPath, model }) => createSession(projectPath, model),
   "session.list": ({ projectPath }) => listSessions(projectPath),
   "session.rename": ({ sessionId, title }) => renameSession(sessionId, title),

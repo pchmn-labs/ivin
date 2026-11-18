@@ -26,6 +26,8 @@ const mountApp = async () => {
       lastActivityAt: at,
     })
   }
+  server.openTab("s1")
+  server.openTab("s2")
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <App />
@@ -53,20 +55,80 @@ test("back and forward walk the sessions opened in this window", async () => {
   const forward = page.getByRole("button", { name: "Forward" })
   await expect.element(back).toBeDisabled()
 
-  await page.getByRole("button", { name: /First/ }).click()
-  await page.getByRole("button", { name: /Second/ }).click()
-  await expect.element(page.getByTestId("session-header-title")).toHaveTextContent("Second")
+  await page
+    .getByTestId("session-item")
+    .filter({ hasText: "First" })
+    .getByRole("button")
+    .first()
+    .click()
+  await page
+    .getByTestId("session-item")
+    .filter({ hasText: "Second" })
+    .getByRole("button")
+    .first()
+    .click()
+  await expect
+    .element(page.getByRole("tab", { name: /Second/ }))
+    .toHaveAttribute("aria-selected", "true")
   await back.click()
-  await expect.element(page.getByTestId("session-header-title")).toHaveTextContent("First")
+  await expect
+    .element(page.getByRole("tab", { name: /First/ }))
+    .toHaveAttribute("aria-selected", "true")
   await expect.element(forward).toBeEnabled()
   await forward.click()
-  await expect.element(page.getByTestId("session-header-title")).toHaveTextContent("Second")
+  await expect
+    .element(page.getByRole("tab", { name: /Second/ }))
+    .toHaveAttribute("aria-selected", "true")
 })
 
-test("the project rail badge counts the sessions waiting on the user", async () => {
+test("the project row badge counts the sessions waiting on the user", async () => {
   const server = await mountApp()
   await vi.waitFor(() => expect(page.getByTestId("project-waiting").query()).toBeNull())
   server.setStatus("s1", "waiting")
   server.setStatus("s2", "waiting")
   await expect.element(page.getByTestId("project-waiting")).toHaveTextContent("2")
+})
+
+test("each tab shows its session, closes on its button, and the bar reorders by drag", async () => {
+  const server = await mountApp()
+  const tabs = page.getByRole("tab")
+  await expect.element(tabs).toHaveLength(2)
+  await expect
+    .element(page.getByRole("tab", { name: /Second/ }))
+    .toHaveAttribute("aria-selected", "true")
+
+  const items = document.querySelectorAll<HTMLElement>('[data-testid="tab"]')
+  const dataTransfer = new DataTransfer()
+  const fire = (target: HTMLElement, type: string, clientX = 0) =>
+    target.dispatchEvent(
+      new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer, clientX }),
+    )
+  const rendered = () => new Promise((resolve) => setTimeout(resolve, 50))
+  fire(items[1]!, "dragstart")
+  await rendered()
+  fire(items[0]!, "dragover", items[0]!.getBoundingClientRect().left + 1)
+  await rendered()
+  fire(items[0]!, "drop")
+  await vi.waitFor(() => expect(server.tabOrder("/dev/ivin")).toEqual(["s2", "s1"]))
+
+  await page.getByRole("button", { name: "Close Second" }).click()
+  await expect.element(tabs).toHaveLength(1)
+  await page.getByRole("button", { name: "Close First" }).click()
+  await expect.element(page.getByText(/No session open/)).toBeVisible()
+})
+
+test("picking another project shows its own tabs, and closing a project drops it", async () => {
+  const server = await mountApp()
+  server.openProject("/dev/other")
+  await page
+    .getByTestId("project-item")
+    .filter({ hasText: "ivin" })
+    .getByRole("button")
+    .first()
+    .click()
+  await expect.element(page.getByRole("tab")).toHaveLength(2)
+
+  await page.getByRole("button", { name: "Close ivin" }).click()
+  await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
+  await expect.element(page.getByText(/No session open/)).toBeVisible()
 })

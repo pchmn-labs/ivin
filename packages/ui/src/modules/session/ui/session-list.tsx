@@ -10,20 +10,27 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { createSessionAtom } from "../atoms/create-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
-import { ProjectCreature } from "../../project/ui/project-creature.tsx"
 import { useNow } from "../../../shared/use-now.ts"
-import { groupSessions } from "../rules/group-sessions.ts"
 import { DEFAULT_MODEL, MODELS, type Model } from "../rules/models.ts"
 import { relativeTime } from "../rules/relative-time.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import { renameSessionAtom } from "../atoms/rename-session.ts"
-import { selectedSessionIdAtom } from "../atoms/selected-session.ts"
+import { openTabAtom } from "../../tab/atoms/open-tab.ts"
+import { tabsOf } from "../../tab/atoms/list-tabs.ts"
 import { SessionMark } from "./session-mark.tsx"
 import "./session-list.css"
 
-function SessionRow({ projectPath, session }: { projectPath: string; session: Session }) {
+function SessionRow({
+  projectPath,
+  session,
+  selected,
+}: {
+  projectPath: string
+  session: Session
+  selected: boolean
+}) {
   const { id } = session
-  const [selectedId, select] = useAtom(selectedSessionIdAtom)
+  const openTab = useAtomSet(openTabAtom)
   const renameSession = useAtomSet(renameSessionAtom)
   const [draft, setDraft] = useState<string | null>(null)
   const now = useNow()
@@ -61,10 +68,10 @@ function SessionRow({ projectPath, session }: { projectPath: string; session: Se
     <li>
       <ListRow
         data-testid="session-item"
-        selected={selectedId === id}
+        selected={selected}
         attention={session.status === "waiting"}
-        aria-current={selectedId === id}
-        onSelect={() => select(id)}
+        aria-current={selected}
+        onSelect={() => openTab({ sessionId: id })}
         leading={
           <span data-testid="session-status">
             <SessionMark status={session.status} label={statusLabel(session.status)} />
@@ -88,58 +95,36 @@ function SessionRow({ projectPath, session }: { projectPath: string; session: Se
   )
 }
 
-function Group({
-  label,
-  sessions,
+function TabSessionRow({
   projectPath,
-  needsYou = false,
+  sessionId,
+  selected,
 }: {
-  label: string
-  sessions: ReadonlyArray<Session>
   projectPath: string
-  needsYou?: boolean
+  sessionId: string
+  selected: boolean
 }) {
-  if (sessions.length === 0) return null
-  return (
-    <section className="iv-session-list__group" aria-label={label}>
-      <h2 className="iv-session-list__label" data-needs-you={needsYou || undefined}>
-        {label} <span className="iv-session-list__count">{sessions.length}</span>
-      </h2>
-      <ul className="iv-session-list__rows">
-        {sessions.map((session) => (
-          <SessionRow key={session.id} projectPath={projectPath} session={session} />
-        ))}
-      </ul>
-    </section>
-  )
+  const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
+  if (!session) return null
+  return <SessionRow projectPath={projectPath} session={session} selected={selected} />
 }
 
-export function SessionList({
-  projectPath,
-  projectName,
-}: {
-  projectPath: string
-  projectName: string
-}) {
-  const list = sessionsOf(projectPath)
-  useAtomMount(list.ids)
-  const sessions = useAtomValue(list.items)
+export function SessionList({ projectPath }: { projectPath: string }) {
+  useAtomMount(sessionsOf(projectPath).ids)
+  const { tabs, selectedSessionId } = useAtomValue(tabsOf(projectPath).value)
   const [created, createSession] = useAtom(createSessionAtom)
   const [model, setModel] = useState<Model>(DEFAULT_MODEL)
-  const { needsYou, others } = groupSessions(sessions)
 
   return (
     <nav className="iv-session-list" aria-label="Sessions">
       <div className="iv-session-list__head">
-        <ProjectCreature name={projectName} size={16} />
-        <h1 className="iv-session-list__project" data-testid="project-name" title={projectPath}>
-          {projectName}
-        </h1>
+        <h2 className="iv-session-list__label">Sessions</h2>
         <span className="iv-session-list__new">
           <IconButton
             icon="new-session"
             label="New session"
             tooltip={`New session · ${model}`}
+            size="sm"
             onClick={() => createSession({ projectPath, model })}
           />
           <Menu
@@ -163,10 +148,16 @@ export function SessionList({
           Could not create the session
         </Text>
       )}
-      <div className="iv-session-list__scroll">
-        <Group label="Needs you" sessions={needsYou} projectPath={projectPath} needsYou />
-        <Group label="Sessions" sessions={others} projectPath={projectPath} />
-      </div>
+      <ul className="iv-session-list__rows">
+        {tabs.map((tab) => (
+          <TabSessionRow
+            key={tab.sessionId}
+            projectPath={projectPath}
+            sessionId={tab.sessionId}
+            selected={tab.sessionId === selectedSessionId}
+          />
+        ))}
+      </ul>
     </nav>
   )
 }

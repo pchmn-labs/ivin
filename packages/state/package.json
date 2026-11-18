@@ -7,6 +7,7 @@
     "./rpc-client-protocol": "./src/rpc-client-protocol.ts",
     "./frame-batch": "./src/frame-batch.ts",
     "./entity-list": "./src/entity-list.ts",
+    "./fed-state": "./src/fed-state.ts",
     "./optimistic": "./src/optimistic.ts",
     "./strong-family": "./src/strong-family.ts"
   },

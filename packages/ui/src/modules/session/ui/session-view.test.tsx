@@ -7,7 +7,6 @@ import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
-import { selectedSessionIdAtom } from "../atoms/selected-session.ts"
 import { SessionList } from "./session-list.tsx"
 import { SessionView } from "./session-view.tsx"
 
@@ -58,14 +57,9 @@ test("the transcript renders through the plugins and the status line shows the u
   })
 
   await render(
-    <RegistryProvider
-      initialValues={[
-        [serverClientLayerAtom, server.layer],
-        [selectedSessionIdAtom, "s1"],
-      ]}
-    >
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionView projectPath="/p" />
+        <SessionView projectPath="/p" sessionId="s1" />
       </PluginsProvider>
     </RegistryProvider>,
   )
@@ -91,14 +85,9 @@ const mountSession = async (status: "idle" | "working" | "waiting") => {
     lastActivityAt: at,
   })
   await render(
-    <RegistryProvider
-      initialValues={[
-        [serverClientLayerAtom, server.layer],
-        [selectedSessionIdAtom, "s1"],
-      ]}
-    >
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionView projectPath="/p" />
+        <SessionView projectPath="/p" sessionId="s1" />
       </PluginsProvider>
     </RegistryProvider>,
   )
@@ -159,16 +148,13 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
     createdAt: at,
     lastActivityAt: at,
   })
+  server.openProject("/p")
+  server.openTab("s1")
   await render(
-    <RegistryProvider
-      initialValues={[
-        [serverClientLayerAtom, server.layer],
-        [selectedSessionIdAtom, "s1"],
-      ]}
-    >
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionList projectPath="/p" projectName="p" />
-        <SessionView projectPath="/p" />
+        <SessionList projectPath="/p" />
+        <SessionView projectPath="/p" sessionId="s1" />
       </PluginsProvider>
     </RegistryProvider>,
   )

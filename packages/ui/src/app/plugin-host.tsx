@@ -1,9 +1,8 @@
 import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Exit } from "effect"
-import { AsyncResult } from "effect/reactivity"
 import { useContext, useEffect, useState, type ReactNode } from "react"
 import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
-import { getCurrentProjectAtom } from "../modules/project/atoms/get-current-project.ts"
+import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
 import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
@@ -12,10 +11,7 @@ import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/acti
 
 const NO_PROJECT = ""
 
-const useProjectPath = () => {
-  const project = useAtomValue(getCurrentProjectAtom)
-  return AsyncResult.isSuccess(project) ? (project.value?.path ?? NO_PROJECT) : NO_PROJECT
-}
+const useProjectPath = () => useAtomValue(selectedProjectAtom)?.path ?? NO_PROJECT
 
 const host: UiHost = {
   useSessions: () => useAtomValue(sessionsOf(useProjectPath()).items),

@@ -57,6 +57,34 @@ export const migrations: readonly Migration[] = [
     version: 5,
     sql: "ALTER TABLE sessions ADD COLUMN status TEXT NOT NULL DEFAULT 'idle'",
   },
+  {
+    version: 6,
+    sql: `CREATE TABLE open_projects (
+      path TEXT PRIMARY KEY,
+      position INTEGER NOT NULL,
+      selected_session_id TEXT
+    );
+    CREATE TABLE workspace (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      selected_project_path TEXT
+    );
+    CREATE TABLE tabs (
+      session_id TEXT PRIMARY KEY,
+      project_path TEXT NOT NULL,
+      position INTEGER NOT NULL
+    );
+    CREATE INDEX tabs_by_project ON tabs (project_path, position);
+    INSERT INTO open_projects (path, position, selected_session_id)
+      SELECT p.path, 0, (
+        SELECT s.id FROM sessions s WHERE s.project_path = p.path
+        ORDER BY s.last_activity_at DESC, s.created_at DESC LIMIT 1
+      )
+      FROM projects p ORDER BY p.last_opened_at DESC LIMIT 1;
+    INSERT INTO workspace (id, selected_project_path) SELECT 1, path FROM open_projects;
+    INSERT INTO tabs (session_id, project_path, position)
+      SELECT id, project_path, ROW_NUMBER() OVER (ORDER BY last_activity_at DESC, created_at DESC) - 1
+      FROM sessions WHERE project_path IN (SELECT path FROM open_projects)`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>
