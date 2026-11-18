@@ -40,7 +40,7 @@
 
 ## Test plan
 
-<!-- Step-by-step instructions to verify this works. -->
+<!-- Step-by-step instructions to verify this works. A user-facing change follows docs/finished-features.md. -->
 
 - [ ] 
 - [ ]

@@ -29,6 +29,8 @@ Read `docs/conventions/README.md` before writing code anywhere, then the file fo
 - `packages/ui/`: `docs/conventions/ui.md`
 - `plugins/`: `docs/conventions/plugins.md`
 
+Read `docs/finished-features.md` before specifying, ticketing or building anything a user sees or triggers.
+
 ### Grilling
 
 Ask each round of a grilling session (`grilling`, `grill-with-docs`) through the `interactive-form` skill rather than in the chat, unless the user asks for the terminal.
