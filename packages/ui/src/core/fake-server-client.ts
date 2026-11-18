@@ -3,6 +3,7 @@ import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session, SessionStatus } from "@ivin/contracts/session"
+import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
 import { ProjectNotOpen } from "@ivin/contracts/project"
@@ -34,6 +35,8 @@ export interface FakeServer {
   readonly setUserKeybindings: (state: UserKeybindings) => void
   // Makes the next call of this RPC die, as a lost connection would.
   readonly failNextCall: (rpc: string) => void
+  // Streams the user's settings to `setting.watch`, as after a change to the file.
+  readonly setUserSettings: (state: UserSettings) => void
 }
 
 export const makeFakeServer = (options: { readonly project?: Project } = {}): FakeServer => {
@@ -47,6 +50,8 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   const sessionChanges = Effect.runSync(PubSub.unbounded<Session>())
   let userKeybindings: UserKeybindings = { keybindings: [], problem: null }
   const keybindingChanges = Effect.runSync(PubSub.unbounded<UserKeybindings>())
+  let userSettings: UserSettings = { settings: defaultSettings, problem: null }
+  const settingChanges = Effect.runSync(PubSub.unbounded<UserSettings>())
   let clock = 1_000
   let nextId = 1
   let hold: { readonly wait: Promise<boolean> } | null = null
@@ -118,6 +123,12 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
           Stream.make(userKeybindings).pipe(Stream.concat(Stream.fromSubscription(subscription))),
         ),
       ),
+    "setting.watch": () =>
+      Stream.unwrap(
+        Effect.map(PubSub.subscribe(settingChanges), (subscription) =>
+          Stream.make(userSettings).pipe(Stream.concat(Stream.fromSubscription(subscription))),
+        ),
+      ),
     "project.list": () => Effect.sync(openProjects),
     "project.open": ({ path }: { path: string }) =>
       Effect.sync(() => {
@@ -169,6 +180,13 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
         if (index >= 0 && selectedTab.get(session.projectPath) === sessionId) {
           const rest = tabsOf(session.projectPath)
           selectedTab.set(session.projectPath, (rest[index] ?? rest[index - 1])?.sessionId ?? null)
+        }
+        if (
+          index >= 0 &&
+          userSettings.settings.tabs.stopAgentOnClose &&
+          (session.status === "working" || session.status === "waiting")
+        ) {
+          saveSession({ ...session, status: "idle" })
         }
         return Effect.succeed(projectTabs(session.projectPath))
       }),
@@ -348,6 +366,10 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
       return { release }
     },
     tabOrder: (projectPath) => tabsOf(projectPath).map((tab) => tab.sessionId),
+    setUserSettings: (state) => {
+      userSettings = state
+      Effect.runSync(PubSub.publish(settingChanges, state))
+    },
     setUserKeybindings: (state) => {
       userKeybindings = state
       Effect.runSync(PubSub.publish(keybindingChanges, state))

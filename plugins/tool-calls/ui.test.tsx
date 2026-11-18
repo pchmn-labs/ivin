@@ -19,6 +19,8 @@ const mount = async (item: ToolCallItem) => {
   const host = {
     useSession: () => undefined,
     useSessions: () => [],
+    useTabs: () => [],
+    useOpenTab: () => () => {},
     useTranscript: () => [],
     useAnswerApproval: () => async () => undefined,
     components: hostComponents,

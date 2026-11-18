@@ -6,6 +6,8 @@ import { selectedProjectAtom } from "../modules/project/atoms/selected-project.t
 import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
 import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { answerApprovalFailure } from "../modules/session/rules/failure-message.ts"
+import { tabsOf } from "../modules/tab/atoms/list-tabs.ts"
+import { openTabAtom } from "../modules/tab/atoms/open-tab.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
 import { hostComponents } from "./host-components.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
@@ -19,6 +21,11 @@ const host: UiHost = {
   useSessions: () => useAtomValue(sessionsOf(useProjectPath()).items),
   useSession: (sessionId) =>
     useAtomValue(sessionsOf(useProjectPath()).items).find((s) => s.id === sessionId),
+  useTabs: () => useAtomValue(tabsOf(useProjectPath()).value).tabs,
+  useOpenTab: () => {
+    const openTab = useAtomSet(openTabAtom)
+    return (sessionId) => openTab({ sessionId })
+  },
   useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).list.items),
   useAnswerApproval: (sessionId) => {
     const projectPath = useProjectPath()

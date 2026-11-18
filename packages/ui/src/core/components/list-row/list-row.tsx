@@ -1,17 +1,7 @@
-import type { ReactNode } from "react"
+import type { ListRowProps } from "@ivin/plugin-api/ui"
 import "./list-row.css"
 
-export interface ListRowProps {
-  readonly leading?: ReactNode
-  readonly title: ReactNode
-  readonly meta?: ReactNode
-  readonly selected?: boolean
-  readonly attention?: boolean
-  readonly onSelect?: () => void
-  readonly actions?: ReactNode
-  readonly "aria-current"?: "page" | "true" | boolean
-  readonly "data-testid"?: string
-}
+export type { ListRowProps }
 
 export function ListRow({
   leading,

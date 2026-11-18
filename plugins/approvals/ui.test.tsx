@@ -37,6 +37,8 @@ const mount = async (
   const host: UiHost = {
     useSession: () => undefined,
     useSessions: () => [],
+    useTabs: () => [],
+    useOpenTab: () => () => {},
     useTranscript: () => items,
     useAnswerApproval: () => answer,
     components: hostComponents,

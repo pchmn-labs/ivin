@@ -82,3 +82,9 @@
 .iv-stack--justify-between {
   justify-content: space-between;
 }
+
+ul.iv-stack {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

@@ -1,10 +1,13 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { useState, type DragEvent, type KeyboardEvent } from "react"
+import { Button } from "../../../core/components/button/button.tsx"
+import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
+import { settingsAtom } from "../../setting/atoms/settings.ts"
+import { isRunning } from "../../session/rules/is-running.ts"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
 import { NewSessionButton } from "../../session/ui/new-session-button.tsx"
 import { SessionMark } from "../../session/ui/session-mark.tsx"
-import { statusLabel } from "../../session/rules/status-label.ts"
 import { closeTabAtom } from "../atoms/close-tab.ts"
 import { tabsOf } from "../atoms/list-tabs.ts"
 import { openTabAtom } from "../atoms/open-tab.ts"
@@ -38,7 +41,14 @@ function TabItem({
   const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
   const openTab = useAtomSet(openTabAtom)
   const closeTab = useAtomSet(closeTabAtom)
+  const { tabs: settings } = useAtomValue(settingsAtom)
+  const [confirming, setConfirming] = useState(false)
   if (!session) return null
+
+  const requestClose = () => {
+    if (settings.stopAgentOnClose && isRunning(session.status)) setConfirming(true)
+    else closeTab({ sessionId })
+  }
 
   const placementAt = (event: DragEvent<HTMLDivElement>): Placement => {
     const box = event.currentTarget.getBoundingClientRect()
@@ -46,59 +56,83 @@ function TabItem({
   }
 
   return (
-    <div
-      className="iv-tab-bar__item"
-      role="presentation"
-      draggable
-      data-selected={selected || undefined}
-      data-drop={drop}
-      data-testid="tab"
-      onDragStart={(event) => {
-        event.dataTransfer.effectAllowed = "move"
-        event.dataTransfer.setData("text/plain", sessionId)
-        onDragStart()
-      }}
-      onDragOver={(event) => {
-        event.preventDefault()
-        onDragOver(placementAt(event))
-      }}
-      onDrop={(event) => {
-        event.preventDefault()
-        onDrop()
-      }}
-      onDragEnd={onDragEnd}
-      onMouseDown={(event) => {
-        // Stops the browser's middle-click autoscroll.
-        if (event.button === 1) event.preventDefault()
-      }}
-      onAuxClick={(event) => {
-        if (event.button !== 1) return
-        event.preventDefault()
-        closeTab({ sessionId })
-      }}
-    >
-      <button
-        type="button"
-        role="tab"
-        className="iv-tab-bar__tab"
-        aria-selected={selected}
-        tabIndex={focusable ? 0 : -1}
-        onClick={() => openTab({ sessionId })}
+    <>
+      <div
+        className="iv-tab-bar__item"
+        role="presentation"
+        draggable
+        data-selected={selected || undefined}
+        data-drop={drop}
+        data-testid="tab"
+        onDragStart={(event) => {
+          event.dataTransfer.effectAllowed = "move"
+          event.dataTransfer.setData("text/plain", sessionId)
+          onDragStart()
+        }}
+        onDragOver={(event) => {
+          event.preventDefault()
+          onDragOver(placementAt(event))
+        }}
+        onDrop={(event) => {
+          event.preventDefault()
+          onDrop()
+        }}
+        onDragEnd={onDragEnd}
+        onMouseDown={(event) => {
+          // Stops the browser's middle-click autoscroll.
+          if (event.button === 1) event.preventDefault()
+        }}
+        onAuxClick={(event) => {
+          if (event.button !== 1) return
+          event.preventDefault()
+          requestClose()
+        }}
       >
-        <SessionMark status={session.status} label={statusLabel(session.status)} />
-        <span className="iv-tab-bar__title" data-testid="tab-title" title={session.title}>
-          {session.title}
-        </span>
-      </button>
-      <button
-        type="button"
-        className="iv-tab-bar__close"
-        aria-label={`Close ${session.title}`}
-        onClick={() => closeTab({ sessionId })}
-      >
-        <Icon name="x" size={14} />
-      </button>
-    </div>
+        <button
+          type="button"
+          role="tab"
+          className="iv-tab-bar__tab"
+          aria-selected={selected}
+          tabIndex={focusable ? 0 : -1}
+          onClick={() => openTab({ sessionId })}
+        >
+          <SessionMark status={session.status} />
+          <span className="iv-tab-bar__title" data-testid="tab-title" title={session.title}>
+            {session.title}
+          </span>
+        </button>
+        <button
+          type="button"
+          className="iv-tab-bar__close"
+          aria-label={`Close ${session.title}`}
+          onClick={requestClose}
+        >
+          <Icon name="x" size={14} />
+        </button>
+      </div>
+      <Dialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title="Close the tab and stop its agent?"
+        description={`The agent of “${session.title}” is still running. The session stays under Inactive sessions.`}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => setConfirming(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => {
+                setConfirming(false)
+                closeTab({ sessionId })
+              }}
+            >
+              Stop and close
+            </Button>
+          </>
+        }
+      />
+    </>
   )
 }
 

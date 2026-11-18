@@ -39,6 +39,25 @@ try {
     .and(window.locator('[data-type="approval"]'))
     .waitFor()
   await shoot("approval")
+  const closeTab = async (title: string) => {
+    const tab = window.getByTestId("tab").filter({ hasText: title }).first()
+    await tab.hover()
+    await tab.getByRole("button", { name: `Close ${title}` }).click()
+  }
+  await closeTab("How many files are there?")
+  await window.getByRole("button", { name: "Stop and close" }).waitFor()
+  await window.waitForTimeout(400)
+  await shoot("close-running-tab")
+  await window.getByRole("button", { name: "Stop and close" }).click()
+  const sidebar = window.getByRole("complementary")
+  await window.getByRole("dialog").waitFor({ state: "detached" })
+  await sidebar.getByRole("button", { name: "New session" }).first().click()
+  await closeTab("New session")
+  await sidebar.getByRole("button", { name: "New session" }).first().click()
+  await sidebar.getByText(/^Inactive sessions/).click()
+  await sidebar.getByTestId("inactive-session").nth(1).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("inactive-sessions")
 } finally {
   await app.close()
 }

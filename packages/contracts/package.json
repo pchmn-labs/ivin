@@ -10,6 +10,7 @@
     "./rpcs": "./src/rpcs.ts",
     "./server": "./src/server.ts",
     "./session": "./src/session.ts",
+    "./setting": "./src/setting.ts",
     "./tab": "./src/tab.ts",
     "./transcript": "./src/transcript.ts"
   },
