@@ -67,7 +67,6 @@ export const demoApprovalTurn: readonly HarnessOutput[] = [
   { type: "status", status: "idle", raw: null },
 ]
 
-// A first turn that answers, then a second that waits for an approval.
 export const demoApprovalScript: readonly (readonly HarnessOutput[])[] = [
   demoTurn,
   demoApprovalTurn,
