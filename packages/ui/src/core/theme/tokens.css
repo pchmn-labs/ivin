@@ -55,6 +55,11 @@
   --iv-tab-padding: 10px;
   --iv-tab-close-size: 20px;
   --iv-badge-size: 16px;
+  --iv-card-width: 300px;
+  --iv-rail-width: 44px;
+  --iv-rail-button-size: 32px;
+  --iv-list-head-height: 36px;
+  --iv-shadow-raised: 0 1px 2px color-mix(in srgb, black 12%, transparent);
   --iv-content-width: 760px;
 
   --iv-opacity-disabled: 0.45;

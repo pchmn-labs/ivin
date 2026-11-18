@@ -7,7 +7,10 @@ import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { App } from "./app.tsx"
 
-const mountApp = async (titles: readonly [string, string] = ["First", "Second"]) => {
+const mountApp = async (
+  titles: readonly [string, string] = ["First", "Second"],
+  options: { otherProject?: boolean } = {},
+) => {
   const server = makeFakeServer({
     project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
@@ -28,6 +31,10 @@ const mountApp = async (titles: readonly [string, string] = ["First", "Second"])
   }
   server.openTab("s1")
   server.openTab("s2")
+  if (options.otherProject) {
+    server.openProject("/dev/other")
+    server.openProject("/dev/ivin")
+  }
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <App />
@@ -81,7 +88,7 @@ test("back and forward walk the sessions opened in this window", async () => {
     .toHaveAttribute("aria-selected", "true")
 })
 
-test("the project row badge counts the sessions waiting on the user", async () => {
+test("the project button badge counts the sessions waiting on the user", async () => {
   const server = await mountApp()
   await vi.waitFor(() => expect(page.getByTestId("project-waiting").query()).toBeNull())
   server.setStatus("s1", "waiting")
@@ -120,17 +127,19 @@ test("each tab shows its session, closes on its button, and the bar reorders by 
 })
 
 test("picking another project shows its own tabs, and closing a project drops it", async () => {
-  const server = await mountApp()
-  server.openProject("/dev/other")
-  await page
-    .getByTestId("project-item")
-    .filter({ hasText: "ivin" })
-    .getByRole("button")
-    .first()
-    .click()
+  await mountApp(["First", "Second"], { otherProject: true })
+  await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
+  await page.getByRole("button", { name: "other" }).click()
+  await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
+  await expect.element(page.getByText(/No session open/)).toBeVisible()
+  await page.getByRole("button", { name: "ivin" }).click()
   await expect.element(page.getByRole("tab")).toHaveLength(2)
 
-  await page.getByRole("button", { name: "Close ivin" }).click()
+  await expect
+    .element(page.getByRole("button", { name: "ivin" }))
+    .toHaveAttribute("aria-current", "true")
+  await page.getByRole("button", { name: "Project actions" }).click()
+  await page.getByRole("menuitem", { name: "Close project" }).click()
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
   await expect.element(page.getByText(/No session open/)).toBeVisible()
 })

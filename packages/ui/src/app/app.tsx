@@ -3,7 +3,8 @@ import { AsyncResult } from "effect/reactivity"
 import { useCallback, useEffect, useState } from "react"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
-import { ProjectList } from "../modules/project/ui/project-list.tsx"
+import { ProjectColumn } from "../modules/project/ui/project-column.tsx"
+import { ProjectRail } from "../modules/project/ui/project-rail.tsx"
 import { NoProject, OpenFolderError } from "../modules/project/ui/no-project.tsx"
 import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
 import { TabView } from "../modules/tab/ui/tab-view.tsx"
@@ -70,9 +71,9 @@ export function App() {
                 />
               </div>
               <div className="iv-app__card-body">
-                <ProjectList />
+                <ProjectRail>{version}</ProjectRail>
+                <ProjectColumn project={current} />
               </div>
-              <div className="iv-app__card-foot">{version}</div>
             </aside>
           )}
           <main className="iv-app__main">

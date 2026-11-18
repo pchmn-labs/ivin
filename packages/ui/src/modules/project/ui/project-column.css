@@ -1,0 +1,27 @@
+.iv-project-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.iv-project-column__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--iv-space-2);
+  height: var(--iv-list-head-height);
+  padding: 0 var(--iv-space-2) 0 var(--iv-space-4);
+}
+
+.iv-project-column__name {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--iv-text-lg);
+  line-height: var(--iv-text-lg-lh);
+  font-weight: var(--iv-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

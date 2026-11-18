@@ -153,7 +153,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionList projectPath="/p" />
+        <SessionList projectPath="/p" projectName="p" />
         <SessionView projectPath="/p" sessionId="s1" />
       </PluginsProvider>
     </RegistryProvider>,

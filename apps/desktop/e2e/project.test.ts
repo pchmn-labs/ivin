@@ -51,7 +51,7 @@ test("two projects each with a session are back with their tabs after a relaunch
         join(root, name),
       )
       await window.getByRole("button", { name: "Open folder…" }).click()
-      await expect(window.getByTestId("project-item").filter({ hasText: name })).toBeVisible()
+      await expect(window.getByRole("button", { name })).toHaveAttribute("aria-current", "true")
       await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
       await expect(window.getByRole("tab")).toHaveCount(1)
     }
@@ -62,10 +62,14 @@ test("two projects each with a session are back with their tabs after a relaunch
   const second = await launchPackagedApp(userDataDir)
   try {
     const window = await second.firstWindow()
-    await expect(window.getByTestId("project-name")).toHaveText(names)
-    // The second project was selected last: its tab is back.
+    await expect(window.getByRole("button", { name: names[1]! })).toHaveAttribute(
+      "aria-current",
+      "true",
+    )
+    await expect(window.getByTestId("project-name")).toHaveText(names[1]!)
     await expect(window.getByRole("tab")).toHaveCount(1)
-    await window.getByTestId("project-name").filter({ hasText: names[0]! }).click()
+    await window.getByRole("button", { name: names[0]! }).click()
+    await expect(window.getByTestId("project-name")).toHaveText(names[0]!)
     await expect(window.getByRole("tab")).toHaveCount(1)
     await expect(window.getByTestId("session-item")).toHaveCount(1)
   } finally {

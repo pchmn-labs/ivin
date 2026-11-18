@@ -7,56 +7,67 @@ import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { SessionList } from "./session-list.tsx"
 
-const setup = async () => {
+const setup = async (titles: ReadonlyArray<string>) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
+  const at = DateTime.makeUnsafe(0)
+  titles.forEach((title, index) => {
+    server.sessions.set(`s${index + 1}`, {
+      id: `s${index + 1}`,
+      projectPath: "/p",
+      title,
+      model: "sonnet",
+      status: "idle",
+      createdAt: at,
+      lastActivityAt: at,
+    })
+    if (title !== "Closed") server.openTab(`s${index + 1}`)
+  })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <SessionList projectPath="/p" />
+      <SessionList projectPath="/p" projectName="p" />
     </RegistryProvider>,
   )
   return server
 }
 
-test("a new session uses sonnet until another model is picked, then keeps it", async () => {
-  const server = await setup()
-  await page.getByRole("button", { name: "New session" }).click()
-  await vi.waitFor(() =>
-    expect([...server.sessions.values()].map((s) => s.model)).toEqual(["sonnet"]),
-  )
-
-  await page.getByRole("button", { name: "Model for the next session" }).click()
-  await page.getByRole("menuitem", { name: "opus" }).click()
-  await vi.waitFor(() =>
-    expect([...server.sessions.values()].map((s) => s.model)).toEqual(["sonnet", "opus"]),
-  )
-
-  await page.getByRole("button", { name: "New session" }).click()
-  await vi.waitFor(() =>
-    expect([...server.sessions.values()].map((s) => s.model)).toEqual(["sonnet", "opus", "opus"]),
-  )
+test("a project with no tab says how to start a session", async () => {
+  await setup([])
+  await expect
+    .element(page.getByText("No sessions in p yet. Start one with New session."))
+    .toBeVisible()
 })
 
 test("each row shows the session status and follows the server", async () => {
-  const server = await setup()
-  await page.getByRole("button", { name: "New session" }).click()
+  const server = await setup(["One"])
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Idle")
 
-  server.setStatus("session-1", "working")
+  server.setStatus("s1", "working")
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Working")
-  server.setStatus("session-1", "failed")
+  server.setStatus("s1", "failed")
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Failed")
 })
 
+test("sessions waiting on the user sit in their own group above the others", async () => {
+  const server = await setup(["One", "Two"])
+  await expect.element(page.getByRole("region", { name: "Needs you" })).not.toBeInTheDocument()
+
+  server.setStatus("s2", "waiting")
+  const needsYou = page.getByRole("region", { name: "Needs you" })
+  await expect.element(needsYou).toBeVisible()
+  await expect.element(needsYou.getByTestId("session-status")).toHaveTextContent("Waiting for you")
+  await expect
+    .element(page.getByRole("region", { name: "Sessions" }).getByTestId("session-item"))
+    .toHaveLength(1)
+})
+
 test("only sessions with an open tab are listed, and picking one selects its tab", async () => {
-  const server = await setup()
-  await page.getByRole("button", { name: "New session" }).click()
-  await page.getByRole("button", { name: "New session" }).click()
+  const server = await setup(["One", "Closed", "Two"])
   await expect.element(page.getByTestId("session-item")).toHaveLength(2)
 
   await page.getByTestId("session-item").first().getByRole("button").first().click()
-  await vi.waitFor(() => expect(server.tabOrder("/p")).toEqual(["session-1", "session-2"]))
+  await vi.waitFor(() => expect(server.tabOrder("/p")).toEqual(["s1", "s3"]))
   await expect
     .element(page.getByTestId("session-item").first().getByRole("button").first())
     .toHaveAttribute("aria-current", "true")

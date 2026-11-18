@@ -1,4 +1,4 @@
-import { useAtom, useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { DateTime } from "effect"
 import { useState } from "react"
@@ -11,8 +11,7 @@ import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { createSessionAtom } from "../atoms/create-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useNow } from "../../../shared/use-now.ts"
-import { MODELS } from "../rules/models.ts"
-import { newSessionModelAtom } from "../atoms/new-session-model.ts"
+import { groupSessions } from "../rules/group-sessions.ts"
 import { relativeTime } from "../rules/relative-time.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import { renameSessionAtom } from "../atoms/rename-session.ts"
@@ -96,69 +95,82 @@ function SessionRow({
   )
 }
 
-function TabSessionRow({
+function Group({
+  label,
+  sessions,
   projectPath,
-  sessionId,
-  selected,
+  selectedId,
+  needsYou = false,
 }: {
+  label: string
+  sessions: ReadonlyArray<Session>
   projectPath: string
-  sessionId: string
-  selected: boolean
+  selectedId: string | null
+  needsYou?: boolean
 }) {
-  const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
-  if (!session) return null
-  return <SessionRow projectPath={projectPath} session={session} selected={selected} />
+  if (sessions.length === 0) return null
+  return (
+    <section className="iv-session-list__group" aria-label={label}>
+      <h2 className="iv-session-list__label" data-needs-you={needsYou || undefined}>
+        {label} <span className="iv-session-list__count">{sessions.length}</span>
+      </h2>
+      <ul className="iv-session-list__rows">
+        {sessions.map((session) => (
+          <SessionRow
+            key={session.id}
+            projectPath={projectPath}
+            session={session}
+            selected={session.id === selectedId}
+          />
+        ))}
+      </ul>
+    </section>
+  )
 }
 
-export function SessionList({ projectPath }: { projectPath: string }) {
-  useAtomMount(sessionsOf(projectPath).ids)
+export function SessionList({
+  projectPath,
+  projectName,
+}: {
+  projectPath: string
+  projectName: string
+}) {
+  const list = sessionsOf(projectPath)
+  useAtomMount(list.ids)
+  const sessions = useAtomValue(list.items)
   const { tabs, selectedSessionId } = useAtomValue(tabsOf(projectPath).value)
-  const [created, createSession] = useAtom(createSessionAtom)
-  const [model, setModel] = useAtom(newSessionModelAtom)
+  const created = useAtomValue(createSessionAtom)
+  const byId = new Map(sessions.map((session) => [session.id, session]))
+  const open = tabs.flatMap((tab) => byId.get(tab.sessionId) ?? [])
+  const { needsYou, others } = groupSessions(open)
 
   return (
     <nav className="iv-session-list" aria-label="Sessions">
-      <div className="iv-session-list__head">
-        <h2 className="iv-session-list__label">Sessions</h2>
-        <span className="iv-session-list__new">
-          <IconButton
-            icon="new-session"
-            label="New session"
-            tooltip={`New session · ${model}`}
-            size="sm"
-            onClick={() => createSession({ projectPath, model })}
-          />
-          <Menu
-            align="end"
-            trigger={
-              <IconButton icon="chevron-down" label="Model for the next session" size="sm" />
-            }
-            items={MODELS.map((name) => ({
-              label: name,
-              ...(name === model && { icon: "check" as const }),
-              onSelect: () => {
-                setModel(name)
-                createSession({ projectPath, model: name })
-              },
-            }))}
-          />
-        </span>
-      </div>
       {AsyncResult.isFailure(created) && (
         <Text role="alert" tone="danger">
           Could not create the session
         </Text>
       )}
-      <ul className="iv-session-list__rows">
-        {tabs.map((tab) => (
-          <TabSessionRow
-            key={tab.sessionId}
-            projectPath={projectPath}
-            sessionId={tab.sessionId}
-            selected={tab.sessionId === selectedSessionId}
-          />
-        ))}
-      </ul>
+      {tabs.length === 0 && (
+        <p className="iv-session-list__empty">
+          No sessions in {projectName} yet. Start one with New session.
+        </p>
+      )}
+      <div className="iv-session-list__scroll">
+        <Group
+          label="Needs you"
+          sessions={needsYou}
+          projectPath={projectPath}
+          selectedId={selectedSessionId}
+          needsYou
+        />
+        <Group
+          label="Sessions"
+          sessions={others}
+          projectPath={projectPath}
+          selectedId={selectedSessionId}
+        />
+      </div>
     </nav>
   )
 }
