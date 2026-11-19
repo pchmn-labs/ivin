@@ -4,7 +4,7 @@ import {
   type WorkingFolderChoice,
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
-import { Effect } from "effect"
+import { DateTime, Effect } from "effect"
 import { createWorktree } from "../../worktree/usecases/create-worktree.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { listWorktrees } from "../../worktree/usecases/list-worktrees.ts"
@@ -25,7 +25,10 @@ const moveToNewWorktree = (session: Session) =>
     const feed = yield* SessionFeed
     const runs = yield* SessionRuns
     const setStatus = (status: Session["status"]) =>
-      store.setStatus(session.id, status).pipe(Effect.andThen(feed.publish(session.id)))
+      DateTime.now.pipe(
+        Effect.flatMap((at) => store.setStatus(session.id, status, at)),
+        Effect.andThen(feed.publish(session.id)),
+      )
 
     yield* setStatus("preparing_worktree")
     const created = yield* createWorktree(session.projectPath, session.id).pipe(

@@ -356,6 +356,7 @@ const mountNewSession = async () => {
     title: "New session",
     model: "sonnet",
     status: "idle" as const,
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   }
