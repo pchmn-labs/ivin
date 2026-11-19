@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { sessionLocation } from "./session-location.ts"
+import { newBranchLabel, sessionLocation } from "./session-location.ts"
 
 const checkout = { workingFolder: "/p", inWorktree: false, branch: "main" }
 const notStarted = { ...checkout, started: false }
@@ -49,4 +49,10 @@ test("outside a git repository, the location is the folder", () => {
     label: "/notes",
     branch: null,
   })
+})
+
+test("a new worktree's branch says what it starts from", () => {
+  expect(newBranchLabel("origin/main", "main")).toBe("New branch from origin/main")
+  expect(newBranchLabel("HEAD", "feat/x")).toBe("New branch from feat/x")
+  expect(newBranchLabel(null, "main")).toBe("New branch")
 })

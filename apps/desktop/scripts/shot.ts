@@ -49,6 +49,8 @@ try {
   await window.waitForTimeout(300)
   await shoot("working-folder-menu")
   await window.getByRole("menuitemradio", { name: "New worktree" }).click()
+  await window.getByText(/^New branch from/).waitFor()
+  await shoot("new-worktree")
   await sendMessage(window, "How many files are there?")
   await window
     .getByTestId("composer-status")

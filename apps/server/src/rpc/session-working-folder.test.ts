@@ -184,14 +184,20 @@ test("a worktree that git cannot create stores git's error, and no run starts", 
   ])
 })
 
-test("the project lists its worktrees, without its checkout", async () => {
+test("the project lists its worktrees, without its checkout, and what a new one starts from", async () => {
   const path = join(project, ".worktrees", "docs-adr")
   git(project, "worktree", "add", "--quiet", "-b", "docs/adr", path)
-  const worktrees = await withServer([], (client) =>
-    client["worktree.list"]({ projectPath: project }),
+  const { worktrees, base } = await withServer([], (client) =>
+    Effect.gen(function* () {
+      return {
+        worktrees: yield* client["worktree.list"]({ projectPath: project }),
+        base: yield* client["worktree.newBase"]({ projectPath: project }),
+      }
+    }),
   )
 
   expect(worktrees).toEqual([{ path, branch: "docs/adr" }])
+  expect(base).toBe("origin/main")
 })
 
 test("a session started in an existing worktree runs there, on its branch", async () => {
@@ -229,15 +235,17 @@ test("a folder that is not one of the project's worktrees is refused, and no run
 test("a session outside a git repository has no branch, and its project no worktree", async () => {
   const folder = join(root, "plain")
   execFileSync("mkdir", [folder])
-  const { created, worktrees } = await withServer([], (client) =>
+  const { created, worktrees, base } = await withServer([], (client) =>
     Effect.gen(function* () {
       return {
         created: yield* client["session.create"]({ projectPath: folder, model: "sonnet" }),
         worktrees: yield* client["worktree.list"]({ projectPath: folder }),
+        base: yield* client["worktree.newBase"]({ projectPath: folder }),
       }
     }),
   )
 
   expect(created).toMatchObject({ workingFolder: folder, branch: null, inWorktree: false })
   expect(worktrees).toEqual([])
+  expect(base).toBeNull()
 })

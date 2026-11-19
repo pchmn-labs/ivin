@@ -339,6 +339,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
         }),
       ),
     "worktree.list": () => Effect.sync(() => [...worktrees]),
+    "worktree.newBase": () => Effect.succeed("origin/main"),
     "session.answerApproval": (input: { sessionId: string; requestId: string; allow: boolean }) =>
       Effect.sync(() => {
         const items = itemsOf(input.sessionId)

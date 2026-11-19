@@ -394,6 +394,7 @@ test("a new session asks for its task with the composer in the middle, and the w
 
   await choose("New worktree")
   expect(picker().element().textContent).toBe("New worktree")
+  await expect.element(page.getByText("New branch from origin/main")).toBeVisible()
   await sendText("go")
 
   await expect.element(title).not.toBeInTheDocument()

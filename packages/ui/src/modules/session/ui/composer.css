@@ -31,6 +31,7 @@
 
 .iv-composer__statusline {
   display: flex;
+  margin-top: var(--iv-space-1);
   justify-content: space-between;
   gap: var(--iv-space-4);
   min-height: var(--iv-space-6);

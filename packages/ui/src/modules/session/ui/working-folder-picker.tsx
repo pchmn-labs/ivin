@@ -4,10 +4,10 @@ import type { MenuItem } from "@ivin/plugin-api/ui"
 import { AsyncResult } from "effect/reactivity"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
-import { worktreesOf } from "../../worktree/atoms/list-worktrees.ts"
+import { newWorktreeBaseOf, worktreesOf } from "../../worktree/atoms/list-worktrees.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
-import { folderName, type WorkingFolderLabel } from "../rules/session-location.ts"
+import { folderName, newBranchLabel, type WorkingFolderLabel } from "../rules/session-location.ts"
 import "./working-folder-picker.css"
 
 export function WorkingFolderPicker({
@@ -21,6 +21,9 @@ export function WorkingFolderPicker({
   const worktreesAtom = worktreesOf(session.projectPath)
   const worktrees = AsyncResult.getOrElse(useAtomValue(worktreesAtom), () => [])
   const refreshWorktrees = useAtomRefresh(worktreesAtom)
+  const baseAtom = newWorktreeBaseOf(session.projectPath)
+  const base = AsyncResult.getOrElse(useAtomValue(baseAtom), () => null)
+  const refreshBase = useAtomRefresh(baseAtom)
   const sessions = useAtomValue(sessionsOf(session.projectPath).items)
 
   const usedBy = (path: string) =>
@@ -56,7 +59,11 @@ export function WorkingFolderPicker({
   return (
     <span className="iv-working-folder-picker">
       <Menu
-        onOpenChange={(open) => open && refreshWorktrees()}
+        onOpenChange={(open) => {
+          if (!open) return
+          refreshWorktrees()
+          refreshBase()
+        }}
         trigger={
           <button
             type="button"
@@ -74,7 +81,7 @@ export function WorkingFolderPicker({
       <span className="iv-working-folder-picker__branch">
         <Icon name="git-branch" size={12} />
         {location.branch === null ? (
-          "New branch"
+          newBranchLabel(base, session.branch)
         ) : (
           <span className="iv-working-folder-picker__name">{location.branch}</span>
         )}

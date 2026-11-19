@@ -33,6 +33,7 @@ import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
 import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
 import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
+import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
 export const layerServices = Layer.mergeAll(layerSessionRuns, layerCurrentSettings).pipe(
   Layer.provideMerge(layerSessionFeed),
@@ -91,6 +92,11 @@ export const handlers = Rpcs.toLayer(
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
       "session.watch": ({ projectPath }) => watchSessions(projectPath),
       "worktree.list": ({ projectPath }) => listWorktrees(projectPath),
+      "worktree.newBase": ({ projectPath }) =>
+        newWorktreeBase(projectPath).pipe(
+          // Git fails outside a repository, where no worktree can start.
+          Effect.orElseSucceed(() => null),
+        ),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

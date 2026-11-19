@@ -10,6 +10,12 @@ export interface WorkingFolderLabel {
 
 export const folderName = (path: string) => path.split("/").filter(Boolean).at(-1) ?? path
 
+// `base` is what the server will start the worktree from; `HEAD` means the checkout's branch.
+export const newBranchLabel = (base: string | null, checkoutBranch: string | null) => {
+  const from = base === "HEAD" ? checkoutBranch : base
+  return from === null ? "New branch" : `New branch from ${from}`
+}
+
 export const sessionLocation = (
   session: Pick<Session, "started" | "inWorktree" | "branch" | "workingFolder">,
   choice: WorkingFolderChoice,

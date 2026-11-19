@@ -10,3 +10,12 @@ export const worktreesOf = strongFamily((projectPath: string) =>
     }),
   ),
 )
+
+export const newWorktreeBaseOf = strongFamily((projectPath: string) =>
+  serverRuntime.atom(
+    Effect.gen(function* () {
+      const client = yield* ServerClient
+      return yield* client["worktree.newBase"]({ projectPath })
+    }),
+  ),
+)
