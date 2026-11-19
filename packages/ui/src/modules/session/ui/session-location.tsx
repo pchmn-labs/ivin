@@ -1,5 +1,5 @@
 import { Icon } from "../../../core/components/icon/icon.tsx"
-import type { Location } from "../rules/session-location.ts"
+import type { WorkingFolderLabel } from "../rules/session-location.ts"
 import "./session-location.css"
 
 const ICONS = { checkout: "folder", worktree: "worktree", folder: "folder" } as const
@@ -9,7 +9,7 @@ export function SessionLocation({
   compact = false,
   title,
 }: {
-  location: Location
+  location: WorkingFolderLabel
   // The sidebar row shows the branch alone, or the label when there is no branch.
   compact?: boolean
   title?: string

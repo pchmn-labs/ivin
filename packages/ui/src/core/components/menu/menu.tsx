@@ -27,7 +27,7 @@ export function Menu({ trigger, items, align = "start", onOpenChange }: MenuProp
     (item) => typeof item === "object" && "checked" in item && item.checked,
   )
   return (
-    <BaseMenu.Root {...(onOpenChange && { onOpenChange: (open: boolean) => onOpenChange(open) })}>
+    <BaseMenu.Root {...(onOpenChange && { onOpenChange })}>
       <BaseMenu.Trigger render={trigger} />
       <BaseMenu.Portal>
         <BaseMenu.Positioner align={align} sideOffset={4}>

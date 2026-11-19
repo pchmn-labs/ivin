@@ -7,18 +7,21 @@ import { Menu } from "../../../core/components/menu/menu.tsx"
 import { worktreesOf } from "../../worktree/atoms/list-worktrees.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
-import { useSessionLocation } from "../hooks/use-session-location.ts"
+import { folderName, type WorkingFolderLabel } from "../rules/session-location.ts"
 import "./working-folder-picker.css"
 
-const folderName = (path: string) => path.split("/").filter(Boolean).at(-1) ?? path
-
-export function WorkingFolderPicker({ session }: { session: Session }) {
+export function WorkingFolderPicker({
+  session,
+  location,
+}: {
+  session: Session
+  location: WorkingFolderLabel
+}) {
   const [choice, setChoice] = useAtom(workingFolderChoiceOf(session.id))
   const worktreesAtom = worktreesOf(session.projectPath)
   const worktrees = AsyncResult.getOrElse(useAtomValue(worktreesAtom), () => [])
   const refreshWorktrees = useAtomRefresh(worktreesAtom)
   const sessions = useAtomValue(sessionsOf(session.projectPath).items)
-  const location = useSessionLocation(session)
 
   const usedBy = (path: string) =>
     sessions.find((other) => other.id !== session.id && other.workingFolder === path)?.title

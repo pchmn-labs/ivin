@@ -132,7 +132,7 @@ export function Composer({
         </Stack>
       </div>
       <div className="iv-composer__statusline">
-        {session && <Location session={session} choosing={choosing} />}
+        {session && <StatusLocation session={session} choosing={choosing} />}
         <div className="iv-composer__status-slot" data-testid="composer-status">
           <Slot slot="composer.status" props={{ sessionId }} />
         </div>
@@ -141,11 +141,11 @@ export function Composer({
   )
 }
 
-// Outside a git repository there is nothing to choose.
-function Location({ session, choosing }: { session: Session; choosing: boolean }) {
+function StatusLocation({ session, choosing }: { session: Session; choosing: boolean }) {
   const location = useSessionLocation(session)
+  // Outside a git repository there is nothing to choose.
   return choosing && location.kind !== "folder" ? (
-    <WorkingFolderPicker session={session} />
+    <WorkingFolderPicker session={session} location={location} />
   ) : (
     <SessionLocation location={location} title={session.workingFolder} />
   )

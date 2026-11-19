@@ -75,7 +75,6 @@ export type MenuItem =
       readonly disabled?: boolean
       // Makes the items that have it one choice, with a check on the chosen one.
       readonly checked?: boolean
-      // Faint text at the end of the row.
       readonly hint?: string
     }
   | { readonly heading: string }

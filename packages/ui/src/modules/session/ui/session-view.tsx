@@ -26,13 +26,12 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
     isRunning(status),
   )
 
-  // A session with nothing in it yet waits for its task, its composer in the middle.
+  // Not waiting for the transcript to load, so a new session does not open docked then jump.
   const blank =
     session !== undefined &&
     !session.started &&
     status === "idle" &&
-    transcript.loaded &&
-    transcript.ids.length === 0
+    (!transcript.loaded || transcript.ids.length === 0)
 
   // The title keeps its place among the children, so the composer survives the switch.
   return (
