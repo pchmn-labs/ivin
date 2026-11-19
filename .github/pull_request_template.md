@@ -24,7 +24,7 @@
 
 ## Read first
 
-<!-- 2 to 5 places, in reading order, each with one line on why a human should read it closely. Write each as a link to its line in this PR's diff, added once the PR has a number: [`path:symbol`](https://github.com/pchmn-labs/ivin/pull/<number>/files#diff-<sha>R<line>), where `<sha>` is `printf %s <path> | shasum -a 256`. -->
+<!-- 2 to 5 places, in reading order, each with one line on why a human should read it closely. Write each as a link to its file in this PR's diff, added once the PR has a number: [`path:symbol`](https://github.com/pchmn-labs/ivin/pull/<number>/files#diff-<sha>), where `<sha>` is `printf %s <path> | shasum -a 256`. No line number: it goes stale with the next commit. -->
 
 1.
 
