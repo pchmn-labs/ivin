@@ -31,10 +31,10 @@
     },
     "code-review": {
       "source": "pchmn/skills",
-      "commit": "edb78e05fbbb896aa564cf0d6efbccedcfdbb265",
+      "commit": "60708c9fbe5b24ac36d11b185c0777862ad6ca9e",
       "sourceType": "github",
       "skillPath": "skills/engineering/code-review/SKILL.md",
-      "computedHash": "bdc40bc9ee8c508109d3f26551da1b1193edf9129d7c0c4e7dd4cd9774deb170"
+      "computedHash": "662dfadc9cc561d18028948499b84a940e327fef205fe56dd16f36654eccab0a"
     },
     "codebase-design": {
       "source": "pchmn/skills",
@@ -66,10 +66,10 @@
     },
     "implement": {
       "source": "pchmn/skills",
-      "commit": "edb78e05fbbb896aa564cf0d6efbccedcfdbb265",
+      "commit": "60708c9fbe5b24ac36d11b185c0777862ad6ca9e",
       "sourceType": "github",
       "skillPath": "skills/engineering/implement/SKILL.md",
-      "computedHash": "4ff619eb32e8665bf185f8fcd480f89b1a5941915570a5c20400e8114385b5cd"
+      "computedHash": "48c0e3ceaf166cce6d8da45ef92588cd17afdc78a9fa2f82bb90062ac126c3ef"
     },
     "improve-codebase-architecture": {
       "source": "pchmn/skills",
@@ -101,10 +101,10 @@
     },
     "setup-matt-pocock-skills": {
       "source": "pchmn/skills",
-      "commit": "a04c2245f598b757ae85b2c758b64130b78c9c8a",
+      "commit": "60708c9fbe5b24ac36d11b185c0777862ad6ca9e",
       "sourceType": "github",
       "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
-      "computedHash": "2f52b6349f17e87d2b64e0adf4fefc4164949e4a30748da9ad811f4b398bdd12"
+      "computedHash": "ee7fcca9dd89e56fa3094e35624783dfb81c9e953b7adc5cae92c318f2eab309"
     },
     "tdd": {
       "source": "pchmn/skills",
@@ -122,10 +122,10 @@
     },
     "to-tickets": {
       "source": "pchmn/skills",
-      "commit": "edb78e05fbbb896aa564cf0d6efbccedcfdbb265",
+      "commit": "60708c9fbe5b24ac36d11b185c0777862ad6ca9e",
       "sourceType": "github",
       "skillPath": "skills/engineering/to-tickets/SKILL.md",
-      "computedHash": "1eaea0a65ef1aa112d5fdc2a845c3240e9e0ed8670dfe99822668c7ee6dfc159"
+      "computedHash": "e3f6ac380c27113e22af7630b344f2d49b6d5eb2ac86dc393c4a108d142d82e8"
     },
     "triage": {
       "source": "pchmn/skills",

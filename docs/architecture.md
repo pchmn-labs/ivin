@@ -437,7 +437,7 @@ The sidebar is a floating card inset from the window edges: a header row (macOS 
 
 A project is a pixel creature (8x8, mirrored, generated from its name, one of six `--iv-project-hue-*` hues). A session row is the harness mark with a status overlay; a project button shows how many of its sessions wait on the user, and a session waiting on the user is outlined. The Claude mark keeps its brand orange, the one colour outside the tokens.
 
-The prototype these come from is kept in [`docs/design/app-shell-prototype.html`](design/app-shell-prototype.html). Pending, waiting on a settings screen: Letter project icons, an alternative to the Pixel icons that ship now. Pending, waiting on server data: the PR icon with checks, branch and worktree in the status line, background tasks.
+Designs decided but not built yet are listed under "Pending designs" in [`DESIGN.md`](../DESIGN.md).
 
 Layout features (stacked or swapped panels, sub-tabs) are where the slot model is weakest; expect to grow a small layout API (`ctx.layout.registerPanel`, panel placement settings) while porting them.
 

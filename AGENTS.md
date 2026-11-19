@@ -65,7 +65,7 @@ Everything written to the tracker is in English, whatever the language of the co
 
 ### Design
 
-Validated UI prototypes live in `docs/design/`. A ticket that adds a screen or changes a layout links one there.
+`DESIGN.md` is the UI's design of record: with the app, it is what the prototype rule of `to-tickets`, `implement` and `code-review` measures a UI change against. A prototype never reaches `main`: one made for a ticket lives on that ticket's branch, and an old one is read from git history, never as a spec.
 
 Motion goes through the `animate` and `choreograph` skills, not `impeccable animate`. A new UI dependency goes through `pick-ui-library` first.
 
