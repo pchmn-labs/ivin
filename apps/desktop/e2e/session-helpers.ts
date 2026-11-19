@@ -3,9 +3,14 @@ import { mkdirSync } from "node:fs"
 import { join } from "node:path"
 import { makeTempDir } from "./launch-app.ts"
 
-export const startSession = async (app: ElectronApplication): Promise<Page> => {
+// `prepare` runs on the empty project folder before the app opens it.
+export const startSession = async (
+  app: ElectronApplication,
+  prepare?: (projectDir: string) => void,
+): Promise<Page> => {
   const projectDir = join(makeTempDir("projects"), "my-project")
   mkdirSync(projectDir)
+  prepare?.(projectDir)
   const window = await app.firstWindow()
   await app.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [path] })

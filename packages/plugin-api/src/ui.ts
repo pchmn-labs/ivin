@@ -13,7 +13,13 @@ export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 export type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
 export type ErrorItem = Extract<TranscriptItem, { type: "error" }>
 export type InterruptionItem = Extract<TranscriptItem, { type: "interruption" }>
-export type MessageSlotItem = MessageItem | ThinkingItem | ErrorItem | InterruptionItem
+export type WorkingFolderItem = Extract<TranscriptItem, { type: "working_folder" }>
+export type MessageSlotItem =
+  | MessageItem
+  | ThinkingItem
+  | ErrorItem
+  | InterruptionItem
+  | WorkingFolderItem
 
 export interface SlotProps {
   "transcript.message": { readonly item: MessageSlotItem; readonly sessionId: string }

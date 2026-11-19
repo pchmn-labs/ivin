@@ -100,6 +100,11 @@ export const applyEvent = (
       const item: TranscriptItem = { ...base, type: "interruption" }
       return { state: { ...state, openMessage: null }, item }
     }
+    case "working_folder": {
+      const { id: _id, sessionId: _s, sequence: _q, at: _at, raw: _raw, ...change } = event
+      const item: TranscriptItem = { ...base, ...change }
+      return { state: { ...state, openMessage: null }, item }
+    }
     case "status":
       return {
         state: event.status === "idle" ? { ...state, openMessage: null } : state,

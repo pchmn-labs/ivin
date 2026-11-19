@@ -58,7 +58,7 @@ export const layerClaudeWith = (killGrace: Duration.Input) =>
       Effect.gen(function* () {
         // spawn reports a missing cwd as ENOENT, the same as a missing binary.
         if (!existsSync(cwd)) {
-          return yield* new HarnessError({ message: `The project folder does not exist: ${cwd}` })
+          return yield* new HarnessError({ message: `The working folder does not exist: ${cwd}` })
         }
         let stoppedByIvin = false
         const { child, lines, exited, started, stderr } = yield* Effect.acquireRelease(

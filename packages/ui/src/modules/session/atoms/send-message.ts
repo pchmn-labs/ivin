@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import type { Session } from "@ivin/contracts/session"
+import type { Session, WorkingFolderChoice } from "@ivin/contracts/session"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { optimistic } from "@ivin/state/optimistic"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
@@ -10,8 +10,9 @@ export const sendMessageAtom = serverRuntime.fn<{
   readonly projectPath: string
   readonly sessionId: string
   readonly text: string
+  readonly workingFolder?: WorkingFolderChoice
 }>()(
-  Effect.fnUntraced(function* ({ projectPath, sessionId, text }, get) {
+  Effect.fnUntraced(function* ({ projectPath, sessionId, text, workingFolder }, get) {
     const client = yield* ServerClient
     const transcript = transcriptOf(sessionId)
     const messageId = crypto.randomUUID()
@@ -36,7 +37,14 @@ export const sendMessageAtom = serverRuntime.fn<{
         }
       }),
       reconcile: (session) => sessionsOf(projectPath).upsert([session]),
-    })(client["session.sendMessage"]({ sessionId, messageId, text }))
+    })(
+      client["session.sendMessage"]({
+        sessionId,
+        messageId,
+        text,
+        ...(workingFolder && { workingFolder }),
+      }),
+    )
   }),
   // A second message sent before the first is answered would otherwise cancel the first.
   { concurrent: true },

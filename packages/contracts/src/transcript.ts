@@ -57,6 +57,20 @@ const ErrorBody = Schema.Struct({
 
 const InterruptionBody = Schema.Struct({ type: Schema.Literal("interruption") })
 
+const workingFolderFields = {
+  path: Schema.String,
+  inWorktree: Schema.Boolean,
+  branch: Schema.NullOr(Schema.String),
+  // `creation`: a new worktree; `choice`: a worktree the user picked before the first message.
+  cause: Schema.Literals(["creation", "choice"]),
+  // False when git does not ignore `.worktrees/`, so the checkout lists it as untracked.
+  worktreesIgnored: Schema.Boolean,
+}
+const WorkingFolderBody = Schema.Struct({
+  type: Schema.Literal("working_folder"),
+  ...workingFolderFields,
+})
+
 const eventBodies = [
   UserMessageBody,
   AssistantTextBody,
@@ -69,6 +83,7 @@ const eventBodies = [
   StatusBody,
   ErrorBody,
   InterruptionBody,
+  WorkingFolderBody,
 ] as const
 
 const raw = { raw: Schema.Unknown }
@@ -165,6 +180,12 @@ export const InterruptionItem = Schema.Struct({
   type: Schema.Literal("interruption"),
 })
 
+export const WorkingFolderItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("working_folder"),
+  ...workingFolderFields,
+})
+
 export const TranscriptItem = Schema.Union([
   MessageItem,
   ThinkingItem,
@@ -173,6 +194,7 @@ export const TranscriptItem = Schema.Union([
   UsageItem,
   ErrorItem,
   InterruptionItem,
+  WorkingFolderItem,
 ])
 export type TranscriptItem = typeof TranscriptItem.Type
 

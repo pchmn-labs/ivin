@@ -13,6 +13,10 @@ test("answering an approval stores the decision on its item and updates the sess
   server.sessions.set("s1", {
     id: "s1",
     projectPath: project,
+    workingFolder: project,
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status: "waiting",

@@ -1,0 +1,61 @@
+.iv-working-folder-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-3);
+  min-width: 0;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+  white-space: nowrap;
+}
+
+.iv-working-folder-picker__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  height: 22px;
+  margin-left: calc(-1 * var(--iv-space-2));
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-sm);
+  background: transparent;
+  color: var(--iv-text-muted);
+  font: inherit;
+  transition:
+    background-color var(--iv-duration-fast) ease-out,
+    color var(--iv-duration-fast) ease-out,
+    transform 160ms var(--iv-ease-out);
+}
+
+.iv-working-folder-picker__trigger:active {
+  transform: scale(0.97);
+}
+
+.iv-working-folder-picker__trigger[data-popup-open] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+
+.iv-working-folder-picker__trigger[data-kind="worktree"] > :first-child {
+  color: var(--iv-accent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-working-folder-picker__trigger:hover {
+    background: var(--iv-bg-hover);
+    color: var(--iv-text);
+  }
+}
+
+.iv-working-folder-picker__branch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  min-width: 0;
+}
+
+.iv-working-folder-picker__name {
+  overflow: hidden;
+  font-family: var(--iv-font-mono);
+  text-overflow: ellipsis;
+}

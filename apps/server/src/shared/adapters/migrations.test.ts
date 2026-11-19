@@ -128,3 +128,18 @@ test("a database with no project gets no open project", () => {
   expect(db.prepare("SELECT * FROM open_projects").all()).toEqual([])
   expect(db.prepare("SELECT * FROM tabs").all()).toEqual([])
 })
+
+test("an existing session gets its project folder as its working folder, with no branch", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 6)))
+  db.prepare(
+    `INSERT INTO sessions (id, project_path, title, created_at, last_activity_at)
+     VALUES ('s', '/a/project', 't', 0, 0)`,
+  ).run()
+
+  Effect.runSync(runMigrations(db))
+
+  expect(db.prepare("SELECT working_folder, branch FROM sessions").all()).toEqual([
+    { working_folder: "/a/project", branch: null },
+  ])
+})

@@ -13,6 +13,10 @@ const setup = async () => {
   server.sessions.set("s1", {
     id: "s1",
     projectPath: project,
+    workingFolder: project,
+    inWorktree: false,
+    branch: "main",
+    started: false,
     title: "New session",
     model: "sonnet",
     status: "idle",

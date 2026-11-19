@@ -6,6 +6,7 @@ export type { ListRowProps }
 export function ListRow({
   leading,
   title,
+  subtitle,
   meta,
   selected = false,
   attention = false,
@@ -28,7 +29,14 @@ export function ListRow({
         aria-current={ariaCurrent ?? (selected ? "true" : undefined)}
       >
         {leading === undefined ? null : <span className="iv-list-row__leading">{leading}</span>}
-        <span className="iv-list-row__title">{title}</span>
+        {subtitle === undefined ? (
+          <span className="iv-list-row__title">{title}</span>
+        ) : (
+          <span className="iv-list-row__text">
+            <span className="iv-list-row__title">{title}</span>
+            <span className="iv-list-row__subtitle">{subtitle}</span>
+          </span>
+        )}
         {meta === undefined ? null : <span className="iv-list-row__meta">{meta}</span>}
       </button>
       {actions === undefined ? null : <div className="iv-list-row__actions">{actions}</div>}

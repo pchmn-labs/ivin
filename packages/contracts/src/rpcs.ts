@@ -6,6 +6,7 @@ import { SessionRpcs } from "./session.ts"
 import { SettingRpcs } from "./setting.ts"
 import { TabRpcs } from "./tab.ts"
 import { TranscriptRpcs } from "./transcript.ts"
+import { WorktreeRpcs } from "./worktree.ts"
 
 export const Rpcs = ServerRpcs.merge(
   KeybindingRpcs,
@@ -15,4 +16,5 @@ export const Rpcs = ServerRpcs.merge(
   SettingRpcs,
   TabRpcs,
   TranscriptRpcs,
+  WorktreeRpcs,
 )

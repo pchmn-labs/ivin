@@ -39,3 +39,27 @@ test("an approval answer has a message for each error type and a default", () =>
     retryable: true,
   })
 })
+
+const worktreeNotCreated = (reason: string) => ({
+  _tag: "WorktreeNotCreated",
+  sessionId: "s1",
+  reason,
+})
+
+test("a worktree git refused points at git's output in the transcript, and can be retried", () => {
+  expect(sendMessageFailure(worktreeNotCreated("git"))).toEqual({
+    text: expect.stringMatching(/^The worktree was not created.*transcript/),
+    retryable: true,
+  })
+})
+
+test("a fetch of origin that timed out says to check the connection", () => {
+  const failure = sendMessageFailure(worktreeNotCreated("fetch_timed_out"))
+  expect(failure.text).toMatch(/connection/)
+  expect(failure.retryable).toBe(true)
+})
+
+test("an origin with no default branch cannot be retried", () => {
+  const failure = sendMessageFailure(worktreeNotCreated("no_default_branch"))
+  expect(failure.retryable).toBe(false)
+})

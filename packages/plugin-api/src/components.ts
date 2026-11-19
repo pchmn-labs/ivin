@@ -20,6 +20,8 @@ export type IconName =
   | "loader"
   | "copy"
   | "git-branch"
+  | "folder"
+  | "worktree"
   | "brain"
   | "wrench"
   | "user"
@@ -71,13 +73,18 @@ export type MenuItem =
       readonly onSelect: () => void
       readonly danger?: boolean
       readonly disabled?: boolean
+      // Makes the items that have it one choice, with a check on the chosen one.
+      readonly checked?: boolean
+      readonly hint?: string
     }
+  | { readonly heading: string }
   | "separator"
 
 export interface MenuProps {
   readonly trigger: ReactElement
   readonly items: ReadonlyArray<MenuItem>
   readonly align?: "start" | "end"
+  readonly onOpenChange?: (open: boolean) => void
 }
 
 export interface DialogProps {
@@ -153,6 +160,7 @@ export interface StatusMarkProps {
 export interface ListRowProps {
   readonly leading?: ReactNode
   readonly title: ReactNode
+  readonly subtitle?: ReactNode
   readonly meta?: ReactNode
   readonly selected?: boolean
   readonly attention?: boolean

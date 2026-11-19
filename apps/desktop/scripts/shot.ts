@@ -1,5 +1,6 @@
 import { _electron as electron } from "@playwright/test"
-import { mkdirSync, rmSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeTempDir } from "../e2e/launch-app.ts"
@@ -16,9 +17,26 @@ const app = await electron.launch({
   env: { ...process.env, IVIN_BACKGROUND: "1", IVIN_HARNESS: "scripted-approval" },
 })
 
+// A repository with one linked worktree, so the working folder menu has something to list.
+const makeRepo = (dir: string) => {
+  const env = {
+    ...process.env,
+    GIT_AUTHOR_NAME: "ivin",
+    GIT_AUTHOR_EMAIL: "ivin@example.com",
+    GIT_COMMITTER_NAME: "ivin",
+    GIT_COMMITTER_EMAIL: "ivin@example.com",
+  }
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: dir, env })
+  git("init", "--quiet", "-b", "main")
+  writeFileSync(join(dir, "README.md"), "hello")
+  git("add", "README.md")
+  git("commit", "--quiet", "-m", "first")
+  git("worktree", "add", "--quiet", "-b", "docs/adr", join(dir, ".worktrees", "docs-adr"))
+}
+
 const written: string[] = []
 try {
-  const window = await startSession(app)
+  const window = await startSession(app, makeRepo)
   const shoot = async (name: string) => {
     const path = join(outDir, `${String(written.length + 1).padStart(2, "0")}-${name}.png`)
     await window.screenshot({ path })
@@ -26,6 +44,13 @@ try {
   }
 
   await shoot("new-session")
+  await window.getByTestId("working-folder-picker").click()
+  await window.getByRole("menuitemradio", { name: "New worktree" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("working-folder-menu")
+  await window.getByRole("menuitemradio", { name: "New worktree" }).click()
+  await window.getByText(/^New branch from/).waitFor()
+  await shoot("new-worktree")
   await sendMessage(window, "How many files are there?")
   await window
     .getByTestId("composer-status")

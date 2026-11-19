@@ -6,6 +6,8 @@
   background: var(--iv-bg-raised);
   box-shadow: var(--iv-shadow-overlay);
   outline: none;
+  max-height: min(360px, var(--available-height));
+  overflow-y: auto;
   transform-origin: var(--transform-origin);
   transition:
     opacity var(--iv-duration-fast) var(--iv-ease-out),
@@ -47,4 +49,35 @@
   height: 1px;
   margin: var(--iv-space-1) 0;
   background: var(--iv-border);
+}
+
+.iv-menu__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv-menu__hint {
+  max-width: 140px;
+  overflow: hidden;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv-menu__check {
+  display: flex;
+  width: 14px;
+  flex: none;
+  color: var(--iv-accent);
+}
+
+.iv-menu__heading {
+  padding: var(--iv-space-1) var(--iv-space-2);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  font-weight: var(--iv-weight-medium);
 }

@@ -49,6 +49,10 @@ test("the transcript renders through the plugins and the status line shows the u
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status: "idle",
@@ -78,6 +82,10 @@ const mountSession = async (status: "idle" | "working" | "waiting") => {
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status,
@@ -127,7 +135,7 @@ test("the composer accepts a message while the session works", async () => {
   await page.getByRole("textbox", { name: "Message" }).fill("also this")
   await page.getByRole("button", { name: "Send" }).click()
   await expect.element(page.getByText("also this", { exact: true })).toBeVisible()
-  await vi.waitFor(() => expect(server.sessions.get("s1")?.title).toBe("also this"))
+  await vi.waitFor(() => expect(server.sentMessages).toHaveLength(1))
 })
 
 test("a message that fails to send stays in the composer, and Retry sends it", async () => {
@@ -148,7 +156,7 @@ test("a message that fails to send stays in the composer, and Retry sends it", a
   await expect.element(page.getByText("keep me", { exact: true })).toBeVisible()
   await expect.element(field).toHaveValue("")
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
-  await vi.waitFor(() => expect(server.sessions.get("s1")?.title).toBe("keep me"))
+  await vi.waitFor(() => expect(server.sentMessages).toHaveLength(2))
 })
 
 test("a message to a session the server no longer has says so, with no Retry", async () => {
@@ -174,6 +182,10 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status: "working",
@@ -290,6 +302,10 @@ test("Escape closes an open menu without interrupting the session", async () => 
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: true,
     title: "t",
     model: "sonnet",
     status: "working",
@@ -319,4 +335,124 @@ test("Enter on the focused Interrupt button presses it rather than running compo
   await page.getByRole("button", { name: "Interrupt" }).element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
+})
+
+const mountNewSession = async () => {
+  const server = makeFakeServer({
+    project: { path: "/p", name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
+  const at = DateTime.makeUnsafe(0)
+  const session = {
+    id: "s1",
+    projectPath: "/p",
+    workingFolder: "/p",
+    inWorktree: false,
+    branch: "main",
+    started: false,
+    title: "New session",
+    model: "sonnet",
+    status: "idle" as const,
+    createdAt: at,
+    lastActivityAt: at,
+  }
+  server.sessions.set("s1", session)
+  server.worktrees.push({ path: "/p/.worktrees/docs-adr", branch: "docs/adr" })
+  server.sessions.set("s2", {
+    ...session,
+    id: "s2",
+    workingFolder: "/p/.worktrees/docs-adr",
+    inWorktree: true,
+    branch: "docs/adr",
+    started: true,
+    title: "Write the ADR",
+  })
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <SessionView projectPath="/p" sessionId="s1" />
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+  return server
+}
+
+const picker = () => page.getByTestId("working-folder-picker")
+const choose = async (name: string | RegExp) => {
+  await picker().click()
+  await page.getByRole("menuitemradio", { name }).click()
+}
+const sendText = async (text: string) => {
+  await page.getByRole("textbox", { name: "Message" }).fill(text)
+  await page.getByRole("button", { name: "Send" }).click()
+}
+
+test("a new session asks for its task with the composer in the middle, and the working folder choice stays until the first message", async () => {
+  const server = await mountNewSession()
+  const title = page.getByRole("heading", { name: "What should we work on in shop?" })
+  await expect.element(title).toBeVisible()
+  expect(picker().element().textContent).toBe("Current checkout")
+
+  await choose("New worktree")
+  expect(picker().element().textContent).toBe("New worktree")
+  await expect.element(page.getByText("New branch from origin/main")).toBeVisible()
+  await sendText("go")
+
+  await expect.element(title).not.toBeInTheDocument()
+  await expect.element(picker()).not.toBeInTheDocument()
+  await expect
+    .element(page.getByTestId("session-location"))
+    .toHaveTextContent("Worktreeivin/generated")
+  await sendText("again")
+  await vi.waitFor(() => expect(server.sentMessages).toHaveLength(2))
+  expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
+    { kind: "new_worktree" },
+    undefined,
+  ])
+})
+
+test("the menu lists the project's worktrees with the session using each, and one can be picked", async () => {
+  const server = await mountNewSession()
+  await picker().click()
+  const existing = page.getByRole("menuitemradio", { name: /docs\/adr/ })
+  expect(existing.element().textContent).toContain("Write the ADR")
+  await existing.click()
+
+  expect(picker().element().textContent).toBe("Worktree")
+  await expect.element(page.getByText("docs/adr", { exact: true })).toBeVisible()
+  await sendText("go")
+  await vi.waitFor(() =>
+    expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
+      { kind: "existing_worktree", path: "/p/.worktrees/docs-adr" },
+    ]),
+  )
+})
+
+test("a worktree git cannot create shows git's message in the transcript and keeps the message and the choice", async () => {
+  const server = await mountNewSession()
+  server.failWorktreeWith("fatal: unable to access 'origin': Could not resolve host")
+  await choose("New worktree")
+  await sendText("go")
+
+  const alert = page.getByTestId("composer-alert")
+  await expect.element(alert).toBeVisible()
+  expect(alert.element().textContent).toMatch(/^The worktree was not created/)
+  await expect
+    .element(
+      page.getByText("fatal: unable to access 'origin': Could not resolve host", { exact: true }),
+    )
+    .toBeVisible()
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("go")
+  expect(picker().element().textContent).toBe("New worktree")
+})
+
+test("a session preparing its worktree says so under the transcript until the run starts", async () => {
+  const server = await mountNewSession()
+  await page.getByRole("textbox", { name: "Message" }).fill("go")
+  server.setStatus("s1", "preparing_worktree")
+  const preparing = page.getByTestId("preparing-worktree")
+  await expect.element(preparing).toBeVisible()
+  expect(preparing.element().textContent).toBe("Preparing worktree…")
+  await expect.element(page.getByRole("button", { name: "Send" })).toBeDisabled()
+  server.setStatus("s1", "working")
+  await expect.element(preparing).not.toBeInTheDocument()
 })

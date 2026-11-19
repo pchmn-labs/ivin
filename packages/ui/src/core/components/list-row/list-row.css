@@ -54,6 +54,21 @@
   white-space: nowrap;
 }
 
+.iv-list-row__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--iv-space-1) 0;
+}
+
+.iv-list-row__subtitle {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--iv-weight-regular);
+}
+
 .iv-list-row__meta {
   flex: none;
   color: var(--iv-text-faint);

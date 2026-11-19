@@ -2,12 +2,13 @@ import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
-import type { Session, SessionStatus } from "@ivin/contracts/session"
+import type { Session, SessionStatus, WorkingFolderChoice } from "@ivin/contracts/session"
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
+import type { Worktree } from "@ivin/contracts/worktree"
 import { ProjectNotOpen } from "@ivin/contracts/project"
-import { SessionNotFound } from "@ivin/contracts/session"
+import { SessionNotFound, WorktreeNotCreated } from "@ivin/contracts/session"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -21,6 +22,11 @@ export interface FakeServer {
   // Changes a session's status as the server would, and streams it to `session.watch`.
   readonly setStatus: (sessionId: string, status: SessionStatus) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
+  readonly sentMessages: ReadonlyArray<{ readonly workingFolder?: WorkingFolderChoice }>
+  // What `worktree.list` returns, for every project.
+  readonly worktrees: Array<Worktree>
+  // Makes every sendMessage fail as git would, storing this message; null sends again.
+  readonly failWorktreeWith: (gitMessage: string | null) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
   readonly holdNextSend: () => { readonly release: () => void; readonly fail: () => void }
   // Makes the next tab.reorder wait until `release` is called, or fail.
@@ -59,6 +65,9 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
   const failing = new Set<string>()
+  const sentMessages: Array<{ readonly workingFolder?: WorkingFolderChoice }> = []
+  let worktreeFailure: string | null = null
+  const worktrees: Array<Worktree> = []
 
   const openProjects = (): OpenProjects => ({ projects: [...projects], selectedPath })
   const tabsOf = (projectPath: string) => tabs.filter((tab) => tab.projectPath === projectPath)
@@ -215,6 +224,10 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
         const session: Session = {
           id: `session-${nextId++}`,
           projectPath,
+          workingFolder: projectPath,
+          inWorktree: false,
+          branch: "main",
+          started: false,
           model,
           title: "New session",
           status: "idle",
@@ -252,9 +265,15 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
         sessions.set(sessionId, renamed)
         return renamed
       }),
-    "session.sendMessage": (input: { sessionId: string; messageId: string; text: string }) =>
+    "session.sendMessage": (input: {
+      sessionId: string
+      messageId: string
+      text: string
+      workingFolder?: WorkingFolderChoice
+    }) =>
       Effect.flatMap(
         Effect.promise(async () => {
+          sentMessages.push(input)
           if (hold) {
             const ok = await hold.wait
             hold = null
@@ -262,14 +281,30 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
           }
           return sessions.get(input.sessionId)
         }),
-        (session) =>
+        (session): Effect.Effect<Session, SessionNotFound | WorktreeNotCreated> =>
           session === undefined
             ? Effect.fail(new SessionNotFound({ sessionId: input.sessionId }))
-            : Effect.succeed(session),
+            : worktreeFailure !== null
+              ? Effect.sync(() =>
+                  publish({
+                    id: `error-${nextId++}`,
+                    sessionId: input.sessionId,
+                    position: itemsOf(input.sessionId).length,
+                    type: "error",
+                    message: worktreeFailure!,
+                  }),
+                ).pipe(
+                  Effect.andThen(
+                    Effect.fail(
+                      new WorktreeNotCreated({ sessionId: input.sessionId, reason: "git" }),
+                    ),
+                  ),
+                )
+              : Effect.succeed(session),
       ).pipe(
         Effect.map((session) => {
           const items = itemsOf(input.sessionId)
-          const isFirstMessage = items.length === 0
+          const isFirstMessage = !session.started
           publish({
             id: input.messageId,
             sessionId: input.sessionId,
@@ -278,8 +313,24 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
             role: "user",
             text: input.text,
           })
+          const choice = isFirstMessage ? input.workingFolder : undefined
+          const worktree =
+            choice?.kind === "new_worktree"
+              ? {
+                  path: `${session.projectPath}/.worktrees/ivin-generated`,
+                  branch: "ivin/generated",
+                }
+              : choice?.kind === "existing_worktree"
+                ? worktrees.find((w) => w.path === choice.path)
+                : undefined
           const updated: Session = {
             ...session,
+            ...(worktree && {
+              workingFolder: worktree.path,
+              inWorktree: true,
+              branch: worktree.branch,
+            }),
+            started: true,
             status: "working",
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
@@ -287,6 +338,8 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
           return saveSession(updated)
         }),
       ),
+    "worktree.list": () => Effect.sync(() => [...worktrees]),
+    "worktree.newBase": () => Effect.succeed("origin/main"),
     "session.answerApproval": (input: { sessionId: string; requestId: string; allow: boolean }) =>
       Effect.sync(() => {
         const items = itemsOf(input.sessionId)
@@ -344,6 +397,9 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
     layer: Layer.succeed(ServerClient)(failingClient as unknown as ServerClient["Service"]),
     sessions,
     errorReports,
+    sentMessages,
+    worktrees,
+    failWorktreeWith: (gitMessage) => void (worktreeFailure = gitMessage),
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
     setStatus: (sessionId, status) => void saveSession({ ...sessions.get(sessionId)!, status }),

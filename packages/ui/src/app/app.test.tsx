@@ -25,6 +25,10 @@ const mountApp = async (
     server.sessions.set(id, {
       id,
       projectPath: "/dev/ivin",
+      workingFolder: "/dev/ivin",
+      inWorktree: false,
+      branch: "main",
+      started: true,
       title,
       model: "sonnet",
       status: "idle",

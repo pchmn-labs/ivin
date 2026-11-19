@@ -12,6 +12,8 @@ import { renameSessionAtom } from "../atoms/rename-session.ts"
 import { openTabAtom } from "../../tab/atoms/open-tab.ts"
 import { tabsOf } from "../../tab/atoms/list-tabs.ts"
 import { RelativeTime } from "./relative-time.tsx"
+import { SessionLocation } from "./session-location.tsx"
+import { useSessionLocation } from "../hooks/use-session-location.ts"
 import { SessionMark } from "./session-mark.tsx"
 import "./session-list.css"
 
@@ -28,6 +30,7 @@ function SessionRow({
   const openTab = useAtomSet(openTabAtom)
   const renameSession = useAtomSet(renameSessionAtom)
   const [draft, setDraft] = useState<string | null>(null)
+  const location = useSessionLocation(session)
 
   const commit = () => {
     const title = draft?.trim()
@@ -72,6 +75,9 @@ function SessionRow({
           </span>
         }
         title={<span data-testid="session-title">{session.title}</span>}
+        {...(location.kind !== "folder" && {
+          subtitle: <SessionLocation location={location} compact />,
+        })}
         meta={<RelativeTime at={session.lastActivityAt} />}
         actions={
           <Menu

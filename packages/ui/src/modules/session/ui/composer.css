@@ -31,12 +31,19 @@
 
 .iv-composer__statusline {
   display: flex;
-  justify-content: flex-end;
+  margin-top: var(--iv-space-1);
+  justify-content: space-between;
+  gap: var(--iv-space-4);
   min-height: var(--iv-space-6);
   align-items: center;
   padding: 0 var(--iv-space-2);
   color: var(--iv-text-faint);
   font-size: var(--iv-text-xs);
+}
+
+.iv-composer__status-slot {
+  margin-left: auto;
+  flex: none;
 }
 
 .iv-composer__alert {

@@ -1,4 +1,5 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import type { Session } from "@ivin/contracts/session"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import { Cause, Exit } from "effect"
 import { useRef, useState } from "react"
@@ -10,6 +11,10 @@ import { ErrorMessage } from "../../../core/components/error-message/error-messa
 import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { TextArea } from "../../../core/components/text-field/text-field.tsx"
+import { SessionLocation } from "./session-location.tsx"
+import { WorkingFolderPicker } from "./working-folder-picker.tsx"
+import { useSessionLocation } from "../hooks/use-session-location.ts"
+import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { isRunning } from "../rules/is-running.ts"
@@ -18,19 +23,37 @@ import { statusLabel } from "../rules/status-label.ts"
 import { sendMessageAtom } from "../atoms/send-message.ts"
 import "./composer.css"
 
-export function Composer({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
+export function Composer({
+  projectPath,
+  sessionId,
+  placeholder = "Message Claude",
+}: {
+  projectPath: string
+  sessionId: string
+  placeholder?: string
+}) {
   const [text, setText] = useState("")
   const root = useRef<HTMLDivElement>(null)
   const [failure, setFailure] = useState<(ActionFailure & { message: string }) | null>(null)
+  const choice = useAtomValue(workingFolderChoiceOf(sessionId))
   const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
   const interrupt = useAtomSet(interruptSessionAtom)
   const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
   const running = isRunning(session?.status)
+  const preparing = session?.status === "preparing_worktree"
+  const choosing = session !== undefined && !session.started && !preparing
 
   const sendText = (message: string) => {
+    if (preparing) return
     setFailure(null)
     setText((current) => (current === message ? "" : current))
-    void send({ projectPath, sessionId, text: message }).then((exit) => {
+    const workingFolder = choosing ? choice : undefined
+    void send({
+      projectPath,
+      sessionId,
+      text: message,
+      ...(workingFolder && { workingFolder }),
+    }).then((exit) => {
       if (Exit.isSuccess(exit) || Cause.hasInterruptsOnly(exit.cause)) return
       // Text typed since the send is newer than the failed message, so it wins.
       setText((current) => (current === "" ? message : current))
@@ -52,7 +75,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   return (
     <div className="iv-composer" ref={root} data-keybinding-area="composer">
       {failure && (
-        <div className="iv-composer__alert">
+        <div className="iv-composer__alert" data-testid="composer-alert">
           <ErrorMessage
             message={failure.text}
             {...(failure.retryable && { onRetry: () => sendText(failure.message) })}
@@ -63,18 +86,20 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
       <div className="iv-composer__surface">
         <TextArea
           label="Message"
-          placeholder="Message Claude"
+          placeholder={placeholder}
           rows={2}
           value={text}
           onChange={(event) => setText(event.target.value)}
         />
         <Stack direction="row" align="center" justify="between" gap={2}>
-          {session && (
-            <span className="iv-composer__model" data-testid="composer-model">
-              <ClaudeMark size={14} />
-              {session.model}
-            </span>
-          )}
+          <Stack direction="row" align="center" gap={3}>
+            {session && (
+              <span className="iv-composer__model" data-testid="composer-model">
+                <ClaudeMark size={14} />
+                {session.model}
+              </span>
+            )}
+          </Stack>
           {session && (
             // The state shows on the session mark; screen readers hear it from here.
             <span
@@ -100,15 +125,28 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
               label="Send"
               tooltip={sendHint}
               variant="primary"
-              disabled={text.trim() === ""}
+              disabled={text.trim() === "" || preparing}
               onClick={submit}
             />
           )}
         </Stack>
       </div>
-      <div className="iv-composer__statusline" data-testid="composer-status">
-        <Slot slot="composer.status" props={{ sessionId }} />
+      <div className="iv-composer__statusline">
+        {session && <StatusLocation session={session} choosing={choosing} />}
+        <div className="iv-composer__status-slot" data-testid="composer-status">
+          <Slot slot="composer.status" props={{ sessionId }} />
+        </div>
       </div>
     </div>
+  )
+}
+
+function StatusLocation({ session, choosing }: { session: Session; choosing: boolean }) {
+  const location = useSessionLocation(session)
+  // Outside a git repository there is nothing to choose.
+  return choosing && location.kind !== "folder" ? (
+    <WorkingFolderPicker session={session} location={location} />
+  ) : (
+    <SessionLocation location={location} title={session.workingFolder} />
   )
 }

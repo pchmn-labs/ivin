@@ -16,6 +16,10 @@ const setup = async (titles: ReadonlyArray<string>, options: { holdTabs?: boolea
     server.sessions.set(`s${index + 1}`, {
       id: `s${index + 1}`,
       projectPath: "/p",
+      workingFolder: "/p",
+      inWorktree: false,
+      branch: "main",
+      started: true,
       title,
       model: "sonnet",
       status: "idle",
@@ -86,4 +90,28 @@ test("only sessions with an open tab are listed, and picking one selects its tab
   await expect
     .element(page.getByTestId("session-item").first().getByRole("button").first())
     .toHaveAttribute("aria-current", "true")
+})
+
+test("each row shows its branch, and whether it runs in the checkout or a worktree", async () => {
+  const server = await setup(["One", "Two"])
+  const two = server.sessions.get("s2")!
+  server.sessions.set("s2", {
+    ...two,
+    workingFolder: "/p/.worktrees/feat-login",
+    inWorktree: true,
+    branch: "feat/login",
+  })
+  server.setStatus("s2", "idle")
+
+  const rows = page.getByTestId("session-location")
+  await expect.element(rows.nth(1)).toHaveTextContent("Worktreefeat/login")
+  await expect.element(rows.nth(0)).toHaveTextContent("Current checkoutmain")
+})
+
+test("a session outside a git repository has no branch line", async () => {
+  const server = await setup(["One"])
+  server.sessions.set("s1", { ...server.sessions.get("s1")!, branch: null })
+  server.setStatus("s1", "working")
+  await expect.element(page.getByTestId("session-status")).toHaveTextContent("Working")
+  expect(page.getByTestId("session-location").query()).toBeNull()
 })

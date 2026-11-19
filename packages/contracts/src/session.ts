@@ -2,12 +2,24 @@ import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
 
 // `waiting`: the agent waits on the user, such as an approval.
-export const SessionStatus = Schema.Literals(["working", "waiting", "idle", "failed"])
+export const SessionStatus = Schema.Literals([
+  "preparing_worktree",
+  "working",
+  "waiting",
+  "idle",
+  "failed",
+])
 export type SessionStatus = typeof SessionStatus.Type
 
 export const Session = Schema.Struct({
   id: Schema.String,
   projectPath: Schema.String,
+  workingFolder: Schema.String,
+  inWorktree: Schema.Boolean,
+  // Null outside a git repository and on a detached HEAD.
+  branch: Schema.NullOr(Schema.String),
+  // The first user message is stored.
+  started: Schema.Boolean,
   title: Schema.String,
   model: Schema.String,
   status: SessionStatus,
@@ -25,6 +37,28 @@ export class ApprovalNotOpen extends Schema.TaggedError<ApprovalNotOpen>()("Appr
   requestId: Schema.String,
 }) {}
 
+export const WorkingFolderChoice = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("checkout") }),
+  Schema.Struct({ kind: Schema.Literal("new_worktree") }),
+  Schema.Struct({ kind: Schema.Literal("existing_worktree"), path: Schema.String }),
+])
+export type WorkingFolderChoice = typeof WorkingFolderChoice.Type
+
+// `not_a_worktree`: the chosen folder is no longer one of the project's worktrees.
+export const WorktreeFailure = Schema.Literals([
+  "git",
+  "fetch_timed_out",
+  "no_default_branch",
+  "not_a_worktree",
+])
+export type WorktreeFailure = typeof WorktreeFailure.Type
+
+// With `reason: "git"`, git's output is in the session's transcript.
+export class WorktreeNotCreated extends Schema.TaggedError<WorktreeNotCreated>()(
+  "WorktreeNotCreated",
+  { sessionId: Schema.String, reason: WorktreeFailure },
+) {}
+
 export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.create", {
     payload: { projectPath: Schema.String, model: Schema.String },
@@ -40,10 +74,16 @@ export const SessionRpcs = RpcGroup.make(
     error: SessionNotFound,
   }),
   // The renderer picks `messageId`, so its optimistic message and the stored event share an id.
+  // `workingFolder` is read on the first message only; the checkout when absent.
   Rpc.make("session.sendMessage", {
-    payload: { sessionId: Schema.String, messageId: Schema.String, text: Schema.String },
+    payload: {
+      sessionId: Schema.String,
+      messageId: Schema.String,
+      text: Schema.String,
+      workingFolder: Schema.optional(WorkingFolderChoice),
+    },
     success: Session,
-    error: SessionNotFound,
+    error: Schema.Union([SessionNotFound, WorktreeNotCreated]),
   }),
   Rpc.make("session.answerApproval", {
     payload: { sessionId: Schema.String, requestId: Schema.String, allow: Schema.Boolean },
