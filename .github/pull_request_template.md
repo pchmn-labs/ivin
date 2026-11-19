@@ -1,25 +1,14 @@
 <!-- Title is a conventional commit: `<type>(<scope>): <subject>` -->
+<!-- The reviewer reads the sections outside the collapsed block, and opens it only to check something. Fill a section once, in a line or two per point; never pad it. -->
 
-## Related Issues
+- Closes #<issue> <!-- or Fixes #<issue>; Refs #<issue> for a related one -->
+- Shares files with #<pr>: <!-- each open pull request that changes the same files, and which files. Delete the line when there is none. -->
 
-<!-- Link related tickets or issues. Use "Closes #123" to auto-close. -->
-- Fixes #<issue> (Resolves the issue)
-  or
-- Closes #<issue> (Resolves the issue)
-  and/or
-- Refs #<issue> (Does not resolve the issue, but is related)
+## Summary
 
-## Description
+<!-- 2 or 3 sentences: what changes and why. When a ticket holds the detail, do not restate it. -->
 
-<!-- What this PR does and why, for a reader who has not read the ticket. Describe the behaviour, not the code. -->
-
-## Changes Made
-
-<!-- One behaviour change per line. An acceptance criterion met differently from the ticket, or left out, is named here. -->
-
--
-
-## Risk of Merging
+## Risk of merging
 
 <!-- Tells the reviewer how slowly to read. Be most careful before writing that a revert undoes it and little breaks: you are grading your own change. -->
 
@@ -29,30 +18,17 @@
 
 **Not covered:** <!-- Risks that no test or check in this PR verifies. "None" when there is none. -->
 
-## Code Summary
-
-<!-- The shape of the code change, readable before the diff. Pick the smallest view that shows it: pseudocode, a call tree, a component tree, a file tree, a Mermaid diagram, or a `diff` of one of these. Keep only the calls, files and boundaries a reviewer needs. One view, rarely more. -->
-
-## Review Guide
-
-**Read first**
+## Read first
 
 <!-- 2 to 5 places, in reading order, as `path:symbol`, each with one line on why a human should read it closely. -->
+
+1.
+
+## Decisions made here
+
+<!-- Where the PR differs from what the ticket asked: each acceptance criterion met differently or left out, and each addition outside the ticket. Then each choice the ticket, the spec and the docs of record left open, with the option set aside, and each code-review finding left as it is, with why. "None" when there is none. -->
+
 -
-
-**Skim**
-
-<!-- What follows mechanically from the places above: tests that mirror the code, renames, re-exports, docs. -->
--
-
-**Decisions made here**
-
-<!-- Each choice the ticket, the spec and the docs of record left open, with the option set aside; then each code-review finding left as it is, with why. "None" when there is none. -->
--
-
-## Evidence
-
-<!-- Before and after: the test that failed before and passes now, as pseudocode, or the output that changed. "Tests pass" alone is not evidence. -->
 
 ## Screenshots
 
@@ -60,6 +36,17 @@
 
 ## Test plan
 
-<!-- The checks left to do by hand, step by step. A user-facing change follows docs/finished-features.md. -->
+<!-- Only the checks a test cannot do, by hand, step by step. A user-facing change follows docs/finished-features.md. -->
 
 - [ ]
+
+<details>
+<summary>Code summary, evidence and files to skim</summary>
+
+**Shape of the change:** <!-- The smallest view that shows it before the diff: pseudocode, a call tree, a component tree, a file tree, a Mermaid diagram, or a `diff` of one of these. Keep only the calls, files and boundaries a reviewer needs. -->
+
+**Evidence:** <!-- The test that failed before and passes now, as pseudocode, or the output that changed. Delete when it would repeat the summary or the tests' names. -->
+
+**Skim:** <!-- What follows mechanically from the Read first places: tests that mirror the code, renames, re-exports, docs. -->
+
+</details>
