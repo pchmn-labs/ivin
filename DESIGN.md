@@ -391,10 +391,10 @@ Disclosures (tool output) use a muted summary with a chevron that rotates 90 deg
 ### Pending designs
 Decided but not built, because the data they need does not exist yet. Build them this way when it arrives.
 - **Letter project icons:** lettered project icons in place of the pixel creatures, chosen in a settings screen that does not exist yet.
-- **Question sheet:** an action sheet for a question from the agent, with a "?" overlay on the session mark in place of the "!". It waits for an answer contract richer than allow or deny.
+- **Question sheet:** an action sheet for a question from the agent, its options numbered, with a "?" overlay on the session mark in place of the "!". It waits for an answer contract richer than allow or deny.
 - **"Allow <rule> for this session":** a third approval option, waiting for the same contract.
 - **PR icon with checks colour:** a pull-request icon on a session whose colour follows its checks.
-- **Background-task dot:** a dot showing that a session runs a background task.
+- **Background tasks:** a dot on the session mark while a session runs a background task, the running tasks in the composer status line, and "In background" on the tool row that started one.
 
 ## Do's and Don'ts
 
