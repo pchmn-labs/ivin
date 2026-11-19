@@ -18,7 +18,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Read `docs/a
 
 ### Design of record
 
-`docs/architecture.md` is the design the code follows. Read it before exploring an area, and a change that departs from it updates it in the same PR.
+`docs/architecture.md` is the design the code follows, and `DESIGN.md` the design the UI follows. Read them before exploring an area, and a change that departs from one updates it in the same PR.
 
 ### Conventions
 
@@ -35,7 +35,9 @@ Read `docs/finished-features.md` before specifying, ticketing or building anythi
 
 To run ivin, show it to the user, capture its screens or show a UI change in a pull request, use the `launch-ivin` skill: its `shot` command is the way to capture them, for example to compare a change with its prototype.
 
-### Running tests
+### Running scripts and tools
+
+Run a tool through the root `package.json` script that wraps it, because the script carries the config. With no script for what you need, call Vite+ through `pnpm vp <command>`, and any other tool through `pnpm exec <tool>`, never `npx`.
 
 While building, run the test files you touch: `pnpm test <path>…`. Run `pnpm check` once, before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI.
 
@@ -63,7 +65,7 @@ Everything written to the tracker is in English, whatever the language of the co
 
 ### Design
 
-Validated UI prototypes live in `docs/design/`. A ticket that adds a screen or changes a layout links one there.
+`/prototype` is the user's global skill, launched by the user. An old prototype is read from git history, never as a spec: `DESIGN.md` and the app are the only design sources.
 
 Motion goes through the `animate` and `choreograph` skills, not `impeccable animate`. A new UI dependency goes through `pick-ui-library` first.
 
