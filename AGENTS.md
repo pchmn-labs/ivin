@@ -35,7 +35,9 @@ Read `docs/finished-features.md` before specifying, ticketing or building anythi
 
 To run ivin, show it to the user, capture its screens or show a UI change in a pull request, use the `launch-ivin` skill: its `shot` command is the way to capture them, for example to compare a change with its prototype.
 
-### Running tests
+### Running scripts and tools
+
+Run a tool through the root `package.json` script that wraps it, because the script carries the config. With no script for what you need, call Vite+ through `pnpm vp <command>`, and any other tool through `pnpm exec <tool>`, never `npx`.
 
 While building, run the test files you touch: `pnpm test <path>…`. Run `pnpm check` once, before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI.
 
