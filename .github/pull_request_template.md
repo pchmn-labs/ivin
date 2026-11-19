@@ -9,43 +9,53 @@
   and/or
 - Refs #<issue> (Does not resolve the issue, but is related)
 
-
 ## Description
 
-<!-- Provide a clear, concise summary of what this PR does and why. Avoid technical aspects if it is a functional change. -->
-
-## Type of Change
-
-- [ ] New feature
-- [ ] Bug fix
-- [ ] Refactoring (no functional changes)
-- [ ] Documentation update
-- [ ] Infrastructure / CI/CD
-- [ ] Performance improvement
+<!-- What this PR does and why, for a reader who has not read the ticket. Describe the behaviour, not the code. -->
 
 ## Changes Made
 
-<!-- List the specific changes. Be precise but not too verbose. If this is a functional change (new feature/bug fix), describe the behavior change and not the technical change. If you need to add technical details, add them in the "Technical Details" section. -->
+<!-- One behaviour change per line. An acceptance criterion met differently from the ticket, or left out, is named here. -->
 
 -
+
+## Merge Danger
+
+<!-- Tells the reviewer how slowly to read. Be most careful before writing "two-way" and a small blast radius: you are grading your own change. -->
+
+**Door:** <!-- One-way: hard to undo once merged (data or a file format written, a public API or contract changed or removed, something deleted or sent outward, or anything the repo's docs list as one-way). Two-way: a revert undoes it. Name what makes it one-way. In ivin, one-way: a SQLite schema or the shape of what is written to it (sessions, transcript events, plugin storage); the format of a file the user edits in `~/.ivin`; deleting a worktree, a branch or a session; anything sent outside the machine. The plugin API is free to break (docs/architecture.md, API stability), so changing it is two-way. -->
+
+**Blast radius:** <!-- What breaks if this is wrong, and for whom. -->
+
+**Not covered:** <!-- Risks that no test or check in this PR verifies. "None" when there is none. -->
+
+## Code Summary
+
+<!-- The shape of the code change, readable before the diff. Pick the smallest view that shows it: pseudocode, a call tree, a component tree, a file tree, a Mermaid diagram, or a `diff` of one of these. Keep only the calls, files and boundaries a reviewer needs. One view, rarely more. -->
+
+## Review Guide
+
+**Read first**
+
+<!-- 2 to 5 places, in reading order, as `path:symbol`, each with one line on why a human should read it closely. -->
 -
+
+**Skim**
+
+<!-- What follows mechanically from the places above: tests that mirror the code, renames, re-exports, docs. -->
 -
 
-<details>
-<summary>Technical Details</summary>
+**Decisions made here**
 
-<!-- Add any technical details or context here if needed. -->
+<!-- Each choice the ticket, the spec and the docs of record left open, with the option set aside; then each code-review finding left as it is, with why. "None" when there is none. -->
+-
 
-</details>
+## Evidence
 
-## Screenshots
-
-<!-- Only when the PR changes a screen enough that a reviewer wants to see it: one or two captures, uploaded as the launch-ivin skill says. Delete this section otherwise. -->
+<!-- Before and after. A screenshot when the change is visual: one or two captures, uploaded as the launch-ivin skill says. Otherwise the test that failed before and passes now, as pseudocode, or the output that changed. "Tests pass" alone is not evidence. -->
 
 ## Test plan
 
-<!-- Step-by-step instructions to verify this works. A user-facing change follows docs/finished-features.md. -->
+<!-- The checks that ran, then the ones left to do by hand, step by step. A user-facing change follows docs/finished-features.md. -->
 
-- [ ] 
-- [ ]
 - [ ]
