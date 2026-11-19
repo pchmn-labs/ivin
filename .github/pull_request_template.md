@@ -1,5 +1,5 @@
 <!-- Title is a conventional commit: `<type>(<scope>): <subject>` -->
-<!-- The reviewer reads the sections outside the collapsed block, and opens it only to check something. Fill a section once, in a line or two per point; never pad it. -->
+<!-- The reviewer reads what is outside the collapsed blocks, and opens one only to check something. Fill a section once, in a line or two per point; never pad it. -->
 
 - Closes #<issue> <!-- or Fixes #<issue>; Refs #<issue> for a related one -->
 - Shares files with #<pr>: <!-- each open pull request that changes the same files, and which files. Delete the line when there is none. -->
@@ -28,11 +28,25 @@
 
 1.
 
+<details>
+<summary>Skim</summary>
+
+<!-- What follows mechanically from the places above: tests that mirror the code, renames, re-exports, docs. -->
+
+</details>
+
 ## Decisions to check
 
-<!-- Only what the reviewer may want to refuse: each acceptance criterion met differently or left out, each addition outside the ticket, and each choice that changes what the user sees or does. Every other decision goes in the collapsed block. "None" when there is none. -->
+<!-- Only what the reviewer may want to refuse: each acceptance criterion met differently or left out, each addition outside the ticket, and each choice that changes what the user sees or does. Every other decision goes under "Other decisions". "None" when there is none. -->
 
 -
+
+<details>
+<summary>Other decisions</summary>
+
+<!-- Each other choice the ticket, the spec and the docs of record left open, with the option set aside; each code-review finding left as it is, with why. Delete the block when there is none. -->
+
+</details>
 
 ## Screenshots
 
@@ -44,13 +58,11 @@
 
 - [ ]
 
+## Evidence
+
 <details>
-<summary>Other decisions, evidence and files to skim</summary>
+<summary>Before and after</summary>
 
-**Other decisions:** <!-- Each other choice the ticket, the spec and the docs of record left open, with the option set aside; each code-review finding left as it is, with why. -->
-
-**Evidence:** <!-- The test that failed before and passes now, as pseudocode, or the output that changed. Delete when it would repeat the summary or the tests' names. -->
-
-**Skim:** <!-- What follows mechanically from the Read first places: tests that mirror the code, renames, re-exports, docs. -->
+<!-- The test that failed before and passes now, as pseudocode, or the output that changed. Delete the section when it would repeat the summary or the tests' names. -->
 
 </details>
