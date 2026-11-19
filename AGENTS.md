@@ -18,7 +18,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Read `docs/a
 
 ### Design of record
 
-`docs/architecture.md` is the design the code follows. Read it before exploring an area, and a change that departs from it updates it in the same PR.
+`docs/architecture.md` is the design the code follows, and `DESIGN.md` the design the UI follows. Read them before exploring an area, and a change that departs from one updates it in the same PR.
 
 ### Conventions
 
@@ -65,7 +65,7 @@ Everything written to the tracker is in English, whatever the language of the co
 
 ### Design
 
-Validated UI prototypes live in `docs/design/`. A ticket that adds a screen or changes a layout links one there.
+`/prototype` is the user's global skill, launched by the user. An old prototype is read from git history, never as a spec: `DESIGN.md` and the app are the only design sources.
 
 Motion goes through the `animate` and `choreograph` skills, not `impeccable animate`. A new UI dependency goes through `pick-ui-library` first.
 
