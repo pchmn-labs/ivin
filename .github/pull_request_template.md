@@ -18,15 +18,19 @@
 
 **Not covered:** <!-- Risks that no test or check in this PR verifies. "None" when there is none. -->
 
+## Code summary
+
+<!-- The shape of the change, readable before the diff: the smallest view that shows it (pseudocode, a call tree, a component tree, a file tree, a Mermaid diagram, or a `diff` of one of these). Keep only the calls, files and boundaries a reviewer needs. -->
+
 ## Read first
 
 <!-- 2 to 5 places, in reading order, as `path:symbol`, each with one line on why a human should read it closely. -->
 
 1.
 
-## Decisions made here
+## Decisions to check
 
-<!-- Where the PR differs from what the ticket asked: each acceptance criterion met differently or left out, and each addition outside the ticket. Then each choice the ticket, the spec and the docs of record left open, with the option set aside, and each code-review finding left as it is, with why. "None" when there is none. -->
+<!-- Only what the reviewer may want to refuse: each acceptance criterion met differently or left out, each addition outside the ticket, and each choice that changes what the user sees or does. Every other decision goes in the collapsed block. "None" when there is none. -->
 
 -
 
@@ -41,9 +45,9 @@
 - [ ]
 
 <details>
-<summary>Code summary, evidence and files to skim</summary>
+<summary>Other decisions, evidence and files to skim</summary>
 
-**Shape of the change:** <!-- The smallest view that shows it before the diff: pseudocode, a call tree, a component tree, a file tree, a Mermaid diagram, or a `diff` of one of these. Keep only the calls, files and boundaries a reviewer needs. -->
+**Other decisions:** <!-- Each other choice the ticket, the spec and the docs of record left open, with the option set aside; each code-review finding left as it is, with why. -->
 
 **Evidence:** <!-- The test that failed before and passes now, as pseudocode, or the output that changed. Delete when it would repeat the summary or the tests' names. -->
 
