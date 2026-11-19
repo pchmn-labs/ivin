@@ -31,7 +31,9 @@ const host: UiHost = {
   },
   useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).list.items),
   useAnswerApproval: (sessionId) => {
-    const projectPath = useProjectPath()
+    // The session may belong to another project than the one on screen, from the Working panel.
+    const projectPath =
+      useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.projectPath ?? NO_PROJECT
     const answer = useAtomSet(answerApprovalAtom, { mode: "promiseExit" })
     return async ({ requestId, allow }) => {
       const exit = await answer({ projectPath, sessionId, requestId, allow })

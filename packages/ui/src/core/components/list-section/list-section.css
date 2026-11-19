@@ -15,7 +15,7 @@
 }
 
 .iv-list-section__label[data-attention] {
-  color: var(--iv-danger);
+  color: var(--iv-attention);
 }
 
 .iv-list-section__count {

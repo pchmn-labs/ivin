@@ -7,11 +7,11 @@ import {
   Stack,
   Text,
   defineUi,
+  formatToolInput,
   useAnswerApproval,
   useTranscript,
 } from "@ivin/plugin-api/ui"
 import type { ActionFailure, ApprovalItem, SlotProps } from "@ivin/plugin-api/ui"
-import { formatInput } from "./rules/format-input.ts"
 
 const OPTIONS = [
   { id: "allow", label: "Allow" },
@@ -23,7 +23,7 @@ const firstLine = (text: string) => text.split("\n", 1)[0] ?? ""
 function ApprovalRecord({ item }: SlotProps["transcript.approval"]) {
   // An allowed call shows as its tool row; only a denial needs a trace.
   if (item.decision !== "deny") return null
-  const input = formatInput(item.name, item.input)
+  const input = formatToolInput(item.name, item.input)
   return (
     <Stack direction="row" gap={2} align="center">
       <Icon name="x" size={14} />
@@ -64,9 +64,9 @@ function PendingSheet({
 
   return (
     <ActionSheet
-      tone="danger"
+      tone="attention"
       title="Approval needed"
-      detail={formatInput(item.name, item.input)}
+      detail={formatToolInput(item.name, item.input)}
       hint="↑↓ to choose, Enter to answer, Esc to deny"
       data-testid="approval-sheet"
     >

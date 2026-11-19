@@ -15,10 +15,17 @@ import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
 import { MainTopBar } from "./main-top-bar.tsx"
 import { ShellControls } from "./shell-controls.tsx"
+import { Slot } from "./slot-renderer.tsx"
+import { ResizeHandle } from "../modules/sidebar/ui/resize-handle.tsx"
 import { getVersionAtom } from "../modules/server/atoms/get-version.ts"
 import { useCommandHandler } from "../modules/command/hooks/use-command-handler.ts"
 import { KeybindingsFileProblem } from "../modules/keybinding/ui/keybindings-file-problem.tsx"
 import "./app.css"
+
+const CARD_MIN = 240
+const CARD_MAX = 480
+const BOTTOM_MIN = 96
+const BOTTOM_MAX_SHARE = 0.7
 
 export function App() {
   const result = useAtomValue(getVersionAtom)
@@ -81,6 +88,27 @@ export function App() {
                 <ProjectRail>{version}</ProjectRail>
                 <ProjectColumn project={current} />
               </div>
+              <div className="iv-app__bottom">
+                <ResizeHandle
+                  label="Resize the bottom panel"
+                  edge="top"
+                  property="--iv-sidebar-bottom-height"
+                  name="sidebar-bottom"
+                  min={BOTTOM_MIN}
+                  max={(element) => (element.parentElement?.clientHeight ?? 0) * BOTTOM_MAX_SHARE}
+                />
+                <div className="iv-app__bottom-scroll">
+                  <Slot slot="sidebar.bottom" props={{}} />
+                </div>
+              </div>
+              <ResizeHandle
+                label="Resize the sidebar"
+                edge="right"
+                property="--iv-card-width"
+                name="sidebar"
+                min={CARD_MIN}
+                max={() => CARD_MAX}
+              />
             </aside>
           )}
           <main className="iv-app__main">

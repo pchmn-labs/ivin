@@ -4,7 +4,6 @@ import type { Project } from "@ivin/contracts/project"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
-import { groupSessions } from "../../session/rules/group-sessions.ts"
 import { projectsAtom } from "../atoms/list-projects.ts"
 import { selectProjectAtom } from "../atoms/select-project.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
@@ -15,7 +14,7 @@ function ProjectButton({ project, selected }: { project: Project; selected: bool
   const selectProject = useAtomSet(selectProjectAtom)
   const list = sessionsOf(project.path)
   useAtomMount(list.ids)
-  const waiting = groupSessions(useAtomValue(list.items)).needsYou.length
+  const waiting = useAtomValue(list.items).filter((s) => s.status === "waiting").length
   const label = waiting === 0 ? project.name : `${project.name} · ${waiting} waiting for you`
 
   return (

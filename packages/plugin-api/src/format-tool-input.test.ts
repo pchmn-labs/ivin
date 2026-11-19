@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { formatInput } from "./format-input.ts"
+import { formatToolInput } from "./format-tool-input.ts"
 
 test.each([
   ["Bash", { command: "ls -la" }, "ls -la"],
@@ -12,17 +12,17 @@ test.each([
   ["WebFetch", { url: "https://a.dev" }, "https://a.dev"],
   ["Task", { description: "Find it", prompt: "long" }, "Find it"],
 ])("%s shows its main argument", (name, input, expected) => {
-  expect(formatInput(name, input)).toBe(expected)
+  expect(formatToolInput(name, input)).toBe(expected)
 })
 
 test("an unknown tool falls back to indented JSON", () => {
-  expect(formatInput("Custom", { a: 1 })).toBe('{\n  "a": 1\n}')
+  expect(formatToolInput("Custom", { a: 1 })).toBe('{\n  "a": 1\n}')
 })
 
 test("a known tool without its main argument falls back to JSON", () => {
-  expect(formatInput("Bash", {})).toBe("{}")
+  expect(formatToolInput("Bash", {})).toBe("{}")
 })
 
 test("an undefined input is shown as empty text", () => {
-  expect(formatInput("Bash", undefined)).toBe("")
+  expect(formatToolInput("Bash", undefined)).toBe("")
 })

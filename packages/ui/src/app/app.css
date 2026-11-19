@@ -11,6 +11,7 @@
 }
 
 .iv-app__card {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: var(--iv-card-width);
@@ -36,6 +37,27 @@
   flex: 1;
   grid-template-columns: var(--iv-rail-width) minmax(0, 1fr);
   min-height: 0;
+}
+
+.iv-app__bottom {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  max-height: var(--iv-sidebar-bottom-height, 45%);
+  min-height: 0;
+  border-top: 1px solid var(--iv-border);
+}
+
+.iv-app__bottom:has(.iv-app__bottom-scroll:empty) {
+  display: none;
+}
+
+.iv-app__bottom-scroll {
+  min-height: 0;
+  padding: 0 var(--iv-space-2) var(--iv-space-2);
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 
 .iv-app__main {

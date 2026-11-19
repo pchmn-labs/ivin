@@ -1,0 +1,66 @@
+.iv-resize-handle {
+  position: absolute;
+  z-index: 2;
+  touch-action: none;
+}
+
+.iv-resize-handle[data-edge="right"] {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+}
+
+.iv-resize-handle[data-edge="top"] {
+  top: -3px;
+  right: 0;
+  left: 0;
+  height: 6px;
+  cursor: row-resize;
+}
+
+.iv-resize-handle::after {
+  content: "";
+  position: absolute;
+  background: var(--iv-accent);
+  opacity: 0;
+  transition: opacity var(--iv-duration-fast) ease-out;
+}
+
+.iv-resize-handle[data-edge="right"]::after {
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: var(--iv-line-bold);
+}
+
+.iv-resize-handle[data-edge="top"]::after {
+  top: 2px;
+  right: 0;
+  left: 0;
+  height: var(--iv-line-bold);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-resize-handle:hover::after {
+    opacity: 0.6;
+    transition-delay: 150ms;
+  }
+}
+
+.iv-resize-handle[data-dragging]::after,
+.iv-resize-handle:focus-visible::after {
+  opacity: 1;
+  transition-delay: 0ms;
+}
+
+.iv-resize-handle:focus-visible {
+  outline: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-resize-handle::after {
+    transition: none;
+  }
+}

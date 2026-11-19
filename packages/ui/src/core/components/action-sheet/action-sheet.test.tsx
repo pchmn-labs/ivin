@@ -16,11 +16,11 @@ test("the sheet is a group named by its title and shows the detail, the content 
   await expect.element(sheet.getByText("Enter to answer")).toBeVisible()
 })
 
-test("the tone defaults to neutral and the danger tone is exposed for styling", async () => {
+test("the tone defaults to neutral and the attention tone is exposed for styling", async () => {
   await render(<ActionSheet title="One" data-testid="neutral" />)
-  await render(<ActionSheet title="Two" tone="danger" data-testid="danger" />)
+  await render(<ActionSheet title="Two" tone="attention" data-testid="attention" />)
   await expect.element(page.getByTestId("neutral")).toHaveAttribute("data-tone", "neutral")
-  await expect.element(page.getByTestId("danger")).toHaveAttribute("data-tone", "danger")
+  await expect.element(page.getByTestId("attention")).toHaveAttribute("data-tone", "attention")
 })
 
 test("the optional parts are left out when absent", async () => {

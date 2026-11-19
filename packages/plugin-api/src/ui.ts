@@ -33,6 +33,8 @@ export interface SlotProps {
   }
   // A section at the bottom of the selected project's sidebar column.
   "sidebar.section": Record<string, never>
+  // A panel across the bottom of the sidebar card, under the projects and the sessions.
+  "sidebar.bottom": Record<string, never>
 }
 export type SlotName = keyof SlotProps
 
@@ -92,3 +94,4 @@ export const useTabs = () => useHost().useTabs()
 export const useOpenTab = () => useHost().useOpenTab()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
+export { formatToolInput } from "./format-tool-input.ts"

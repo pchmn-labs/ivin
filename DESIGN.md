@@ -19,7 +19,9 @@ colors:
   bubble: "color-mix(in srgb, #a9d9a0 14%, #1e2823)"
   cursor-red: "#f0644a"
   cursor-red-subtle: "rgba(229, 83, 59, 0.14)"
-  cursor-red-outline: "color-mix(in srgb, #f0644a 60%, transparent)"
+  amber: "#e2b04f"
+  amber-subtle: "color-mix(in srgb, #e2b04f 8%, transparent)"
+  amber-outline: "color-mix(in srgb, #e2b04f 60%, transparent)"
   project-hue-0: "#8fbf98"
   project-hue-1: "#8fadd6"
   project-hue-2: "#d2b273"
@@ -44,6 +46,7 @@ colors:
   bubble-light: "color-mix(in srgb, #2f6a3c 16%, #f7f6ee)"
   cursor-red-light: "#b8432b"
   cursor-red-subtle-light: "rgba(184, 67, 43, 0.1)"
+  amber-light: "#8f6411"
   project-hue-0-light: "#3f7a4c"
   project-hue-1-light: "#3d6496"
   project-hue-2-light: "#87661a"
@@ -146,7 +149,7 @@ components:
     rounded: "{rounded.card}"
     width: "300px"
   project-badge:
-    backgroundColor: "{colors.cursor-red}"
+    backgroundColor: "{colors.amber}"
     textColor: "{colors.ground-card}"
     typography: "{typography.caption}"
     height: "16px"
@@ -161,11 +164,13 @@ components:
     backgroundColor: "{colors.hover-wash}"
   list-row-selected:
     backgroundColor: "{colors.active-wash}"
+  list-row-attention:
+    backgroundColor: "{colors.amber-subtle}"
   group-label:
     textColor: "{colors.text-faint}"
     typography: "{typography.caption}"
   group-label-needs-you:
-    textColor: "{colors.cursor-red}"
+    textColor: "{colors.amber}"
   block-subtle:
     backgroundColor: "{colors.ground-subtle}"
     rounded: "{rounded.md}"
@@ -227,7 +232,7 @@ components:
 
 **Creative North Star: "The Quiet Workbench"**
 
-ivin uses the layout every agent app ships: a project and session column, a tab bar, a transcript, a composer. It is finished to the level of Linear, Zed and Raycast, with fewer facts per row than Linear. The look is calm and flat, built for a window that stays open all day. Neutrals are tinted from the app icon's forest greens. Yew green is the one accent. The icon's red cursor appears only when the user is needed or something failed.
+ivin uses the layout every agent app ships: a project and session column, a tab bar, a transcript, a composer. It is finished to the level of Linear, Zed and Raycast, with fewer facts per row than Linear. The look is calm and flat, built for a window that stays open all day. Neutrals are tinted from the app icon's forest greens. Yew green is the one accent. Amber appears only when the user is needed, and the icon's red cursor only when something failed.
 
 All colours, sizes, radii and durations are `--iv-` CSS custom properties in `packages/ui/src/core/theme/tokens.css`. A theme changes the app by overriding those variables. The built-in theme is "forest", in a dark and a light variant, and follows the system appearance unless `data-theme` forces one. The dark variant is deep forest green; the light variant ("Mousse") is a warm moss-paper, with borders and washes in a warm olive ink. Plugins get the same components as the built-in screens, only through `@ivin/plugin-api`. The reasons are in `docs/adr/0002-design-system-on-base-ui-and-css-custom-properties.md`.
 
@@ -235,7 +240,7 @@ The design does without dense dashboards, IDE chrome and decoration.
 
 **Key Characteristics:**
 - Flat, tinted neutrals. Depth comes from four ground tones (deep, ground, card, raised) and 1px hairlines.
-- One green accent and one red signal, each with a single job. Dashed red means "the user must answer".
+- One green accent and two signals, each with a single job: amber for "the user must answer", red for "something failed". Dashed amber goes around what the user must answer.
 - System UI type at 13px body, with mono for code, commands and paths.
 - A 4px grid, 28px controls (`--iv-control-md`; 24px small, `--iv-control-sm`), 30px list rows (`--iv-row-height`), 6px corners on controls and 10px on surfaces.
 - Shadows only on overlays: menus, tooltips and dialogs. The sidebar card floats by inset and border, not shadow.
@@ -243,7 +248,7 @@ The design does without dense dashboards, IDE chrome and decoration.
 
 ## Colors
 
-The palette is green-tinted neutrals, one yew-green accent, one cursor red, six project hues and the Claude brand orange. Each theme colour has a light-theme counterpart (the `-light` keys).
+The palette is green-tinted neutrals, one yew-green accent, an amber and a cursor red signal, six project hues and the Claude brand orange. Each theme colour has a light-theme counterpart (the `-light` keys).
 
 ### Primary
 - **Yew Green** (`--iv-accent`): the primary button, the selected tab underline, the focus ring, the caret, links, text selection (32% mix), the connected dot, the "working" status mark and the working ring on the session mark. In light it darkens to a deep forest green so white text on it stays legible.
@@ -252,9 +257,11 @@ The palette is green-tinted neutrals, one yew-green accent, one cursor red, six 
 - **Bubble** (`--iv-bubble`): the user's message. Yew mixed into the raised ground (14% in dark, 16% in light), so the user's own words read as theirs without a second accent.
 
 ### Secondary
-- **Cursor Red** (`--iv-danger`): "waiting for you" and "failed" status, the "Needs you" group label, the project row badge, the approval sheet title, errors, failed tool calls and destructive menu items. Taken from the red terminal cursor in the app icon.
+- **Amber** (`--iv-attention`): the "waiting for you" status, the "Needs you" group label and count, the project rail badge and the approval sheet title. An approval is a question, not a fault, so it does not take the red. In light it deepens to a dark ochre so the badge's card-coloured count stays legible.
+- **Amber Wash / Hover** (`--iv-attention-subtle`, `--iv-attention-hover`): amber at 8% and 13%, the fill of a row whose session waits on the user, at rest and on hover.
+- **Amber Outline** (`--iv-attention-outline`): amber at 60%, used only as a dashed 1px line around something the user must answer.
+- **Cursor Red** (`--iv-danger`): the "failed" status, errors, failed tool calls, the failed connection dot and destructive menu items. Taken from the red terminal cursor in the app icon.
 - **Cursor Red Wash** (`--iv-danger-subtle`): the fill of error blocks and danger buttons.
-- **Cursor Red Outline** (`--iv-danger-outline`): cursor red at 60%, used only as a dashed 1px line around something the user must answer.
 
 ### Tertiary
 - **Project Hues** (`--iv-project-hue-0` to `-5`): sage, slate blue, ochre, lilac, clay and teal, muted in dark and deepened in light. A project's pixel creature takes one hue, chosen from its name. They identify projects and nothing else.
@@ -272,9 +279,9 @@ The palette is green-tinted neutrals, one yew-green accent, one cursor red, six 
 ### Named Rules
 **The One Accent Rule.** Yew green marks focus, selection, the primary action and "working". It never decorates.
 
-**The Red Means You Rule.** Cursor red marks only what needs the user (waiting, an approval) or what went wrong (error, failure). A status colour goes through `--iv-status-working`, `--iv-status-waiting`, `--iv-status-idle` or `--iv-status-failed`, never a raw colour.
+**The Amber Asks, Red Fails Rule.** Amber marks only what needs the user (waiting, an approval); cursor red marks only what went wrong (error, failure). A status colour goes through `--iv-status-working`, `--iv-status-waiting`, `--iv-status-idle` or `--iv-status-failed`, never a raw colour.
 
-**The Token-Only Rule.** No colour, font or size outside the `--iv-` tokens. Derived tints use `color-mix()` on a token (accent blocks at 8% fill and 40% border, the bubble at 14% or 16%, the danger outline at 60%). The one exception is the Claude mark's brand orange, which belongs to the harness, not the theme.
+**The Token-Only Rule.** No colour, font or size outside the `--iv-` tokens. Derived tints use `color-mix()` on a token (accent blocks at 8% fill and 40% border, the bubble at 14% or 16%, the amber wash at 8% and 13%, the amber outline at 60%). The one exception is the Claude mark's brand orange, which belongs to the harness, not the theme.
 
 ## Typography
 
@@ -299,11 +306,13 @@ Weights are 400, 500 and 600 only. Times, counts and costs use tabular figures.
 
 ## Layout
 
-The window is a two-column grid. On the left, a floating sidebar card 300px wide, inset 8px from the top, bottom and left window edges. On the right, the main area on the forest ground. The sidebar toggle removes the card, and the main area then takes the full width. With no project open the window is a single centred column, with the connection dot in the bottom-left corner.
+The window is a two-column grid. On the left, a floating sidebar card 300px wide by default (`--iv-card-width`), inset 8px from the top, bottom and left window edges. On the right, the main area on the forest ground. The card's right edge resizes it between 240px and 480px, by drag or by the arrow keys once focused; a double-click returns it to 300px, and the width is kept between launches. The sidebar toggle removes the card, and the main area then takes the full width. With no project open the window is a single centred column, with the connection dot in the bottom-left corner.
 
-The card stacks a 40px draggable top row, and a body. The macOS traffic lights sit inset 15pt from the card's top-left corner, centred on the top row; the row holds 78px of space for them (`--iv-traffic-lights-width`), then the sidebar toggle, with back and forward 2px apart at the row's right end, all three ghost icon buttons. The body splits into a 44px project rail (`--iv-rail-width`, a hairline on its right) and the list column.
+The card stacks a 40px draggable top row, a body, and the `sidebar.bottom` panel. The macOS traffic lights sit inset 15pt from the card's top-left corner, centred on the top row; the row holds 78px of space for them (`--iv-traffic-lights-width`), then the sidebar toggle, with back and forward 2px apart at the row's right end, all three ghost icon buttons. The body splits into a 44px project rail (`--iv-rail-width`, a hairline on its right) and the list column.
 
-The rail holds one 32px button per open project, in order, 8px corners, with the project's 20px pixel creature; a red count badge sits on its top-right corner for the sessions waiting on the user. Below, a spacer pushes the open-folder ghost icon button and the connection dot (faint, yew when connected, red when failed) to the bottom. The list column opens with a 36px head: the selected project's 16px creature, its name in 14px semibold, New session, the small chevron beside it that opens the model menu for the next session, and an ellipsis menu with Close project. Under it, the project's sessions that have an open tab fall into two groups, "Needs you" first (red label) and "Sessions" after, each with a caption label and its count, in tab order inside each; an empty group is not shown, and a project with no tab says "No sessions in <name> yet. Start one with New session." Rows are 2px apart inside 8px side padding.
+The rail holds one 32px button per open project, in order, 8px corners, with the project's 20px pixel creature; an amber count badge sits on its top-right corner for the sessions waiting on the user. Below, a spacer pushes the open-folder ghost icon button and the connection dot (faint, yew when connected, red when failed) to the bottom. The list column opens with a 36px head: the selected project's 16px creature, its name in 14px semibold, New session, the small chevron beside it that opens the model menu for the next session, and an ellipsis menu with Close project. Under it, the project's sessions that have an open tab, in tab order, under a "Sessions" caption label with its count; a session waiting on the user keeps its place and takes the waiting row style. A project with no tab says "No sessions in <name> yet. Start one with New session." Rows are 2px apart inside 8px side padding.
+
+The `sidebar.bottom` panel spans the whole card width under the rail and the list column, above a hairline, and is absent when no contribution renders. It is at most 45% of the card tall by default and scrolls inside; its top edge resizes it by drag or arrow keys, up to 70% of the card, and a double-click returns it to the default. Its built-in contribution is the Working panel: a folding head "Working · N", with "· M need(s) you" in amber, that stays in view while its rows scroll, then "Needs you" and "Running" groups listing the sessions of every open project that wait for an approval or run, except the one on screen. Each row has the session mark, the title, the elapsed time in its status and, on a second line, the project's 12px creature and name; a waiting row adds the command it asks about (the first line, mono, truncated), shows the whole command in a mono tooltip titled "Approval needed" after a hover, and carries a small secondary Allow and a ghost Deny under it, inside its frame. A click on a row opens its session's tab, and the approval sheet then takes the keyboard focus.
 
 The main area opens with a slim 40px draggable title bar (8px from the top) holding the selected project's tab bar (see Navigation); when the sidebar is closed the traffic-light space and the shell controls move into it. Below it come the transcript and the composer, which share a centred column at most 760px wide (`--iv-content-width`), with 24px side padding. Transcript items are separated by 8px of vertical padding. The list is virtualised, so a row's look must stay cheap.
 
@@ -325,10 +334,10 @@ A zero-blur `box-shadow` ring that stands in for a border (the selected rail but
 
 Corners are gently rounded in three sizes: 4px (`sm`) for menu items, tooltips, inline code and the bubble's tail corner; 6px (`md`) for buttons, fields, rows, options, blocks and code blocks; 10px (`lg`) for the composer, the action sheet, menus, dialogs, and scrollbar thumbs. Large surfaces that frame the app take `--iv-radius-card` (10px): the sidebar card and the bubble. The user's bubble is rounded on three corners and keeps a 4px corner at the bottom right, toward the user's side.
 
-Borders are 1px. The 2px lines are the selected tab underline and the tab drop line (`--iv-line-bold`). Status marks and overlays on the session mark are circles; the project badge is a pill. Project creatures are 8 by 8 pixel grids drawn with crisp edges, at 16px in the project column.
+Borders are 1px. The 2px lines are the selected tab underline and the tab drop line (`--iv-line-bold`). Status marks and overlays on the session mark are circles; the project badge is a pill. Project creatures are 8 by 8 pixel grids drawn with crisp edges, at 16px in the project column and 12px in a Working panel row.
 
 ### Named Rules
-**The Dashed Red Rule.** A dashed 1px line in `--iv-danger-outline` means "the user must answer". It goes around a waiting session row and the approval sheet, and nowhere else. A solid red line means an error, not a question.
+**The Dashed Amber Rule.** A dashed 1px line in `--iv-attention-outline` means "the user must answer". It goes around a waiting session row and the approval sheet, and nowhere else. A solid red line means an error, not a question.
 
 ## Components
 
@@ -357,18 +366,18 @@ Phosphor icons at regular weight, 16px by default and 14px inline with small tex
 
 ### List Rows
 - **Style:** 30px tall, 6px corners, 8px padding: a leading mark, a truncated title, then faint tabular metadata (relative time).
-- **States:** hover wash; selected rows take the active wash and 500 weight; a row whose session waits on the user takes the dashed red outline, inset by 1px. Row actions appear only on hover, focus or selection.
+- **States:** hover wash; selected rows take the active wash and 500 weight; a row whose session waits on the user takes the dashed amber outline, inset by 1px, over the amber wash (amber hover on hover). Row actions appear only on hover, focus or selection. Controls under a row (`below`) sit inside its frame, aligned with the title, and share its hover; a row's `tooltip` opens on its right.
 
 ### Session Mark
-The signature of the session list: the 16px Claude mark with a small circular overlay at its bottom-right, cut out from the card ground by a ring of the card colour. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px red disc with a "!". Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
+The signature of the session list: the 16px Claude mark with a small circular overlay at its bottom-right, cut out from the card ground by a ring of the card colour. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px amber disc with a "!". Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
 
 ### Status Mark
-A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv-duration-pulse`). Waiting is a larger 8px red dot. Idle is a faint 1.5px ring. Failed is red. It always carries a label, visible or hidden.
+A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv-duration-pulse`). Waiting is a larger 8px amber dot. Idle is a faint 1.5px ring. Failed is red. It always carries a label, visible or hidden.
 
 ### Navigation
-- **Project rail:** a 44px column of 32px project buttons with 8px corners (`--iv-rail-button-size`), each showing the 20px creature. The selected button takes the raised background, a 1px hairline ring and a faint shadow (`--iv-shadow-raised`); an unselected one takes the hover wash on hover. The label and tooltip are the project's name, with " · N waiting for you" when sessions wait. The red pill badge (`--iv-badge-size` tall, 11px semibold tabular count) sits on the button's top-right corner, ringed in the card colour. The open-folder ghost icon button and the connection dot close the rail.
+- **Project rail:** a 44px column of 32px project buttons with 8px corners (`--iv-rail-button-size`), each showing the 20px creature. The selected button takes the raised background, a 1px hairline ring and a faint shadow (`--iv-shadow-raised`); an unselected one takes the hover wash on hover. The label and tooltip are the project's name, with " · N waiting for you" when sessions wait. The amber pill badge (`--iv-badge-size` tall, 11px semibold tabular count) sits on the button's top-right corner, ringed in the card colour. The open-folder ghost icon button and the connection dot close the rail.
 - **List head:** 36px (`--iv-list-head-height`): creature, project name, New session with the model chevron, and a ghost ellipsis menu holding Close project.
-- **Session groups:** caption labels in faint text with a tabular count; "Needs you" is in cursor red.
+- **Session groups:** caption labels in faint text with a tabular count; "Needs you" is in amber.
 - **Model menu:** a small ghost chevron beside New session opens a menu of models; the current choice carries a check, and picking one starts a session with it. The composer then shows that session's model, fixed at creation, as muted 12px text beside a 14px Claude mark.
 - **Tab bar:** in the 40px main title bar, the selected project's tabs followed by a ghost New session icon button (plus; it starts a session with the model chosen in the model menu). A tab is `--iv-tab-height` (30px) tall with `--iv-radius-tab` (8px) corners, `--iv-tab-width` (240px) wide whatever its title, shrinking equally with the room left down to `--iv-tab-min-width` (180px) before the bar scrolls, 4px apart, its title cut with an ellipsis. It shows the session mark, then the title in muted 500-weight small text. The selected tab takes the raised background with a 1px hairline ring and a main-colour title; an unselected tab takes the hover wash on hover. A 20px close button (14px x) appears only on hover or keyboard focus; the title gives it room, the tab keeps its width. A middle click also closes a tab. The bar scrolls sideways with no visible scrollbar. Tabs reorder by drag, with a 2px yew drop line; Left, Right, Home and End move between tabs. Unselected tabs have no separators between them.
 - **Tabs (component):** the underlined tabs for inside a panel: 32px tall, muted 500-weight labels, a 2px yew underline on the active tab, over a hairline. The tab bar above does not use it.
@@ -377,13 +386,13 @@ A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv
 A raised 10px-corner surface with a strong hairline, docked at the bottom of the centred column. The text field sits flat inside it, and the whole surface takes the focus ring colour when focused. Below the field: the session's model on the left (the status shows only on the session mark, with a hidden label here for screen readers) and one icon action on the right: Send (primary, arrow up, disabled while the field is empty), or Stop (secondary, square) while the session works and the field is empty. Under the surface, a faint status line carries the `composer.status` slot (usage) at its right end; the session's worktree, branch and PR checks join it when the server sends them. Plugins can dock a sheet on its top edge through the `composer.above` slot.
 
 ### Action Sheet
-A raised panel docked on the composer's top edge: 10px top corners, no bottom border, and the composer's top corners go square so the two read as one surface. It slides up 8px and fades in over 180ms (`--iv-duration-base`) on `--iv-ease-out`. A head row carries an optional muted icon, a 500-weight title and a mono detail clamped to three lines; a faint caption hint sits below the content. In the danger tone the outline turns to the dashed red outline, the composer's top edge turns dashed red with it, and the title turns red.
+A raised panel docked on the composer's top edge: 10px top corners, no bottom border, and the composer's top corners go square so the two read as one surface. It slides up 8px and fades in over 180ms (`--iv-duration-base`) on `--iv-ease-out`. A head row carries an optional muted icon, a 500-weight title and a mono detail clamped to three lines; a faint caption hint sits below the content. In the attention tone the outline turns to the dashed amber outline, the composer's top edge turns dashed amber with it, and the title turns amber.
 
 ### Option List
 A keyboard-first single choice inside a sheet: 36px options with 6px corners, 2px apart, body text with an optional faint caption hint on the right (a key such as "Esc"). The chosen option takes the active wash; the others take the hover wash on hover. Arrow keys move the choice, Enter submits it, Escape takes the escape action, and a click submits directly when asked. The approval sheet uses it for Allow / Deny.
 
 ### Overlays
-Menus have 10px corners, 4px padding and 28px items with 4px corners; the highlighted item takes the active wash and destructive items are red. Tooltips are 12px text with 4px corners. Dialogs are at most 420px wide, with 20px padding, a 16px semibold title, a muted description and right-aligned actions. All three fade and scale from 0.97 (120ms for menus and tooltips, 180ms for dialogs) on `cubic-bezier(0.22, 1, 0.36, 1)`, and reduced motion removes it.
+Menus have 10px corners, 4px padding and 28px items with 4px corners; the highlighted item takes the active wash and destructive items are red. Tooltips are 12px text with 4px corners, at most 420px wide; a mono tooltip (a command, a path) wraps its text, with a faint caption label above it. Dialogs are at most 420px wide, with 20px padding, a 16px semibold title, a muted description and right-aligned actions. All three fade and scale from 0.97 (120ms for menus and tooltips, 180ms for dialogs) on `cubic-bezier(0.22, 1, 0.36, 1)`, and reduced motion removes it.
 
 ### Disclosure and Code
 Disclosures (tool output) use a muted summary with a chevron that rotates 90 degrees when open. A tool call is one row: chevron, the tool's icon (terminal for Bash, file for Read, pencil for edits, a wrench otherwise), its name and its mono argument; a spinner while it runs, a red "failed" when it fails, nothing once it succeeds. Its input and output open under the chevron. Thinking is not shown, and an approval leaves a trace in the transcript only when denied: "Denied:" and the command on one muted line. Code blocks use the deep ground, 12px mono and 6px corners, and scroll past 240px.
@@ -401,8 +410,8 @@ Decided but not built, because the data they need does not exist yet. Build them
 ### Do:
 - **Do** take every colour, size, radius and duration from a `--iv-` token, so a theme file can override it. The Claude mark's orange is the only literal colour.
 - **Do** keep yew green for focus, selection, the primary action and "working", and use at most one primary button per surface.
-- **Do** keep cursor red for "waiting for you", approvals, errors and failures, through the `--iv-status-*` tokens.
-- **Do** mark anything the user must answer with the dashed `--iv-danger-outline`, and only that.
+- **Do** keep amber for "waiting for you" and approvals, and cursor red for errors and failures, through the `--iv-status-*` tokens.
+- **Do** mark anything the user must answer with the dashed `--iv-attention-outline`, and only that.
 - **Do** build plugin UI only from `@ivin/plugin-api` components, with layout through `Stack` and `Block`, and dock plugin prompts on the composer through `composer.above`.
 - **Do** draw icons through `Icon` by name, in Phosphor regular weight.
 - **Do** use mono for code, commands and file paths, and tabular figures for times, counts and costs.
@@ -414,4 +423,4 @@ Decided but not built, because the data they need does not exist yet. Build them
 - **Don't** use dense dashboards, IDE chrome or decoration.
 - **Don't** add inline styles to screens or plugins, or import a UI library or an icon set into a plugin.
 - **Don't** add a font size, weight or radius outside the scales above.
-- **Don't** use red for emphasis or decoration, or project hues for anything but project identity.
+- **Don't** use red or amber for emphasis or decoration, or project hues for anything but project identity.
