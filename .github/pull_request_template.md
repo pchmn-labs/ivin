@@ -19,13 +19,13 @@
 
 -
 
-## Merge Danger
+## Risk of Merging
 
-<!-- Tells the reviewer how slowly to read. Be most careful before writing "two-way" and a small blast radius: you are grading your own change. -->
+<!-- Tells the reviewer how slowly to read. Be most careful before writing that a revert undoes it and little breaks: you are grading your own change. -->
 
-**Door:** <!-- One-way: hard to undo once merged (data or a file format written, a public API or contract changed or removed, something deleted or sent outward, or anything the repo's docs list as one-way). Two-way: a revert undoes it. Name what makes it one-way. In ivin, one-way: a SQLite schema or the shape of what is written to it (sessions, transcript events, plugin storage); the format of a file the user edits in `~/.ivin`; deleting a worktree, a branch or a session; anything sent outside the machine. The plugin API is free to break (docs/architecture.md, API stability), so changing it is two-way. -->
+**Undone by a revert:** <!-- Yes, or no and why. No: a SQLite schema or the shape of what is written to it; the format of a file the user edits in `~/.ivin` or `<repo>/.ivin`; deleting a worktree, a branch or a session; anything sent outside the machine. The plugin API is free to break while `apiVersion` is 0 (docs/architecture.md, API stability). -->
 
-**Blast radius:** <!-- What breaks if this is wrong, and for whom. -->
+**What breaks if it is wrong:** <!-- What, and for whom. -->
 
 **Not covered:** <!-- Risks that no test or check in this PR verifies. "None" when there is none. -->
 
@@ -52,10 +52,14 @@
 
 ## Evidence
 
-<!-- Before and after. A screenshot when the change is visual: one or two captures, uploaded as the launch-ivin skill says. Otherwise the test that failed before and passes now, as pseudocode, or the output that changed. "Tests pass" alone is not evidence. -->
+<!-- Before and after: the test that failed before and passes now, as pseudocode, or the output that changed. "Tests pass" alone is not evidence. -->
+
+## Screenshots
+
+<!-- Only when the PR changes a screen enough that a reviewer wants to see it: one or two captures, uploaded as the launch-ivin skill says. Delete this section otherwise. -->
 
 ## Test plan
 
-<!-- The checks that ran, then the ones left to do by hand, step by step. A user-facing change follows docs/finished-features.md. -->
+<!-- The checks left to do by hand, step by step. A user-facing change follows docs/finished-features.md. -->
 
 - [ ]
