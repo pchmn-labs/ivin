@@ -32,6 +32,7 @@ import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
 import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
+import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 
 export const layerServices = Layer.mergeAll(layerSessionRuns, layerCurrentSettings).pipe(
   Layer.provideMerge(layerSessionFeed),
@@ -89,6 +90,7 @@ export const handlers = Rpcs.toLayer(
         answerApproval(sessionId, requestId, allow),
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
       "session.watch": ({ projectPath }) => watchSessions(projectPath),
+      "worktree.list": ({ projectPath }) => listWorktrees(projectPath),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

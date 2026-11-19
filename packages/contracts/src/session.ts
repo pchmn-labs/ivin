@@ -37,14 +37,20 @@ export class ApprovalNotOpen extends Schema.TaggedError<ApprovalNotOpen>()("Appr
   requestId: Schema.String,
 }) {}
 
-// `branch: null` lets the server generate one.
 export const WorkingFolderChoice = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("checkout") }),
-  Schema.Struct({ kind: Schema.Literal("worktree"), branch: Schema.NullOr(Schema.String) }),
+  Schema.Struct({ kind: Schema.Literal("new_worktree") }),
+  Schema.Struct({ kind: Schema.Literal("existing_worktree"), path: Schema.String }),
 ])
 export type WorkingFolderChoice = typeof WorkingFolderChoice.Type
 
-export const WorktreeFailure = Schema.Literals(["git", "fetch_timed_out", "no_default_branch"])
+// `not_a_worktree`: the chosen folder is no longer one of the project's worktrees.
+export const WorktreeFailure = Schema.Literals([
+  "git",
+  "fetch_timed_out",
+  "no_default_branch",
+  "not_a_worktree",
+])
 export type WorktreeFailure = typeof WorktreeFailure.Type
 
 // With `reason: "git"`, git's output is in the session's transcript.

@@ -1,5 +1,7 @@
 # Design references
 
+`working-folder-prototype.html` shows how a session with no message yet asks for its task and lets the user pick its working folder: the composer in the middle of the window, and a menu under it with Current checkout, New worktree and the project's existing worktrees (#37). Press `F` before sending to see git fail.
+
 `app-shell-prototype.html` is the HTML prototype the milestone 1 redesign (#33) was settled on. It is a single file with fake data: open it in a browser, no server needed. `DESIGN.md` is the design of record; the prototype is a reference for what it shows beyond the app.
 
 What the prototype shows that the app does not have yet:

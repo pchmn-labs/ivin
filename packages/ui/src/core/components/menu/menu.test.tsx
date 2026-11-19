@@ -65,3 +65,28 @@ test("Escape closes the menu and returns focus to the trigger", async () => {
   await expect.element(page.getByRole("menu")).not.toBeInTheDocument()
   await vi.waitFor(() => expect(document.activeElement).toBe(trigger().element()))
 })
+
+test("checked items are one choice with a check on the chosen one, under their heading and with their hint", async () => {
+  const onPick = vi.fn()
+  await render(
+    <Menu
+      trigger={<button type="button">Folder</button>}
+      items={[
+        { label: "Checkout", onSelect: onPick, checked: true },
+        "separator",
+        { heading: "Worktrees" },
+        { label: "docs/adr", onSelect: onPick, checked: false, hint: "Write the ADR" },
+      ]}
+    />,
+  )
+  await page.getByRole("button", { name: "Folder" }).click()
+
+  await expect.element(page.getByText("Worktrees", { exact: true })).toBeVisible()
+  const chosen = page.getByRole("menuitemradio", { name: "Checkout" })
+  await expect.element(chosen).toHaveAttribute("aria-checked", "true")
+  const other = page.getByRole("menuitemradio", { name: /docs\/adr/ })
+  expect(other.element().textContent).toBe("docs/adrWrite the ADR")
+  await other.click()
+  expect(onPick).toHaveBeenCalledOnce()
+  await expect.element(page.getByRole("menu")).not.toBeInTheDocument()
+})

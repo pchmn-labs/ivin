@@ -1,4 +1,5 @@
 import { Rpcs } from "@ivin/contracts/rpcs"
+import type { WorkingFolderChoice } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { layerScripted, type StartInput } from "@ivin/harness"
 import { Effect, Fiber, Layer, Stream } from "effect"
@@ -116,17 +117,15 @@ test("a checkout session runs in the project folder, on the checkout's branch", 
   expect(items.map((i) => i.type)).not.toContain("working_folder")
 })
 
-test("a worktree session gets a generated branch under .worktrees/, from origin's fresh default branch", async () => {
+const sendFirst = (client: Client, sessionId: string, workingFolder: WorkingFolderChoice) =>
+  client["session.sendMessage"]({ sessionId, messageId: "m1", text: "go", workingFolder })
+
+test("a new worktree session gets a generated branch under .worktrees/, from origin's fresh default branch", async () => {
   const starts: StartInput[] = []
   const { sent, items } = await withServer(starts, (client) =>
     Effect.gen(function* () {
       const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
-      const sent = yield* client["session.sendMessage"]({
-        sessionId: created.id,
-        messageId: "m1",
-        text: "go",
-        workingFolder: { kind: "worktree", branch: null },
-      })
+      const sent = yield* sendFirst(client, created.id, { kind: "new_worktree" })
       return { sent, items: yield* itemsOf(client, created.id) }
     }),
   )
@@ -145,9 +144,8 @@ test("a worktree session gets a generated branch under .worktrees/, from origin'
   ])
 })
 
-test("a worktree session with a named branch gets that branch, and the session is preparing meanwhile", async () => {
-  const starts: StartInput[] = []
-  const { sent, statuses } = await withServer(starts, (client) =>
+test("a session is preparing its new worktree before it works", async () => {
+  const statuses = await withServer([], (client) =>
     Effect.gen(function* () {
       const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
       const watching = yield* client["session.watch"]({ projectPath: project }).pipe(
@@ -157,38 +155,22 @@ test("a worktree session with a named branch gets that branch, and the session i
         Effect.forkChild,
       )
       yield* Effect.sleep("10 millis")
-      const sent = yield* client["session.sendMessage"]({
-        sessionId: created.id,
-        messageId: "m1",
-        text: "go",
-        workingFolder: { kind: "worktree", branch: " feat/login " },
-      })
-      return { sent, statuses: yield* Fiber.join(watching) }
+      yield* sendFirst(client, created.id, { kind: "new_worktree" })
+      return yield* Fiber.join(watching)
     }),
   )
 
-  expect(sent).toMatchObject({
-    workingFolder: join(project, ".worktrees", "feat-login"),
-    branch: "feat/login",
-  })
   expect(statuses).toContain("preparing_worktree")
   expect(statuses.indexOf("preparing_worktree")).toBeLessThan(statuses.indexOf("working"))
 })
 
 test("a worktree that git cannot create stores git's error, and no run starts", async () => {
-  git(project, "branch", "taken")
   const starts: StartInput[] = []
   const { error, session, items } = await withServer(starts, (client) =>
     Effect.gen(function* () {
       const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
-      const error = yield* Effect.flip(
-        client["session.sendMessage"]({
-          sessionId: created.id,
-          messageId: "m1",
-          text: "go",
-          workingFolder: { kind: "worktree", branch: "taken" },
-        }),
-      )
+      git(project, "branch", `ivin/${created.id.slice(0, 8)}`)
+      const error = yield* Effect.flip(sendFirst(client, created.id, { kind: "new_worktree" }))
       const [session] = yield* client["session.list"]({ projectPath: project })
       return { error, session, items: yield* itemsOf(client, created.id) }
     }),
@@ -202,12 +184,60 @@ test("a worktree that git cannot create stores git's error, and no run starts", 
   ])
 })
 
-test("a session outside a git repository has no branch", async () => {
+test("the project lists its worktrees, without its checkout", async () => {
+  const path = join(project, ".worktrees", "docs-adr")
+  git(project, "worktree", "add", "--quiet", "-b", "docs/adr", path)
+  const worktrees = await withServer([], (client) =>
+    client["worktree.list"]({ projectPath: project }),
+  )
+
+  expect(worktrees).toEqual([{ path, branch: "docs/adr" }])
+})
+
+test("a session started in an existing worktree runs there, on its branch", async () => {
+  const path = join(project, ".worktrees", "docs-adr")
+  git(project, "worktree", "add", "--quiet", "-b", "docs/adr", path)
+  const starts: StartInput[] = []
+  const { sent, items } = await withServer(starts, (client) =>
+    Effect.gen(function* () {
+      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const sent = yield* sendFirst(client, created.id, { kind: "existing_worktree", path })
+      return { sent, items: yield* itemsOf(client, created.id) }
+    }),
+  )
+
+  expect(sent).toMatchObject({ workingFolder: path, inWorktree: true, branch: "docs/adr" })
+  expect(starts.map((s) => s.cwd)).toEqual([path])
+  expect(items[0]).toMatchObject({ type: "working_folder", path, cause: "choice" })
+})
+
+test("a folder that is not one of the project's worktrees is refused, and no run starts", async () => {
+  const starts: StartInput[] = []
+  const error = await withServer(starts, (client) =>
+    Effect.gen(function* () {
+      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      return yield* Effect.flip(
+        sendFirst(client, created.id, { kind: "existing_worktree", path: root }),
+      )
+    }),
+  )
+
+  expect(error).toMatchObject({ _tag: "WorktreeNotCreated", reason: "not_a_worktree" })
+  expect(starts).toEqual([])
+})
+
+test("a session outside a git repository has no branch, and its project no worktree", async () => {
   const folder = join(root, "plain")
   execFileSync("mkdir", [folder])
-  const created = await withServer([], (client) =>
-    client["session.create"]({ projectPath: folder, model: "sonnet" }),
+  const { created, worktrees } = await withServer([], (client) =>
+    Effect.gen(function* () {
+      return {
+        created: yield* client["session.create"]({ projectPath: folder, model: "sonnet" }),
+        worktrees: yield* client["worktree.list"]({ projectPath: folder }),
+      }
+    }),
   )
 
   expect(created).toMatchObject({ workingFolder: folder, branch: null, inWorktree: false })
+  expect(worktrees).toEqual([])
 })

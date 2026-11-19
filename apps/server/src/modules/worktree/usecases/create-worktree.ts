@@ -1,5 +1,5 @@
 import { Data, Effect } from "effect"
-import { branchFor, worktreePath } from "../rules/worktree-branch.ts"
+import { generatedBranch, worktreePath } from "../rules/worktree-branch.ts"
 import { worktreeBase } from "../rules/worktree-base.ts"
 import { Git } from "./git.ts"
 import { OriginFetch } from "./origin-fetch.ts"
@@ -10,11 +10,11 @@ export class NoDefaultBranch extends Data.TaggedError("NoDefaultBranch")<{}> {
   }
 }
 
-export const createWorktree = (repo: string, sessionId: string, requestedBranch: string | null) =>
+export const createWorktree = (repo: string, sessionId: string) =>
   Effect.gen(function* () {
     const git = yield* Git
     const origin = yield* OriginFetch
-    const branch = branchFor(requestedBranch, sessionId)
+    const branch = generatedBranch(sessionId)
     const path = worktreePath(repo, branch)
     const hasOrigin = yield* git.hasRemote(repo, "origin")
     if (hasOrigin) yield* origin.fetch(repo)

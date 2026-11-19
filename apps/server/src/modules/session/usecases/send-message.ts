@@ -7,6 +7,7 @@ import {
 import { Effect } from "effect"
 import { createWorktree } from "../../worktree/usecases/create-worktree.ts"
 import { Git } from "../../worktree/usecases/git.ts"
+import { listWorktrees } from "../../worktree/usecases/list-worktrees.ts"
 import { titleFromMessage } from "../rules/session-title.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionRuns } from "./session-runs.ts"
@@ -18,7 +19,7 @@ const REASONS = {
   NoDefaultBranch: "no_default_branch",
 } as const
 
-const moveToNewWorktree = (session: Session, branch: string | null) =>
+const moveToNewWorktree = (session: Session) =>
   Effect.gen(function* () {
     const store = yield* SessionStore
     const feed = yield* SessionFeed
@@ -27,7 +28,7 @@ const moveToNewWorktree = (session: Session, branch: string | null) =>
       store.setStatus(session.id, status).pipe(Effect.andThen(feed.publish(session.id)))
 
     yield* setStatus("preparing_worktree")
-    const created = yield* createWorktree(session.projectPath, session.id, branch).pipe(
+    const created = yield* createWorktree(session.projectPath, session.id).pipe(
       Effect.tapError((error) =>
         // Git's own output goes to the transcript as written, like a harness error.
         (error._tag === "GitError"
@@ -51,6 +52,27 @@ const moveToNewWorktree = (session: Session, branch: string | null) =>
     })
   })
 
+const moveToExistingWorktree = (session: Session, path: string) =>
+  Effect.gen(function* () {
+    const store = yield* SessionStore
+    const runs = yield* SessionRuns
+    const worktree = (yield* listWorktrees(session.projectPath)).find((w) => w.path === path)
+    if (!worktree) {
+      return yield* new WorktreeNotCreated({ sessionId: session.id, reason: "not_a_worktree" })
+    }
+    yield* store.setWorkingFolder(session.id, worktree.path, worktree.branch)
+    yield* runs.record(session, {
+      type: "working_folder",
+      path: worktree.path,
+      inWorktree: true,
+      branch: worktree.branch,
+      cause: "choice",
+      // ivin created no folder here, so there is no untracked folder to warn about.
+      worktreesIgnored: true,
+      raw: null,
+    })
+  })
+
 export const sendMessage = (
   sessionId: string,
   messageId: string,
@@ -64,8 +86,10 @@ export const sendMessage = (
     const found = yield* store.findById(sessionId)
     if (!found) return yield* new SessionNotFound({ sessionId })
     if (!found.started) {
-      if (workingFolder?.kind === "worktree") {
-        yield* moveToNewWorktree(found, workingFolder.branch)
+      if (workingFolder?.kind === "new_worktree") {
+        yield* moveToNewWorktree(found)
+      } else if (workingFolder?.kind === "existing_worktree") {
+        yield* moveToExistingWorktree(found, workingFolder.path)
       } else {
         // The user may have switched branches in the checkout since the session was created.
         yield* store.setWorkingFolder(

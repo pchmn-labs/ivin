@@ -105,7 +105,7 @@ test("each row shows its branch, and whether it runs in the checkout or a worktr
 
   const rows = page.getByTestId("session-location")
   await expect.element(rows.nth(1)).toHaveTextContent("Worktreefeat/login")
-  await expect.element(rows.nth(0)).toHaveTextContent("Checkoutmain")
+  await expect.element(rows.nth(0)).toHaveTextContent("Current checkoutmain")
 })
 
 test("a session outside a git repository has no branch line", async () => {

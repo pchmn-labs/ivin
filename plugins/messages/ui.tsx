@@ -20,7 +20,9 @@ function Message({ item }: SlotProps["transcript.message"]) {
         <Stack direction="row" gap={1} align="center">
           <Icon name="worktree" size={14} />
           <Text size="sm" tone="muted">
-            Started in a new worktree on
+            {item.cause === "creation"
+              ? "Started in a new worktree on"
+              : "Started in the worktree on"}
           </Text>
           <Text size="sm" mono>
             {item.branch}

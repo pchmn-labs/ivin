@@ -20,7 +20,11 @@ const WORKTREE_FAILURES: Record<WorktreeFailure, ActionFailure> = {
     retryable: true,
   },
   no_default_branch: {
-    text: "The worktree was not created: origin has no main, master or default branch to start from. Pick Checkout to send the message.",
+    text: "The worktree was not created: origin has no main, master or default branch to start from. Pick Current checkout to send the message.",
+    retryable: false,
+  },
+  not_a_worktree: {
+    text: "This worktree no longer exists. Pick another working folder to send the message.",
     retryable: false,
   },
 }

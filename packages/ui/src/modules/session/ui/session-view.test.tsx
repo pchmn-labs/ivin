@@ -338,9 +338,11 @@ test("Enter on the focused Interrupt button presses it rather than running compo
 })
 
 const mountNewSession = async () => {
-  const server = makeFakeServer()
+  const server = makeFakeServer({
+    project: { path: "/p", name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
   const at = DateTime.makeUnsafe(0)
-  server.sessions.set("s1", {
+  const session = {
     id: "s1",
     projectPath: "/p",
     workingFolder: "/p",
@@ -349,9 +351,20 @@ const mountNewSession = async () => {
     started: false,
     title: "New session",
     model: "sonnet",
-    status: "idle",
+    status: "idle" as const,
     createdAt: at,
     lastActivityAt: at,
+  }
+  server.sessions.set("s1", session)
+  server.worktrees.push({ path: "/p/.worktrees/docs-adr", branch: "docs/adr" })
+  server.sessions.set("s2", {
+    ...session,
+    id: "s2",
+    workingFolder: "/p/.worktrees/docs-adr",
+    inWorktree: true,
+    branch: "docs/adr",
+    started: true,
+    title: "Write the ADR",
   })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
@@ -363,69 +376,72 @@ const mountNewSession = async () => {
   return server
 }
 
-test("the working folder choice and branch name show only before the first message", async () => {
-  const server = await mountNewSession()
-  const choice = page.getByRole("combobox", { name: "Working folder" })
-  await expect.element(choice).toHaveValue("checkout")
-  expect(page.getByRole("textbox", { name: "Branch name" }).query()).toBeNull()
-  await expect.element(page.getByTestId("session-location")).toHaveTextContent("Checkoutmain")
-
-  await choice.selectOptions("worktree")
-  await page.getByRole("textbox", { name: "Branch name" }).fill("feat/login")
-  await page.getByRole("textbox", { name: "Message" }).fill("go")
+const picker = () => page.getByTestId("working-folder-picker")
+const choose = async (name: string | RegExp) => {
+  await picker().click()
+  await page.getByRole("menuitemradio", { name }).click()
+}
+const sendText = async (text: string) => {
+  await page.getByRole("textbox", { name: "Message" }).fill(text)
   await page.getByRole("button", { name: "Send" }).click()
+}
 
-  await expect.element(choice).not.toBeInTheDocument()
-  await expect.element(page.getByRole("textbox", { name: "Branch name" })).not.toBeInTheDocument()
-  await expect.element(page.getByTestId("session-location")).toHaveTextContent("Worktreefeat/login")
-  expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
-    { kind: "worktree", branch: "feat/login" },
-  ])
-})
-
-test("an empty branch name lets the server generate one, and the checkout sends no branch", async () => {
+test("a new session asks for its task with the composer in the middle, and the working folder choice stays until the first message", async () => {
   const server = await mountNewSession()
-  await page.getByRole("combobox", { name: "Working folder" }).selectOptions("worktree")
-  await page.getByRole("textbox", { name: "Message" }).fill("go")
-  await page.getByRole("button", { name: "Send" }).click()
+  const title = page.getByRole("heading", { name: "What should we work on in shop?" })
+  await expect.element(title).toBeVisible()
+  expect(picker().element().textContent).toBe("Current checkout")
+
+  await choose("New worktree")
+  expect(picker().element().textContent).toBe("New worktree")
+  await sendText("go")
+
+  await expect.element(title).not.toBeInTheDocument()
+  await expect.element(picker()).not.toBeInTheDocument()
   await expect
-    .element(page.getByRole("combobox", { name: "Working folder" }))
-    .not.toBeInTheDocument()
-  await page.getByRole("textbox", { name: "Message" }).fill("again")
-  await page.getByRole("button", { name: "Send" }).click()
-
+    .element(page.getByTestId("session-location"))
+    .toHaveTextContent("Worktreeivin/generated")
+  await sendText("again")
   await vi.waitFor(() => expect(server.sentMessages).toHaveLength(2))
   expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
-    { kind: "worktree", branch: null },
+    { kind: "new_worktree" },
     undefined,
   ])
 })
 
+test("the menu lists the project's worktrees with the session using each, and one can be picked", async () => {
+  const server = await mountNewSession()
+  await picker().click()
+  const existing = page.getByRole("menuitemradio", { name: /docs\/adr/ })
+  expect(existing.element().textContent).toContain("Write the ADR")
+  await existing.click()
+
+  expect(picker().element().textContent).toBe("Worktree")
+  await expect.element(page.getByText("docs/adr", { exact: true })).toBeVisible()
+  await sendText("go")
+  await vi.waitFor(() =>
+    expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
+      { kind: "existing_worktree", path: "/p/.worktrees/docs-adr" },
+    ]),
+  )
+})
+
 test("a worktree git cannot create shows git's message in the transcript and keeps the message and the choice", async () => {
   const server = await mountNewSession()
-  server.failWorktreeWith("fatal: a branch named 'taken' already exists")
-  await page.getByRole("combobox", { name: "Working folder" }).selectOptions("worktree")
-  await page.getByRole("textbox", { name: "Branch name" }).fill("taken")
-  await page.getByRole("textbox", { name: "Message" }).fill("go")
-  await page.getByRole("button", { name: "Send" }).click()
+  server.failWorktreeWith("fatal: unable to access 'origin': Could not resolve host")
+  await choose("New worktree")
+  await sendText("go")
 
   const alert = page.getByTestId("composer-alert")
   await expect.element(alert).toBeVisible()
   expect(alert.element().textContent).toMatch(/^The worktree was not created/)
   await expect
-    .element(page.getByText("fatal: a branch named 'taken' already exists", { exact: true }))
+    .element(
+      page.getByText("fatal: unable to access 'origin': Could not resolve host", { exact: true }),
+    )
     .toBeVisible()
   await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("go")
-  await expect.element(page.getByRole("textbox", { name: "Branch name" })).toHaveValue("taken")
-})
-
-test("with New worktree chosen, the status line shows a worktree on the branch being typed", async () => {
-  await mountNewSession()
-  const location = page.getByTestId("session-location")
-  await page.getByRole("combobox", { name: "Working folder" }).selectOptions("worktree")
-  await expect.element(location).toHaveTextContent("Worktree")
-  await page.getByRole("textbox", { name: "Branch name" }).fill("feat/x")
-  await expect.element(location).toHaveTextContent("Worktreefeat/x")
+  expect(picker().element().textContent).toBe("New worktree")
 })
 
 test("a session preparing its worktree says so under the transcript until the run starts", async () => {

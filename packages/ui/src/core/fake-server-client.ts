@@ -6,6 +6,7 @@ import type { Session, SessionStatus, WorkingFolderChoice } from "@ivin/contract
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
+import type { Worktree } from "@ivin/contracts/worktree"
 import { ProjectNotOpen } from "@ivin/contracts/project"
 import { SessionNotFound, WorktreeNotCreated } from "@ivin/contracts/session"
 import { ServerClient } from "./server-client.ts"
@@ -22,6 +23,8 @@ export interface FakeServer {
   readonly setStatus: (sessionId: string, status: SessionStatus) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   readonly sentMessages: ReadonlyArray<{ readonly workingFolder?: WorkingFolderChoice }>
+  // What `worktree.list` returns, for every project.
+  readonly worktrees: Array<Worktree>
   // Makes every sendMessage fail as git would, storing this message; null sends again.
   readonly failWorktreeWith: (gitMessage: string | null) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
@@ -64,6 +67,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   const failing = new Set<string>()
   const sentMessages: Array<{ readonly workingFolder?: WorkingFolderChoice }> = []
   let worktreeFailure: string | null = null
+  const worktrees: Array<Worktree> = []
 
   const openProjects = (): OpenProjects => ({ projects: [...projects], selectedPath })
   const tabsOf = (projectPath: string) => tabs.filter((tab) => tab.projectPath === projectPath)
@@ -309,16 +313,22 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
             role: "user",
             text: input.text,
           })
-          const worktreeBranch =
-            isFirstMessage && input.workingFolder?.kind === "worktree"
-              ? (input.workingFolder.branch ?? "ivin/generated")
-              : null
+          const choice = isFirstMessage ? input.workingFolder : undefined
+          const worktree =
+            choice?.kind === "new_worktree"
+              ? {
+                  path: `${session.projectPath}/.worktrees/ivin-generated`,
+                  branch: "ivin/generated",
+                }
+              : choice?.kind === "existing_worktree"
+                ? worktrees.find((w) => w.path === choice.path)
+                : undefined
           const updated: Session = {
             ...session,
-            ...(worktreeBranch !== null && {
-              workingFolder: `${session.projectPath}/.worktrees/${worktreeBranch.replaceAll("/", "-")}`,
+            ...(worktree && {
+              workingFolder: worktree.path,
               inWorktree: true,
-              branch: worktreeBranch,
+              branch: worktree.branch,
             }),
             started: true,
             status: "working",
@@ -328,6 +338,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
           return saveSession(updated)
         }),
       ),
+    "worktree.list": () => Effect.sync(() => [...worktrees]),
     "session.answerApproval": (input: { sessionId: string; requestId: string; allow: boolean }) =>
       Effect.sync(() => {
         const items = itemsOf(input.sessionId)
@@ -386,6 +397,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
     sessions,
     errorReports,
     sentMessages,
+    worktrees,
     failWorktreeWith: (gitMessage) => void (worktreeFailure = gitMessage),
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),

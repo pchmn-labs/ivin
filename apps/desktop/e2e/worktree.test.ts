@@ -40,16 +40,18 @@ test("a session started in a new worktree shows its branch in the composer and t
     await expect(window.getByTestId("project-name")).toHaveText("my-project")
     await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
 
-    await window.getByRole("combobox", { name: "Working folder" }).selectOption("worktree")
-    await window.getByRole("textbox", { name: "Branch name" }).fill("feat/e2e")
+    await window.getByTestId("working-folder-picker").click()
+    await window.getByRole("menuitemradio", { name: "New worktree" }).click()
     await sendMessage(window, "hello")
 
-    await expect(window.getByRole("combobox", { name: "Working folder" })).toHaveCount(0)
-    await expect(window.getByRole("main").getByTestId("session-location")).toContainText("feat/e2e")
+    const branch = window.getByRole("main").getByTestId("session-location")
+    await expect(branch).toContainText("ivin/")
+    await expect(window.getByTestId("working-folder-picker")).toHaveCount(0)
+    const name = (await branch.textContent())!.replace(/^Worktree/, "")
     await expect(window.getByTestId("session-item").getByTestId("session-location")).toContainText(
-      "feat/e2e",
+      name,
     )
-    expect(existsSync(join(project, ".worktrees", "feat-e2e", "README.md"))).toBe(true)
+    expect(existsSync(join(project, ".worktrees", name.replace("/", "-"), "README.md"))).toBe(true)
   } finally {
     await app.close()
   }

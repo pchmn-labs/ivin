@@ -1,30 +1,37 @@
-import type { Session } from "@ivin/contracts/session"
 import { Icon } from "../../../core/components/icon/icon.tsx"
+import type { Location } from "../rules/session-location.ts"
 import "./session-location.css"
 
+const ICONS = { checkout: "folder", worktree: "worktree", folder: "folder" } as const
+
 export function SessionLocation({
-  session,
+  location,
   compact = false,
+  title,
 }: {
-  session: Pick<Session, "inWorktree" | "branch" | "workingFolder">
+  location: Location
+  // The sidebar row shows the branch alone, or the label when there is no branch.
   compact?: boolean
+  title?: string
 }) {
-  const kind = session.inWorktree ? "Worktree" : "Checkout"
+  const labelHidden = compact && location.branch !== null
   return (
     <span
       className="iv-session-location"
       data-compact={compact || undefined}
       data-testid="session-location"
-      title={session.workingFolder || undefined}
+      title={title}
     >
       <span className="iv-session-location__item">
-        <Icon name={session.inWorktree ? "worktree" : "folder"} size={12} />
-        <span className={compact ? "iv-visually-hidden" : undefined}>{kind}</span>
+        <Icon name={ICONS[location.kind]} size={12} />
+        <span className={labelHidden ? "iv-visually-hidden" : "iv-session-location__name"}>
+          {location.label}
+        </span>
       </span>
-      {session.branch !== null && (
+      {location.branch !== null && (
         <span className="iv-session-location__item iv-session-location__branch">
           {!compact && <Icon name="git-branch" size={12} />}
-          <span className="iv-session-location__name">{session.branch}</span>
+          <span className="iv-session-location__name">{location.branch}</span>
         </span>
       )}
     </span>

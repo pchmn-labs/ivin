@@ -73,13 +73,19 @@ export type MenuItem =
       readonly onSelect: () => void
       readonly danger?: boolean
       readonly disabled?: boolean
+      // Makes the items that have it one choice, with a check on the chosen one.
+      readonly checked?: boolean
+      // Faint text at the end of the row.
+      readonly hint?: string
     }
+  | { readonly heading: string }
   | "separator"
 
 export interface MenuProps {
   readonly trigger: ReactElement
   readonly items: ReadonlyArray<MenuItem>
   readonly align?: "start" | "end"
+  readonly onOpenChange?: (open: boolean) => void
 }
 
 export interface DialogProps {

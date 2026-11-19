@@ -61,7 +61,8 @@ const workingFolderFields = {
   path: Schema.String,
   inWorktree: Schema.Boolean,
   branch: Schema.NullOr(Schema.String),
-  cause: Schema.Literal("creation"),
+  // `creation`: a new worktree; `choice`: a worktree the user picked before the first message.
+  cause: Schema.Literals(["creation", "choice"]),
   // False when git does not ignore `.worktrees/`, so the checkout lists it as untracked.
   worktreesIgnored: Schema.Boolean,
 }

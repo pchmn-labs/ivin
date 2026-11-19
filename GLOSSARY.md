@@ -12,7 +12,7 @@ _Avoid_: workspace, repo
 The project folder's own git working copy, as opposed to its worktrees.
 
 **Worktree**:
-A linked git worktree of the project's repository, on its own branch, that a session can run in so it does not share files with other sessions. ivin creates them under `<project>/.worktrees/`.
+A linked git worktree of the project's repository, on its own branch, that a session can run in so it does not share files with other sessions. ivin creates them under `<project>/.worktrees/`; a session can also start in one made outside ivin.
 _Avoid_: workspace, clone
 
 **Working folder**:

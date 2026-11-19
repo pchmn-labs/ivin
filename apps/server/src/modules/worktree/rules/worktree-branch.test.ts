@@ -1,14 +1,8 @@
 import { expect, test } from "vitest"
-import { branchFor, worktreePath } from "./worktree-branch.ts"
+import { generatedBranch, worktreePath } from "./worktree-branch.ts"
 
-test("an empty or blank branch name gets one generated from the session id", () => {
-  const sessionId = "3f2a9c1e-77aa-4b2c-9d10-aa00bb11cc22"
-  expect(branchFor(null, sessionId)).toBe("ivin/3f2a9c1e")
-  expect(branchFor("   ", sessionId)).toBe("ivin/3f2a9c1e")
-})
-
-test("a named branch is kept, trimmed", () => {
-  expect(branchFor("  feat/login ", "3f2a9c1e")).toBe("feat/login")
+test("a new worktree's branch is named after the session id", () => {
+  expect(generatedBranch("3f2a9c1e-77aa-4b2c-9d10-aa00bb11cc22")).toBe("ivin/3f2a9c1e")
 })
 
 test.each([

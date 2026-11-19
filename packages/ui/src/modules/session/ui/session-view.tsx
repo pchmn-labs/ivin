@@ -1,5 +1,7 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { TranscriptView } from "../../transcript/ui/transcript-view.tsx"
+import { transcriptOf } from "../../transcript/atoms/get-items.ts"
+import { projectsAtom } from "../../project/atoms/list-projects.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
@@ -11,7 +13,12 @@ import { Composer } from "./composer.tsx"
 import "./session-view.css"
 
 function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
-  const status = useAtomValue(sessionsOf(projectPath).item(sessionId))?.status
+  const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
+  const status = session?.status
+  const transcript = useAtomValue(transcriptOf(sessionId).view)
+  const projectName = useAtomValue(projectsAtom.value).projects.find(
+    (project) => project.path === projectPath,
+  )?.name
   const interrupt = useAtomSet(interruptSessionAtom)
   useCommandHandler(
     "session.interrupt",
@@ -19,11 +26,25 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
     isRunning(status),
   )
 
+  // A session with nothing in it yet waits for its task, its composer in the middle.
+  const blank =
+    session !== undefined &&
+    !session.started &&
+    status === "idle" &&
+    transcript.loaded &&
+    transcript.ids.length === 0
+
+  // The title keeps its place among the children, so the composer survives the switch.
   return (
-    <div className="iv-session-view">
-      <div className="iv-session-view__transcript">
-        <TranscriptView key={sessionId} sessionId={sessionId} />
-      </div>
+    <div className={blank ? "iv-session-view iv-session-view--blank" : "iv-session-view"}>
+      {blank && (
+        <h1 className="iv-session-view__title">What should we work on in {projectName}?</h1>
+      )}
+      {!blank && (
+        <div className="iv-session-view__transcript">
+          <TranscriptView key={sessionId} sessionId={sessionId} />
+        </div>
+      )}
       {status === "preparing_worktree" && (
         <div className="iv-session-view__preparing" data-testid="preparing-worktree">
           <Icon name="loader" size={14} />
@@ -32,7 +53,12 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
           </Text>
         </div>
       )}
-      <Composer key={sessionId} projectPath={projectPath} sessionId={sessionId} />
+      <Composer
+        key={sessionId}
+        projectPath={projectPath}
+        sessionId={sessionId}
+        {...(blank && { placeholder: "Describe the task" })}
+      />
     </div>
   )
 }

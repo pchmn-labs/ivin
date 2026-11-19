@@ -28,3 +28,18 @@
   padding: var(--iv-space-2) var(--iv-space-6);
   color: var(--iv-text-muted);
 }
+
+.iv-session-view--blank {
+  justify-content: center;
+  padding-bottom: 12vh;
+}
+
+.iv-session-view__title {
+  width: 100%;
+  max-width: var(--iv-content-width);
+  margin: 0 auto var(--iv-space-3);
+  padding: 0 var(--iv-space-7);
+  font-size: var(--iv-text-2xl);
+  font-weight: var(--iv-weight-medium);
+  line-height: var(--iv-text-2xl-lh);
+}
