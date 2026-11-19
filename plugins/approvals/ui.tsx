@@ -8,6 +8,7 @@ import {
   Text,
   defineUi,
   formatToolInput,
+  pendingApproval,
   useAnswerApproval,
   useTranscript,
 } from "@ivin/plugin-api/ui"
@@ -93,9 +94,7 @@ function PendingSheet({
 }
 
 function ApprovalSheet({ session, isEmptyComposer }: SlotProps["composer.above"]) {
-  const pending = useTranscript(session.id)
-    .filter((item): item is ApprovalItem => item.type === "approval" && item.decision === null)
-    .at(-1)
+  const pending = pendingApproval(useTranscript(session.id))
   if (pending === undefined) return null
   return (
     <PendingSheet

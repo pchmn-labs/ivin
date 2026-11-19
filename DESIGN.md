@@ -258,7 +258,7 @@ The palette is green-tinted neutrals, one yew-green accent, an amber and a curso
 
 ### Secondary
 - **Amber** (`--iv-attention`): the "waiting for you" status, the "Needs you" group label and count, the project rail badge and the approval sheet title. An approval is a question, not a fault, so it does not take the red. In light it deepens to a dark ochre so the badge's card-coloured count stays legible.
-- **Amber Wash / Hover** (`--iv-attention-subtle`, `--iv-attention-hover`): amber at 8% and 13%, the fill of a row whose session waits on the user, at rest and on hover.
+- **Amber Wash / Hover** (`--iv-attention-subtle`, `--iv-attention-hover`): amber at 8% and 13%, the fill of a waiting row that carries controls under it (a Working panel card), at rest and on hover.
 - **Amber Outline** (`--iv-attention-outline`): amber at 60%, used only as a dashed 1px line around something the user must answer.
 - **Cursor Red** (`--iv-danger`): the "failed" status, errors, failed tool calls, the failed connection dot and destructive menu items. Taken from the red terminal cursor in the app icon.
 - **Cursor Red Wash** (`--iv-danger-subtle`): the fill of error blocks and danger buttons.
@@ -366,7 +366,7 @@ Phosphor icons at regular weight, 16px by default and 14px inline with small tex
 
 ### List Rows
 - **Style:** 30px tall, 6px corners, 8px padding: a leading mark, a truncated title, then faint tabular metadata (relative time).
-- **States:** hover wash; selected rows take the active wash and 500 weight; a row whose session waits on the user takes the dashed amber outline, inset by 1px, over the amber wash (amber hover on hover). Row actions appear only on hover, focus or selection. Controls under a row (`below`) sit inside its frame, aligned with the title, and share its hover; a row's `tooltip` opens on its right.
+- **States:** hover wash; selected rows take the active wash and 500 weight; a row whose session waits on the user takes the dashed amber outline, inset by 1px; with controls under it, it also takes the amber wash (amber hover on hover). Row actions appear only on hover, focus or selection. Controls under a row (`below`) sit inside its frame, aligned with the title, and share its hover; a row's `tooltip` opens on its right.
 
 ### Session Mark
 The signature of the session list: the 16px Claude mark with a small circular overlay at its bottom-right, cut out from the card ground by a ring of the card colour. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px amber disc with a "!". Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.

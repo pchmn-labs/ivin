@@ -11,6 +11,7 @@ import {
   Text,
   defineUi,
   formatToolInput,
+  pendingApproval,
   useAnswerApproval,
   useOpenTab,
   useProjects,
@@ -18,7 +19,6 @@ import {
   useSessions,
   useTranscript,
   type ActionFailure,
-  type ApprovalItem,
   type Session,
 } from "@ivin/plugin-api/ui"
 import { elapsed } from "./rules/elapsed.ts"
@@ -57,16 +57,10 @@ function Detail({ project, command }: { project: string; command?: string }) {
   )
 }
 
-function usePendingApproval(sessionId: string) {
-  return useTranscript(sessionId)
-    .filter((item): item is ApprovalItem => item.type === "approval" && item.decision === null)
-    .at(-1)
-}
-
 function WaitingRow({ session, project, now }: { session: Session; project: string; now: number }) {
   const openTab = useOpenTab()
   const answer = useAnswerApproval(session.id)
-  const pending = usePendingApproval(session.id)
+  const pending = pendingApproval(useTranscript(session.id))
   const [sending, setSending] = useState(false)
   const [failure, setFailure] = useState<(ActionFailure & { allow: boolean }) | null>(null)
   const command = pending === undefined ? undefined : formatToolInput(pending.name, pending.input)

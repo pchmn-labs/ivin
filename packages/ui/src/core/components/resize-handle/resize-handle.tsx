@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react"
-import { readStoredSize, storeSize } from "../adapters/stored-size.ts"
-import { clampSize, draggedSize } from "../rules/resize.ts"
+import { readStoredSize, storeSize } from "./stored-size.ts"
+import { clampSize, draggedSize } from "./resize.ts"
 import "./resize-handle.css"
 
 const KEY_STEP = 16
@@ -18,7 +18,6 @@ export function ResizeHandle({
   edge: "right" | "top"
   // The CSS custom property on the parent that its stylesheet sizes it by.
   property: string
-  // Where the size is remembered between launches.
   name: string
   min: number
   max: (element: HTMLElement) => number

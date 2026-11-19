@@ -13,10 +13,13 @@
 .iv-list-row[data-attention] {
   outline: 1px dashed var(--iv-attention-outline);
   outline-offset: -1px;
+}
+
+.iv-list-row[data-attention]:has(> .iv-list-row__below) {
   background: var(--iv-attention-subtle);
 }
 
-.iv-list-row[data-attention]:hover {
+.iv-list-row[data-attention]:has(> .iv-list-row__below):hover {
   background: var(--iv-attention-hover);
 }
 
