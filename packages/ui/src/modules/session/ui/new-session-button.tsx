@@ -19,9 +19,10 @@ export function NewSessionButton({
     <IconButton
       icon={icon}
       label="New session"
-      tooltip={`New session · ${model}`}
+      tooltip={model === null ? "New session" : `New session · ${model}`}
       {...(size && { size })}
-      onClick={() => void startSession(projectPath, model)}
+      disabled={model === null}
+      onClick={() => model !== null && void startSession(projectPath, model)}
     />
   )
 }

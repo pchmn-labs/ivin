@@ -106,7 +106,7 @@ const startupFiber = Effect.runFork(
   ),
 )
 
-// Closing the scopes runs the finalizers that kill the claude processes; exiting directly would orphan them.
+// Closing the scopes runs the finalizers that kill the agent processes; exiting directly would orphan them.
 let stopping = false
 const shutdown = () => {
   if (stopping) return

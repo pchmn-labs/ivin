@@ -2,7 +2,7 @@ import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
-import type { Session, SessionStatus, WorkingFolderChoice } from "@ivin/contracts/session"
+import type { Harness, Session, SessionStatus, WorkingFolderChoice } from "@ivin/contracts/session"
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
@@ -68,7 +68,10 @@ export interface FakeCheckout extends CheckoutStatus {
   pullRefusal: string | null
 }
 
-export const makeFakeServer = (options: { readonly project?: Project } = {}): FakeServer => {
+export const makeFakeServer = (
+  options: { readonly project?: Project; readonly harness?: Harness } = {},
+): FakeServer => {
+  const harness = options.harness ?? "claude"
   let projects: Array<Project> = options.project ? [options.project] : []
   let selectedPath: string | null = options.project?.path ?? null
   let tabs: Array<{ sessionId: string; projectPath: string }> = []
@@ -170,6 +173,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
 
   const client = {
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
+    "server.getHarness": () => Effect.succeed(harness),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
     "keybinding.watch": () =>
       Stream.unwrap(
@@ -274,6 +278,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
           branch: "main",
           started: false,
           workingFolderDeleted: false,
+          harness,
           model,
           title: "New session",
           status: "idle",

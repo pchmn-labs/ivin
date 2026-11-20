@@ -31,6 +31,7 @@ const mountApp = async (
       started: true,
       workingFolderDeleted: false,
       title,
+      harness: "claude",
       model: "sonnet",
       status: "idle",
       statusChangedAt: at,

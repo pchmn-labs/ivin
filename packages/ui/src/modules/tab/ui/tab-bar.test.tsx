@@ -1,5 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
-import type { SessionStatus } from "@ivin/contracts/session"
+import type { Harness, SessionStatus } from "@ivin/contracts/session"
 import { defaultSettings } from "@ivin/contracts/setting"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
@@ -9,7 +9,10 @@ import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { TabBar } from "./tab-bar.tsx"
 
-const setup = async (status: SessionStatus, options: { stopAgentOnClose?: boolean } = {}) => {
+const setup = async (
+  status: SessionStatus,
+  options: { stopAgentOnClose?: boolean; harness?: Harness } = {},
+) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
@@ -29,6 +32,7 @@ const setup = async (status: SessionStatus, options: { stopAgentOnClose?: boolea
     started: true,
     workingFolderDeleted: false,
     title: "Fix the login",
+    harness: options.harness ?? "claude",
     model: "sonnet",
     status,
     statusChangedAt: at,
@@ -83,4 +87,11 @@ test.each([
   await expect.element(page.getByTestId("tab")).not.toBeInTheDocument()
   expect(confirmation().query()).toBeNull()
   expect(server.sessions.get("s1")?.status).toBe(status)
+})
+
+test("a tab draws its session's harness mark", async () => {
+  await setup("idle", { harness: "codex" })
+  const tab = page.getByTestId("tab").element()
+  expect(tab.querySelector(".iv-harness-mark--agent")).not.toBeNull()
+  expect(tab.querySelector(".iv-harness-mark--claude")).toBeNull()
 })

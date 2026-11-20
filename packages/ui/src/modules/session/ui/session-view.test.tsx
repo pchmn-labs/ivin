@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import type { Harness } from "@ivin/contracts/session"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
@@ -55,6 +56,7 @@ test("the transcript renders through the plugins and the status line shows the u
     started: true,
     workingFolderDeleted: false,
     title: "t",
+    harness: "claude",
     model: "sonnet",
     status: "idle",
     statusChangedAt: at,
@@ -78,7 +80,10 @@ test("the transcript renders through the plugins and the status line shows the u
     .toHaveTextContent("1,540 tokens · $0.0123")
 })
 
-const mountSession = async (status: "idle" | "working" | "waiting") => {
+const mountSession = async (
+  status: "idle" | "working" | "waiting",
+  harness: Harness = "claude",
+) => {
   const server = makeFakeServer()
   const at = DateTime.makeUnsafe(0)
   server.sessions.set("s1", {
@@ -90,6 +95,7 @@ const mountSession = async (status: "idle" | "working" | "waiting") => {
     started: true,
     workingFolderDeleted: false,
     title: "t",
+    harness,
     model: "sonnet",
     status,
     statusChangedAt: at,
@@ -105,6 +111,22 @@ const mountSession = async (status: "idle" | "working" | "waiting") => {
   )
   return server
 }
+
+test("a codex session's composer names Codex and draws no Claude mark", async () => {
+  await mountSession("idle", "codex")
+  await expect.element(page.getByPlaceholder("Message Codex")).toBeVisible()
+  const model = page.getByTestId("composer-model").element()
+  expect(model.querySelector(".iv-harness-mark--agent")).not.toBeNull()
+  expect(document.querySelector(".iv-composer .iv-harness-mark--claude")).toBeNull()
+})
+
+test("a claude session's composer names Claude and draws the Claude mark", async () => {
+  await mountSession("idle")
+  await expect.element(page.getByPlaceholder("Message Claude")).toBeVisible()
+  expect(
+    page.getByTestId("composer-model").element().querySelector(".iv-harness-mark--claude"),
+  ).not.toBeNull()
+})
 
 test("the composer announces the status and follows the server", async () => {
   const server = await mountSession("idle")
@@ -192,6 +214,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
     started: true,
     workingFolderDeleted: false,
     title: "t",
+    harness: "claude",
     model: "sonnet",
     status: "working",
     statusChangedAt: at,
@@ -314,6 +337,7 @@ test("Escape closes an open menu without interrupting the session", async () => 
     started: true,
     workingFolderDeleted: false,
     title: "t",
+    harness: "claude",
     model: "sonnet",
     status: "working",
     statusChangedAt: at,
@@ -360,6 +384,7 @@ const mountNewSession = async (checkout: Partial<FakeCheckout> = {}) => {
     started: false,
     workingFolderDeleted: false,
     title: "New session",
+    harness: "claude" as const,
     model: "sonnet",
     status: "idle" as const,
     statusChangedAt: at,
@@ -546,6 +571,7 @@ const mountDeletedFolderSession = async () => {
     started: true,
     workingFolderDeleted: true,
     title: "Add the Working panel",
+    harness: "claude",
     model: "sonnet",
     status: "idle",
     statusChangedAt: at,

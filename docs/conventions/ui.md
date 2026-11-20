@@ -39,4 +39,4 @@ packages/ui/src/
 
 ## Colour
 
-Every colour is a `--iv-` token, with one exception: a harness mark keeps its brand colour (Claude's orange, in `core/components/harness-mark/harness-mark.css`).
+Every colour is a `--iv-` token, with one exception: a harness mark keeps its brand colour (in `core/components/harness-mark/harness-mark.css`).

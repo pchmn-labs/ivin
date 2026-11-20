@@ -13,6 +13,7 @@ export const makeTestSession = (
   branch: "main",
   started: true,
   workingFolderDeleted: false,
+  harness: "claude",
   model: "sonnet",
   status: "idle",
   statusChangedAt: DateTime.makeUnsafe(0),

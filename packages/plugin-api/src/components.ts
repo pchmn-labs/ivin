@@ -195,6 +195,7 @@ export interface ListSectionProps {
 // The session's harness mark, with its status over it and as its accessible name.
 export interface SessionMarkProps {
   readonly status: Session["status"]
+  readonly harness: Session["harness"]
 }
 
 // "now", "5 min", "3 d"…, kept current while shown.

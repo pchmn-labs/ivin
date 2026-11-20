@@ -94,6 +94,7 @@ const seeded = () => {
       started: true,
       workingFolderDeleted: false,
       title: id,
+      harness: "claude",
       model: "sonnet",
       status: "idle",
       statusChangedAt: at,

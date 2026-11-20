@@ -8,7 +8,7 @@ import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
-import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
+import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { TextArea } from "../../../core/components/text-field/text-field.tsx"
 import { BranchPicker } from "./branch-picker.tsx"
@@ -19,21 +19,14 @@ import { useSessionLocation } from "../hooks/use-session-location.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
+import { HARNESSES } from "../rules/harnesses.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { sendMessageFailure } from "../rules/failure-message.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import { sendMessageAtom } from "../atoms/send-message.ts"
 import "./composer.css"
 
-export function Composer({
-  projectPath,
-  sessionId,
-  placeholder = "Message Claude",
-}: {
-  projectPath: string
-  sessionId: string
-  placeholder?: string
-}) {
+export function Composer({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
   const [text, setText] = useState("")
   const root = useRef<HTMLDivElement>(null)
   const [failure, setFailure] = useState<(ActionFailure & { message: string }) | null>(null)
@@ -44,6 +37,7 @@ export function Composer({
   const running = isRunning(session?.status)
   const preparing = session?.status === "preparing_worktree"
   const choosing = session !== undefined && !session.started && !preparing
+  const harness = session && HARNESSES[session.harness]
 
   const sendText = (message: string) => {
     if (preparing) return
@@ -109,16 +103,16 @@ export function Composer({
       <div className="iv-composer__surface">
         <TextArea
           label="Message"
-          placeholder={placeholder}
+          placeholder={`Message ${harness?.name ?? "the agent"}`}
           rows={2}
           value={text}
           onChange={(event) => setText(event.target.value)}
         />
         <Stack direction="row" align="center" justify="between" gap={2}>
           <Stack direction="row" align="center" gap={3}>
-            {session && (
+            {session && harness && (
               <span className="iv-composer__model" data-testid="composer-model">
-                <ClaudeMark size={14} />
+                <HarnessMark mark={harness.mark} size={14} />
                 {session.model}
               </span>
             )}

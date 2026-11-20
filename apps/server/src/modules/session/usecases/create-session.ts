@@ -1,4 +1,5 @@
 import type { Session } from "@ivin/contracts/session"
+import { HarnessProvider } from "@ivin/harness"
 import { DateTime, Effect } from "effect"
 import { Git } from "../../worktree/usecases/git.ts"
 import { SessionStore } from "./session-store.ts"
@@ -9,6 +10,7 @@ export const createSession = (projectPath: string, model: string) =>
   Effect.gen(function* () {
     const store = yield* SessionStore
     const git = yield* Git
+    const { id: harness } = yield* HarnessProvider
     const now = yield* DateTime.now
     const session: Session = {
       id: crypto.randomUUID(),
@@ -19,6 +21,7 @@ export const createSession = (projectPath: string, model: string) =>
       started: false,
       workingFolderDeleted: false,
       title: defaultTitle,
+      harness,
       model,
       status: "idle",
       statusChangedAt: now,

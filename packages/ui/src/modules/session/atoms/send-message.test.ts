@@ -19,6 +19,7 @@ const setup = async () => {
     started: false,
     workingFolderDeleted: false,
     title: "New session",
+    harness: "claude",
     model: "sonnet",
     status: "idle",
     statusChangedAt: at,

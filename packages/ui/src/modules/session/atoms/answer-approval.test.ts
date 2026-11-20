@@ -19,6 +19,7 @@ test("answering an approval stores the decision on its item and updates the sess
     started: true,
     workingFolderDeleted: false,
     title: "t",
+    harness: "claude",
     model: "sonnet",
     status: "waiting",
     statusChangedAt: at,

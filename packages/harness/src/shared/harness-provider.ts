@@ -1,3 +1,4 @@
+import type { Harness } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Context, Data, type Effect, type Scope, type Stream } from "effect"
 
@@ -48,7 +49,7 @@ export interface HarnessRun {
 export class HarnessProvider extends Context.Service<
   HarnessProvider,
   {
-    readonly id: "claude" | "codex" | "acp" | "scripted"
+    readonly id: Harness
     readonly start: (input: StartInput) => Effect.Effect<HarnessRun, HarnessError, Scope.Scope>
     readonly toolActivity: (call: ToolUse, result: ToolOutcome) => ToolActivity
   }

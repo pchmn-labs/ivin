@@ -11,6 +11,9 @@ export const SessionStatus = Schema.Literals([
 ])
 export type SessionStatus = typeof SessionStatus.Type
 
+export const Harness = Schema.Literals(["claude", "codex", "acp", "scripted"])
+export type Harness = typeof Harness.Type
+
 export const Session = Schema.Struct({
   id: Schema.String,
   projectPath: Schema.String,
@@ -22,6 +25,7 @@ export const Session = Schema.Struct({
   started: Schema.Boolean,
   workingFolderDeleted: Schema.Boolean,
   title: Schema.String,
+  harness: Harness,
   model: Schema.String,
   status: SessionStatus,
   statusChangedAt: Schema.DateTimeUtcFromMillis,

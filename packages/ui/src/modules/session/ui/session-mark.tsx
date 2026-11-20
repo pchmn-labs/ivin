@@ -1,12 +1,13 @@
 import type { SessionMarkProps } from "@ivin/plugin-api/ui"
-import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
+import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
+import { HARNESSES } from "../rules/harnesses.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import "./session-mark.css"
 
-export function SessionMark({ status }: SessionMarkProps) {
+export function SessionMark({ status, harness }: SessionMarkProps) {
   return (
     <span className="iv-session-mark" data-status={status}>
-      <ClaudeMark />
+      <HarnessMark mark={HARNESSES[harness].mark} />
       <span className="iv-session-mark__overlay" aria-hidden="true">
         {status === "waiting" && (
           <svg viewBox="0 0 12 12">
