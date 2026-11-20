@@ -33,7 +33,7 @@
 .iv-image-marker__image {
   width: 16px;
   height: 16px;
-  border-radius: 3px;
+  border-radius: var(--iv-radius-sm);
   overflow: hidden;
   background: var(--iv-bg-subtle);
 }

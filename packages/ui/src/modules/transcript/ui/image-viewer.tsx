@@ -9,6 +9,7 @@ import { draftImages } from "../../session/rules/draft.ts"
 import { type ImageViewerState, imageViewerAtom } from "../atoms/image-viewer.ts"
 import { sessionImagesOf } from "../atoms/list-images.ts"
 import { imageDataUrl } from "../rules/image-url.ts"
+import { withoutImageMarkers } from "../rules/message-parts.ts"
 import { ImageThumbnail } from "./image-thumbnail.tsx"
 import { StoredImage } from "./stored-image.tsx"
 import "./image-viewer.css"
@@ -22,9 +23,8 @@ interface Entry {
   readonly src?: string
 }
 
-const MARKERS = /\[Image #\d+\]/g
 const quote = (text: string) =>
-  `From your message: “${text.replace(MARKERS, "").replace(/\s+/g, " ").trim()}”`
+  `From your message: “${withoutImageMarkers(text).replace(/\s+/g, " ").trim()}”`
 
 function useEntries({ sessionId, images }: ImageViewerState): ReadonlyArray<Entry> {
   const draft = useAtomValue(draftOf(sessionId))
@@ -61,7 +61,6 @@ function Viewer({ state, onStep }: { state: ImageViewerState; onStep: (id: strin
     const next = entries[index + by]
     if (next) onStep(next.id)
   }
-  // Arrows move inside the view, so they are not keybindings (ADR-0003).
   const stepRef = useRef(step)
   stepRef.current = step
   useEffect(() => {
@@ -122,6 +121,7 @@ function Viewer({ state, onStep }: { state: ImageViewerState; onStep: (id: strin
               number={entry.number}
               size="sm"
               current={entry.id === state.imageId}
+              lazy
               onOpen={() => onStep(entry.id)}
               {...(entry.src !== undefined && { src: entry.src })}
             />
@@ -136,10 +136,32 @@ function Viewer({ state, onStep }: { state: ImageViewerState; onStep: (id: strin
 export function ImageViewer({ sessionId }: { sessionId: string }) {
   const [state, setState] = useAtom(imageViewerAtom)
   const open = state?.sessionId === sessionId
+  const opener = useRef<{ imageId: string; element: HTMLElement | null } | null>(null)
+  const focusOnClose = useRef<HTMLElement | null>(null)
+  if (!open) opener.current = null
+  else if (opener.current === null) {
+    const focused = document.activeElement
+    opener.current = {
+      imageId: state.imageId,
+      element: focused instanceof HTMLElement ? focused : null,
+    }
+  }
+
+  // Back to what opened the view, or to the thumbnail of the image it closes on.
+  useEffect(() => {
+    if (!open || !opener.current) return
+    const list = state.images === "draft" ? ".iv-draft-images" : ".iv-message-images"
+    focusOnClose.current =
+      state.imageId === opener.current.imageId
+        ? opener.current.element
+        : (document.querySelector<HTMLElement>(`${list} [data-image-id="${state.imageId}"]`) ??
+          opener.current.element)
+  })
+
   return (
     <BaseDialog.Root open={open} onOpenChange={(next) => !next && setState(null)}>
       <BaseDialog.Portal>
-        <BaseDialog.Popup className="iv-image-viewer" aria-label="Images">
+        <BaseDialog.Popup className="iv-image-viewer" aria-label="Images" finalFocus={focusOnClose}>
           {open && state && (
             <Viewer state={state} onStep={(imageId) => setState({ ...state, imageId })} />
           )}

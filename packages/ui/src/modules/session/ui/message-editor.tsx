@@ -13,7 +13,6 @@ export interface MessageEditorHandle {
 
 export interface MessageEditorProps {
   readonly ref?: Ref<MessageEditorHandle>
-  // The text with an `[Image #N]` marker where each image goes.
   readonly value: string
   // Every image a marker of `value` may name.
   readonly images: ReadonlyArray<DraftImage>
@@ -43,6 +42,8 @@ const markerElement = (image: DraftImage) => {
   marker.append(frame, `#${image.number}`)
   return marker
 }
+
+export const carriesFiles = (data: DataTransfer) => data.types.includes("Files")
 
 const markerOf = (target: EventTarget | null) =>
   target instanceof Element ? target.closest<HTMLElement>(".iv-image-marker") : null
@@ -240,10 +241,10 @@ export function MessageEditor({
           else document.execCommand("insertText", false, event.clipboardData.getData("text/plain"))
         }}
         onDragOver={(event) => {
-          if (event.dataTransfer.types.includes("Files")) event.preventDefault()
+          if (carriesFiles(event.dataTransfer)) event.preventDefault()
         }}
         onDrop={(event) => {
-          if (!event.dataTransfer.types.includes("Files")) return
+          if (!carriesFiles(event.dataTransfer)) return
           event.preventDefault()
           event.stopPropagation()
           // The image lands where the caret would go under the pointer.

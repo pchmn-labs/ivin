@@ -1,4 +1,3 @@
-// The file's bytes as base64, the form images travel in over the RPC.
 export const readImageFile = (file: Blob): Promise<string> =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()

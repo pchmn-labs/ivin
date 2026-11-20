@@ -17,7 +17,7 @@ import {
 } from "../rules/draft.ts"
 import { type ImageRefusal, imageRefusal, refusalMessage } from "../rules/image-refusal.ts"
 import { DraftImages } from "./draft-images.tsx"
-import { type MessageEditorHandle, MessageEditor } from "./message-editor.tsx"
+import { type MessageEditorHandle, MessageEditor, carriesFiles } from "./message-editor.tsx"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
@@ -166,17 +166,17 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         className="iv-composer__surface"
         data-dragging={dragging > 0 || undefined}
         onDragEnter={(event) => {
-          if (event.dataTransfer.types.includes("Files")) setDragging((n) => n + 1)
+          if (carriesFiles(event.dataTransfer)) setDragging((n) => n + 1)
         }}
         onDragLeave={(event) => {
-          if (event.dataTransfer.types.includes("Files")) setDragging((n) => Math.max(0, n - 1))
+          if (carriesFiles(event.dataTransfer)) setDragging((n) => Math.max(0, n - 1))
         }}
         onDragOver={(event) => {
-          if (event.dataTransfer.types.includes("Files")) event.preventDefault()
+          if (carriesFiles(event.dataTransfer)) event.preventDefault()
         }}
         onDropCapture={() => setDragging(0)}
         onDrop={(event) => {
-          if (!event.dataTransfer.types.includes("Files")) return
+          if (!carriesFiles(event.dataTransfer)) return
           event.preventDefault()
           void addImageFiles([...event.dataTransfer.files], null)
         }}

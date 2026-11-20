@@ -8,6 +8,8 @@ const MARKER = /\[Image #(\d+)\]/g
 
 export const imageMarker = (number: number) => `[Image #${number}]`
 
+export const withoutImageMarkers = (text: string) => text.replace(MARKER, "")
+
 export const messageParts = <I extends ImageRef>(
   text: string,
   images: ReadonlyArray<I>,

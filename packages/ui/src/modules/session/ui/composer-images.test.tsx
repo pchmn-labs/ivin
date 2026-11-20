@@ -200,10 +200,60 @@ test("a sent image opens full screen; the arrows move through the session's imag
   await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #3 · 3 of 3")
   await userEvent.keyboard("{ArrowLeft}")
   await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #2 · 2 of 3")
+  await userEvent.keyboard("{ArrowLeft}")
 
   await userEvent.keyboard("{Escape}")
   await expect.element(viewer).not.toBeInTheDocument()
   await expect.element(thumbnail).toHaveFocus()
+})
+
+test("closing the full-screen view on another image puts the focus on that image's thumbnail", async () => {
+  const server = makeFakeServer()
+  addSession(server, "s1", 3)
+  seedTranscript(server)
+  await render(view(server, "s1"))
+
+  await page.getByRole("button", { name: "View image #1" }).first().click()
+  await expect
+    .element(page.getByRole("dialog").getByRole("heading"))
+    .toHaveTextContent("Image #1 · 1 of 3")
+  await userEvent.keyboard("{ArrowRight}")
+  await expect
+    .element(page.getByRole("dialog").getByRole("heading"))
+    .toHaveTextContent("Image #2 · 2 of 3")
+  await userEvent.keyboard("{Escape}")
+
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
+  await expect.element(page.getByRole("button", { name: "View image #2" }).first()).toHaveFocus()
+})
+
+test("the full-screen view draws the images of its strip only as they scroll into view", async () => {
+  const server = makeFakeServer()
+  addSession(server, "s1", 80)
+  const numbers = Array.from({ length: 80 }, (_, i) => i + 1)
+  server.seedItems("s1", [
+    {
+      id: "m1",
+      sessionId: "s1",
+      position: 0,
+      type: "message",
+      role: "user",
+      text: numbers.map((n) => `[Image #${n}]`).join(" "),
+      images: numbers.map((number) => ({ id: `img-${number}`, number, mediaType: "image/png" })),
+    },
+  ])
+  for (const n of numbers) server.seedImage(`img-${n}`, { mediaType: "image/png", base64: PIXEL })
+  await render(view(server, "s1"))
+
+  await page.getByRole("button", { name: "View image #1" }).first().click()
+  await expect
+    .element(page.getByRole("dialog").getByRole("heading"))
+    .toHaveTextContent("Image #1 · 1 of 80")
+  await new Promise((resolve) => setTimeout(resolve, 300))
+
+  const strip = page.getByRole("dialog").element().querySelector(".iv-image-viewer__strip")!
+  expect(strip.querySelectorAll("button")).toHaveLength(80)
+  expect(strip.querySelectorAll("img").length).toBeLessThan(40)
 })
 
 test("a marker in a sent message opens its image full screen", async () => {
@@ -227,4 +277,16 @@ test("a marker in the composer opens the draft's images full screen", async () =
   const viewer = page.getByRole("dialog")
   await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #2 · 2 of 2")
   await expect.element(viewer.getByText("two.png · Not sent yet")).toBeVisible()
+})
+
+test("hovering a marker in a sent message shows its image in a preview card", async () => {
+  const server = makeFakeServer()
+  addSession(server, "s1", 3)
+  seedTranscript(server)
+  await render(view(server, "s1"))
+
+  await page.getByRole("button", { name: "View image #3" }).last().hover()
+  await expect.element(page.getByText("Image #3", { exact: true })).toBeVisible()
+  await page.getByText("a test fails", { exact: false }).hover()
+  await expect.element(page.getByText("Image #3", { exact: true })).not.toBeInTheDocument()
 })

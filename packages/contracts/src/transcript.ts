@@ -9,8 +9,7 @@ export const ImageMediaType = Schema.Literals([
 ])
 export type ImageMediaType = typeof ImageMediaType.Type
 
-// The bytes are fetched apart with `transcript.getImage`, so a page of items stays small.
-// `number` is unique in the session; the message's text holds `[Image #<number>]` where the image goes.
+// `number` is unique in the session.
 export const ImageRef = Schema.Struct({
   id: Schema.String,
   number: Schema.Int,
