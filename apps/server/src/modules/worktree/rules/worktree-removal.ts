@@ -2,16 +2,15 @@ export interface SessionUse {
   readonly workingFolder: string
   readonly inWorktree: boolean
   readonly workingFolderDeleted: boolean
-  // Its tab just closed.
-  readonly closed: boolean
+  readonly tabJustClosed: boolean
   // It has an open tab or a running agent.
   readonly inUse: boolean
 }
 
 export interface RemovalCandidate {
   readonly path: string
-  // `agent`: a worktree under `.worktrees/` that no closed session was in.
-  readonly origin: "session" | "agent"
+  // `sweep`: a worktree under `.worktrees/` that no session whose tab just closed was in.
+  readonly origin: "closedSession" | "sweep"
 }
 
 export interface WorktreeState {
@@ -24,31 +23,36 @@ export interface WorktreeState {
 
 const isInside = (folder: string, path: string) => folder === path || folder.startsWith(`${path}/`)
 
-// `worktrees` are the project's linked worktrees, so the checkout is never among them.
+export const isInUse = (path: string, sessions: readonly SessionUse[]) =>
+  sessions.some((session) => session.inUse && isInside(session.workingFolder, path))
+
+// Skips the checkout even when `worktrees` lists it.
 export const removalCandidates = (
   projectPath: string,
   worktrees: readonly { readonly path: string; readonly branch: string | null }[],
   sessions: readonly SessionUse[],
 ): RemovalCandidate[] => {
-  const used = (path: string) =>
-    sessions.some((session) => session.inUse && isInside(session.workingFolder, path))
   const candidates = new Map<string, RemovalCandidate>()
-  const listed = new Set(worktrees.map((worktree) => worktree.path))
+  // A detached HEAD's commits may be reachable from nothing else.
+  const removable = new Set(
+    worktrees
+      .filter(({ path, branch }) => branch !== null && path !== projectPath)
+      .filter(({ path }) => !isInUse(path, sessions))
+      .map(({ path }) => path),
+  )
   for (const session of sessions) {
     const path = session.workingFolder
-    if (!session.closed || !session.inWorktree || session.workingFolderDeleted) continue
-    if (path === projectPath || !listed.has(path) || used(path)) continue
-    candidates.set(path, { path, origin: "session" })
+    if (!session.tabJustClosed || !session.inWorktree || session.workingFolderDeleted) continue
+    if (removable.has(path)) candidates.set(path, { path, origin: "closedSession" })
   }
-  for (const { path, branch } of worktrees) {
-    if (candidates.has(path) || branch === null || used(path)) continue
-    if (isInside(path, `${projectPath}/.worktrees`) && path !== projectPath) {
-      candidates.set(path, { path, origin: "agent" })
+  for (const path of removable) {
+    if (!candidates.has(path) && isInside(path, `${projectPath}/.worktrees`)) {
+      candidates.set(path, { path, origin: "sweep" })
     }
   }
   return [...candidates.values()]
 }
 
-// An agent's worktree with no commit yet may hold work about to start.
+// A swept worktree with no commit yet may hold work an agent is about to start.
 export const isRemovable = (origin: RemovalCandidate["origin"], state: WorktreeState) =>
-  state.clean && state.merged && (origin === "session" || state.hasCommits)
+  state.clean && state.merged && (origin === "closedSession" || state.hasCommits)

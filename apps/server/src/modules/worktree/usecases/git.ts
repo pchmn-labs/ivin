@@ -30,7 +30,6 @@ export class Git extends Context.Service<
     readonly currentBranch: (folder: string) => Effect.Effect<string | null>
     // Tracked files only: untracked ones survive a checkout unless git names them.
     readonly hasLocalChanges: (folder: string) => Effect.Effect<boolean, GitError>
-    // Untracked files count: a worktree removed with them would lose them.
     readonly isClean: (folder: string) => Effect.Effect<boolean, GitError>
     // Squash merges included: a squashed branch is not an ancestor of `target`.
     readonly isMergedInto: (

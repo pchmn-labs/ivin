@@ -8,6 +8,7 @@ import {
   parseWorktreeList,
   underOpenedPath,
 } from "../rules/git-output.ts"
+import { hasOwnCommits, isSquashMerged, mergeAddsNothing } from "../rules/merge-state.ts"
 import { Git, GitError } from "../usecases/git.ts"
 
 interface ExecFailure {
@@ -40,37 +41,30 @@ const orNull = <A>(effect: Effect.Effect<A, GitError>) =>
 const patchIds = (cwd: string, patches: string) =>
   git(cwd, ["patch-id", "--stable"], `${patches}\n`).pipe(Effect.map(parsePatchIds))
 
-// One commit of `base..target` carries the branch's whole diff, even if later commits edited its lines.
 const squashMerged = (folder: string, base: string, target: string) =>
   Effect.gen(function* () {
-    const diff = yield* git(folder, ["diff", "--no-color", "--no-ext-diff", base, "HEAD"])
-    const [branchId] = yield* patchIds(folder, diff)
-    if (branchId === undefined) return false
-    const log = yield* git(folder, [
-      "log",
-      "-p",
-      "--no-color",
-      "--no-ext-diff",
-      "--no-merges",
-      `${base}..${target}`,
-    ])
-    return (yield* patchIds(folder, log)).includes(branchId)
+    const diffArgs = ["--no-color", "--no-ext-diff", "--binary"]
+    const diff = yield* git(folder, ["diff", ...diffArgs, base, "HEAD"])
+    const log = yield* git(folder, ["log", "-p", ...diffArgs, "--no-merges", `${base}..${target}`])
+    return isSquashMerged(yield* patchIds(folder, diff), yield* patchIds(folder, log))
   })
 
 const isMergedInto = (folder: string, target: string) =>
   Effect.gen(function* () {
     const head = (yield* git(folder, ["rev-parse", "HEAD"])).trim()
     const base = (yield* git(folder, ["merge-base", "HEAD", target])).trim()
-    // A branch landed by a merge commit has its tip off `target`'s first-parent line.
-    const hasCommits =
-      head !== base ||
-      !(yield* git(folder, ["rev-list", "--first-parent", target, "--not", "HEAD^@"]))
-        .split("\n")
-        .includes(head)
+    const firstParents = yield* git(folder, [
+      "rev-list",
+      "--first-parent",
+      target,
+      "--not",
+      "HEAD^@",
+    ])
+    const hasCommits = hasOwnCommits(head, base, firstParents.split("\n"))
     const targetTree = (yield* git(folder, ["rev-parse", `${target}^{tree}`])).trim()
-    // A conflict fails merge-tree; the patch-id match still answers.
-    const mergedTree = yield* orNull(git(folder, ["merge-tree", "--write-tree", target, "HEAD"]))
-    if (mergedTree?.split("\n")[0] === targetTree) return { merged: true, hasCommits }
+    // merge-tree fails on a conflict.
+    const mergeTree = yield* orNull(git(folder, ["merge-tree", "--write-tree", target, "HEAD"]))
+    if (mergeAddsNothing(mergeTree, targetTree)) return { merged: true, hasCommits }
     return { merged: hasCommits && (yield* squashMerged(folder, base, target)), hasCommits }
   })
 
