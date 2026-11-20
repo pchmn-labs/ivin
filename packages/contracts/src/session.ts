@@ -20,7 +20,6 @@ export const Session = Schema.Struct({
   branch: Schema.NullOr(Schema.String),
   // The first user message is stored.
   started: Schema.Boolean,
-  // Messages are refused until the user picks a new working folder.
   workingFolderDeleted: Schema.Boolean,
   title: Schema.String,
   model: Schema.String,
@@ -133,7 +132,6 @@ export const SessionRpcs = RpcGroup.make(
     success: Session,
     error: Schema.Union([SessionNotFound, WorktreeNotCreated, WorkingFolderDeleted]),
   }),
-  // Ends the agent's process, so the next message resumes the conversation in the new folder.
   Rpc.make("session.pickWorkingFolder", {
     payload: { sessionId: Schema.String, workingFolder: WorkingFolderChoice },
     success: Session,

@@ -174,7 +174,9 @@ test("a worktree that git cannot create stores git's error, and no run starts", 
   const { error, session, items } = await withServer(starts, (client) =>
     Effect.gen(function* () {
       const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
-      git(project, "branch", `ivin/${created.id.slice(0, 8)}`)
+      const target = join(project, ".worktrees", `ivin-${created.id.slice(0, 8)}`)
+      execFileSync("mkdir", ["-p", target])
+      writeFileSync(join(target, "in-the-way.txt"), "")
       const error = yield* Effect.flip(sendFirst(client, created.id, { kind: "new_worktree" }))
       const [session] = yield* client["session.list"]({ projectPath: project })
       return { error, session, items: yield* itemsOf(client, created.id) }
@@ -626,5 +628,47 @@ test("picking a folder that is not one of the project's worktrees keeps the sess
   )
 
   expect(error).toMatchObject({ _tag: "WorktreeNotCreated", reason: "not_a_worktree" })
+  expect(session?.workingFolderDeleted).toBe(true)
+})
+
+test("a session whose own new worktree was deleted gets another new worktree, on a branch of its own", async () => {
+  const starts: StartInput[] = []
+  const { sessionId, picked, status } = await withServer(starts, (client) =>
+    Effect.gen(function* () {
+      yield* client["project.open"]({ path: project })
+      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const first = yield* sendFirst(client, created.id, { kind: "new_worktree" })
+      rmSync(first.workingFolder, { recursive: true, force: true })
+      yield* client["tab.open"]({ sessionId: created.id })
+      const picked = yield* client["session.pickWorkingFolder"]({
+        sessionId: created.id,
+        workingFolder: { kind: "new_worktree" },
+      })
+      return {
+        sessionId: created.id,
+        picked,
+        status: (yield* sessionOf(client, created.id))?.status,
+      }
+    }),
+  )
+
+  const branch = `ivin/${sessionId.slice(0, 8)}-2`
+  expect(picked).toMatchObject({ branch, inWorktree: true, workingFolderDeleted: false })
+  expect(existsSync(picked.workingFolder)).toBe(true)
+  expect(status).toBe("idle")
+})
+
+test("a session whose worktree was deleted while the server was down is marked when its project's tabs are listed", async () => {
+  const path = addWorktree("gone")
+  const session = await withServer([], (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* startInWorktree(client, path)
+      yield* client["tab.open"]({ sessionId })
+      git(project, "worktree", "remove", "--force", path)
+      yield* client["tab.list"]({ projectPath: project })
+      return yield* sessionOf(client, sessionId)
+    }),
+  )
+
   expect(session?.workingFolderDeleted).toBe(true)
 })

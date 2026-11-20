@@ -1,6 +1,6 @@
 import { Data, Effect } from "effect"
 import { WORKTREE_FETCH_REUSE_MS } from "../rules/fetch-reuse.ts"
-import { generatedBranch, worktreePath } from "../rules/worktree-branch.ts"
+import { freeGeneratedBranch, worktreePath } from "../rules/worktree-branch.ts"
 import { Git } from "./git.ts"
 import { newWorktreeBase } from "./new-worktree-base.ts"
 import { OriginFetch } from "./origin-fetch.ts"
@@ -15,7 +15,11 @@ export const createWorktree = (repo: string, sessionId: string) =>
   Effect.gen(function* () {
     const git = yield* Git
     const origin = yield* OriginFetch
-    const branch = generatedBranch(sessionId)
+    // A session that already had a worktree may have left its branch, or a deleted folder git still lists.
+    const branch = freeGeneratedBranch(repo, sessionId, {
+      branches: (yield* git.listBranches(repo)).local,
+      paths: (yield* git.listWorktrees(repo)).map((entry) => entry.path),
+    })
     const path = worktreePath(repo, branch)
     if (yield* git.hasRemote(repo, "origin"))
       yield* origin.fetch(repo, { reuseMs: WORKTREE_FETCH_REUSE_MS, afterFailure: "retry" })

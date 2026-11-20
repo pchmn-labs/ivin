@@ -1,5 +1,5 @@
 import { SessionNotFound, type WorkingFolderChoice } from "@ivin/contracts/session"
-import { Effect } from "effect"
+import { DateTime, Effect } from "effect"
 import { moveToCheckout, moveToExistingWorktree, moveToNewWorktree } from "./move-working-folder.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionRuns } from "./session-runs.ts"
@@ -16,6 +16,8 @@ export const pickWorkingFolder = (sessionId: string, workingFolder: WorkingFolde
     else if (workingFolder.kind === "existing_worktree")
       yield* moveToExistingWorktree(session, workingFolder.path, "pick")
     else yield* moveToCheckout(session, "pick")
+    // No run follows the pick to end the "preparing worktree" status a new worktree set.
+    yield* store.setStatus(sessionId, "idle", yield* DateTime.now)
     yield* (yield* SessionFeed).publish(sessionId)
     return (yield* store.findById(sessionId)) ?? session
   })

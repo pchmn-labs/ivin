@@ -144,7 +144,7 @@ export function PickWorkingFolder({ session }: { session: Session }) {
         className="iv-pick-working-folder__options"
         onKeyDown={(event) => {
           if (event.key !== "Enter") return
-          // Keeps Enter from reaching the composer.send keybinding as well.
+          // A radio does not submit its form on Enter.
           event.preventDefault()
           submit()
         }}
