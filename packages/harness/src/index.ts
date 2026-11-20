@@ -12,6 +12,7 @@ export {
 export {
   demoAnswer,
   demoApprovalScript,
+  demoShotScript,
   demoScript,
   demoUsage,
 } from "./modules/scripted/adapters/demo-script.ts"

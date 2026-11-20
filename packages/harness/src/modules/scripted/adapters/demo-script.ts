@@ -125,6 +125,11 @@ export const demoApprovalTurn: readonly HarnessOutput[] = [
 
 export const demoApprovalScript: readonly (readonly HarnessOutput[])[] = [
   demoTurn,
+  demoApprovalTurn,
+]
+
+export const demoShotScript: readonly (readonly HarnessOutput[])[] = [
+  demoTurn,
   demoWorkTurn,
   demoApprovalTurn,
 ]

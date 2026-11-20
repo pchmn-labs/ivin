@@ -14,7 +14,7 @@ mkdirSync(outDir, { recursive: true })
 
 const app = await electron.launch({
   args: [join(desktopDir, "dist/main.js"), `--user-data-dir=${makeTempDir("user-data")}`],
-  env: { ...process.env, IVIN_BACKGROUND: "1", IVIN_HARNESS: "scripted-approval" },
+  env: { ...process.env, IVIN_BACKGROUND: "1", IVIN_HARNESS: "scripted-shot" },
 })
 
 // A repository with a linked worktree, a second branch and an origin, so the working folder menu
