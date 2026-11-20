@@ -1,6 +1,7 @@
 import { expect, test } from "vitest"
 import {
   answerApprovalFailure,
+  checkoutFailure,
   createSessionFailure,
   sendMessageFailure,
 } from "./failure-message.ts"
@@ -62,4 +63,41 @@ test("a fetch of origin that timed out says to check the connection", () => {
 test("an origin with no default branch cannot be retried", () => {
   const failure = sendMessageFailure(worktreeNotCreated("no_default_branch"))
   expect(failure.retryable).toBe(false)
+})
+
+test("git's refusal to switch or pull carries its message, and says when local changes are the cause", () => {
+  const blocked = {
+    _tag: "GitRefused",
+    sessionId: "s1",
+    message: "error: …",
+    blockedByLocalChanges: true,
+  }
+  expect(checkoutFailure(blocked, "pull")).toMatchObject({
+    gitMessage: "error: …",
+    blockedByLocalChanges: true,
+    retryable: true,
+  })
+  expect(checkoutFailure(blocked, "pull").text).toMatch(
+    /^The branch was not pulled\. Local changes/,
+  )
+  const diverged = { ...blocked, blockedByLocalChanges: false }
+  expect(checkoutFailure(diverged, "switch").text).toBe(
+    "The checkout was not switched to the default branch. Fix what git reports, then retry.",
+  )
+})
+
+test("a switch after the first message, or for a removed session, offers no retry", () => {
+  expect(
+    checkoutFailure({ _tag: "SessionAlreadyStarted", sessionId: "s1" }, "switch"),
+  ).toMatchObject({
+    retryable: false,
+    gitMessage: null,
+  })
+  expect(checkoutFailure(sessionNotFound, "pull").retryable).toBe(false)
+  expect(checkoutFailure(unknown, "pull")).toEqual({
+    text: "The branch was not pulled.",
+    retryable: true,
+    gitMessage: null,
+    blockedByLocalChanges: false,
+  })
 })

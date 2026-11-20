@@ -6,9 +6,15 @@ import type { Session, SessionStatus, WorkingFolderChoice } from "@ivin/contract
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
-import type { Worktree } from "@ivin/contracts/worktree"
+import type { CheckoutStatus, Worktree } from "@ivin/contracts/worktree"
 import { ProjectNotOpen } from "@ivin/contracts/project"
-import { SessionNotFound, WorktreeNotCreated } from "@ivin/contracts/session"
+import {
+  CheckoutHasLocalChanges,
+  GitRefused,
+  type LocalChangesChoice,
+  SessionNotFound,
+  WorktreeNotCreated,
+} from "@ivin/contracts/session"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -25,6 +31,9 @@ export interface FakeServer {
   readonly sentMessages: ReadonlyArray<{ readonly workingFolder?: WorkingFolderChoice }>
   // What `worktree.list` returns, for every project.
   readonly worktrees: Array<Worktree>
+  // The project checkout as `worktree.checkoutStatus` reports it; switching and pulling change it.
+  readonly checkout: FakeCheckout
+  readonly localChangesChoices: ReadonlyArray<LocalChangesChoice | "stash before pull">
   // Makes every sendMessage fail as git would, storing this message; null sends again.
   readonly failWorktreeWith: (gitMessage: string | null) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
@@ -43,6 +52,12 @@ export interface FakeServer {
   readonly failNextCall: (rpc: string) => void
   // Streams the user's settings to `setting.watch`, as after a change to the file.
   readonly setUserSettings: (state: UserSettings) => void
+}
+
+export interface FakeCheckout extends CheckoutStatus {
+  dirty: boolean
+  // Git's refusal for the next pull while the checkout is dirty; null pulls.
+  pullRefusal: string | null
 }
 
 export const makeFakeServer = (options: { readonly project?: Project } = {}): FakeServer => {
@@ -68,6 +83,21 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   const sentMessages: Array<{ readonly workingFolder?: WorkingFolderChoice }> = []
   let worktreeFailure: string | null = null
   const worktrees: Array<Worktree> = []
+  const checkout: FakeCheckout = {
+    branch: "main",
+    defaultBranch: "main",
+    defaultBranchInWorktree: false,
+    behind: 0,
+    dirty: false,
+    pullRefusal: null,
+  }
+  const localChangesChoices: Array<LocalChangesChoice | "stash before pull"> = []
+  const checkoutStatus = (): CheckoutStatus => ({
+    branch: checkout.branch,
+    defaultBranch: checkout.defaultBranch,
+    defaultBranchInWorktree: checkout.defaultBranchInWorktree,
+    behind: checkout.behind,
+  })
 
   const openProjects = (): OpenProjects => ({ projects: [...projects], selectedPath })
   const tabsOf = (projectPath: string) => tabs.filter((tab) => tab.projectPath === projectPath)
@@ -344,6 +374,41 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
       ),
     "worktree.list": () => Effect.sync(() => [...worktrees]),
     "worktree.newBase": () => Effect.succeed("origin/main"),
+    "worktree.checkoutStatus": () => Effect.sync(checkoutStatus),
+    "session.switchToDefaultBranch": ({
+      sessionId,
+      localChanges,
+    }: {
+      sessionId: string
+      localChanges?: LocalChangesChoice
+    }): Effect.Effect<Session, CheckoutHasLocalChanges> =>
+      checkout.dirty && !localChanges
+        ? Effect.fail(new CheckoutHasLocalChanges({ sessionId }))
+        : Effect.sync(() => {
+            if (localChanges) localChangesChoices.push(localChanges)
+            Object.assign(checkout, { branch: checkout.defaultBranch, behind: 0, dirty: false })
+            return saveSession({ ...sessions.get(sessionId)!, branch: checkout.branch })
+          }),
+    "session.fastForward": ({
+      sessionId,
+      stash,
+    }: {
+      sessionId: string
+      stash?: boolean
+    }): Effect.Effect<Session, GitRefused> =>
+      checkout.dirty && checkout.pullRefusal !== null && stash !== true
+        ? Effect.fail(
+            new GitRefused({
+              sessionId,
+              message: checkout.pullRefusal,
+              blockedByLocalChanges: true,
+            }),
+          )
+        : Effect.sync(() => {
+            if (stash === true) localChangesChoices.push("stash before pull")
+            Object.assign(checkout, { behind: 0, dirty: stash === true ? false : checkout.dirty })
+            return sessions.get(sessionId)!
+          }),
     "session.answerApproval": (input: { sessionId: string; requestId: string; allow: boolean }) =>
       Effect.sync(() => {
         const items = itemsOf(input.sessionId)
@@ -403,6 +468,8 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
     errorReports,
     sentMessages,
     worktrees,
+    checkout,
+    localChangesChoices,
     failWorktreeWith: (gitMessage) => void (worktreeFailure = gitMessage),
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),

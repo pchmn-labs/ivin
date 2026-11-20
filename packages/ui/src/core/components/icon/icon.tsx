@@ -1,6 +1,8 @@
 import {
+  ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowsLeftRight,
   ArrowUp,
   Brain,
   CaretDown,
@@ -56,8 +58,10 @@ const icons = {
   wrench: Wrench,
   user: User,
   sparkles: Sparkle,
+  "arrow-down": ArrowDown,
   "arrow-left": ArrowLeft,
   "arrow-right": ArrowRight,
+  "arrows-left-right": ArrowsLeftRight,
   "panel-left": SidebarSimple,
   "new-session": NotePencil,
 } satisfies Record<IconName, PhosphorIcon>
