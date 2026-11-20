@@ -20,7 +20,7 @@
       }
     ],
     "function-disallowed-list": [
-      ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch", "color"],
+      ["/^(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|device-cmyk)$/i"],
       {
         "message": "Hard-coded colour function: use a --iv- colour token from core/theme/tokens.css, or color-mix() on one (docs/conventions/ui.md#colour)"
       }
@@ -28,7 +28,7 @@
     "declaration-property-value-disallowed-list": [
       {
         "/.*/": [
-          "/var\\(\\s*--(?!iv-|available-height(?![\\w-])|available-width(?![\\w-])|transform-origin(?![\\w-]))/"
+          "/[vV][aA][rR]\\(\\s*--(?!iv-|available-height(?![\\w-])|available-width(?![\\w-])|transform-origin(?![\\w-]))/"
         ]
       },
       {

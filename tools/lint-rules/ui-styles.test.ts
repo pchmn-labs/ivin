@@ -84,8 +84,17 @@ const lintTsx = (cases: Case[]) => {
 
 const problemsOf = (file: string, what: string) => problems.get(key(file, what))!
 
+const hexColour: Case = [
+  `${ui}/modules/session/ui/a.css`,
+  "a hex colour",
+  `.a {\n  color: #d97757;\n}\n`,
+]
+
 const cssForbidden: Case[] = [
-  [`${ui}/modules/session/ui/a.css`, "a hex colour", `.a {\n  color: #d97757;\n}\n`],
+  hexColour,
+  [`${ui}/modules/session/ui/a.css`, "an upper-case RGB()", `.a {\n  color: RGB(0 0 0);\n}\n`],
+  [`${ui}/modules/session/ui/a.css`, "device-cmyk()", `.a {\n  color: device-cmyk(0 0 0 1);\n}\n`],
+  [`${ui}/modules/session/ui/a.css`, "an upper-case VAR()", `.a {\n  width: VAR(--width);\n}\n`],
   [`${ui}/modules/session/ui/a.css`, "a named colour", `.a {\n  color: red;\n}\n`],
   [`${ui}/modules/session/ui/a.css`, "rgb()", `.a {\n  color: rgb(0 0 0 / 50%);\n}\n`],
   [`${ui}/modules/session/ui/a.css`, "hsl()", `.a {\n  color: hsl(0 0% 0%);\n}\n`],
@@ -150,6 +159,12 @@ const cssAllowed: Case[] = [
   ],
 ]
 
+const nativeButton: Case = [
+  `${ui}/modules/session/ui/a.tsx`,
+  "a native <button>",
+  `export const A = () => (\n  <button type="button" />\n)\n`,
+]
+
 const tsxForbidden: Case[] = [
   [
     `${ui}/modules/session/ui/a.tsx`,
@@ -161,11 +176,7 @@ const tsxForbidden: Case[] = [
     "a style prop",
     `export const A = () => (\n  <div style={{ height: 300 }} />\n)\n`,
   ],
-  [
-    `${ui}/modules/session/ui/a.tsx`,
-    "a native <button>",
-    `export const A = () => (\n  <button type="button" />\n)\n`,
-  ],
+  nativeButton,
   [
     `${ui}/modules/session/ui/a.tsx`,
     "a native <input>",
@@ -205,16 +216,22 @@ const tsxAllowed: Case[] = [
     "a native <button>, as a test file",
     `export const A = () => (\n  <button type="button" />\n)\n`,
   ],
-  [
-    `${ui}/modules/tab/ui/tab-bar.tsx`,
-    "a native <button>, as a tab with no core component",
-    `export const A = () => (\n  <button type="button" role="tab" />\n)\n`,
-  ],
-  [
-    `${ui}/modules/session/ui/pick-working-folder.tsx`,
-    "a native radio <input>, as a choice row with no core component",
-    `export const A = () => (\n  <input type="radio" />\n)\n`,
-  ],
+  ...[
+    "project/ui/project-rail.tsx",
+    "session/ui/branch-picker.tsx",
+    "session/ui/checkout-sync.tsx",
+    "session/ui/draft-images.tsx",
+    "session/ui/pick-working-folder.tsx",
+    "session/ui/run-options-menu.tsx",
+    "session/ui/working-folder-picker.tsx",
+    "tab/ui/tab-bar.tsx",
+    "transcript/ui/image-marker.tsx",
+    "transcript/ui/image-thumbnail.tsx",
+  ].map((file): Case => [
+    `${ui}/modules/${file}`,
+    "a native control, as a control no core component draws",
+    `export const A = () => (\n  <button type="button"><input type="radio" /></button>\n)\n`,
+  ]),
 ]
 
 beforeAll(async () => {
@@ -235,7 +252,7 @@ describe("UI styles in CSS", () => {
   })
 
   test("a failure names the rule, the line and the token to use", () => {
-    const [found] = problemsOf(cssForbidden[0]![0], cssForbidden[0]![1])
+    const [found] = problemsOf(hexColour[0], hexColour[1])
     expect(found).toEqual({
       rule: "color-no-hex",
       line: 2,
@@ -258,7 +275,7 @@ describe("UI styles in TSX", () => {
   })
 
   test("a native control names the rule, the line and the component to use", () => {
-    const [found] = problemsOf(tsxForbidden[2]![0], tsxForbidden[2]![1])
+    const [found] = problemsOf(nativeButton[0], nativeButton[1])
     expect(found).toEqual({
       rule: "react(forbid-elements)",
       line: 2,

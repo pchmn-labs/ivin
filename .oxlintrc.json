@@ -190,7 +190,7 @@
               },
               {
                 "element": "input",
-                "message": "use TextField from core/components/text-field instead of a native <input>, see docs/conventions/ui.md#styles"
+                "message": "use TextField from core/components/text-field, or OptionList from core/components/option-list for a choice, instead of a native <input>, see docs/conventions/ui.md#styles"
               },
               {
                 "element": "select",
@@ -207,10 +207,10 @@
     },
     {
       "files": ["packages/ui/src/core/components/resize-handle/**"],
+      "plugins": ["react"],
       "rules": {
         "react/forbid-dom-props": "off"
-      },
-      "plugins": ["react"]
+      }
     },
     {
       "files": [
@@ -225,18 +225,18 @@
         "packages/ui/src/modules/transcript/ui/image-marker.tsx",
         "packages/ui/src/modules/transcript/ui/image-thumbnail.tsx"
       ],
+      "plugins": ["react"],
       "rules": {
         "react/forbid-elements": "off"
-      },
-      "plugins": ["react"]
+      }
     },
     {
       "files": ["packages/ui/src/**/*.test.tsx"],
+      "plugins": ["react"],
       "rules": {
         "react/forbid-dom-props": "off",
         "react/forbid-elements": "off"
-      },
-      "plugins": ["react"]
+      }
     }
   ]
 }
