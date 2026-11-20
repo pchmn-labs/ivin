@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 // Speaks just enough of claude's stream-json: echoes each user message and works until interrupted.
+// A message starting with "run: " runs the rest in a shell and answers with what it printed.
+const { execSync } = require("node:child_process")
 const { createInterface } = require("node:readline")
 
 const sessionId = "00000000-0000-4000-8000-000000000001"
@@ -71,7 +73,12 @@ createInterface({ input: process.stdin }).on("line", (text) => {
   }
   if (line.type === "user") {
     const block = line.message.content.find((part) => part.type === "text")
-    answer(block ? block.text : "")
+    const text = block ? block.text : ""
+    answer(
+      text.startsWith("run: ")
+        ? execSync(`${text.slice(5)} 2>&1`, { encoding: "utf8", shell: "/bin/sh" })
+        : text,
+    )
   } else if (line.type === "control_request" && line.request?.subtype === "interrupt") {
     interrupt(line.request_id)
   }

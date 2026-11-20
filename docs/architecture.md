@@ -73,7 +73,7 @@ Effect v4 is recent, so agents will often write v3 idioms in the core. That cost
 - **server** runs in an Electron `utilityProcess`, so a slow git call never freezes the window, and the same server can later run headless (remote machine, web client, mobile) like T3 Code's. Agent processes are its children, so nothing a plugin does may run inside it.
 - **plugin host** is a second `utilityProcess` that runs every plugin's server half. A plugin that loops or crashes takes the host down, not the server: sessions keep running, and the server restarts the host without the faulty plugin (see [Error isolation](#error-isolation)).
 - **main** stays thin: windows, OS integration, and the crash bookkeeping behind safe mode.
-- **One RPC contract, several transports.** `packages/contracts` defines every request and stream once with Effect `Schema`. The renderer reaches it over a `MessagePort`, the plugin host over another, the CLI over a unix socket (`~/.ivin/run/ivin.sock`, mode 0600), and a headless client later over a WebSocket. Every CLI command is an RPC the UI can call.
+- **One RPC contract, several transports.** `packages/contracts` defines every request and stream once with Effect `Schema`. The renderer reaches it over a `MessagePort`, the plugin host over another, the CLI over a unix socket (`~/.ivin/run/ivin.sock`, mode 0600, one JSON message per line), and a headless client later over a WebSocket. Every CLI command is an RPC the UI can call.
 
 ## Repository layout
 
@@ -209,7 +209,7 @@ interface HarnessRun {
 - Reference implementations: T3 Code's provider layer and MonoCode's `src/integrations/harness`. Both are read before writing a provider, for the protocol details and edge cases they already solved (flags, message shapes, approval flow, resume, interrupts). Code is copied or adapted where it fits ivin's interfaces, with attribution; neither is a dependency, and nothing requires matching their structure or their Effect version.
 - The server picks the provider from `IVIN_HARNESS`, `claude` when unset; tests and the CI smoke run set it to `scripted`, which replays a recorded transcript and never spawns an agent. `scripted-approval` replays the same transcript, then a turn that waits for an approval; `pnpm --filter @ivin/desktop shot` uses it. An unpackaged main process loads the renderer from `packages/ui/dist`.
 - With `IVIN_BACKGROUND=1` the desktop app opens without taking focus: no Dock icon on macOS, window shown inactive. The e2e launch helper sets it.
-- Every spawned agent gets `IVIN_SESSION_ID` and `IVIN_SOCKET` in its environment, so `ivin` commands run by the agent apply to its own session with no argument.
+- Every spawned agent gets `IVIN_SESSION_ID` and `IVIN_SOCKET` in its environment, and the folder holding `ivin` first on its `PATH`, so `ivin` commands run by the agent reach this app and apply to its own session with no argument. Main sets `IVIN_SOCKET` and `PATH` on the server process, and the agents inherit them.
 - Plugins can amend a spawn (`harness.beforeSpawn`: extra args, env, MCP servers, appended system prompt) and observe every event (`transcript.onEvent`).
 - `transcript.onEvent` is an observer: events are forwarded to the plugin host after they are persisted, and a slow plugin only delays itself.
 - `harness.beforeSpawn` is on the spawn's critical path, so its rules are explicit. Hooks run in plugin load order; each returns a patch that is merged (env and args append, a later plugin wins on the same env key). A hook that throws or exceeds 2 s is skipped, the spawn goes on, and the session shows a warning naming the plugin.
@@ -408,6 +408,13 @@ ivin --safe                                             # start with user and pr
 ```
 
 Commands default to `$IVIN_SESSION_ID`, so an agent annotates its own session without knowing its id.
+
+Shipped so far: `ivin doctor`, one line per check (the app's version, the socket, `settings.json`, `keybindings.json`, the program the harness runs, found on the server's `PATH`), exit 1 when one fails.
+
+- **Running it.** `apps/cli` is bundled by tsdown into one file, shipped as `Resources/cli/ivin.js`. At each launch main writes `<userData>/bin/ivin`, a shell script that runs that file with the app's own Electron as Node (`ELECTRON_RUN_AS_NODE=1`), so `ivin` needs no Node and follows the app when it moves.
+- **Every command** takes `--help` and `--json` (stdout gets `{ "ok": …, … }`, or `{ "ok": false, "error": { "reason", "message" } }`), and exits 0 (ok), 1 (failed), 2 (invalid usage) or 3 (ivin is not running). It reaches `$IVIN_SOCKET`, else `~/.ivin/run/ivin.sock`. The CLI writes its own messages; the raw error stays in the server's log ([ADR-0004](adr/0004-the-ui-writes-error-messages-and-the-server-logs-raw-errors.md)).
+- **The socket.** The server removes it on a clean exit. At start it replaces one nobody answers on, left by a crash, and leaves alone one another running ivin answers on: that launch then serves no socket, logs why, and gives its agents an empty `IVIN_SOCKET`, so their `ivin` says so instead of reaching the other app.
+- **Tests** run the built `ivin` as a child process against an in-process server on a temporary socket with an in-memory SQLite (`apps/server/src/rpc/cli-server.ts`).
 
 ### Skills and docs for agents
 

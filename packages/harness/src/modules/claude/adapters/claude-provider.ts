@@ -9,6 +9,7 @@ import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/
 import { approvalResponseLine } from "../rules/approval-response.ts"
 import { claudeArgs } from "../rules/claude-args.ts"
 import { claudeRunOptions } from "../rules/run-options.ts"
+import { findOnPath } from "./find-on-path.ts"
 import { listClaudeModels } from "./list-models.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
 import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
@@ -75,6 +76,7 @@ export const layerClaudeWith = (
     HarnessProvider.of({
       id: "claude",
       runOptions: listedRunOptions(listTimeout),
+      program: Effect.sync(() => ({ name: "claude", path: findOnPath("claude") })),
       toolActivity,
       start: ({ sessionId, cwd, options, providerSessionId }) =>
         Effect.gen(function* () {

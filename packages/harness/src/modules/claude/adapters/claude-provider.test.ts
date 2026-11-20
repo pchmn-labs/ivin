@@ -327,3 +327,23 @@ setInterval(() => {}, 1000)`,
     },
   )
 }, 10_000)
+
+test("the program is the claude found first on the PATH, or none when it is missing", async () => {
+  const program = () =>
+    Effect.runPromise(
+      Effect.gen(function* () {
+        return yield* (yield* HarnessProvider).program
+      }).pipe(Effect.provide(layerClaude)),
+    )
+  await withFakeClaude("", async (dir) => {
+    expect(await program()).toEqual({ name: "claude", path: join(dir, "claude") })
+  })
+
+  const path = process.env["PATH"]
+  process.env["PATH"] = mkdtempSync(join(tmpdir(), "ivin-empty-path-"))
+  try {
+    expect(await program()).toEqual({ name: "claude", path: null })
+  } finally {
+    process.env["PATH"] = path
+  }
+})

@@ -11,7 +11,7 @@
     "test": "vp test run",
     "build": "vp run --filter './apps/*' --filter './packages/*' build",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
-    "dev": "vp run --filter @ivin/server build && vp run --parallel --filter @ivin/ui --filter @ivin/desktop dev",
+    "dev": "vp run --filter @ivin/server --filter @ivin/cli build && vp run --parallel --filter @ivin/ui --filter @ivin/desktop dev",
     "package": "pnpm build && pnpm --filter @ivin/desktop package",
     "e2e": "pnpm --filter @ivin/desktop e2e"
   },

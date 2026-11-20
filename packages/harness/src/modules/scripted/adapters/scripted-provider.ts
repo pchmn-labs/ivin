@@ -83,6 +83,7 @@ export const layerScripted = (
     return {
       id: "scripted",
       runOptions: Effect.succeed(runOptions),
+      program: Effect.succeed(null),
       // Scripts replay recorded Claude output.
       toolActivity,
       start: (input) =>

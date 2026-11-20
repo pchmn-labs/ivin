@@ -210,6 +210,18 @@ importers:
         specifier: ^2.3.0
         version: 2.3.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(vitest@5.1.0)
 
+  apps/cli:
+    dependencies:
+      '@ivin/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@ivin/state':
+        specifier: workspace:*
+        version: link:../../packages/state
+      effect:
+        specifier: 4.1.4
+        version: 4.1.4
+
   apps/desktop:
     devDependencies:
       '@ivin/contracts':
