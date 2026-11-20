@@ -113,10 +113,11 @@ export const migrations: readonly Migration[] = [
     sql: `CREATE TABLE images (
       id TEXT PRIMARY KEY,
       session_id TEXT NOT NULL REFERENCES sessions (id),
+      number INTEGER NOT NULL,
       media_type TEXT NOT NULL,
-      data BLOB NOT NULL
-    );
-    CREATE INDEX images_by_session ON images (session_id)`,
+      data BLOB NOT NULL,
+      UNIQUE (session_id, number)
+    )`,
   },
 ]
 

@@ -303,6 +303,7 @@ export const makeFakeServer = (
           createdAt: at,
           lastActivityAt: at,
           archivedAt: null,
+          lastImageNumber: 0,
         }
         sessions.set(session.id, session)
         return session
@@ -443,6 +444,7 @@ export const makeFakeServer = (
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
             archivedAt: null,
+            lastImageNumber: 0,
           }
           return saveSession(updated)
         }),

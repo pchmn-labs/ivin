@@ -33,6 +33,8 @@ export const Session = Schema.Struct({
   createdAt: Schema.DateTimeUtcFromMillis,
   lastActivityAt: Schema.DateTimeUtcFromMillis,
   archivedAt: Schema.NullOr(Schema.DateTimeUtcFromMillis),
+  // 0 before the first image; the next pasted image takes the number after it.
+  lastImageNumber: Schema.Int,
 })
 export type Session = typeof Session.Type
 

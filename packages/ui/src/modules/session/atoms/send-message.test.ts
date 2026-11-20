@@ -26,6 +26,7 @@ const setup = async () => {
     createdAt: at,
     lastActivityAt: at,
     archivedAt: null,
+    lastImageNumber: 0,
   })
   const sessions = sessionsOf(project)
   const transcript = transcriptOf("s1")

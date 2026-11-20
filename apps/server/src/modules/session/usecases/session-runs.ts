@@ -31,7 +31,7 @@ interface UserMessage {
 const userMessageEvent = ({ text, images }: UserMessage): HarnessEvent => ({
   type: "user_message",
   text,
-  images: images.map(({ id, mediaType }) => ({ id, mediaType })),
+  images: images.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
   raw: null,
 })
 

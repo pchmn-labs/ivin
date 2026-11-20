@@ -20,10 +20,16 @@ const turn: readonly HarnessOutput[] = [
 
 const screenshot: ImageData = {
   id: "i1",
+  number: 1,
   mediaType: "image/png",
   base64: "iVBORw0KGgoAAAANSUhEUg==",
 }
-const photo: ImageData = { id: "i2", mediaType: "image/jpeg", base64: "/9j/4AAQSkZJRgABAQ==" }
+const photo: ImageData = {
+  id: "i2",
+  number: 2,
+  mediaType: "image/jpeg",
+  base64: "/9j/4AAQSkZJRgABAQ==",
+}
 
 const newDatabase = () => {
   const db = new DatabaseSync(":memory:")
@@ -69,7 +75,7 @@ test("a message with two images stores two blobs, references them, and hands the
       yield* client["session.sendMessage"]({
         sessionId: session.id,
         messageId: "m1",
-        text: "what is this?",
+        text: "what is this? [Image #1] [Image #2]",
         images: [screenshot, photo],
       })
       return {
@@ -79,21 +85,21 @@ test("a message with two images stores two blobs, references them, and hands the
     }),
   )
 
-  const stored = db.prepare("SELECT id, media_type FROM images ORDER BY id").all()
+  const stored = db.prepare("SELECT id, number, media_type FROM images ORDER BY id").all()
   expect(stored).toEqual([
-    { id: "i1", media_type: "image/png" },
-    { id: "i2", media_type: "image/jpeg" },
+    { id: "i1", number: 1, media_type: "image/png" },
+    { id: "i2", number: 2, media_type: "image/jpeg" },
   ])
   expect(page.items[0]).toMatchObject({
     role: "user",
-    text: "what is this?",
+    text: "what is this? [Image #1] [Image #2]",
     images: [
-      { id: "i1", mediaType: "image/png" },
-      { id: "i2", mediaType: "image/jpeg" },
+      { id: "i1", number: 1, mediaType: "image/png" },
+      { id: "i2", number: 2, mediaType: "image/jpeg" },
     ],
   })
   expect(sent.map((s) => s.images)).toEqual([[screenshot, photo]])
-  expect(fetched).toEqual(photo)
+  expect(fetched).toEqual({ mediaType: "image/jpeg", base64: photo.base64 })
 })
 
 test("a page of transcript items carries image references, not image bytes", async () => {
@@ -157,4 +163,41 @@ test("fetching an unknown image fails with ImageNotFound", async () => {
   )
 
   expect(error._tag).toBe("ImageNotFound")
+})
+
+test("the session's images are listed in transcript order, and the session knows its last number", async () => {
+  const third: ImageData = { ...screenshot, id: "i3", number: 3 }
+  const { images, session } = await withServer(
+    newDatabase(),
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        yield* client["session.sendMessage"]({
+          sessionId: created.id,
+          messageId: "m1",
+          text: "[Image #2] then [Image #1]",
+          images: [photo, screenshot],
+        })
+        yield* client["session.sendMessage"]({
+          sessionId: created.id,
+          messageId: "m2",
+          text: "and [Image #3]",
+          images: [third],
+        })
+        return {
+          images: yield* client["transcript.listImages"]({ sessionId: created.id }),
+          session: (yield* client["session.list"]({ projectPath: "/p" }))[0],
+        }
+      }),
+    { cycle: true },
+  )
+
+  expect(images.map(({ id, number, messageId }) => ({ id, number, messageId }))).toEqual([
+    { id: "i2", number: 2, messageId: "m1" },
+    { id: "i1", number: 1, messageId: "m1" },
+    { id: "i3", number: 3, messageId: "m2" },
+  ])
+  expect(images[2]?.messageText).toBe("and [Image #3]")
+  expect(session?.lastImageNumber).toBe(3)
 })

@@ -10,7 +10,12 @@ export const ImageMediaType = Schema.Literals([
 export type ImageMediaType = typeof ImageMediaType.Type
 
 // The bytes are fetched apart with `transcript.getImage`, so a page of items stays small.
-export const ImageRef = Schema.Struct({ id: Schema.String, mediaType: ImageMediaType })
+// `number` is unique in the session; the message's text holds `[Image #<number>]` where the image goes.
+export const ImageRef = Schema.Struct({
+  id: Schema.String,
+  number: Schema.Int,
+  mediaType: ImageMediaType,
+})
 export type ImageRef = typeof ImageRef.Type
 
 export const ImageData = Schema.Struct({
@@ -18,6 +23,16 @@ export const ImageData = Schema.Struct({
   base64: Schema.String,
 })
 export type ImageData = typeof ImageData.Type
+
+export const ImageFile = Schema.Struct({ mediaType: ImageMediaType, base64: Schema.String })
+export type ImageFile = typeof ImageFile.Type
+
+export const SessionImage = Schema.Struct({
+  ...ImageRef.fields,
+  messageId: Schema.String,
+  messageText: Schema.String,
+})
+export type SessionImage = typeof SessionImage.Type
 
 const UserMessageBody = Schema.Struct({
   type: Schema.Literal("user_message"),
@@ -267,7 +282,12 @@ export const TranscriptRpcs = RpcGroup.make(
   }),
   Rpc.make("transcript.getImage", {
     payload: { imageId: Schema.String },
-    success: ImageData,
+    success: ImageFile,
     error: ImageNotFound,
+  }),
+  // Every image the user sent in the session, in transcript order.
+  Rpc.make("transcript.listImages", {
+    payload: { sessionId: Schema.String },
+    success: Schema.Array(SessionImage),
   }),
 )

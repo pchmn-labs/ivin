@@ -18,6 +18,7 @@ interface SessionRow {
   created_at: number
   last_activity_at: number
   archived_at: number | null
+  last_image_number: number
 }
 
 const toSession = (row: SessionRow): Session => ({
@@ -36,12 +37,14 @@ const toSession = (row: SessionRow): Session => ({
   createdAt: DateTime.makeUnsafe(row.created_at),
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
   archivedAt: row.archived_at === null ? null : DateTime.makeUnsafe(row.archived_at),
+  lastImageNumber: row.last_image_number,
 })
 
 const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model, status,
   status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
-  ) AS started`
+  ) AS started,
+  (SELECT COALESCE(MAX(number), 0) FROM images i WHERE i.session_id = sessions.id) AS last_image_number`
 
 export const layerSqliteSessionStore = Layer.effect(SessionStore)(
   Effect.gen(function* () {

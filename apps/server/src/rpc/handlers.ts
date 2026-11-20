@@ -39,6 +39,7 @@ import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlit
 import { layerSqliteImageStore } from "../modules/transcript/adapters/sqlite-image-store.ts"
 import { getImage } from "../modules/transcript/usecases/get-image.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
+import { listImages } from "../modules/transcript/usecases/list-images.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
@@ -137,6 +138,7 @@ export const handlers = Rpcs.toLayer(
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),
       "transcript.getImage": ({ imageId }) => getImage(imageId),
+      "transcript.listImages": ({ sessionId }) => listImages(sessionId),
     }),
   ),
 )
