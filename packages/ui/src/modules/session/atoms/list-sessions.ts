@@ -17,7 +17,11 @@ export const sessionsOf = strongFamily((projectPath: string) =>
         Effect.gen(function* () {
           const client = yield* ServerClient
           yield* client["session.watch"]({ projectPath }).pipe(
-            Stream.runForEach((session) => writer.upsert([session])),
+            Stream.runForEach((change) =>
+              change._tag === "changed"
+                ? writer.upsert([change.session])
+                : writer.remove(change.sessionId),
+            ),
           )
         }),
     },

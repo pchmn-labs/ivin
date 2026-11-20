@@ -6,6 +6,7 @@ import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
 import { openSessionsAtom } from "../modules/session/atoms/open-sessions.ts"
+import { useSessionActions } from "../modules/session/hooks/use-session-actions.ts"
 import { answerApprovalFailure } from "../modules/session/rules/failure-message.ts"
 import { tabsOf } from "../modules/tab/atoms/list-tabs.ts"
 import { openTabAtom } from "../modules/tab/atoms/open-tab.ts"
@@ -40,6 +41,7 @@ const host: UiHost = {
       return Exit.isFailure(exit) ? answerApprovalFailure(Cause.squash(exit.cause)) : undefined
     }
   },
+  useSessionActions,
   components: hostComponents,
 }
 

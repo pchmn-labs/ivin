@@ -5,6 +5,7 @@ import { Slot } from "../../../app/slot-renderer.tsx"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
 import { ListSection } from "../../../core/components/list-section/list-section.tsx"
+import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { sessionsOf } from "../atoms/list-sessions.ts"
@@ -13,6 +14,7 @@ import { openTabAtom } from "../../tab/atoms/open-tab.ts"
 import { tabsOf } from "../../tab/atoms/list-tabs.ts"
 import { RelativeTime } from "./relative-time.tsx"
 import { SessionLocation } from "./session-location.tsx"
+import { useSessionActions } from "../hooks/use-session-actions.ts"
 import { useSessionLocation } from "../hooks/use-session-location.ts"
 import { SessionMark } from "./session-mark.tsx"
 import "./session-list.css"
@@ -31,6 +33,7 @@ function SessionRow({
   const renameSession = useAtomSet(renameSessionAtom)
   const [draft, setDraft] = useState<string | null>(null)
   const location = useSessionLocation(session)
+  const actions = useSessionActions(session)
 
   const commit = () => {
     const title = draft?.trim()
@@ -83,9 +86,14 @@ function SessionRow({
           <Menu
             align="end"
             trigger={<IconButton icon="ellipsis" label="Session actions" size="sm" />}
-            items={[{ label: "Rename", icon: "pencil", onSelect: () => setDraft(session.title) }]}
+            items={[
+              { label: "Rename", icon: "pencil", onSelect: () => setDraft(session.title) },
+              "separator",
+              ...actions.items,
+            ]}
           />
         }
+        {...(actions.failure !== null && { below: <ErrorMessage message={actions.failure} /> })}
       />
     </li>
   )

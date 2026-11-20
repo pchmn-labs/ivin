@@ -112,6 +112,8 @@ const lastList = (client: Client) =>
 
 const untilIdle = (client: Client, sessionId: string) =>
   client["session.watch"]({ projectPath: project }).pipe(
+    Stream.filter((change) => change._tag === "changed"),
+    Stream.map((change) => change.session),
     Stream.filter((session) => session.id === sessionId && session.status === "idle"),
     Stream.take(1),
     Stream.runDrain,

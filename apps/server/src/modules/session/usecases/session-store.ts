@@ -6,6 +6,7 @@ export class SessionStore extends Context.Service<
   {
     readonly insert: (session: Session) => Effect.Effect<void>
     readonly findById: (id: string) => Effect.Effect<Session | null>
+    // Archived sessions included.
     readonly listByProject: (projectPath: string) => Effect.Effect<readonly Session[]>
     readonly rename: (id: string, title: string) => Effect.Effect<void>
     // No-op once the title was set by a first message or a rename.
@@ -28,5 +29,8 @@ export class SessionStore extends Context.Service<
     // No run survives a connection, so a session left working or waiting is idle again.
     readonly resetRunning: Effect.Effect<void>
     readonly touch: (id: string, at: Session["lastActivityAt"]) => Effect.Effect<void>
+    readonly setArchivedAt: (id: string, at: Session["archivedAt"]) => Effect.Effect<void>
+    // Erases the session, its transcript and its tab in one transaction.
+    readonly delete: (id: string) => Effect.Effect<void>
   }
 >()("ivin/server/SessionStore") {}

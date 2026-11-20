@@ -1,4 +1,4 @@
-import { useAtomValue } from "@effect/atom-react"
+import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { useCallback, useState } from "react"
 import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
@@ -9,6 +9,8 @@ import { ProjectRail } from "../modules/project/ui/project-rail.tsx"
 import { NoProject, OpenFolderError } from "../modules/project/ui/no-project.tsx"
 import { useReportUncaughtErrors } from "../modules/log/hooks/use-report-uncaught-errors.ts"
 import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
+import { archivedViewOpenAtom } from "../modules/session/atoms/archived-view.ts"
+import { SessionActionDialog } from "../modules/session/ui/session-action-dialog.tsx"
 import { StartSessionError } from "../modules/session/ui/start-session-error.tsx"
 import { TabView } from "../modules/tab/ui/tab-view.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
@@ -37,6 +39,15 @@ export function App() {
   useRecordSessionVisits()
   useReportUncaughtErrors()
   useCommandHandler("sidebar.toggle", toggleSidebar, projectPath !== null)
+  const setArchivedOpen = useAtomSet(archivedViewOpenAtom)
+  useCommandHandler(
+    "session.showArchived",
+    () => {
+      setSidebarOpen(true)
+      setArchivedOpen(true)
+    },
+    projectPath !== null,
+  )
 
   const connection = AsyncResult.match(result, {
     onInitial: () => ({ state: "connecting", text: "Connecting to the server…" }),
@@ -124,6 +135,7 @@ export function App() {
             <KeybindingsFileProblem />
             <TabView projectPath={projectPath} />
           </main>
+          <SessionActionDialog />
         </div>
       )}
     </PluginsProvider>

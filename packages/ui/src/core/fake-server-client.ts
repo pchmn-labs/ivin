@@ -2,7 +2,13 @@ import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
-import type { Harness, Session, SessionStatus, WorkingFolderChoice } from "@ivin/contracts/session"
+import type {
+  Harness,
+  Session,
+  SessionChange,
+  SessionStatus,
+  WorkingFolderChoice,
+} from "@ivin/contracts/session"
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
@@ -79,7 +85,7 @@ export const makeFakeServer = (
   const sessions = new Map<string, Session>()
   const transcripts = new Map<string, Array<TranscriptItem>>()
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
-  const sessionChanges = Effect.runSync(PubSub.unbounded<Session>())
+  const sessionChanges = Effect.runSync(PubSub.unbounded<SessionChange>())
   let userKeybindings: UserKeybindings = { keybindings: [], problem: null }
   const keybindingChanges = Effect.runSync(PubSub.unbounded<UserKeybindings>())
   let userSettings: UserSettings = { settings: defaultSettings, problem: null }
@@ -143,9 +149,27 @@ export const makeFakeServer = (
     const session =
       before && before.status !== changed.status ? { ...changed, statusChangedAt: tick() } : changed
     sessions.set(session.id, session)
-    Effect.runSync(PubSub.publish(sessionChanges, session))
+    const change: SessionChange =
+      session.archivedAt === null
+        ? { _tag: "changed", session }
+        : { _tag: "removed", sessionId: session.id, projectPath: session.projectPath }
+    Effect.runSync(PubSub.publish(sessionChanges, change))
     return session
   }
+  const removeTab = (session: Session) => {
+    const index = tabsOf(session.projectPath).findIndex((tab) => tab.sessionId === session.id)
+    tabs = tabs.filter((tab) => tab.sessionId !== session.id)
+    if (index >= 0 && selectedTab.get(session.projectPath) === session.id) {
+      const rest = tabsOf(session.projectPath)
+      selectedTab.set(session.projectPath, (rest[index] ?? rest[index - 1])?.sessionId ?? null)
+    }
+    return index >= 0
+  }
+  const existing = (sessionId: string) =>
+    Effect.suspend(() => {
+      const session = sessions.get(sessionId)
+      return session ? Effect.succeed(session) : Effect.fail(new SessionNotFound({ sessionId }))
+    })
 
   const getItems = ({
     sessionId,
@@ -232,15 +256,8 @@ export const makeFakeServer = (
       Effect.suspend(() => {
         const session = sessions.get(sessionId)
         if (!session) return Effect.fail(new SessionNotFound({ sessionId }))
-        const bar = tabsOf(session.projectPath)
-        const index = bar.findIndex((tab) => tab.sessionId === sessionId)
-        tabs = tabs.filter((tab) => tab.sessionId !== sessionId)
-        if (index >= 0 && selectedTab.get(session.projectPath) === sessionId) {
-          const rest = tabsOf(session.projectPath)
-          selectedTab.set(session.projectPath, (rest[index] ?? rest[index - 1])?.sessionId ?? null)
-        }
         if (
-          index >= 0 &&
+          removeTab(session) &&
           userSettings.settings.tabs.stopAgentOnClose &&
           (session.status === "working" || session.status === "waiting")
         ) {
@@ -285,6 +302,7 @@ export const makeFakeServer = (
           statusChangedAt: at,
           createdAt: at,
           lastActivityAt: at,
+          archivedAt: null,
         }
         sessions.set(session.id, session)
         return session
@@ -292,12 +310,48 @@ export const makeFakeServer = (
     "session.watch": ({ projectPath }: { projectPath: string }) =>
       Stream.unwrap(
         Effect.map(PubSub.subscribe(sessionChanges), (subscription) =>
-          Stream.fromIterable([...sessions.values()]).pipe(
+          Stream.fromIterable(
+            [...sessions.values()]
+              .filter((session) => session.archivedAt === null)
+              .map((session): SessionChange => ({ _tag: "changed", session })),
+          ).pipe(
             Stream.concat(Stream.fromSubscription(subscription)),
-            Stream.filter((session) => session.projectPath === projectPath),
+            Stream.filter(
+              (change) =>
+                (change._tag === "changed" ? change.session.projectPath : change.projectPath) ===
+                projectPath,
+            ),
           ),
         ),
       ),
+    "session.listArchived": ({ projectPath }: { projectPath: string }) =>
+      Effect.sync(() =>
+        [...sessions.values()]
+          .filter((session) => session.projectPath === projectPath && session.archivedAt !== null)
+          .toSorted(
+            (a, b) => DateTime.toEpochMillis(b.archivedAt!) - DateTime.toEpochMillis(a.archivedAt!),
+          ),
+      ),
+    "session.archive": ({ sessionId }: { sessionId: string }) =>
+      Effect.map(existing(sessionId), (session) => {
+        removeTab(session)
+        saveSession({ ...session, status: "idle", archivedAt: tick() })
+      }),
+    "session.restore": ({ sessionId }: { sessionId: string }) =>
+      Effect.map(existing(sessionId), (session) => saveSession({ ...session, archivedAt: null })),
+    "session.delete": ({ sessionId }: { sessionId: string }) =>
+      Effect.map(existing(sessionId), (session) => {
+        removeTab(session)
+        sessions.delete(sessionId)
+        transcripts.delete(sessionId)
+        Effect.runSync(
+          PubSub.publish(sessionChanges, {
+            _tag: "removed",
+            sessionId,
+            projectPath: session.projectPath,
+          }),
+        )
+      }),
     "session.interrupt": ({ sessionId }: { sessionId: string }) =>
       Effect.sync(() => {
         const items = itemsOf(sessionId)
@@ -387,6 +441,7 @@ export const makeFakeServer = (
             status: "working",
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
+            archivedAt: null,
           }
           return saveSession(updated)
         }),

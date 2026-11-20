@@ -20,7 +20,7 @@ Where a session's agent runs: the checkout or one worktree. Several sessions may
 _Avoid_: cwd, workspace
 
 **Session**:
-One agent conversation, bound to a project folder, a working folder, a branch, a harness and a model. Its status is preparing worktree, working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript.
+One agent conversation, bound to a project folder, a working folder, a branch, a harness and a model. Its status is preparing worktree, working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript. An **archived** session is hidden from the sidebar, with no tab and no running agent, until the user restores it; deleting a session erases it with its transcript.
 _Avoid_: conversation, chat, thread
 
 **Harness**:

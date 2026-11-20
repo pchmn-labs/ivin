@@ -1,3 +1,4 @@
+import type { Session } from "@ivin/contracts/session"
 import { Context, Effect, FiberSet, Layer, Semaphore } from "effect"
 import { logFailure } from "../../log/usecases/log-error.ts"
 import { SessionFeed } from "../../session/usecases/session-feed.ts"
@@ -16,6 +17,7 @@ export class WorktreeCleanup extends Context.Service<
     readonly afterTabsClosed: (
       projectPath: string,
       sessionIds: readonly string[],
+      deletedSessions?: readonly Session[],
     ) => Effect.Effect<void>
     // Waits for the cleanups started so far.
     readonly settled: Effect.Effect<void>
@@ -31,11 +33,11 @@ export const layerWorktreeCleanup = Layer.effect(WorktreeCleanup)(
     // One pass at a time, so two never judge the same worktree.
     const passes = yield* Semaphore.make(1)
     return {
-      afterTabsClosed: (projectPath, sessionIds) =>
+      afterTabsClosed: (projectPath, sessionIds, deletedSessions = []) =>
         FiberSet.run(
           fibers,
           passes
-            .withPermits(1)(removeMergedWorktrees(projectPath, sessionIds))
+            .withPermits(1)(removeMergedWorktrees(projectPath, sessionIds, deletedSessions))
             .pipe(
               Effect.catchCause((cause) => logFailure("worktree cleanup", cause)),
               Effect.provideContext(context),

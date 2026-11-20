@@ -111,13 +111,17 @@ const KEY_LABELS: Readonly<Record<string, string>> = {
   arrowright: "→",
 }
 
-const keyLabel = (key: string) =>
-  KEY_LABELS[key] ?? (key.length === 1 ? key.toUpperCase() : key[0]!.toUpperCase() + key.slice(1))
+const MAC_KEY_LABELS: Readonly<Record<string, string>> = { backspace: "⌫" }
+
+const keyLabel = (key: string, { mac }: Platform) =>
+  (mac ? MAC_KEY_LABELS[key] : undefined) ??
+  KEY_LABELS[key] ??
+  (key.length === 1 ? key.toUpperCase() : key[0]!.toUpperCase() + key.slice(1))
 
 export const formatKey = (text: string, platform: Platform): string => {
   const chord = parse(text, platform)
   if (chord === null) return text
-  const key = keyLabel(chord.key)
+  const key = keyLabel(chord.key, platform)
   if (platform.mac) {
     return [chord.ctrl && "⌃", chord.alt && "⌥", chord.shift && "⇧", chord.meta && "⌘", key]
       .filter(Boolean)

@@ -70,4 +70,6 @@ test("a key shows as the platform writes it", () => {
   expect(formatKey("escape", mac)).toBe("Esc")
   expect(formatKey("mod+\\", { mac: false })).toBe("Ctrl+\\")
   expect(formatKey("alt+shift+b", { mac: false })).toBe("Shift+Alt+B")
+  expect(formatKey("mod+shift+backspace", mac)).toBe("⇧⌘⌫")
+  expect(formatKey("mod+shift+backspace", { mac: false })).toBe("Ctrl+Shift+Backspace")
 })

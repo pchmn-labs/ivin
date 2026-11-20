@@ -27,6 +27,7 @@ export const createSession = (projectPath: string, model: string) =>
       statusChangedAt: now,
       createdAt: now,
       lastActivityAt: now,
+      archivedAt: null,
     }
     yield* store.insert(session)
     return session

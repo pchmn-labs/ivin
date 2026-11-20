@@ -38,6 +38,7 @@ const setup = async (
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   })
   server.openTab("s1")
   await render(

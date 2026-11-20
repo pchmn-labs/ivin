@@ -94,5 +94,6 @@ export const useTabs = () => useHost().useTabs()
 export const useOpenTab = () => useHost().useOpenTab()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
+export const useSessionActions = (session: Session) => useHost().useSessionActions(session)
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"

@@ -37,6 +37,7 @@ const mountApp = async (
       statusChangedAt: at,
       createdAt: at,
       lastActivityAt: at,
+      archivedAt: null,
     })
   }
   server.openTab("s1")
@@ -327,4 +328,57 @@ test("a server that does not answer is reported in the window, without a raw err
     )
     .toBeVisible()
   expect(document.body.textContent).not.toContain("server.getVersion failed")
+})
+
+test("the keyboard alone archives the session on screen, opens the archived list and restores it", async () => {
+  const server = await mountApp()
+  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect
+    .element(page.getByRole("tab", { name: /Second/ }))
+    .toHaveAttribute("aria-selected", "true")
+
+  await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
+  await expect.element(page.getByRole("tab")).toHaveLength(1)
+  await vi.waitFor(() => expect(server.sessions.get("s2")?.archivedAt).not.toBeNull())
+
+  await userEvent.keyboard(`{Shift>}{${mod}>}a{/${mod}}{/Shift}`)
+  const archived = page.getByRole("navigation", { name: "Archived sessions" })
+  await vi.waitFor(() => expect(document.activeElement?.textContent).toContain("Second"))
+  await userEvent.keyboard("{Enter}")
+  await vi.waitFor(() => expect(server.sessions.get("s2")?.archivedAt).toBeNull())
+  await expect.element(archived.getByText("No archived sessions in ivin.")).toBeVisible()
+
+  await userEvent.keyboard("{Escape}")
+  await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
+  await expect.element(page.getByText(/^Inactive sessions/)).toBeVisible()
+})
+
+test("archiving a working session from its tab asks first, then stops it and closes the tab", async () => {
+  const server = await mountApp()
+  server.setStatus("s1", "working")
+  await expect.element(page.getByRole("tab")).toHaveLength(2)
+
+  await page.getByRole("tab", { name: /First/ }).click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Archive" }).click()
+  const dialog = page.getByRole("dialog")
+  await expect.element(dialog.getByText("Archive the session and stop its agent?")).toBeVisible()
+  expect(server.sessions.get("s1")?.archivedAt).toBeNull()
+
+  await dialog.getByRole("button", { name: "Stop and archive" }).click()
+  await expect.element(page.getByRole("tab")).toHaveLength(1)
+  expect(server.sessions.get("s1")?.archivedAt).not.toBeNull()
+})
+
+test("a failed archive from a session's menu says so under its row and keeps its tab", async () => {
+  const server = await mountApp()
+  server.failNextCall("session.archive")
+  await expect.element(page.getByRole("tab")).toHaveLength(2)
+
+  const row = page.getByTestId("session-item").filter({ hasText: "First" })
+  await row.hover()
+  await row.getByRole("button", { name: "Session actions" }).click()
+  await page.getByRole("menuitem", { name: "Archive" }).click()
+
+  await expect.element(row.getByRole("alert")).toHaveTextContent("The session was not archived.")
+  await expect.element(page.getByRole("tab")).toHaveLength(2)
 })

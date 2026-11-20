@@ -62,6 +62,7 @@ test("the transcript renders through the plugins and the status line shows the u
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   })
 
   await render(
@@ -101,6 +102,7 @@ const mountSession = async (
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
@@ -220,6 +222,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   })
   server.openProject("/p")
   server.openTab("s1")
@@ -343,6 +346,7 @@ test("Escape closes an open menu without interrupting the session", async () => 
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   })
   server.openProject("/p")
   server.openTab("s1")
@@ -390,6 +394,7 @@ const mountNewSession = async (checkout: Partial<FakeCheckout> = {}) => {
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   }
   server.sessions.set("s1", session)
   server.worktrees.push({ path: "/p/.worktrees/docs-adr", branch: "docs/adr" })
@@ -598,6 +603,7 @@ const mountDeletedFolderSession = async () => {
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>

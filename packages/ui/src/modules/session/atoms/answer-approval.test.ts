@@ -25,6 +25,7 @@ test("answering an approval stores the decision on its item and updates the sess
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   })
   server.seedItems("s1", [
     {
