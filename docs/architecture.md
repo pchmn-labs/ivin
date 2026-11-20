@@ -456,7 +456,7 @@ Layout features (stacked or swapped panels, sub-tabs) are where the slot model i
 ## Build and release
 
 - **One version.** The whole monorepo carries a single semver version, `0.x` until the switch. A plugin's `apiVersion` is a separate integer and does not follow it.
-- **Packaging.** electron-builder, macOS arm64 only at first; CI also builds a Linux x64 folder that only the end-to-end tests use. `node-pty` is the one native module: it is rebuilt for Electron and unpacked from the asar archive.
+- **Packaging.** electron-builder, macOS arm64 only at first; CI also builds a Linux x64 folder that only the end-to-end tests use. The Linux end-to-end tests run on every pull request; the macOS ones run on paid Avrea runners, on each push to `main` and on a pull request labelled `e2e:macos`. `node-pty` is the one native module: it is rebuilt for Electron and unpacked from the asar archive.
 - **Releases.** release-it bumps the version, writes the changelog from the conventional commits and tags `vX.Y.Z`; the tag starts a workflow that builds, signs, notarises and publishes a GitHub Release.
 - **Updates.** `electron-updater` reads the GitHub Releases. Auto-update on macOS needs a signed and notarised app, so an Apple Developer ID; an unsigned build still runs when built locally.
 - **Packaged early.** CI builds the packaged app and launches it from milestone 1 on, because `utilityProcess` paths, the asar archive and the native module only fail there.
