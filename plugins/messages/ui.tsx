@@ -7,6 +7,7 @@ const unignoredWorktrees =
 const workingFolderLabel = (item: WorkingFolderItem) => {
   if (item.cause === "creation") return "Started in a new worktree on"
   if (item.cause === "choice") return "Started in the worktree on"
+  if (item.cause === "branch_picker") return "Switched to"
   return item.inWorktree ? "Moved to the worktree on" : "Back in the checkout on"
 }
 

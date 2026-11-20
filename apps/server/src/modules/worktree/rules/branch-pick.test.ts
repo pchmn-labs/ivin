@@ -62,7 +62,10 @@ test("a worktree whose folder is gone does not hold its branch", () => {
       { name: "fix/typo", remote: false },
       {
         ...state,
-        worktrees: [...worktrees, { path: "/repo/.worktrees/gone", branch: "fix/typo", prunable: true }],
+        worktrees: [
+          ...worktrees,
+          { path: "/repo/.worktrees/gone", branch: "fix/typo", prunable: true },
+        ],
       },
     ),
   ).toEqual({ kind: "checkout", branch: "fix/typo" })

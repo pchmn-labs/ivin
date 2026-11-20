@@ -17,7 +17,8 @@ const app = await electron.launch({
   env: { ...process.env, IVIN_BACKGROUND: "1", IVIN_HARNESS: "scripted-approval" },
 })
 
-// A repository with one linked worktree, so the working folder menu has something to list.
+// A repository with a linked worktree and a second branch, so the working folder menu and the
+// branch picker have something to list.
 const makeRepo = (dir: string) => {
   const env = {
     ...process.env,
@@ -32,6 +33,7 @@ const makeRepo = (dir: string) => {
   git("add", "README.md")
   git("commit", "--quiet", "-m", "first")
   git("worktree", "add", "--quiet", "-b", "docs/adr", join(dir, ".worktrees", "docs-adr"))
+  git("branch", "fix/typo")
 }
 
 const written: string[] = []
@@ -44,6 +46,12 @@ try {
   }
 
   await shoot("new-session")
+  await window.getByTestId("branch-picker").click()
+  await window.getByTestId("branch-row").filter({ hasText: "docs/adr" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("branch-picker")
+  await window.keyboard.press("Escape")
+  await window.getByTestId("branch-row").first().waitFor({ state: "detached" })
   await window.getByTestId("working-folder-picker").click()
   await window.getByRole("menuitemradio", { name: "New worktree" }).waitFor()
   await window.waitForTimeout(300)

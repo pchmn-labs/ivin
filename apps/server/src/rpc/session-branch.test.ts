@@ -4,7 +4,7 @@ import { layerScripted, type StartInput } from "@ivin/harness"
 import { Effect, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
@@ -101,8 +101,8 @@ const withServer = <A, E>(
   )
 }
 
-const listBranches = (client: Client) =>
-  client["worktree.listBranches"]({ projectPath: project }).pipe(Stream.runCollect)
+const listBranches = (client: Client, projectPath = project) =>
+  client["worktree.listBranches"]({ projectPath }).pipe(Stream.runCollect)
 
 const lastList = (client: Client) =>
   listBranches(client).pipe(Effect.map((lists) => lists[lists.length - 1]))
@@ -244,4 +244,29 @@ test("a checkout git refuses returns git's message and leaves the session where 
   })
   expect(session).toMatchObject({ workingFolder: project, branch: "main" })
   expect(items).toEqual([])
+})
+
+test("a project opened through a symlink sees its checkout and worktrees under the path it was opened with", async () => {
+  const linked = join(root, "linked")
+  symlinkSync(project, linked)
+  const { lists, picked } = await withServer((client) =>
+    Effect.gen(function* () {
+      const created = yield* client["session.create"]({ projectPath: linked, model: "sonnet" })
+      const lists = yield* listBranches(client, linked)
+      const picked = yield* client["session.pickBranch"]({
+        sessionId: created.id,
+        name: "main",
+        remote: false,
+      })
+      return { lists, picked }
+    }),
+  )
+
+  expect(lists[lists.length - 1]?.branches).toEqual(
+    expect.arrayContaining([
+      { name: "main", remote: false, worktreePath: linked },
+      { name: "docs/adr", remote: false, worktreePath: join(linked, ".worktrees", "docs-adr") },
+    ]),
+  )
+  expect(picked).toMatchObject({ workingFolder: linked, inWorktree: false, branch: "main" })
 })

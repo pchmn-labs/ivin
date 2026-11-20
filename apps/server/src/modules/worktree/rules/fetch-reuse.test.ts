@@ -1,5 +1,9 @@
 import { expect, test } from "vitest"
-import { BRANCH_LIST_FETCH_REUSE_MS, WORKTREE_FETCH_REUSE_MS, isFetchRecent } from "./fetch-reuse.ts"
+import {
+  BRANCH_LIST_FETCH_REUSE_MS,
+  WORKTREE_FETCH_REUSE_MS,
+  isFetchRecent,
+} from "./fetch-reuse.ts"
 
 const now = 1_000_000
 

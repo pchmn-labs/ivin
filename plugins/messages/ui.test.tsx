@@ -111,3 +111,17 @@ test("the agent leaving a worktree says the session is back in the checkout", as
   await expect.element(page.getByText("Back in the checkout on")).toBeVisible()
   await expect.element(page.getByText("main", { exact: true })).toBeVisible()
 })
+
+test("a branch picked in the branch picker names the branch and the folder it is checked out in", async () => {
+  await mount({
+    ...worktree,
+    path: "/repo",
+    inWorktree: false,
+    branch: "fix/typo",
+    cause: "branch_picker",
+    worktreesIgnored: true,
+  })
+  await expect.element(page.getByText("Switched to")).toBeVisible()
+  await expect.element(page.getByText("fix/typo")).toBeVisible()
+  await expect.element(page.getByText("/repo", { exact: true })).toBeVisible()
+})

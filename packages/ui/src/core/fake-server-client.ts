@@ -6,9 +6,9 @@ import type { Session, SessionStatus, WorkingFolderChoice } from "@ivin/contract
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
-import type { Worktree } from "@ivin/contracts/worktree"
+import type { Branch, Worktree } from "@ivin/contracts/worktree"
 import { ProjectNotOpen } from "@ivin/contracts/project"
-import { SessionNotFound, WorktreeNotCreated } from "@ivin/contracts/session"
+import { CheckoutRefused, SessionNotFound, WorktreeNotCreated } from "@ivin/contracts/session"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -25,6 +25,12 @@ export interface FakeServer {
   readonly sentMessages: ReadonlyArray<{ readonly workingFolder?: WorkingFolderChoice }>
   // What `worktree.list` returns, for every project.
   readonly worktrees: Array<Worktree>
+  // What `worktree.listBranches` returns: the local ones at once, the remote ones once fetched.
+  readonly branches: Array<Branch>
+  // Makes the next fetch of origin wait until `release` is called, or fail.
+  readonly holdNextFetch: () => { readonly release: () => void; readonly fail: () => void }
+  // Makes every pickBranch fail as git would, with this message; null picks again.
+  readonly failCheckoutWith: (gitMessage: string | null) => void
   // Makes every sendMessage fail as git would, storing this message; null sends again.
   readonly failWorktreeWith: (gitMessage: string | null) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
@@ -68,6 +74,9 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   const sentMessages: Array<{ readonly workingFolder?: WorkingFolderChoice }> = []
   let worktreeFailure: string | null = null
   const worktrees: Array<Worktree> = []
+  const branches: Array<Branch> = []
+  let holdFetch: Promise<boolean> | null = null
+  let checkoutFailure: string | null = null
 
   const openProjects = (): OpenProjects => ({ projects: [...projects], selectedPath })
   const tabsOf = (projectPath: string) => tabs.filter((tab) => tab.projectPath === projectPath)
@@ -344,6 +353,40 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
       ),
     "worktree.list": () => Effect.sync(() => [...worktrees]),
     "worktree.newBase": () => Effect.succeed("origin/main"),
+    "worktree.listBranches": () =>
+      Stream.make({ branches: branches.filter((b) => !b.remote), fetch: "fetching" as const }).pipe(
+        Stream.concat(
+          Stream.fromEffect(
+            Effect.promise(async () => {
+              const fetched = holdFetch === null ? true : await holdFetch
+              holdFetch = null
+              return fetched
+                ? { branches: [...branches], fetch: "done" as const }
+                : { branches: branches.filter((b) => !b.remote), fetch: "failed" as const }
+            }),
+          ),
+        ),
+      ),
+    "session.pickBranch": (input: { sessionId: string; name: string; remote: boolean }) =>
+      Effect.suspend((): Effect.Effect<Session, CheckoutRefused> => {
+        if (checkoutFailure !== null) {
+          return Effect.fail(
+            new CheckoutRefused({ sessionId: input.sessionId, gitMessage: checkoutFailure }),
+          )
+        }
+        const session = sessions.get(input.sessionId)!
+        const name = input.remote ? input.name.slice("origin/".length) : input.name
+        const holder = branches.find((b) => !b.remote && b.name === name)?.worktreePath ?? null
+        const workingFolder = holder ?? session.workingFolder
+        return Effect.succeed(
+          saveSession({
+            ...session,
+            workingFolder,
+            inWorktree: workingFolder !== session.projectPath,
+            branch: name,
+          }),
+        )
+      }),
     "session.answerApproval": (input: { sessionId: string; requestId: string; allow: boolean }) =>
       Effect.sync(() => {
         const items = itemsOf(input.sessionId)
@@ -404,6 +447,13 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
     sentMessages,
     worktrees,
     failWorktreeWith: (gitMessage) => void (worktreeFailure = gitMessage),
+    branches,
+    holdNextFetch: () => {
+      let settle!: (ok: boolean) => void
+      holdFetch = new Promise<boolean>((resolve) => (settle = resolve))
+      return { release: () => settle(true), fail: () => settle(false) }
+    },
+    failCheckoutWith: (gitMessage) => void (checkoutFailure = gitMessage),
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
     setStatus: (sessionId, status) => void saveSession({ ...sessions.get(sessionId)!, status }),

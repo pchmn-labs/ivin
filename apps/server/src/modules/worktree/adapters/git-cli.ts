@@ -1,6 +1,7 @@
 import { Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
-import { parseBranches, parseWorktreeList } from "../rules/git-output.ts"
+import { realpathSync } from "node:fs"
+import { parseBranches, parseWorktreeList, underOpenedPath } from "../rules/git-output.ts"
 import { Git, GitError } from "../usecases/git.ts"
 
 interface ExecFailure {
@@ -29,7 +30,9 @@ const orNull = <A>(effect: Effect.Effect<A, GitError>) =>
 
 export const layerGitCli = Layer.succeed(Git)({
   listWorktrees: (repo) =>
-    git(repo, ["worktree", "list", "--porcelain"]).pipe(Effect.map(parseWorktreeList)),
+    git(repo, ["worktree", "list", "--porcelain"]).pipe(
+      Effect.map((out) => underOpenedPath(parseWorktreeList(out), repo, realpathSync(repo))),
+    ),
   listBranches: (repo) =>
     git(repo, ["for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"]).pipe(
       Effect.map(parseBranches),
@@ -47,9 +50,7 @@ export const layerGitCli = Layer.succeed(Git)({
   checkout: (folder, branch) =>
     git(folder, ["checkout", "--quiet", branch, "--"]).pipe(Effect.asVoid),
   checkoutTracking: (folder, remote, branch) =>
-    git(folder, ["checkout", "--quiet", "--track", "-b", branch, remote, "--"]).pipe(
-      Effect.asVoid,
-    ),
+    git(folder, ["checkout", "--quiet", "--track", "-b", branch, remote, "--"]).pipe(Effect.asVoid),
   currentBranch: (folder) =>
     orNull(git(folder, ["symbolic-ref", "--quiet", "--short", "HEAD"])).pipe(
       Effect.map((out) => out?.trim() || null),

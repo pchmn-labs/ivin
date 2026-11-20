@@ -6,7 +6,9 @@ import { BRANCH_LIST_FETCH_REUSE_MS } from "../rules/fetch-reuse.ts"
 import { Git } from "./git.ts"
 import { OriginFetch } from "./origin-fetch.ts"
 
-export const listBranches = (projectPath: string): Stream.Stream<BranchList, never, Git | OriginFetch> =>
+export const listBranches = (
+  projectPath: string,
+): Stream.Stream<BranchList, never, Git | OriginFetch> =>
   Stream.unwrap(
     Effect.gen(function* () {
       const git = yield* Git

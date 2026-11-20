@@ -14,6 +14,7 @@ import {
   FolderOpen,
   GitBranch,
   GitFork,
+  MagnifyingGlass,
   NotePencil,
   PencilSimple,
   Plus,
@@ -60,6 +61,7 @@ const icons = {
   "arrow-right": ArrowRight,
   "panel-left": SidebarSimple,
   "new-session": NotePencil,
+  search: MagnifyingGlass,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {

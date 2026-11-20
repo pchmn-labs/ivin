@@ -40,3 +40,15 @@ export const parseBranches = (output: string): Branches => {
       .map((ref) => ref.slice(REMOTES.length)),
   }
 }
+
+// Git prints resolved paths; a repository opened through a symlink keeps the path it was opened with.
+export const underOpenedPath = (
+  entries: readonly WorktreeEntry[],
+  opened: string,
+  resolved: string,
+): WorktreeEntry[] =>
+  entries.map((entry) =>
+    entry.path === resolved || entry.path.startsWith(`${resolved}/`)
+      ? { ...entry, path: opened + entry.path.slice(resolved.length) }
+      : entry,
+  )
