@@ -55,7 +55,25 @@
   border-top-right-radius: 0;
 }
 
+.iv-composer:has(.iv-action-sheet[data-tone="danger"]) .iv-composer__surface {
+  border-top-color: color-mix(in srgb, var(--iv-danger) 40%, transparent);
+}
+
 .iv-composer:has(.iv-action-sheet[data-tone="attention"]) .iv-composer__surface {
   border-top-style: dashed;
   border-top-color: var(--iv-attention-outline);
+}
+
+.iv-composer__sheet-row {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  padding-left: var(--iv-space-1);
+}
+
+.iv-composer__sheet-hint {
+  flex: 1;
+  min-width: 0;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
 }

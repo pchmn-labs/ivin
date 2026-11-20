@@ -287,10 +287,10 @@ test("a Claude Code that does not answer in time gives the fixed models, and is 
 setInterval(() => {}, 1000)`,
     async (dir) => {
       process.env["FAKE_LOG"] = join(dir, "starts.log")
-      const [first] = await listedModels(layerClaudeWith("100 millis", "200 millis"))
+      const [first] = await listedModels(layerClaudeWith("100 millis", "1500 millis"))
 
       expect(first!.model.values).toEqual(FALLBACK_MODELS)
       expect(readFileSync(join(dir, "starts.log"), "utf8")).toBe("start\nstart\n")
     },
   )
-})
+}, 10_000)

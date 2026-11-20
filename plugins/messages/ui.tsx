@@ -15,7 +15,7 @@ const workingFolderLabel = (item: WorkingFolderItem) => {
 const RUN_OPTION_LABELS: Record<RunOptionItem["option"], string> = {
   model: "Model",
   effort: "Effort",
-  permissionMode: "Permission mode",
+  permissionMode: "Permissions",
 }
 
 function Message({ item }: SlotProps["transcript.message"]) {
@@ -53,16 +53,18 @@ function Message({ item }: SlotProps["transcript.message"]) {
   }
   if (item.type === "run_option") {
     return (
-      <Text as="p" size="sm" tone="muted">
-        {RUN_OPTION_LABELS[item.option]} changed from{" "}
-        <Text size="sm" mono>
-          {item.from}
-        </Text>{" "}
-        to{" "}
-        <Text size="sm" mono>
-          {item.to}
+      <Stack direction="row" gap={1} align="center">
+        <Text size="sm" tone="faint">
+          {RUN_OPTION_LABELS[item.option]}
         </Text>
-      </Text>
+        <Text size="sm" tone="muted">
+          {item.fromName}
+        </Text>
+        <Icon name="arrow-right" size={12} label="to" />
+        <Text size="sm" tone="muted">
+          {item.toName}
+        </Text>
+      </Stack>
     )
   }
   if (item.type === "error") {

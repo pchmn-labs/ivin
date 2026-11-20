@@ -6,6 +6,7 @@ import type {
   Harness,
   HarnessRunOptions,
   RelaunchFailure,
+  RunOption,
   RunOptions,
   Session,
   SessionChange,
@@ -79,11 +80,49 @@ export interface FakeCheckout extends CheckoutStatus {
   pullRefusal: string | null
 }
 
+const offer = (value: string, name: string, description: string | null = null) => ({
+  value,
+  name,
+  description,
+})
+const ALL_EFFORTS = ["low", "medium", "high", "xhigh"]
+
 export const fakeRunOptions: HarnessRunOptions = {
-  model: { values: ["sonnet", "opus", "haiku"], default: "sonnet" },
-  effort: { values: ["low", "medium", "high"], default: "high" },
-  permissionMode: { values: ["manual", "acceptEdits", "plan"], default: "manual" },
+  model: {
+    values: [
+      {
+        ...offer("sonnet", "Sonnet 5.5", "For everyday tasks"),
+        efforts: ALL_EFFORTS,
+        older: false,
+      },
+      { ...offer("opus", "Opus 5.5"), efforts: ALL_EFFORTS, older: false },
+      { ...offer("haiku", "Haiku 5.5"), efforts: ALL_EFFORTS, older: false },
+      { ...offer("claude-opus-4-6", "Opus 4.6"), efforts: ["low", "medium", "high"], older: true },
+      { ...offer("claude-haiku-4-5", "Haiku 4.5"), efforts: [], older: true },
+    ],
+    default: "sonnet",
+  },
+  effort: {
+    values: [
+      offer("low", "Low"),
+      offer("medium", "Medium"),
+      offer("high", "High"),
+      offer("xhigh", "Extra high"),
+    ],
+    default: "high",
+  },
+  permissionMode: {
+    values: [
+      offer("manual", "Manual", "Asks before edits and commands"),
+      offer("acceptEdits", "Accept edits", "Edits files without asking"),
+      offer("plan", "Plan", "Reads and plans, changes nothing"),
+    ],
+    default: "manual",
+  },
 }
+
+const fakeNameOf = (option: RunOption, value: string) =>
+  fakeRunOptions[option].values.find((offered) => offered.value === value)?.name ?? value
 
 export const makeFakeServer = (
   options: {
@@ -348,6 +387,8 @@ export const makeFakeServer = (
             option,
             from: session[option],
             to,
+            fromName: fakeNameOf(option, session[option]),
+            toName: fakeNameOf(option, to),
           })
         }
         return Effect.succeed(saveSession({ ...session, ...requested, relaunchFailure: null }))

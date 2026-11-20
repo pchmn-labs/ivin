@@ -217,7 +217,8 @@ export interface MarkdownProps {
 }
 
 export interface ActionSheetProps {
-  readonly tone?: "attention" | "neutral"
+  // `danger` is announced as an alert.
+  readonly tone?: "attention" | "danger" | "neutral"
   readonly icon?: IconName
   readonly title: string
   readonly detail?: string

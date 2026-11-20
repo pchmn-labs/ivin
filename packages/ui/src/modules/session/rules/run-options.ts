@@ -1,44 +1,78 @@
-import type { HarnessRunOptions, RunOption, RunOptions } from "@ivin/contracts/session"
+import type {
+  HarnessRunOptions,
+  OfferedValue,
+  RunOption,
+  RunOptions,
+} from "@ivin/contracts/session"
 
 export const RUN_OPTIONS: ReadonlyArray<RunOption> = ["model", "effort", "permissionMode"]
 
 export const RUN_OPTION_LABELS: Record<RunOption, string> = {
   model: "Model",
   effort: "Effort",
-  permissionMode: "Permission mode",
+  permissionMode: "Permissions",
 }
+
+const unnamed = (value: string): OfferedValue => ({ value, name: value, description: null })
 
 // The current value stays listed when the harness no longer offers it, so the menu shows what is set.
 export const offeredValues = (
   offered: HarnessRunOptions | null,
   option: RunOption,
   current: string,
-): ReadonlyArray<string> => {
-  const values = offered?.[option].values ?? []
-  return values.includes(current) ? values : [current, ...values]
+): ReadonlyArray<OfferedValue> => {
+  const values: ReadonlyArray<OfferedValue> = offered?.[option].values ?? []
+  return values.some((offer) => offer.value === current) ? values : [unnamed(current), ...values]
 }
 
-export const changedRunOptions = (
+export const nameOf = (offered: HarnessRunOptions | null, option: RunOption, value: string) =>
+  offered?.[option].values.find((offer) => offer.value === value)?.name ?? value
+
+export const usableEfforts = (offered: HarnessRunOptions | null, model: string) =>
+  offered?.model.values.find((offer) => offer.value === model)?.efforts ??
+  offered?.effort.values.map((offer) => offer.value) ??
+  []
+
+export const effortFor = (offered: HarnessRunOptions, model: string, effort: string) => {
+  const usable = usableEfforts(offered, model)
+  if (usable.length === 0 || usable.includes(effort)) return effort
+  const levels = offered.effort.values.map((offer) => offer.value)
+  const lower = levels
+    .slice(0, levels.indexOf(effort))
+    .reverse()
+    .find((level) => usable.includes(level))
+  return lower ?? levels.find((level) => usable.includes(level)) ?? effort
+}
+
+export const runOptionNames = (offered: HarnessRunOptions | null, options: RunOptions) =>
+  RUN_OPTIONS.filter(
+    (option) =>
+      option !== "effort" || offered === null || usableEfforts(offered, options.model).length > 0,
+  ).map((option) => nameOf(offered, option, options[option]))
+
+const changedRunOptions = (current: RunOptions, previous: RunOptions) =>
+  RUN_OPTIONS.filter((option) => current[option] !== previous[option])
+
+export const relaunchFailureText = (
+  offered: HarnessRunOptions | null,
   current: RunOptions,
   previous: RunOptions,
-): ReadonlyArray<{ readonly option: RunOption; readonly from: string; readonly to: string }> =>
-  RUN_OPTIONS.filter((option) => current[option] !== previous[option]).map((option) => ({
-    option,
-    from: previous[option],
-    to: current[option],
-  }))
-
-export const relaunchFailureText = (current: RunOptions, previous: RunOptions) => {
-  const changes = changedRunOptions(current, previous)
-  const what = changes
-    .map(({ option, to }) => `${RUN_OPTION_LABELS[option].toLowerCase()} ${to}`)
-    .join(", ")
-  return what === ""
-    ? "The agent failed on the first message after the change."
-    : `The agent failed on the first message with ${what}. Go back to what worked, or pick another value.`
+) => {
+  const names = changedRunOptions(current, previous).map((option) =>
+    nameOf(offered, option, current[option]),
+  )
+  return names.length === 0
+    ? "The agent did not start after the change."
+    : `The agent did not start with ${names.join(", ")}.`
 }
 
-export const goBackLabel = (current: RunOptions, previous: RunOptions) => {
-  const changes = changedRunOptions(current, previous)
-  return changes.length === 1 ? `Back to ${changes[0]!.from}` : "Go back"
+export const goBackLabel = (
+  offered: HarnessRunOptions | null,
+  current: RunOptions,
+  previous: RunOptions,
+) => {
+  const [only, ...others] = changedRunOptions(current, previous)
+  return only !== undefined && others.length === 0
+    ? `Back to ${nameOf(offered, only, previous[only])}`
+    : "Go back"
 }

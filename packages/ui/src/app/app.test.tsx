@@ -384,7 +384,7 @@ test("a failed archive from a session's menu says so under its row and keeps its
   await expect.element(page.getByRole("tab")).toHaveLength(2)
 })
 
-test("mod+shift+m in the composer opens the model menu", async () => {
+test("mod+shift+m in the composer opens the run options menu", async () => {
   await mountApp()
   await page.getByRole("textbox", { name: "Message" }).click()
   await userEvent.keyboard(`{${mod}>}{Shift>}m{/Shift}{/${mod}}`)
