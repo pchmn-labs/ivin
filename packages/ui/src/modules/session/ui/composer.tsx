@@ -11,6 +11,7 @@ import { ErrorMessage } from "../../../core/components/error-message/error-messa
 import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { TextArea } from "../../../core/components/text-field/text-field.tsx"
+import { BranchPicker } from "./branch-picker.tsx"
 import { SessionLocation } from "./session-location.tsx"
 import { WorkingFolderPicker } from "./working-folder-picker.tsx"
 import { useSessionLocation } from "../hooks/use-session-location.ts"
@@ -147,6 +148,12 @@ function StatusLocation({ session, choosing }: { session: Session; choosing: boo
   return choosing && location.kind !== "folder" ? (
     <WorkingFolderPicker session={session} location={location} />
   ) : (
-    <SessionLocation location={location} title={session.workingFolder} />
+    <SessionLocation
+      location={location}
+      title={session.workingFolder}
+      branch={
+        location.branch !== null && <BranchPicker session={session} branch={location.branch} />
+      }
+    />
   )
 }

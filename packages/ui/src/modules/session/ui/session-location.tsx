@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import type { WorkingFolderLabel } from "../rules/session-location.ts"
 import "./session-location.css"
@@ -8,8 +9,11 @@ export function SessionLocation({
   location,
   compact = false,
   title,
+  branch,
 }: {
   location: WorkingFolderLabel
+  // Replaces the branch label, such as with a control to change it.
+  branch?: ReactNode
   // The sidebar row shows the branch alone, or the label when there is no branch.
   compact?: boolean
   title?: string
@@ -28,7 +32,8 @@ export function SessionLocation({
           {location.label}
         </span>
       </span>
-      {location.branch !== null && (
+      {location.branch !== null && branch}
+      {location.branch !== null && branch === undefined && (
         <span className="iv-session-location__item iv-session-location__branch">
           {!compact && <Icon name="git-branch" size={12} />}
           <span className="iv-session-location__name">{location.branch}</span>

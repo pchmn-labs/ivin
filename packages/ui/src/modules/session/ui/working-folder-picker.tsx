@@ -8,6 +8,7 @@ import { newWorktreeBaseOf, worktreesOf } from "../../worktree/atoms/list-worktr
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
 import { folderName, newBranchLabel, type WorkingFolderLabel } from "../rules/session-location.ts"
+import { BranchPicker } from "./branch-picker.tsx"
 import "./working-folder-picker.css"
 
 export function WorkingFolderPicker({
@@ -78,14 +79,28 @@ export function WorkingFolderPicker({
         }
         items={items}
       />
-      <span className="iv-working-folder-picker__branch">
-        <Icon name="git-branch" size={12} />
-        {location.branch === null ? (
-          newBranchLabel(base, session.branch)
-        ) : (
-          <span className="iv-working-folder-picker__name">{location.branch}</span>
-        )}
-      </span>
+      {location.branch !== null && choice.kind === "checkout" ? (
+        <BranchPicker
+          session={session}
+          branch={location.branch}
+          onPicked={(picked) =>
+            setChoice(
+              picked.workingFolder === picked.projectPath
+                ? { kind: "checkout" }
+                : { kind: "existing_worktree", path: picked.workingFolder },
+            )
+          }
+        />
+      ) : (
+        <span className="iv-working-folder-picker__branch">
+          <Icon name="git-branch" size={12} />
+          {location.branch === null ? (
+            newBranchLabel(base, session.branch)
+          ) : (
+            <span className="iv-working-folder-picker__name">{location.branch}</span>
+          )}
+        </span>
+      )}
     </span>
   )
 }
