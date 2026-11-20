@@ -12,6 +12,7 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 4. **Don't reinvent the harness layer.** Provider protocols come from T3 Code and MonoCode (both MIT, attribution kept in `NOTICE`).
 5. **Light and leak-free by default.** Every feature is measured against a memory and startup budget (see [Performance and memory](#performance-and-memory)).
 6. **Effect inside, plain TypeScript at the edge.** The core is written with Effect v4; the plugin API is functions, promises and React hooks.
+7. **No harness is special.** ivin runs sessions on several harnesses (Claude Code, Codex, ACP agents), and Claude Code is one implementation of the `HarnessProvider` port among them. Only a provider's own module in `packages/harness` knows a harness's protocol, flags, names or tools; everything else speaks of "the agent" and reads the session's harness when it must show its name, mark or models.
 
 ## Stack
 

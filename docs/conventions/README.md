@@ -23,6 +23,10 @@ What belongs to no subject goes in `src/shared/`.
 
 A layer exists only when it holds a file. Create a folder with its first file.
 
+## Harnesses
+
+Code outside `packages/harness/src/modules/<provider>/` names no harness: no harness name in copy or identifiers, no provider flag, tool name or file format, no harness-specific branch. Copy says "the agent"; a harness's name, mark or models come from the session's harness. The reason: [Principles](../architecture.md#principles), "No harness is special".
+
 ## Enforced imports
 
 Checked by Oxlint, as `no-restricted-imports` overrides in `.oxlintrc.json` whose message cites ADR-0001:
