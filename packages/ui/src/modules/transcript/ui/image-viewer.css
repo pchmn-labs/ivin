@@ -2,7 +2,7 @@
   position: fixed;
   inset: 0;
   display: grid;
-  grid-template-rows: 48px minmax(0, 1fr) auto;
+  grid-template-rows: calc(var(--iv-space-2) + var(--iv-space-10)) minmax(0, 1fr) auto;
   background: var(--iv-bg-subtle);
   transition: opacity var(--iv-duration-base) var(--iv-ease-out);
 }
@@ -21,9 +21,16 @@
   align-items: center;
   gap: var(--iv-space-3);
   min-width: 0;
-  padding: 0 var(--iv-space-3) 0 var(--iv-space-5);
+  padding: var(--iv-space-2) var(--iv-space-3) 0
+    calc(var(--iv-space-2) + var(--iv-traffic-lights-width));
   border-bottom: 1px solid var(--iv-border);
   font-size: var(--iv-text-sm);
+  -webkit-app-region: drag;
+}
+
+/* The window's top bars under this overlay are drag regions, which take the click. */
+.iv-image-viewer__head button {
+  -webkit-app-region: no-drag;
 }
 
 .iv-image-viewer__title {
