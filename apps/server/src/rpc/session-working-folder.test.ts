@@ -1,7 +1,7 @@
 import { Rpcs } from "@ivin/contracts/rpcs"
 import type { WorkingFolderChoice } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { layerScripted, type StartInput } from "@ivin/harness"
+import { layerScripted, type ScriptedElement, type StartInput } from "@ivin/harness"
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
@@ -65,7 +65,12 @@ afterEach(() => rmSync(root, { recursive: true, force: true }))
 const makeClient = () => RpcTest.makeClient(Rpcs)
 type Client = Effect.Success<ReturnType<typeof makeClient>>
 
-const withServer = <A, E>(starts: StartInput[], use: (client: Client) => Effect.Effect<A, E>) => {
+const withServer = <A, E>(
+  starts: StartInput[],
+  use: (client: Client) => Effect.Effect<A, E>,
+  turns: readonly (readonly ScriptedElement[])[] = [turn],
+  closed: string[] = [],
+) => {
   const db = new DatabaseSync(":memory:")
   Effect.runSync(runMigrations(db))
   return Effect.runPromise(
@@ -78,7 +83,7 @@ const withServer = <A, E>(starts: StartInput[], use: (client: Client) => Effect.
           Layer.provide(Layer.succeed(Database)(db)),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([turn], { starts })),
+          Layer.provide(layerScripted(turns, { starts, closed, reportSession: true })),
         ),
       ),
       Effect.scoped,
@@ -248,4 +253,218 @@ test("a session outside a git repository has no branch, and its project no workt
   expect(created).toMatchObject({ workingFolder: folder, branch: null, inWorktree: false })
   expect(worktrees).toEqual([])
   expect(base).toBeNull()
+})
+
+const sessionOf = (client: Client, sessionId: string) =>
+  client["session.list"]({ projectPath: project }).pipe(
+    Effect.map((sessions) => sessions.find((s) => s.id === sessionId)!),
+  )
+
+const untilStatus = (client: Client, sessionId: string, status: string) =>
+  Effect.gen(function* () {
+    for (let attempt = 0; attempt < 400; attempt++) {
+      if ((yield* sessionOf(client, sessionId)).status === status) return
+      yield* Effect.sleep("5 millis")
+    }
+    return yield* Effect.die(`The session never reached ${status}`)
+  })
+
+const send = (client: Client, sessionId: string, messageId: string) =>
+  client["session.sendMessage"]({ sessionId, messageId, text: "go" }).pipe(
+    Effect.andThen(untilStatus(client, sessionId, "idle")),
+  )
+
+const toolTurn = (
+  calls: readonly { name: string; input: unknown; output: string; isError?: boolean }[],
+): ScriptedElement[] => [
+  { type: "status", status: "running", raw: null },
+  ...calls.flatMap((call, index): ScriptedElement[] => [
+    { type: "tool_call", toolCallId: `t${index}`, name: call.name, input: call.input, raw: null },
+    {
+      type: "tool_result",
+      toolCallId: `t${index}`,
+      output: call.output,
+      isError: call.isError ?? false,
+      raw: null,
+    },
+  ]),
+  { type: "assistant_text", text: "Done.", raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
+// Outputs as recorded in packages/harness/src/modules/claude/rules/fixtures/.
+const enterWorktree = (path: string) =>
+  toolTurn([
+    {
+      name: "EnterWorktree",
+      input: { name: "try-adopt" },
+      output: `Created worktree at “${path}” on branch “worktree-try-adopt”. The session is now working in the worktree. Use ExitWorktree to leave mid-session, or exit the session to be prompted.`,
+    },
+  ])
+const exitWorktree = (path: string, back: string) =>
+  toolTurn([
+    {
+      name: "ExitWorktree",
+      input: { action: "keep" },
+      output: `Exited worktree. Your work is preserved at “${path}” on branch “worktree-try-adopt”. Session is now back in “${back}”.`,
+    },
+  ])
+
+test("EnterWorktree moves the session to the worktree at once, and the next turn resumes there", async () => {
+  const path = join(project, ".claude", "worktrees", "try-adopt")
+  git(project, "worktree", "add", "--quiet", "-b", "worktree-try-adopt", path)
+  const starts: StartInput[] = []
+  const closed: string[] = []
+  const { moved, items, sessionId, closedBeforeShutdown } = await withServer(
+    starts,
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        yield* send(client, created.id, "m1")
+        const moved = yield* sessionOf(client, created.id)
+        yield* send(client, created.id, "m2")
+        return {
+          moved,
+          items: yield* itemsOf(client, created.id),
+          sessionId: created.id,
+          closedBeforeShutdown: [...closed],
+        }
+      }),
+    [enterWorktree(path), turn],
+    closed,
+  )
+
+  expect(moved).toMatchObject({
+    workingFolder: path,
+    inWorktree: true,
+    branch: "worktree-try-adopt",
+  })
+  expect(items.filter((i) => i.type === "working_folder")).toMatchObject([
+    { path, inWorktree: true, branch: "worktree-try-adopt", cause: "adoption" },
+  ])
+  expect(starts).toMatchObject([
+    { cwd: project, providerSessionId: null },
+    { cwd: path, providerSessionId: `scripted-${sessionId}` },
+  ])
+  expect(closedBeforeShutdown).toEqual([sessionId])
+})
+
+test("ExitWorktree moves the session back to the checkout", async () => {
+  const path = join(project, ".claude", "worktrees", "try-adopt")
+  git(project, "worktree", "add", "--quiet", "-b", "worktree-try-adopt", path)
+  const starts: StartInput[] = []
+  const { back, items } = await withServer(
+    starts,
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        yield* send(client, created.id, "m1")
+        yield* send(client, created.id, "m2")
+        return {
+          back: yield* sessionOf(client, created.id),
+          items: yield* itemsOf(client, created.id),
+        }
+      }),
+    [enterWorktree(path), exitWorktree(path, project)],
+  )
+
+  expect(back).toMatchObject({ workingFolder: project, inWorktree: false, branch: "main" })
+  expect(items.filter((i) => i.type === "working_folder")).toMatchObject([
+    { path, cause: "adoption" },
+    { path: project, inWorktree: false, branch: "main", cause: "adoption" },
+  ])
+  expect(starts.map((s) => s.cwd)).toEqual([project, path])
+})
+
+test("a worktree the agent creates with git worktree add moves the session once the agent works in it", async () => {
+  const path = join(project, ".worktrees", "try-adopt")
+  const add = "git worktree add .worktrees/try-adopt -b try/adopt"
+  const starts: StartInput[] = []
+  const { beforeEntering, entered } = await withServer(
+    starts,
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        yield* client["session.sendMessage"]({ sessionId: created.id, messageId: "m1", text: "go" })
+        yield* untilStatus(client, created.id, "waiting")
+        // The approval holds the turn while git creates the worktree, as the real command would.
+        git(project, "worktree", "add", "--quiet", "-b", "try/adopt", path)
+        yield* client["session.answerApproval"]({
+          sessionId: created.id,
+          requestId: "r1",
+          allow: true,
+        })
+        yield* untilStatus(client, created.id, "idle")
+        const beforeEntering = yield* sessionOf(client, created.id)
+        yield* send(client, created.id, "m2")
+        return { beforeEntering, entered: yield* sessionOf(client, created.id) }
+      }),
+    [
+      [
+        { type: "status", status: "running", raw: null },
+        { type: "tool_call", toolCallId: "t1", name: "Bash", input: { command: add }, raw: null },
+        {
+          type: "approval_request",
+          requestId: "r1",
+          toolCallId: "t1",
+          name: "Bash",
+          input: { command: add },
+          raw: null,
+        },
+        {
+          type: "tool_result",
+          toolCallId: "t1",
+          output: "Preparing worktree (new branch 'try/adopt')\nHEAD is now at 85e6a78 init",
+          isError: false,
+          raw: null,
+        },
+        { type: "status", status: "idle", raw: null },
+      ],
+      toolTurn([
+        {
+          name: "Bash",
+          input: { command: "cd .worktrees/try-adopt && git branch --show-current" },
+          output: "try/adopt",
+        },
+      ]),
+    ],
+  )
+
+  expect(beforeEntering).toMatchObject({ workingFolder: project })
+  expect(entered).toMatchObject({ workingFolder: path, inWorktree: true, branch: "try/adopt" })
+  expect(starts.map((s) => s.cwd)).toEqual([project])
+})
+
+test("a git worktree add that failed moves nothing", async () => {
+  const starts: StartInput[] = []
+  const { session, items } = await withServer(
+    starts,
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        yield* send(client, created.id, "m1")
+        yield* send(client, created.id, "m2")
+        return {
+          session: yield* sessionOf(client, created.id),
+          items: yield* itemsOf(client, created.id),
+        }
+      }),
+    [
+      toolTurn([
+        {
+          name: "Bash",
+          input: { command: "git worktree add .worktrees/again -b main && cd .worktrees/again" },
+          output:
+            "Exit code 255\nPreparing worktree (new branch 'main')\nfatal: a branch named 'main' already exists",
+          isError: true,
+        },
+        { name: "Bash", input: { command: "cd .worktrees/again && ls" }, output: "" },
+      ]),
+      turn,
+    ],
+  )
+
+  expect(session).toMatchObject({ workingFolder: project, inWorktree: false })
+  expect(items.map((i) => i.type)).not.toContain("working_folder")
+  expect(starts.map((s) => s.cwd)).toEqual([project])
 })

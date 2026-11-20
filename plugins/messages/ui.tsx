@@ -1,8 +1,14 @@
 import { Block, Icon, Markdown, Stack, Text, defineUi } from "@ivin/plugin-api/ui"
-import type { SlotProps } from "@ivin/plugin-api/ui"
+import type { SlotProps, WorkingFolderItem } from "@ivin/plugin-api/ui"
 
 const unignoredWorktrees =
   ".worktrees/ is not ignored by git, so the checkout lists it as untracked. Add .worktrees/ to .gitignore."
+
+const workingFolderLabel = (item: WorkingFolderItem) => {
+  if (item.cause === "creation") return "Started in a new worktree on"
+  if (item.cause === "choice") return "Started in the worktree on"
+  return item.inWorktree ? "Moved to the worktree on" : "Back in the checkout on"
+}
 
 function Message({ item }: SlotProps["transcript.message"]) {
   // Thinking stays in the transcript data but is not shown, as in the Claude CLI.
@@ -18,11 +24,9 @@ function Message({ item }: SlotProps["transcript.message"]) {
     return (
       <Stack gap={1}>
         <Stack direction="row" gap={1} align="center">
-          <Icon name="worktree" size={14} />
+          <Icon name={item.inWorktree ? "worktree" : "folder"} size={14} />
           <Text size="sm" tone="muted">
-            {item.cause === "creation"
-              ? "Started in a new worktree on"
-              : "Started in the worktree on"}
+            {workingFolderLabel(item)}
           </Text>
           <Text size="sm" mono>
             {item.branch}
