@@ -92,3 +92,22 @@ test("a new worktree under a .worktrees/ that git does not ignore says what to a
   await expect.element(note).toBeVisible()
   expect(note.element().textContent).toContain("Add .worktrees/ to .gitignore")
 })
+
+test("the agent entering a worktree says the session moved there", async () => {
+  await mount({ ...worktree, cause: "adoption", worktreesIgnored: true })
+  await expect.element(page.getByText("Moved to the worktree on")).toBeVisible()
+  await expect.element(page.getByText("feat/login")).toBeVisible()
+})
+
+test("the agent leaving a worktree says the session is back in the checkout", async () => {
+  await mount({
+    ...worktree,
+    path: "/repo",
+    inWorktree: false,
+    branch: "main",
+    cause: "adoption",
+    worktreesIgnored: true,
+  })
+  await expect.element(page.getByText("Back in the checkout on")).toBeVisible()
+  await expect.element(page.getByText("main", { exact: true })).toBeVisible()
+})

@@ -61,8 +61,9 @@ const workingFolderFields = {
   path: Schema.String,
   inWorktree: Schema.Boolean,
   branch: Schema.NullOr(Schema.String),
-  // `creation`: a new worktree; `choice`: a worktree the user picked before the first message.
-  cause: Schema.Literals(["creation", "choice"]),
+  // `creation`: a new worktree; `choice`: a worktree the user picked before the first message;
+  // `adoption`: the agent entered a worktree it made, or left one.
+  cause: Schema.Literals(["creation", "choice", "adoption"]),
   // False when git does not ignore `.worktrees/`, so the checkout lists it as untracked.
   worktreesIgnored: Schema.Boolean,
 }

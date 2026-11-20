@@ -4,6 +4,9 @@ export {
   type ApprovalDecision,
   type HarnessRun,
   type StartInput,
+  type ToolActivity,
+  type ToolOutcome,
+  type ToolUse,
   type UserMessage,
 } from "./shared/harness-provider.ts"
 export {
