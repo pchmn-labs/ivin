@@ -1,9 +1,25 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { RunOption, RunOptions, Session } from "@ivin/contracts/session"
+import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
+import type { RunOptions, Session } from "@ivin/contracts/session"
+import type { RunOption } from "@ivin/contracts/transcript"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import { Cause, Exit } from "effect"
 import { AsyncResult } from "effect/reactivity"
 import { useEffect, useRef, useState } from "react"
+import { hoveredImageAtom, imageViewerAtom } from "../../transcript/atoms/image-viewer.ts"
+import { imageDataUrl } from "../../transcript/rules/image-url.ts"
+import { ImagePreview } from "../../transcript/ui/image-preview.tsx"
+import { readImageFile } from "../adapters/read-image-file.ts"
+import { draftOf } from "../atoms/draft.ts"
+import {
+  type Draft,
+  type DraftImage,
+  draftImages,
+  emptyDraft,
+  nextImageNumber,
+} from "../rules/draft.ts"
+import { type ImageRefusal, imageRefusal, refusalMessage } from "../rules/image-refusal.ts"
+import { DraftImages } from "./draft-images.tsx"
+import { type MessageEditorHandle, MessageEditor, carriesFiles } from "./message-editor.tsx"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
@@ -14,7 +30,6 @@ import {
   type ErrorMessageProps,
 } from "../../../core/components/error-message/error-message.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
-import { TextArea } from "../../../core/components/text-field/text-field.tsx"
 import { BranchPicker } from "./branch-picker.tsx"
 import { RunOptionsMenu, type RunOptionsMenuState } from "./run-options-menu.tsx"
 import { getHarnessAtom } from "../../server/atoms/get-harness.ts"
@@ -35,9 +50,16 @@ import { sendMessageAtom } from "../atoms/send-message.ts"
 import "./composer.css"
 
 export function Composer({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
-  const [text, setText] = useState("")
+  const [draft, setDraft] = useAtom(draftOf(sessionId))
+  const text = draft.text
   const root = useRef<HTMLDivElement>(null)
-  const [failure, setFailure] = useState<(ActionFailure & { message: string }) | null>(null)
+  const editor = useRef<MessageEditorHandle>(null)
+  const [failure, setFailure] = useState<(ActionFailure & { draft: Draft }) | null>(null)
+  const [refusal, setRefusal] = useState<string | null>(null)
+  const [dragging, setDragging] = useState(0)
+  const [preview, setPreview] = useState<{ image: DraftImage; anchor: HTMLElement } | null>(null)
+  const [hoveredImage, setHoveredImage] = useAtom(hoveredImageAtom)
+  const openViewer = useAtomSet(imageViewerAtom)
   const choice = useAtomValue(workingFolderChoiceOf(sessionId))
   const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
   const interrupt = useAtomSet(interruptSessionAtom)
@@ -58,7 +80,9 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
 
   useEffect(() => {
     if (relaunchFailure === null) return
-    setText((current) => (current === "" ? relaunchFailure.message : current))
+    setDraft((current) =>
+      current.text === "" ? { ...current, text: relaunchFailure.message } : current,
+    )
   }, [relaunchFailureKey])
 
   const changeRunOptions = (options: Partial<RunOptions>) => {
@@ -69,48 +93,90 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     })
   }
 
-  const sendText = (message: string) => {
+  const images = draftImages(draft)
+  const maxImageBytes = harness?.maxImageBytes ?? 0
+
+  const sendDraft = (sent: Draft) => {
     if (preparing) return
     setFailure(null)
-    setText((current) => (current === message ? "" : current))
+    setRefusal(null)
+    setDraft((current) => (current.text === sent.text ? emptyDraft : current))
     const workingFolder = choosing ? choice : undefined
     void send({
       projectPath,
       sessionId,
-      text: message,
+      text: sent.text,
+      images: draftImages(sent).map(({ id, number, mediaType, base64 }) => ({
+        id,
+        number,
+        mediaType,
+        base64,
+      })),
       ...(workingFolder && { workingFolder }),
     }).then((exit) => {
       if (Exit.isSuccess(exit) || Cause.hasInterruptsOnly(exit.cause)) return
       // Text typed since the send is newer than the failed message, so it wins.
-      setText((current) => (current === "" ? message : current))
-      setFailure({ message, ...sendMessageFailure(Cause.squash(exit.cause)) })
+      setDraft((current) => (current.text === "" ? sent : current))
+      setFailure({ draft: sent, ...sendMessageFailure(Cause.squash(exit.cause)) })
     })
   }
   const submit = () => {
-    if (text.trim() !== "") sendText(text)
+    if (text.trim() !== "") sendDraft(draft)
   }
+
+  const addImageFiles = async (files: ReadonlyArray<File>, at: Range | null) => {
+    const refused: Array<ImageRefusal> = []
+    const accepted: Array<File> = []
+    for (const file of files) {
+      const problem = imageRefusal(file, maxImageBytes)
+      if (problem) refused.push(problem)
+      else accepted.push(file)
+    }
+    setRefusal(
+      refused.length === 0
+        ? null
+        : refusalMessage(refused, harness?.name ?? "the agent", maxImageBytes),
+    )
+    if (accepted.length === 0) return
+    const contents = await Promise.all(accepted.map(readImageFile))
+    let number = nextImageNumber(session?.lastImageNumber ?? 0, draft)
+    const added: Array<DraftImage> = accepted.map((file, i) => ({
+      id: crypto.randomUUID(),
+      number: number++,
+      mediaType: file.type as DraftImage["mediaType"],
+      base64: contents[i] ?? "",
+      name: file.name || "Pasted image",
+    }))
+    setDraft((current) => ({ ...current, images: [...current.images, ...added] }))
+    editor.current?.insertImages(added, at)
+  }
+
+  const openDraftImage = (imageId: string) => openViewer({ sessionId, images: "draft", imageId })
   useCommandHandler("composer.send", submit)
   const sendHint = useKeyHint("Send", "composer.send")
   const interruptHint = useKeyHint("Interrupt", "session.interrupt")
 
   const isEmptyComposer = (target: EventTarget | null) =>
     text === "" &&
-    target instanceof HTMLTextAreaElement &&
+    target instanceof HTMLElement &&
+    target.closest(".iv-message-editor") !== null &&
     target.closest(".iv-composer") === root.current
 
   const shown: ErrorMessageProps | null = failure
     ? {
         message: failure.text,
-        ...(failure.retryable && { onRetry: () => sendText(failure.message) }),
+        ...(failure.retryable && { onRetry: () => sendDraft(failure.draft) }),
       }
-    : optionsFailure
-      ? {
-          message: optionsFailure.text,
-          ...(optionsFailure.retryable && {
-            onRetry: () => changeRunOptions(optionsFailure.options),
-          }),
-        }
-      : null
+    : refusal !== null
+      ? { message: refusal }
+      : optionsFailure
+        ? {
+            message: optionsFailure.text,
+            ...(optionsFailure.retryable && {
+              onRetry: () => changeRunOptions(optionsFailure.options),
+            }),
+          }
+        : null
   const changed: RunOption =
     (relaunchFailure &&
       RUN_OPTIONS.find((option) => session?.[option] !== relaunchFailure.previous[option])) ??
@@ -170,14 +236,56 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
       {alert}
       {session && <Slot slot="composer.above" props={{ session, isEmptyComposer }} />}
       {relaunchSheet}
-      <div className="iv-composer__surface">
-        <TextArea
+      <div
+        className="iv-composer__surface"
+        data-dragging={dragging > 0 || undefined}
+        onDragEnter={(event) => {
+          if (carriesFiles(event.dataTransfer)) setDragging((n) => n + 1)
+        }}
+        onDragLeave={(event) => {
+          if (carriesFiles(event.dataTransfer)) setDragging((n) => Math.max(0, n - 1))
+        }}
+        onDragOver={(event) => {
+          if (carriesFiles(event.dataTransfer)) event.preventDefault()
+        }}
+        onDropCapture={() => setDragging(0)}
+        onDrop={(event) => {
+          if (!carriesFiles(event.dataTransfer)) return
+          event.preventDefault()
+          void addImageFiles([...event.dataTransfer.files], null)
+        }}
+      >
+        <DraftImages
+          images={images}
+          onOpen={openDraftImage}
+          onRemove={(number) => {
+            setRefusal(null)
+            editor.current?.removeImage(number)
+          }}
+        />
+        <MessageEditor
+          ref={editor}
           label="Message"
           placeholder={`Message ${harness?.name ?? "the agent"}`}
-          rows={2}
           value={text}
-          onChange={(event) => setText(event.target.value)}
+          images={draft.images}
+          hotImageId={hoveredImage}
+          onChange={(next) => setDraft((current) => ({ ...current, text: next }))}
+          onImageFiles={(files, at) => void addImageFiles(files, at)}
+          onOpenImage={openDraftImage}
+          onHoverImage={(imageId, anchor) => {
+            setHoveredImage(imageId)
+            const image = draft.images.find((candidate) => candidate.id === imageId)
+            setPreview(image && anchor ? { image, anchor } : null)
+          }}
         />
+        {preview && (
+          <ImagePreview
+            anchor={preview.anchor}
+            number={preview.image.number}
+            src={imageDataUrl(preview.image)}
+          />
+        )}
         <Stack direction="row" align="center" justify="between" gap={2}>
           <Stack direction="row" align="center" gap={3}>
             {session && (

@@ -11,11 +11,15 @@ import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { SessionList } from "./session-list.tsx"
 import { SessionView } from "./session-view.tsx"
 
+// The composer's field is a contenteditable, whose lines innerText keeps.
+const composerText = () =>
+  (page.getByRole("textbox", { name: "Message" }).element() as HTMLElement).innerText
+
 test("the transcript renders through the plugins and the status line shows the usage", async () => {
   const server = makeFakeServer()
   const base = { sessionId: "s1" }
   server.seedItems("s1", [
-    { ...base, id: "m0", position: 0, type: "message", role: "user", text: "hello" },
+    { ...base, id: "m0", position: 0, type: "message", role: "user", text: "hello", images: [] },
     {
       ...base,
       id: "t1",
@@ -66,6 +70,7 @@ test("the transcript renders through the plugins and the status line shows the u
     createdAt: at,
     lastActivityAt: at,
     archivedAt: null,
+    lastImageNumber: 0,
   })
 
   await render(
@@ -109,6 +114,7 @@ const mountSession = async (
     createdAt: at,
     lastActivityAt: at,
     archivedAt: null,
+    lastImageNumber: 0,
   })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
@@ -122,7 +128,9 @@ const mountSession = async (
 
 test("a codex session's composer names Codex and draws no Claude mark", async () => {
   await mountSession("idle", "codex")
-  await expect.element(page.getByPlaceholder("Message Codex")).toBeVisible()
+  await expect
+    .element(page.getByRole("textbox", { name: "Message" }))
+    .toHaveAttribute("aria-placeholder", "Message Codex")
   const model = page.getByTestId("run-options").element()
   expect(model.querySelector(".iv-harness-mark--agent")).not.toBeNull()
   expect(document.querySelector(".iv-composer .iv-harness-mark--claude")).toBeNull()
@@ -130,7 +138,9 @@ test("a codex session's composer names Codex and draws no Claude mark", async ()
 
 test("a claude session's composer names Claude and draws the Claude mark", async () => {
   await mountSession("idle")
-  await expect.element(page.getByPlaceholder("Message Claude")).toBeVisible()
+  await expect
+    .element(page.getByRole("textbox", { name: "Message" }))
+    .toHaveAttribute("aria-placeholder", "Message Claude")
   expect(
     page.getByTestId("run-options").element().querySelector(".iv-harness-mark--claude"),
   ).not.toBeNull()
@@ -178,17 +188,17 @@ test("a message that fails to send stays in the composer, and Retry sends it", a
   const field = page.getByRole("textbox", { name: "Message" })
   await field.fill("keep me")
   await page.getByRole("button", { name: "Send" }).click()
-  await expect.element(field).toHaveValue("")
+  await expect.poll(composerText).toBe("")
 
   send.fail()
   const alert = page.getByRole("alert")
   await expect.element(alert.getByText("The message was not sent.")).toBeVisible()
-  await expect.element(field).toHaveValue("keep me")
+  await expect.poll(composerText).toBe("keep me")
   expect(server.errorReports.map((report) => report.action)).toContain("session.sendMessage")
 
   await alert.getByRole("button", { name: "Retry" }).click()
   await expect.element(page.getByText("keep me", { exact: true })).toBeVisible()
-  await expect.element(field).toHaveValue("")
+  await expect.poll(composerText).toBe("")
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
   await vi.waitFor(() => expect(server.sentMessages).toHaveLength(2))
 })
@@ -201,7 +211,7 @@ test("a message to a session the server no longer has says so, with no Retry", a
   const alert = page.getByRole("alert")
   await expect.element(alert.getByText(/^This session no longer exists/)).toBeVisible()
   expect(alert.getByRole("button", { name: "Retry" }).query()).toBeNull()
-  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("hello")
+  await expect.poll(composerText).toBe("hello")
 })
 
 test("Escape interrupts a working session wherever the focus is", async () => {
@@ -232,6 +242,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
     createdAt: at,
     lastActivityAt: at,
     archivedAt: null,
+    lastImageNumber: 0,
   })
   server.openProject("/p")
   server.openTab("s1")
@@ -319,13 +330,13 @@ test("with composer.send moved to mod+enter and enter removed, Enter inserts a n
   const field = page.getByRole("textbox", { name: "Message" })
   await field.click()
   await userEvent.keyboard("one{Enter}two")
-  await expect.element(field).toHaveValue("one\ntwo")
+  await expect.poll(composerText).toBe("one\ntwo")
   await page.getByRole("button", { name: "Send" }).hover()
   await expect.element(page.getByText(/^Send \((⌘|Ctrl\+)Enter\)$/)).toBeVisible()
 
   await field.click()
   await userEvent.keyboard(`{${mod}>}{Enter}{/${mod}}`)
-  await expect.element(field).toHaveValue("")
+  await expect.poll(composerText).toBe("")
   await expect.element(page.getByTestId("transcript-item")).toBeVisible()
 })
 
@@ -334,7 +345,7 @@ test("Shift+Enter in the composer inserts a new line and does not send", async (
   const field = page.getByRole("textbox", { name: "Message" })
   await field.click()
   await userEvent.keyboard("one{Shift>}{Enter}{/Shift}two")
-  await expect.element(field).toHaveValue("one\ntwo")
+  await expect.poll(composerText).toBe("one\ntwo")
 })
 
 test("Escape closes an open menu without interrupting the session", async () => {
@@ -359,6 +370,7 @@ test("Escape closes an open menu without interrupting the session", async () => 
     createdAt: at,
     lastActivityAt: at,
     archivedAt: null,
+    lastImageNumber: 0,
   })
   server.openProject("/p")
   server.openTab("s1")
@@ -410,6 +422,7 @@ const mountNewSession = async (checkout: Partial<FakeCheckout> = {}) => {
     createdAt: at,
     lastActivityAt: at,
     archivedAt: null,
+    lastImageNumber: 0,
   }
   server.sessions.set("s1", session)
   server.worktrees.push({ path: "/p/.worktrees/docs-adr", branch: "docs/adr" })
@@ -524,7 +537,7 @@ test("a worktree git cannot create shows git's message in the transcript and kee
       page.getByText("fatal: unable to access 'origin': Could not resolve host", { exact: true }),
     )
     .toBeVisible()
-  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("go")
+  await expect.poll(composerText).toBe("go")
   expect(picker().element().textContent).toBe("New worktree")
 })
 
@@ -598,7 +611,7 @@ test("the switch and pull buttons are gone once the first message is sent, and a
   await expect.element(switchButton()).toBeVisible()
 
   await sendText("go")
-  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("")
+  await expect.poll(composerText).toBe("")
   await expect.element(switchButton()).not.toBeInTheDocument()
   await expect.element(page.getByRole("button", { name: /^Pull/ })).not.toBeInTheDocument()
 })
@@ -628,6 +641,7 @@ const mountDeletedFolderSession = async () => {
     createdAt: at,
     lastActivityAt: at,
     archivedAt: null,
+    lastImageNumber: 0,
   })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
@@ -797,7 +811,7 @@ test("a failed relaunch docks a sheet above the composer, puts the message back 
   await vi.waitFor(() =>
     expect(sheet.element().textContent).toContain("The agent did not start with Haiku 5.5."),
   )
-  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("fix the tests")
+  await vi.waitFor(() => expect(composerText()).toBe("fix the tests"))
 
   await sheet.getByRole("button", { name: "Pick another" }).click()
   await expect.element(page.getByRole("listbox", { name: "Model" })).toBeVisible()
@@ -806,7 +820,7 @@ test("a failed relaunch docks a sheet above the composer, puts the message back 
   await sheet.getByRole("button", { name: "Back to Sonnet 5.5" }).click()
   await expect.element(runOptions("Sonnet 5.5, High, Manual")).toBeVisible()
   await expect.element(sheet).not.toBeInTheDocument()
-  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("fix the tests")
+  await vi.waitFor(() => expect(composerText()).toBe("fix the tests"))
 })
 
 test("a model change the server did not take goes back, says so above the composer and retries", async () => {

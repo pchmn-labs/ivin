@@ -27,6 +27,7 @@ interface SessionRow {
   created_at: number
   last_activity_at: number
   archived_at: number | null
+  last_image_number: number
 }
 
 const toSession = (row: SessionRow): Session => ({
@@ -52,13 +53,15 @@ const toSession = (row: SessionRow): Session => ({
   createdAt: DateTime.makeUnsafe(row.created_at),
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
   archivedAt: row.archived_at === null ? null : DateTime.makeUnsafe(row.archived_at),
+  lastImageNumber: row.last_image_number,
 })
 
 const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model,
   effort, permission_mode, relaunch_failure, status,
   status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
-  ) AS started`
+  ) AS started,
+  (SELECT COALESCE(MAX(number), 0) FROM images i WHERE i.session_id = sessions.id) AS last_image_number`
 
 export const layerSqliteSessionStore = Layer.effect(SessionStore)(
   Effect.gen(function* () {
@@ -216,6 +219,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           db.exec("BEGIN IMMEDIATE")
           try {
             db.prepare("DELETE FROM transcript_events WHERE session_id = ?").run(id)
+            db.prepare("DELETE FROM images WHERE session_id = ?").run(id)
             db.prepare("DELETE FROM tabs WHERE session_id = ?").run(id)
             db.prepare(
               "UPDATE open_projects SET selected_session_id = NULL WHERE selected_session_id = ?",

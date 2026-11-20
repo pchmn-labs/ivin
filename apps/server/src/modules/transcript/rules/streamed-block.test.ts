@@ -32,6 +32,7 @@ const openMessage: ItemState = {
     type: "message",
     role: "assistant",
     text: "a",
+    images: [],
   },
 }
 

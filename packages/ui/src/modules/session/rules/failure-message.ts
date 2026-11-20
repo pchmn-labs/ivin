@@ -10,8 +10,9 @@ import type {
   WorktreeFailure,
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
+import type { RunOption } from "@ivin/contracts/transcript"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
-import type { RunOption, RunOptions } from "@ivin/contracts/session"
+import type { RunOptions } from "@ivin/contracts/session"
 import { RUN_OPTIONS } from "./run-options.ts"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 

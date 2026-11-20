@@ -1,10 +1,40 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
-import { RunOption } from "./session.ts"
+
+export const ImageMediaType = Schema.Literals([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+])
+export type ImageMediaType = typeof ImageMediaType.Type
+
+// `number` is unique in the session.
+export const ImageRef = Schema.Struct({
+  id: Schema.String,
+  number: Schema.Int,
+  mediaType: ImageMediaType,
+})
+export type ImageRef = typeof ImageRef.Type
+
+export const ImageData = Schema.Struct({
+  ...ImageRef.fields,
+  base64: Schema.String,
+})
+export type ImageData = typeof ImageData.Type
+
+export const SessionImage = Schema.Struct({
+  ...ImageRef.fields,
+  messageId: Schema.String,
+  messageText: Schema.String,
+})
+export type SessionImage = typeof SessionImage.Type
 
 const UserMessageBody = Schema.Struct({
   type: Schema.Literal("user_message"),
   text: Schema.String,
+  // Absent on messages stored before images existed.
+  images: Schema.optional(Schema.Array(ImageRef)),
 })
 const AssistantTextBody = Schema.Struct({
   type: Schema.Literal("assistant_text"),
@@ -73,6 +103,9 @@ const WorkingFolderBody = Schema.Struct({
   type: Schema.Literal("working_folder"),
   ...workingFolderFields,
 })
+
+export const RunOption = Schema.Literals(["model", "effort", "permissionMode"])
+export type RunOption = typeof RunOption.Type
 
 // The names are kept as they read at the change, as the harness may later rename or drop a value.
 const runOptionFields = {
@@ -149,6 +182,7 @@ export const MessageItem = Schema.Struct({
   type: Schema.Literal("message"),
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
+  images: Schema.Array(ImageRef),
 })
 export const ThinkingItem = Schema.Struct({
   ...itemFields,
@@ -258,5 +292,10 @@ export const TranscriptRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String, before: Schema.Int },
     success: TranscriptItemChange,
     stream: true,
+  }),
+  // Every image the user sent in the session, in transcript order.
+  Rpc.make("transcript.listImages", {
+    payload: { sessionId: Schema.String },
+    success: Schema.Array(SessionImage),
   }),
 )

@@ -1,5 +1,5 @@
 import type { Harness, HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
-import type { HarnessOutput } from "@ivin/contracts/transcript"
+import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
 import { Context, Data, type Effect, type Scope, type Stream } from "effect"
 
 export class HarnessError extends Data.TaggedError("HarnessError")<{
@@ -16,6 +16,7 @@ export interface StartInput {
 
 export interface UserMessage {
   readonly text: string
+  readonly images: readonly ImageData[]
 }
 
 export interface ApprovalDecision {

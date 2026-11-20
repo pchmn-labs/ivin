@@ -22,7 +22,7 @@ real(
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
           providerSessionId: null,
         })
-        yield* harness.send({ text: "Reply with exactly: pong" })
+        yield* harness.send({ text: "Reply with exactly: pong", images: [] })
         return yield* Stream.runCollect(
           Stream.takeUntil(harness.events, (o) => o.type === "status" && o.status === "idle"),
         )
@@ -32,6 +32,38 @@ real(
     expect(outputs.some((o) => o.type === "delta")).toBe(true)
     expect(outputs.find((o) => o.type === "assistant_text")).toMatchObject({ text: "pong" })
     expect(outputs.some((o) => o.type === "usage")).toBe(true)
+  },
+  60_000,
+)
+
+// A 32×32 square of a single red.
+const RED_SQUARE =
+  "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nGN4ampNU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULANjfVEx+wBeAAAAAAElFTkSuQmCC"
+
+real(
+  "an image sent with a message reaches the real claude CLI, which describes it",
+  async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ivin-claude-"))
+    const outputs = await Effect.runPromise(
+      Effect.gen(function* () {
+        const harness = yield* (yield* HarnessProvider).start({
+          sessionId: "s1",
+          cwd,
+          options: { model: "haiku", effort: "low", permissionMode: "manual" },
+          providerSessionId: null,
+        })
+        yield* harness.send({
+          text: "What single colour fills [Image #1]? Answer with one lowercase word.",
+          images: [{ id: "i1", number: 1, mediaType: "image/png", base64: RED_SQUARE }],
+        })
+        return yield* Stream.runCollect(
+          Stream.takeUntil(harness.events, (o) => o.type === "status" && o.status === "idle"),
+        )
+      }).pipe(Effect.provide(layerClaude), Effect.scoped),
+    )
+
+    const answer = outputs.find((o) => o.type === "assistant_text")
+    expect(answer?.type === "assistant_text" && answer.text.toLowerCase()).toContain("red")
   },
   60_000,
 )
@@ -53,6 +85,7 @@ real.each([
         })
         yield* harness.send({
           text: "Run the shell command `touch made.txt` with the Bash tool. Do nothing else.",
+          images: [],
         })
         return yield* Stream.runCollect(
           harness.events.pipe(

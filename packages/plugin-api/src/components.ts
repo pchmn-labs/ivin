@@ -1,6 +1,7 @@
 import { createElement } from "react"
 import type { ComponentType, ReactElement, ReactNode } from "react"
 import type { Session } from "@ivin/contracts/session"
+import type { ImageRef } from "@ivin/contracts/transcript"
 import { useHost } from "./host-context.ts"
 
 export type IconName =
@@ -253,6 +254,19 @@ export interface ErrorMessageProps {
   readonly "data-testid"?: string
 }
 
+// The images of a user's message, as thumbnails that open the full-screen view.
+export interface MessageImagesProps {
+  readonly sessionId: string
+  readonly images: ReadonlyArray<ImageRef>
+}
+
+// A user's message text, with each `[Image #N]` drawn as its image's marker.
+export interface MessageTextProps {
+  readonly sessionId: string
+  readonly text: string
+  readonly images: ReadonlyArray<ImageRef>
+}
+
 export interface HostComponents {
   readonly Button: ComponentType<ButtonProps>
   readonly IconButton: ComponentType<IconButtonProps>
@@ -275,6 +289,8 @@ export interface HostComponents {
   readonly SessionMark: ComponentType<SessionMarkProps>
   readonly RelativeTime: ComponentType<RelativeTimeProps>
   readonly ProjectMark: ComponentType<ProjectMarkProps>
+  readonly MessageImages: ComponentType<MessageImagesProps>
+  readonly MessageText: ComponentType<MessageTextProps>
 }
 
 const hostComponent =
@@ -302,4 +318,6 @@ export const ListRow = hostComponent((c) => c.ListRow)
 export const ListSection = hostComponent((c) => c.ListSection)
 export const SessionMark = hostComponent((c) => c.SessionMark)
 export const RelativeTime = hostComponent((c) => c.RelativeTime)
+export const MessageImages = hostComponent((c) => c.MessageImages)
+export const MessageText = hostComponent((c) => c.MessageText)
 export const ProjectMark = hostComponent((c) => c.ProjectMark)

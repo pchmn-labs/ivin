@@ -1,4 +1,13 @@
-import { Block, Icon, Markdown, Stack, Text, defineUi } from "@ivin/plugin-api/ui"
+import {
+  Block,
+  Icon,
+  Markdown,
+  MessageImages,
+  MessageText,
+  Stack,
+  Text,
+  defineUi,
+} from "@ivin/plugin-api/ui"
 import type { RunOptionItem, SlotProps, WorkingFolderItem } from "@ivin/plugin-api/ui"
 
 const unignoredWorktrees =
@@ -18,7 +27,7 @@ const RUN_OPTION_LABELS: Record<RunOptionItem["option"], string> = {
   permissionMode: "Permissions",
 }
 
-function Message({ item }: SlotProps["transcript.message"]) {
+function Message({ item, sessionId }: SlotProps["transcript.message"]) {
   // Thinking stays in the transcript data but is not shown, as in the agent CLIs.
   if (item.type === "thinking") return null
   if (item.type === "interruption") {
@@ -80,9 +89,8 @@ function Message({ item }: SlotProps["transcript.message"]) {
   if (item.role === "user") {
     return (
       <Block tone="bubble">
-        <Text as="p" preWrap>
-          {item.text}
-        </Text>
+        <MessageImages sessionId={sessionId} images={item.images} />
+        <MessageText sessionId={sessionId} text={item.text} images={item.images} />
       </Block>
     )
   }

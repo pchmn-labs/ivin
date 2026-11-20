@@ -8,6 +8,10 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 const watchWhileFileIs = (texts: ReadonlyArray<string | null>) =>
   Effect.runPromise(
@@ -20,6 +24,9 @@ const watchWhileFileIs = (texts: ReadonlyArray<string | null>) =>
           Layer.provide(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(layerDatabase(":memory:")),
+          Layer.provide(
+            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+          ),
           Layer.provide(layerScripted([])),
           Layer.provide(layerKeybindingsFileOf(texts)),
           Layer.provide(layerSettingsFileOf([])),

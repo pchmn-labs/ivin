@@ -110,6 +110,16 @@ export const migrations: readonly Migration[] = [
   },
   {
     version: 12,
+    sql: `CREATE TABLE images (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES sessions (id),
+      number INTEGER NOT NULL,
+      media_type TEXT NOT NULL,
+      UNIQUE (session_id, number)
+    )`,
+  },
+  {
+    version: 13,
     sql: `ALTER TABLE sessions ADD COLUMN effort TEXT NOT NULL DEFAULT 'high';
     ALTER TABLE sessions ADD COLUMN permission_mode TEXT NOT NULL DEFAULT 'manual';
     ALTER TABLE sessions ADD COLUMN run_options_at INTEGER NOT NULL DEFAULT 0;

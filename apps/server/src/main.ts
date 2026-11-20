@@ -8,6 +8,7 @@ import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file
 import { layerServices } from "./rpc/handlers.ts"
 import { serveOverPort } from "./rpc/serve.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
+import { ImageFolder } from "./modules/transcript/usecases/image-folder.ts"
 
 interface MainPort {
   on(event: "message", listener: (event: { data: unknown }) => void): void
@@ -23,9 +24,14 @@ const { parentPort } = process as unknown as {
 }
 
 const {
-  values: { database: databasePath, log: logPath, home: homePath },
+  values: { database: databasePath, log: logPath, home: homePath, images: imagesPath },
 } = parseArgs({
-  options: { database: { type: "string" }, log: { type: "string" }, home: { type: "string" } },
+  options: {
+    database: { type: "string" },
+    log: { type: "string" },
+    home: { type: "string" },
+    images: { type: "string" },
+  },
   strict: false,
 })
 
@@ -39,6 +45,8 @@ const path = databasePath as string
 const layerLogger = layerErrorLogFile(logPath as string)
 if (typeof homePath !== "string") fail("Missing --home <path>, the folder of the user's files")
 const ivinHome = homePath as string
+if (typeof imagesPath !== "string") fail("Missing --images <path>, the folder of the sent images")
+const imageFolder = imagesPath as string
 
 const harnessId = process.env["IVIN_HARNESS"] ?? "claude"
 const layerHarnesses = {
@@ -75,6 +83,7 @@ const startup = Effect.gen(function* () {
       Layer.provideMerge(
         Layer.mergeAll(
           layerDatabase(path),
+          Layer.succeed(ImageFolder)({ path: imageFolder }),
           layerHarness,
           layerLogger,
           layerFsKeybindingsFile(ivinHome),

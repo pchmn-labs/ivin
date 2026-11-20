@@ -13,6 +13,7 @@ import { listClaudeModels } from "./list-models.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
 import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
 import { toolActivity } from "../rules/tool-activity.ts"
+import { userMessageLine } from "../rules/user-message-line.ts"
 
 const EVENT_BUFFER = 64
 const STDERR_LIMIT = 8_192
@@ -151,13 +152,9 @@ export const layerClaudeWith = (
 
           const run: HarnessRun = {
             events,
-            send: ({ text }) =>
+            send: (message) =>
               Effect.callback<void, HarnessError>((resume) => {
-                const line = JSON.stringify({
-                  type: "user",
-                  message: { role: "user", content: [{ type: "text", text }] },
-                })
-                child.stdin.write(`${line}\n`, (error) =>
+                child.stdin.write(`${userMessageLine(message)}\n`, (error) =>
                   resume(
                     error
                       ? Effect.fail(

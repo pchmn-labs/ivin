@@ -36,6 +36,7 @@ const setup = async (
       createdAt: at,
       lastActivityAt: at,
       archivedAt: null,
+      lastImageNumber: 0,
     })
     if (title !== "Closed") server.openTab(`s${index + 1}`)
   })

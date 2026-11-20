@@ -1,4 +1,5 @@
-import type { HarnessRunOptions, RunOption, RunOptions } from "@ivin/contracts/session"
+import type { HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
+import type { RunOption } from "@ivin/contracts/transcript"
 
 const OPTIONS: readonly RunOption[] = ["model", "effort", "permissionMode"]
 

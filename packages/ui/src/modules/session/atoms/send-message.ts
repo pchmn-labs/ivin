@@ -1,18 +1,20 @@
 import { Effect } from "effect"
 import type { Session, WorkingFolderChoice } from "@ivin/contracts/session"
-import type { TranscriptItem } from "@ivin/contracts/transcript"
+import type { ImageData, TranscriptItem } from "@ivin/contracts/transcript"
 import { optimistic } from "@ivin/state/optimistic"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 import { transcriptOf } from "../../transcript/atoms/get-items.ts"
+import { forgetSentImages, rememberSentImages } from "../../transcript/atoms/sent-images.ts"
 import { sessionsOf } from "./list-sessions.ts"
 
 export const sendMessageAtom = serverRuntime.fn<{
   readonly projectPath: string
   readonly sessionId: string
   readonly text: string
+  readonly images?: ReadonlyArray<ImageData>
   readonly workingFolder?: WorkingFolderChoice
 }>()(
-  Effect.fnUntraced(function* ({ projectPath, sessionId, text, workingFolder }, get) {
+  Effect.fnUntraced(function* ({ projectPath, sessionId, text, images = [], workingFolder }, get) {
     const client = yield* ServerClient
     const transcript = transcriptOf(sessionId)
     const messageId = crypto.randomUUID()
@@ -26,7 +28,9 @@ export const sendMessageAtom = serverRuntime.fn<{
       type: "message",
       role: "user",
       text,
+      images: images.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
     }
+    rememberSentImages(images)
 
     return yield* optimistic<Session>({
       apply: transcript.list.upsert([pending]),
@@ -42,9 +46,10 @@ export const sendMessageAtom = serverRuntime.fn<{
         sessionId,
         messageId,
         text,
+        ...(images.length > 0 && { images }),
         ...(workingFolder && { workingFolder }),
       }),
-    )
+    ).pipe(Effect.ensuring(Effect.sync(() => forgetSentImages(images))))
   }),
   // A second message sent before the first is answered would otherwise cancel the first.
   { concurrent: true },

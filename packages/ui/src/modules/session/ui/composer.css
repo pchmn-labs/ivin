@@ -13,20 +13,19 @@
   border: 1px solid var(--iv-border-strong);
   border-radius: var(--iv-radius-lg);
   background: var(--iv-bg-raised);
+  transition:
+    border-color var(--iv-duration-fast) ease-out,
+    background-color var(--iv-duration-fast) ease-out;
 }
 
 .iv-composer__surface:focus-within {
   border-color: var(--iv-focus-ring);
 }
 
-/* The surface carries the border and focus state, so the field sits flat inside it. */
-.iv-composer__surface .iv-field {
-  border-color: transparent;
-  background: transparent;
-}
-
-.iv-composer__surface .iv-field:focus-visible {
-  outline: none;
+.iv-composer__surface[data-dragging] {
+  border-style: dashed;
+  border-color: var(--iv-accent);
+  background: color-mix(in srgb, var(--iv-accent) 6%, var(--iv-bg-raised));
 }
 
 .iv-composer__statusline {

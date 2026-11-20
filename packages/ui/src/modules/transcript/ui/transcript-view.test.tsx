@@ -17,9 +17,13 @@ const message = (position: number): TranscriptItem => ({
   type: "message",
   role: "assistant",
   text: `message ${position}`,
+  images: [],
 })
 
 const scroller = () => document.querySelector<HTMLElement>('[data-testid="transcript"]')!
+// The image files the transcript asks the window to load: one per <img> it has drawn.
+const loadedImages = () =>
+  [...document.querySelectorAll<HTMLImageElement>("img")].map((image) => image.getAttribute("src"))
 const frames = () => new Promise((resolve) => setTimeout(resolve, 150))
 
 test("the transcript stays put when scrolled up and follows when at the bottom", async () => {
@@ -48,6 +52,7 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
     createdAt: at,
     lastActivityAt: at,
     archivedAt: null,
+    lastImageNumber: 0,
   })
 
   await render(
@@ -78,4 +83,42 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
   await expect.element(page.getByText("message 40", { exact: true })).toBeVisible()
   server.pushItem(message(41))
   await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
+})
+
+test("a transcript of 200 images loads only the images of the rows on screen", async () => {
+  const server = makeFakeServer()
+  server.seedItems(
+    "s1",
+    Array.from({ length: 200 }, (_, i) => ({
+      id: `m${i}`,
+      sessionId: "s1",
+      position: i,
+      type: "message" as const,
+      role: "user" as const,
+      text: `shot ${i} [Image #${i + 1}]`,
+      images: [{ id: `img-${i + 1}`, number: i + 1, mediaType: "image/png" as const }],
+    })),
+  )
+
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+
+  await expect.element(page.getByText("shot 199", { exact: false })).toBeVisible()
+  await vi.waitFor(() => expect(loadedImages()).toContain("ivin-image://s1/img-200.png"))
+  const onScreen = new Set(loadedImages())
+  expect(onScreen.size).toBeLessThan(20)
+
+  for (let i = 0; i < 5; i++) {
+    scroller().scrollTop = 0
+    await frames()
+  }
+  await vi.waitFor(() => expect(loadedImages().some((src) => !onScreen.has(src))).toBe(true))
+  expect(new Set(loadedImages()).size).toBeLessThan(200)
 })

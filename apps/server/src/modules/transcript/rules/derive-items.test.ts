@@ -34,7 +34,15 @@ const result = (toolCallId: string, isError = false): Body => ({
 
 test("a user message is one message item named after its event", () => {
   expect(deriveItems(events(user("hi")))).toEqual([
-    { id: "e1", sessionId: "s1", position: 1, type: "message", role: "user", text: "hi" },
+    {
+      id: "e1",
+      sessionId: "s1",
+      position: 1,
+      type: "message",
+      role: "user",
+      text: "hi",
+      images: [],
+    },
   ])
 })
 
@@ -133,6 +141,7 @@ test("a usage event is a usage item at its own position and leaves the open mess
       type: "message",
       role: "assistant",
       text: "one\n\ntwo",
+      images: [],
     },
     {
       id: "e2",

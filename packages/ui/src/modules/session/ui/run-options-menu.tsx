@@ -1,4 +1,5 @@
-import type { HarnessRunOptions, RunOption, RunOptions, Session } from "@ivin/contracts/session"
+import type { HarnessRunOptions, RunOptions, Session } from "@ivin/contracts/session"
+import type { RunOption } from "@ivin/contracts/transcript"
 import {
   ColumnMenu,
   ColumnMenuNote,

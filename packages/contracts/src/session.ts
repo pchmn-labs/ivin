@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
+import { ImageData } from "./transcript.ts"
 
 // `waiting`: the agent waits on the user, such as an approval.
 export const SessionStatus = Schema.Literals([
@@ -13,9 +14,6 @@ export type SessionStatus = typeof SessionStatus.Type
 
 export const Harness = Schema.Literals(["claude", "codex", "acp", "scripted"])
 export type Harness = typeof Harness.Type
-
-export const RunOption = Schema.Literals(["model", "effort", "permissionMode"])
-export type RunOption = typeof RunOption.Type
 
 export const RunOptions = Schema.Struct({
   model: Schema.String,
@@ -79,6 +77,8 @@ export const Session = Schema.Struct({
   createdAt: Schema.DateTimeUtcFromMillis,
   lastActivityAt: Schema.DateTimeUtcFromMillis,
   archivedAt: Schema.NullOr(Schema.DateTimeUtcFromMillis),
+  // 0 before the first image; the next pasted image takes the number after it.
+  lastImageNumber: Schema.Int,
 })
 export type Session = typeof Session.Type
 
@@ -207,6 +207,7 @@ export const SessionRpcs = RpcGroup.make(
       sessionId: Schema.String,
       messageId: Schema.String,
       text: Schema.String,
+      images: Schema.optional(Schema.Array(ImageData)),
       workingFolder: Schema.optional(WorkingFolderChoice),
     },
     success: Session,

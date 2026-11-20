@@ -30,6 +30,7 @@ export const createSession = (projectPath: string) =>
       createdAt: now,
       lastActivityAt: now,
       archivedAt: null,
+      lastImageNumber: 0,
     }
     yield* store.insert(session)
     return session

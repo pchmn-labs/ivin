@@ -1,0 +1,24 @@
+.iv-message-editor {
+  position: relative;
+}
+
+.iv-message-editor__field {
+  min-height: calc(2 * var(--iv-text-md-lh) + 2 * var(--iv-space-1));
+  max-height: 240px;
+  padding: var(--iv-space-1) var(--iv-space-2);
+  overflow-y: auto;
+  color: var(--iv-text);
+  font-size: var(--iv-text-md);
+  line-height: var(--iv-text-md-lh);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  outline: none;
+}
+
+.iv-message-editor__placeholder {
+  position: absolute;
+  top: var(--iv-space-1);
+  left: var(--iv-space-2);
+  color: var(--iv-text-faint);
+  pointer-events: none;
+}
