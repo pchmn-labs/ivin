@@ -6,7 +6,7 @@ export class ImageStore extends Context.Service<
   {
     readonly save: (sessionId: string, images: readonly ImageData[]) => Effect.Effect<void>
     readonly uncompressed: (sessionId: string) => Effect.Effect<readonly string[]>
-    // Replaces the image's file with a WebP copy when that is smaller; a failure leaves the file as it was.
+    // A failure leaves the file as it was.
     readonly compress: (
       sessionId: string,
       imageId: string,

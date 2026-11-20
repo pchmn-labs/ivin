@@ -1,5 +1,6 @@
 import { Context, Effect, FiberSet, Layer, Semaphore } from "effect"
 import { logFailure } from "../../log/usecases/log-error.ts"
+import { TabStore } from "../../tab/usecases/tab-store.ts"
 import { ImageStore } from "./image-store.ts"
 
 export class ImageCompression extends Context.Service<
@@ -15,7 +16,10 @@ export class ImageCompression extends Context.Service<
 const compressSession = (sessionId: string) =>
   Effect.gen(function* () {
     const store = yield* ImageStore
+    const tabs = yield* TabStore
     for (const imageId of yield* store.uncompressed(sessionId)) {
+      // A tab reopened during the pass shows the session again, at full quality.
+      if (yield* tabs.find(sessionId)) return
       yield* store
         .compress(sessionId, imageId)
         .pipe(Effect.catchCause((cause) => logFailure("image compression", cause)))
@@ -24,7 +28,7 @@ const compressSession = (sessionId: string) =>
 
 export const layerImageCompression = Layer.effect(ImageCompression)(
   Effect.gen(function* () {
-    const context = yield* Effect.context<ImageStore>()
+    const context = yield* Effect.context<ImageStore | TabStore>()
     const fibers = yield* FiberSet.make()
     // One pass at a time, so two never compress the same image.
     const passes = yield* Semaphore.make(1)

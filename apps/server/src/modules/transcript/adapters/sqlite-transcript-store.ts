@@ -69,7 +69,6 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             event.type === "user_message" && event.images && compressed.size > 0
               ? {
                   ...event,
-                  // The window builds an image's file name from its type.
                   images: event.images.map((image) => ({
                     ...image,
                     mediaType: compressed.get(image.id) ?? image.mediaType,

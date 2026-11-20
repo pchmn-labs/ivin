@@ -17,7 +17,6 @@ const workerFile = () => {
   return existsSync(bundled) ? bundled : join(import.meta.dirname, "webp-worker.ts")
 }
 
-// Encoding a large screenshot takes most of a second, which would stall every RPC on this thread.
 export const toWebpOffThread = (bytes: Uint8Array, mediaType: DecodableMediaType) =>
   new Promise<Uint8Array>((resolve, reject) => {
     const worker = new Worker(workerFile(), { workerData: { bytes, mediaType } })

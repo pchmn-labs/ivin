@@ -67,7 +67,7 @@ export const layerFsImageStore = Layer.effect(ImageStore)(
           const markCompressed = db.prepare(
             "UPDATE images SET compressed_media_type = ? WHERE id = ?",
           )
-          // A WebP no smaller than the original is dropped, and the image counts as compressed.
+          // Marked even when the original stays, so the next close does not encode it again.
           if (webp.byteLength >= bytes.byteLength)
             return void markCompressed.run(mediaType, imageId)
           writeFileSync(join(sessionFolder(sessionId), imageFileName(imageId, "image/webp")), webp)
