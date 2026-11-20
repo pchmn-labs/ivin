@@ -10,11 +10,8 @@ export class SettingsFile extends Context.Service<
 >()("ivin/server/SettingsFile") {}
 
 // A file that goes through `texts`, then stays as it is.
-export const layerSettingsFileOf = (
-  texts: ReadonlyArray<string | null>,
-  path = "/home/.ivin/settings.json",
-) =>
+export const layerSettingsFileOf = (texts: ReadonlyArray<string | null>) =>
   Layer.succeed(SettingsFile)({
-    path,
+    path: "/home/.ivin/settings.json",
     contents: Stream.fromIterable(texts).pipe(Stream.concat(Stream.never)),
   })

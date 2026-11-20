@@ -34,9 +34,9 @@ const parse = (command: Command, args: readonly string[]) => {
     return parseArgs({
       args: [...args],
       options: Object.fromEntries(
-        Object.entries({ ...command.options, ...sharedOptions }).map(([key, { type }]) => [
+        Object.entries({ ...command.options, ...sharedOptions }).map(([key, { type, short }]) => [
           key,
-          { type },
+          short ? { type, short } : { type },
         ]),
       ),
       allowPositionals: true,
@@ -50,7 +50,8 @@ const parse = (command: Command, args: readonly string[]) => {
   }
 }
 
-const run = async (args: readonly string[]): Promise<Outcome> => {
+// `asJson` is unset when the arguments could not be parsed.
+const run = async (args: readonly string[]): Promise<Outcome & { readonly asJson?: boolean }> => {
   const [name, ...rest] = args
   if (name === undefined) return usageError("ivin needs a command.", mainHelp(commands))
   if (name === "--help" || name === "-h") return helpOf(mainHelp(commands))
@@ -64,15 +65,31 @@ const run = async (args: readonly string[]): Promise<Outcome> => {
   const parsed = parse(command, rest)
   if ("code" in parsed) return parsed
   const { values, positionals } = parsed
+  const asJson = values["json"] === true
+  return { asJson, ...(await runCommand(command, values, positionals)) }
+}
+
+const runCommand = async (
+  command: Command,
+  values: Parameters<Command["run"]>[0]["values"],
+  positionals: readonly string[],
+): Promise<Outcome> => {
   if (values["help"] === true) return helpOf(commandHelp(command))
-  if (positionals.length > command.arguments) {
+  if (positionals.length > command.maxArguments) {
     return usageError(
-      `Unexpected argument "${positionals[command.arguments]}".`,
+      `Unexpected argument "${positionals[command.maxArguments]}".`,
       commandHelp(command),
     )
   }
 
   const socketPath = socketPathOf(process.env)
+  if (socketPath === null) {
+    return failure(
+      exitCode.notRunning,
+      "notRunning",
+      "The ivin that started this agent serves no socket, because another ivin already does. Quit both, then open one.",
+    )
+  }
   const exit = await Effect.runPromiseExit(
     withServer(socketPath, command.run({ values, positionals })),
   )
@@ -89,23 +106,18 @@ const run = async (args: readonly string[]): Promise<Outcome> => {
     )
   }
   if (error?._tag === "ConnectionFailed") {
-    const { code } = error.cause as NodeJS.ErrnoException
-    return failure(
-      exitCode.failed,
-      "failed",
-      `Could not connect to ${socketPath}${code ? ` (${code})` : ""}.`,
-    )
+    return failure(exitCode.failed, "failed", `Could not connect to ivin on ${socketPath}.`)
   }
   return failure(
     exitCode.failed,
     "failed",
-    "ivin could not answer the command. The error is written in ivin's log, ~/.ivin/logs/ivin.log.",
+    "ivin could not answer the command. If the app failed, its error is in ~/.ivin/logs/ivin.log.",
   )
 }
 
 const args = process.argv.slice(2)
 const outcome = await run(args)
-const json = args.includes("--json")
+const json = outcome.asJson ?? args.includes("--json")
 const stream = outcome.toStderr && !json ? process.stderr : process.stdout
 // Writes to a pipe are asynchronous on macOS: exiting before they drain would cut the output.
 stream.write(`${json ? JSON.stringify(outcome.json) : outcome.text}\n`, () =>

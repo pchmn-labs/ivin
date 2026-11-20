@@ -413,7 +413,7 @@ Shipped so far: `ivin doctor`, one line per check (the app's version, the socket
 
 - **Running it.** `apps/cli` is bundled by tsdown into one file, shipped as `Resources/cli/ivin.js`. At each launch main writes `<userData>/bin/ivin`, a shell script that runs that file with the app's own Electron as Node (`ELECTRON_RUN_AS_NODE=1`), so `ivin` needs no Node and follows the app when it moves.
 - **Every command** takes `--help` and `--json` (stdout gets `{ "ok": …, … }`, or `{ "ok": false, "error": { "reason", "message" } }`), and exits 0 (ok), 1 (failed), 2 (invalid usage) or 3 (ivin is not running). It reaches `$IVIN_SOCKET`, else `~/.ivin/run/ivin.sock`. The CLI writes its own messages; the raw error stays in the server's log ([ADR-0004](adr/0004-the-ui-writes-error-messages-and-the-server-logs-raw-errors.md)).
-- **The socket.** The server removes it on a clean exit. At start it replaces one nobody answers on, left by a crash, and leaves alone one another running ivin answers on: that launch then serves no socket and logs why.
+- **The socket.** The server removes it on a clean exit. At start it replaces one nobody answers on, left by a crash, and leaves alone one another running ivin answers on: that launch then serves no socket, logs why, and gives its agents an empty `IVIN_SOCKET`, so their `ivin` says so instead of reaching the other app.
 - **Tests** run the built `ivin` as a child process against an in-process server on a temporary socket with an in-memory SQLite (`apps/server/src/rpc/cli-server.ts`).
 
 ### Skills and docs for agents

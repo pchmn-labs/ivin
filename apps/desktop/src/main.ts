@@ -132,7 +132,6 @@ void app.whenReady().then(() => {
     {
       serviceName: "ivin-server",
       stdio: "inherit",
-      // The server's agents inherit both, so they reach this app with `ivin`.
       env: {
         ...process.env,
         IVIN_SOCKET: join(ivinHome, "run", "ivin.sock"),

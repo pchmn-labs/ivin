@@ -61,6 +61,13 @@ test("with the app closed, ivin says it is not running and exits 3", async () =>
   expect(JSON.parse(json.stdout)).toMatchObject({ ok: false, error: { reason: "notRunning" } })
 }, 10_000)
 
+test("an agent whose app serves no socket is told so instead of reaching another ivin", async () => {
+  const run = await runCli(["doctor"], { IVIN_SOCKET: "" })
+
+  expect(run.code).toBe(3)
+  expect(run.stderr).toContain("The ivin that started this agent serves no socket")
+}, 10_000)
+
 test("ivin --help and ivin doctor --help describe the commands and their options", async () => {
   const main = await runCli(["--help"])
   const doctor = await runCli(["doctor", "--help"])
@@ -71,6 +78,7 @@ test("ivin --help and ivin doctor --help describe the commands and their options
   expect(doctor.code).toBe(0)
   expect(doctor.stdout).toContain("Usage: ivin doctor [--json]")
   expect(doctor.stdout).toMatch(/--json +Print the result as JSON/)
+  expect((await runCli(["doctor", "-h"])).stdout).toBe(doctor.stdout)
 }, 10_000)
 
 test.each([[["frob"]], [["doctor", "--frob"]], [["doctor", "extra"]], [[]]])(

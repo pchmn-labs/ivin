@@ -21,8 +21,11 @@ export class ConnectionFailed extends Data.TaggedError("ConnectionFailed")<{
   readonly cause: unknown
 }> {}
 
-export const socketPathOf = (env: NodeJS.ProcessEnv) =>
-  env["IVIN_SOCKET"] ?? join(env["IVIN_HOME"] ?? join(homedir(), ".ivin"), "run", "ivin.sock")
+// Null when the app that started this agent could not serve its socket.
+export const socketPathOf = (env: NodeJS.ProcessEnv): string | null =>
+  env["IVIN_SOCKET"] === ""
+    ? null
+    : (env["IVIN_SOCKET"] ?? join(env["IVIN_HOME"] ?? join(homedir(), ".ivin"), "run", "ivin.sock"))
 
 // The app is not running when nothing listens: no socket file, or one left by a crash.
 const isNotListening = (error: NodeJS.ErrnoException) =>

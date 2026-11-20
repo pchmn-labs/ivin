@@ -10,11 +10,8 @@ export class KeybindingsFile extends Context.Service<
 >()("ivin/server/KeybindingsFile") {}
 
 // A file that goes through `texts`, then stays as it is.
-export const layerKeybindingsFileOf = (
-  texts: ReadonlyArray<string | null>,
-  path = "/home/.ivin/keybindings.json",
-) =>
+export const layerKeybindingsFileOf = (texts: ReadonlyArray<string | null>) =>
   Layer.succeed(KeybindingsFile)({
-    path,
+    path: "/home/.ivin/keybindings.json",
     contents: Stream.fromIterable(texts).pipe(Stream.concat(Stream.never)),
   })

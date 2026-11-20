@@ -5,6 +5,7 @@ export const exitCode = { ok: 0, failed: 1, usage: 2, notRunning: 3 } as const
 
 export interface Option {
   readonly type: "string" | "boolean"
+  readonly short?: string
   readonly description: string
   readonly value?: string
 }
@@ -21,8 +22,7 @@ export interface Command {
   readonly usage: string
   readonly description: string
   readonly options: Readonly<Record<string, Option>>
-  // How many positional arguments the command takes at most.
-  readonly arguments: number
+  readonly maxArguments: number
   readonly run: (input: {
     readonly values: Readonly<Record<string, string | boolean | (string | boolean)[] | undefined>>
     readonly positionals: readonly string[]
@@ -31,7 +31,7 @@ export interface Command {
 
 export const sharedOptions: Readonly<Record<string, Option>> = {
   json: { type: "boolean", description: "Print the result as JSON on stdout" },
-  help: { type: "boolean", description: "Show this help" },
+  help: { type: "boolean", short: "h", description: "Show this help" },
 }
 
 const optionLines = (options: Readonly<Record<string, Option>>) => {
@@ -65,9 +65,7 @@ export const mainHelp = (commands: readonly Command[]) => {
     "Commands:",
     ...commands.map(({ name, summary }) => `  ${name.padEnd(width)}  ${summary}`),
     "",
-    "Options:",
-    ...optionLines(sharedOptions),
-    "",
+    "Every command takes --json, to print its result as JSON on stdout, and --help.",
     "Run `ivin <command> --help` for a command's options.",
     "Exit codes: 0 ok, 1 failed, 2 invalid usage, 3 ivin is not running.",
   ].join("\n")

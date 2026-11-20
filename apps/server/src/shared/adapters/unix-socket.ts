@@ -21,7 +21,6 @@ const answers = (path: string) =>
     probe.once("error", () => resolve(false))
   })
 
-// A crash leaves the file behind; only a socket nobody answers on is removed.
 const removeIfStale = (path: string) =>
   Effect.tryPromise({
     try: () => answers(path),
@@ -38,6 +37,8 @@ const listen = (path: string, server: Server) =>
   Effect.tryPromise({
     try: async () => {
       await mkdir(dirname(path), { recursive: true, mode: 0o700 })
+      // Connecting needs the folder's permission, so no one else gets in before the chmod.
+      await chmod(dirname(path), 0o700)
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject)
         server.listen(path, () => {

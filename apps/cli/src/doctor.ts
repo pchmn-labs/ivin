@@ -74,7 +74,7 @@ export const doctor: Command = {
   description:
     "Prints one line per check: the app's version, the socket, settings.json, keybindings.json and the program the agents run. Exits 1 when a check fails.",
   options: {},
-  arguments: 0,
+  maxArguments: 0,
   run: () =>
     Effect.gen(function* () {
       const { client, socketPath } = yield* Server
