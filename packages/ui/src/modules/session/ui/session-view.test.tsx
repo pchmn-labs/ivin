@@ -530,3 +530,83 @@ test("the switch and pull buttons are gone once the first message is sent, and a
   await expect.element(switchButton()).not.toBeInTheDocument()
   await expect.element(page.getByRole("button", { name: /^Pull/ })).not.toBeInTheDocument()
 })
+
+const mountDeletedFolderSession = async () => {
+  const server = makeFakeServer({
+    project: { path: "/p", name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
+  const at = DateTime.makeUnsafe(0)
+  server.worktrees.push({ path: "/p/.worktrees/docs-adr", branch: "docs/adr" })
+  server.sessions.set("s1", {
+    id: "s1",
+    projectPath: "/p",
+    workingFolder: "/p/.worktrees/ivin-3f2a9c1e",
+    inWorktree: true,
+    branch: "ivin/3f2a9c1e",
+    started: true,
+    workingFolderDeleted: true,
+    title: "Add the Working panel",
+    model: "sonnet",
+    status: "idle",
+    statusChangedAt: at,
+    createdAt: at,
+    lastActivityAt: at,
+  })
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <SessionView projectPath="/p" sessionId="s1" />
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+  return server
+}
+
+const continueHere = () =>
+  page.getByRole("button", { name: /^(Continue here|Create and continue)$/ })
+
+test("a session whose worktree was deleted shows the working folder picker instead of the text field", async () => {
+  const server = await mountDeletedFolderSession()
+
+  await expect.element(page.getByText("Where should Claude continue?")).toBeVisible()
+  await expect.element(page.getByRole("textbox", { name: "Message" })).not.toBeInTheDocument()
+  await expect
+    .element(page.getByTestId("session-location"))
+    .toHaveTextContent("Worktree deletedivin/3f2a9c1e")
+  await expect.element(page.getByRole("radio", { name: /Current checkout/ })).toBeChecked()
+  await expect.element(page.getByRole("radio", { name: /docs\/adr/ })).toBeVisible()
+
+  await page.getByTestId("pick-working-folder").getByText("docs/adr").click()
+  await continueHere().click()
+
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toBeVisible()
+  expect(server.pickedFolders).toEqual([
+    { kind: "existing_worktree", path: "/p/.worktrees/docs-adr" },
+  ])
+  await expect.element(page.getByTestId("session-location")).toHaveTextContent("Worktreedocs/adr")
+})
+
+test("the working folder picker is answered from the keyboard", async () => {
+  const server = await mountDeletedFolderSession()
+
+  await expect.element(page.getByRole("radio", { name: /Current checkout/ })).toHaveFocus()
+  await userEvent.keyboard("{ArrowDown}")
+  await expect.element(continueHere()).toHaveTextContent("Create and continue")
+  await userEvent.keyboard("{Enter}")
+
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toBeVisible()
+  expect(server.pickedFolders).toEqual([{ kind: "new_worktree" }])
+})
+
+test("a pick that fails says so beside the picker, keeps the choice and offers a retry", async () => {
+  const server = await mountDeletedFolderSession()
+  server.failNextCall("session.pickWorkingFolder")
+
+  await page.getByTestId("pick-working-folder").getByText("docs/adr").click()
+  await continueHere().click()
+
+  await expect.element(page.getByTestId("pick-working-folder-alert")).toBeVisible()
+  await expect.element(page.getByRole("radio", { name: /docs\/adr/ })).toBeChecked()
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toBeVisible()
+})

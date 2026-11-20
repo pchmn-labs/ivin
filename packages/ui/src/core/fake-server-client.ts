@@ -30,6 +30,7 @@ export interface FakeServer {
   readonly setStatus: (sessionId: string, status: SessionStatus) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   readonly sentMessages: ReadonlyArray<{ readonly workingFolder?: WorkingFolderChoice }>
+  readonly pickedFolders: ReadonlyArray<WorkingFolderChoice>
   // What `worktree.list` returns, for every project.
   readonly worktrees: Array<Worktree>
   // The project checkout as `worktree.checkoutStatus` reports it; switching and pulling change it.
@@ -88,6 +89,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
   const errorReports: Array<ErrorReport> = []
   const failing = new Set<string>()
   const sentMessages: Array<{ readonly workingFolder?: WorkingFolderChoice }> = []
+  const pickedFolders: Array<WorkingFolderChoice> = []
   let worktreeFailure: string | null = null
   const worktrees: Array<Worktree> = []
   const checkout: FakeCheckout = {
@@ -384,6 +386,41 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
           return saveSession(updated)
         }),
       ),
+    "session.pickWorkingFolder": (input: {
+      sessionId: string
+      workingFolder: WorkingFolderChoice
+    }) =>
+      Effect.suspend(() => {
+        const session = sessions.get(input.sessionId)
+        if (session === undefined) {
+          return Effect.fail(new SessionNotFound({ sessionId: input.sessionId }))
+        }
+        pickedFolders.push(input.workingFolder)
+        const choice = input.workingFolder
+        const folder =
+          choice.kind === "checkout"
+            ? { path: session.projectPath, inWorktree: false, branch: "main" }
+            : choice.kind === "new_worktree"
+              ? {
+                  path: `${session.projectPath}/.worktrees/ivin-generated`,
+                  inWorktree: true,
+                  branch: "ivin/generated",
+                }
+              : {
+                  path: choice.path,
+                  inWorktree: true,
+                  branch: worktrees.find((w) => w.path === choice.path)?.branch ?? null,
+                }
+        return Effect.succeed(
+          saveSession({
+            ...session,
+            workingFolder: folder.path,
+            inWorktree: folder.inWorktree,
+            branch: folder.branch,
+            workingFolderDeleted: false,
+          }),
+        )
+      }),
     "worktree.list": () => Effect.sync(() => [...worktrees]),
     "worktree.newBase": () => Effect.succeed("origin/main"),
     "worktree.checkoutStatus": () => Effect.sync(checkoutStatus),
@@ -513,6 +550,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
     sessions,
     errorReports,
     sentMessages,
+    pickedFolders,
     worktrees,
     checkout,
     localChangesChoices,

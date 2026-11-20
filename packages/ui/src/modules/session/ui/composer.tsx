@@ -12,6 +12,7 @@ import { ClaudeMark } from "../../../core/components/harness-mark/harness-mark.t
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { TextArea } from "../../../core/components/text-field/text-field.tsx"
 import { BranchPicker } from "./branch-picker.tsx"
+import { PickWorkingFolder } from "./pick-working-folder.tsx"
 import { SessionLocation } from "./session-location.tsx"
 import { WorkingFolderPicker } from "./working-folder-picker.tsx"
 import { useSessionLocation } from "../hooks/use-session-location.ts"
@@ -73,16 +74,37 @@ export function Composer({
     target instanceof HTMLTextAreaElement &&
     target.closest(".iv-composer") === root.current
 
+  const alert = failure && (
+    <div className="iv-composer__alert" data-testid="composer-alert">
+      <ErrorMessage
+        message={failure.text}
+        {...(failure.retryable && { onRetry: () => sendText(failure.message) })}
+      />
+    </div>
+  )
+  const statusLine = (
+    <div className="iv-composer__statusline">
+      {session && <StatusLocation session={session} choosing={choosing} />}
+      <div className="iv-composer__status-slot" data-testid="composer-status">
+        <Slot slot="composer.status" props={{ sessionId }} />
+      </div>
+    </div>
+  )
+
+  if (session?.workingFolderDeleted) {
+    // Outside the composer's keybinding area, so Enter picks the folder rather than sending.
+    return (
+      <div className="iv-composer">
+        {alert}
+        <PickWorkingFolder session={session} />
+        {statusLine}
+      </div>
+    )
+  }
+
   return (
     <div className="iv-composer" ref={root} data-keybinding-area="composer">
-      {failure && (
-        <div className="iv-composer__alert" data-testid="composer-alert">
-          <ErrorMessage
-            message={failure.text}
-            {...(failure.retryable && { onRetry: () => sendText(failure.message) })}
-          />
-        </div>
-      )}
+      {alert}
       {session && <Slot slot="composer.above" props={{ session, isEmptyComposer }} />}
       <div className="iv-composer__surface">
         <TextArea
@@ -132,12 +154,7 @@ export function Composer({
           )}
         </Stack>
       </div>
-      <div className="iv-composer__statusline">
-        {session && <StatusLocation session={session} choosing={choosing} />}
-        <div className="iv-composer__status-slot" data-testid="composer-status">
-          <Slot slot="composer.status" props={{ sessionId }} />
-        </div>
-      </div>
+      {statusLine}
     </div>
   )
 }
@@ -151,9 +168,10 @@ function StatusLocation({ session, choosing }: { session: Session; choosing: boo
     <SessionLocation
       location={location}
       title={session.workingFolder}
-      branch={
-        location.branch !== null && <BranchPicker session={session} branch={location.branch} />
-      }
+      {...(location.branch !== null &&
+        location.deleted !== true && {
+          branch: <BranchPicker session={session} branch={location.branch} />,
+        })}
     />
   )
 }

@@ -6,6 +6,7 @@ import type {
   SessionAlreadyStarted,
   SessionWorking,
   SessionNotFound,
+  WorkingFolderDeleted,
   WorktreeFailure,
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
@@ -44,7 +45,31 @@ export const sendMessageFailure = (error: unknown): ActionFailure => {
   if (isTag<WorktreeNotCreated>(error, "WorktreeNotCreated")) {
     return WORKTREE_FAILURES[(error as WorktreeNotCreated).reason]
   }
+  if (isTag<WorkingFolderDeleted>(error, "WorkingFolderDeleted")) {
+    return {
+      text: "This session's worktree was deleted, so the message was not sent. Pick where Claude continues, then send it again.",
+      retryable: false,
+    }
+  }
   return { text: "The message was not sent.", retryable: true }
+}
+
+export const pickWorkingFolderFailure = (error: unknown): ActionFailure => {
+  if (isTag<SessionNotFound>(error, "SessionNotFound")) {
+    return { text: "This session no longer exists.", retryable: false }
+  }
+  if (isTag<WorktreeNotCreated>(error, "WorktreeNotCreated")) {
+    const reason = (error as WorktreeNotCreated).reason
+    return reason === "no_default_branch"
+      ? {
+          text: "The worktree was not created: origin has no main, master or default branch to start from. Pick another folder.",
+          retryable: false,
+        }
+      : reason === "not_a_worktree"
+        ? { text: "This worktree no longer exists. Pick another folder.", retryable: false }
+        : WORKTREE_FAILURES[reason]
+  }
+  return { text: "The working folder was not changed.", retryable: true }
 }
 
 export const createSessionFailure = (_error: unknown): ActionFailure => ({

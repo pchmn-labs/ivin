@@ -125,3 +125,21 @@ test("a branch picked in the branch picker names the branch and the folder it is
   await expect.element(page.getByText("fix/typo")).toBeVisible()
   await expect.element(page.getByText("/repo", { exact: true })).toBeVisible()
 })
+
+test("a folder picked after a deletion says where the session moved", async () => {
+  await mount({ ...worktree, cause: "pick", worktreesIgnored: true })
+  await expect.element(page.getByText("Moved to the worktree on")).toBeVisible()
+})
+
+test("a pick of the checkout names the checkout, not a worktree", async () => {
+  await mount({
+    ...worktree,
+    path: "/repo",
+    inWorktree: false,
+    branch: "main",
+    cause: "pick",
+    worktreesIgnored: true,
+  })
+  await expect.element(page.getByText("Moved to the checkout on")).toBeVisible()
+  await expect.element(page.getByText("main", { exact: true })).toBeVisible()
+})
