@@ -1,12 +1,7 @@
-export interface ToolCall {
-  readonly name: string
-  readonly input: unknown
-}
+import type { HarnessEvent } from "@ivin/contracts/transcript"
 
-export interface ToolResult {
-  readonly output: string
-  readonly isError: boolean
-}
+export type ToolCall = Pick<Extract<HarnessEvent, { type: "tool_call" }>, "name" | "input">
+type ToolResult = Pick<Extract<HarnessEvent, { type: "tool_result" }>, "output" | "isError">
 
 const WORKTREE_TOOLS = new Set(["EnterWorktree", "ExitWorktree"])
 const SHELL_TOOL = "Bash"
@@ -18,7 +13,7 @@ export const needsWorktreeList = (call: ToolCall) =>
 const PATH_CHAR = /[\w.\-~]/
 const CREATION = /git\s+(?:-C\s+\S+\s+)?worktree\s+add\b[^;&|\n]*/g
 
-const spellings = (folder: string, from: string) => {
+const pathForms = (folder: string, from: string) => {
   if (!folder.startsWith(`${from}/`)) return [folder]
   const relative = folder.slice(from.length + 1)
   return [folder, relative, `./${relative}`]
@@ -41,7 +36,7 @@ const mentionsAt = (text: string, spelling: string) => {
 const lastMentioned = (text: string, folders: readonly string[], from: string) => {
   let best: { folder: string; at: number; length: number } | null = null
   for (const folder of folders) {
-    for (const spelling of spellings(folder, from)) {
+    for (const spelling of pathForms(folder, from)) {
       for (const at of mentionsAt(text, spelling)) {
         if (!best || at > best.at || (at === best.at && spelling.length > best.length)) {
           best = { folder, at, length: spelling.length }
@@ -78,7 +73,6 @@ export const folderAfterTool = ({
   if (result.isError) return null
   const target = WORKTREE_TOOLS.has(call.name)
     ? lastMentioned(result.output, folders, workingFolder)
-    : // Creating a worktree is not working in it: only the agent's other commands count.
-      lastMentioned(inputText(call.input).replace(CREATION, ""), created, workingFolder)
+    : lastMentioned(inputText(call.input).replace(CREATION, ""), created, workingFolder)
   return target === workingFolder ? null : target
 }

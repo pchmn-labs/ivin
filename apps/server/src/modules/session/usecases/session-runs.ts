@@ -42,7 +42,6 @@ export class SessionRuns extends Context.Service<
 >()("ivin/server/SessionRuns") {}
 
 interface ActiveRun {
-  // The agent process keeps the folder it started in, even after the session moved.
   readonly cwd: string
   readonly busy: () => boolean
   readonly turnStarted: Effect.Effect<void>
@@ -265,7 +264,8 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           yield* setStatus(session.id, "working")
           const run = yield* runOf(session, message)
           if (!run) return
-          yield* run.turnStarted
+          // Mid-turn, a worktree the agent just made would be taken for one that was already there.
+          if (!run.busy()) yield* run.turnStarted
           yield* run.record({ type: "user_message", text: message.text, raw: null }, message.id)
           yield* run
             .send(message.text)

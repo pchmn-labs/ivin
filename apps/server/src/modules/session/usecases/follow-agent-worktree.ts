@@ -7,7 +7,6 @@ import { listWorktrees } from "../../worktree/usecases/list-worktrees.ts"
 import { folderAfterTool, needsWorktreeList, type ToolCall } from "../rules/agent-worktree.ts"
 import { SessionStore } from "./session-store.ts"
 
-// Moves the session to the folder its agent works in, as the run's tool calls show it.
 export const followAgentWorktree = (
   session: Session,
   record: (event: HarnessEvent) => Effect.Effect<void>,
@@ -20,13 +19,12 @@ export const followAgentWorktree = (
     const calls = new Map<string, ToolCall>()
     let worktrees: readonly Worktree[] = []
 
-    const list = listWorktrees(session.projectPath).pipe(
+    const refreshWorktrees = listWorktrees(session.projectPath).pipe(
       Effect.provideService(Git, git),
       Effect.tap((listed) => Effect.sync(() => void (worktrees = listed))),
     )
 
-    // A worktree that appears between turns is not the agent's: the user or another session made it.
-    const turnStarted = list.pipe(
+    const turnStarted = refreshWorktrees.pipe(
       Effect.tap((listed) => Effect.sync(() => listed.forEach((w) => known.add(w.path)))),
       Effect.asVoid,
     )
@@ -45,7 +43,7 @@ export const followAgentWorktree = (
           inWorktree,
           branch,
           cause: "adoption",
-          // ivin created no folder here, so there is no untracked folder to warn about.
+          // The warning is for the worktrees ivin creates under .worktrees/.
           worktreesIgnored: true,
           raw: null,
         })
@@ -62,7 +60,7 @@ export const followAgentWorktree = (
         calls.delete(output.toolCallId)
         if (!call || output.isError) return
         if (needsWorktreeList(call)) {
-          for (const worktree of yield* list) {
+          for (const worktree of yield* refreshWorktrees) {
             if (!known.has(worktree.path)) created.add(worktree.path)
             known.add(worktree.path)
           }
