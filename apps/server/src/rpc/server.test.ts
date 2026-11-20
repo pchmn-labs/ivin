@@ -9,11 +9,12 @@ import { handlers, layerServices } from "./handlers.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 
-test("server.getVersion answers with the version the server was built with", async () => {
-  const program = Effect.gen(function* () {
-    const client = yield* RpcTest.makeClient(ServerRpcs)
-    return yield* client["server.getVersion"]()
-  }).pipe(
+const makeClient = () => RpcTest.makeClient(ServerRpcs)
+type Client = Effect.Success<ReturnType<typeof makeClient>>
+
+const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E>) =>
+  makeClient().pipe(
+    Effect.flatMap(use),
     Effect.provide(
       handlers.pipe(
         Layer.provide(layerServices),
@@ -25,7 +26,13 @@ test("server.getVersion answers with the version the server was built with", asy
       ),
     ),
     Effect.scoped,
+    Effect.runPromise,
   )
 
-  expect(await Effect.runPromise(program)).toEqual({ version: "1.2.3" })
+test("server.getVersion answers with the version the server was built with", async () => {
+  expect(await withServer((client) => client["server.getVersion"]())).toEqual({ version: "1.2.3" })
+})
+
+test("server.getHarness answers with the harness of the server's provider", async () => {
+  expect(await withServer((client) => client["server.getHarness"]())).toBe("scripted")
 })

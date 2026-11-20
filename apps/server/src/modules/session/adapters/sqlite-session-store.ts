@@ -1,4 +1,4 @@
-import type { Session, SessionStatus } from "@ivin/contracts/session"
+import type { Harness, Session, SessionStatus } from "@ivin/contracts/session"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
 import { SessionStore } from "../usecases/session-store.ts"
@@ -11,6 +11,7 @@ interface SessionRow {
   started: number
   working_folder_deleted: number
   title: string
+  harness: Harness
   model: string
   status: SessionStatus
   status_changed_at: number
@@ -27,6 +28,7 @@ const toSession = (row: SessionRow): Session => ({
   started: row.started === 1,
   workingFolderDeleted: row.working_folder_deleted === 1,
   title: row.title,
+  harness: row.harness,
   model: row.model,
   status: row.status,
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
@@ -34,8 +36,8 @@ const toSession = (row: SessionRow): Session => ({
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
 })
 
-const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, model, status, status_changed_at,
-  created_at, last_activity_at, EXISTS (
+const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model, status,
+  status_changed_at, created_at, last_activity_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
   ) AS started`
 
@@ -46,15 +48,16 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
       insert: (session) =>
         Effect.sync(() => {
           db.prepare(
-            `INSERT INTO sessions (id, project_path, working_folder, branch, title, model, status,
-               status_changed_at, created_at, last_activity_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            `INSERT INTO sessions (id, project_path, working_folder, branch, title, harness, model,
+               status, status_changed_at, created_at, last_activity_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           ).run(
             session.id,
             session.projectPath,
             session.workingFolder,
             session.branch,
             session.title,
+            session.harness,
             session.model,
             session.status,
             DateTime.toEpochMillis(session.statusChangedAt),

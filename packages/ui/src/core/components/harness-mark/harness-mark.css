@@ -6,3 +6,7 @@
 .iv-harness-mark--claude {
   color: #d97757;
 }
+
+.iv-harness-mark--agent {
+  color: var(--iv-text-muted);
+}

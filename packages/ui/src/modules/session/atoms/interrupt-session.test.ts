@@ -19,6 +19,7 @@ const setup = async () => {
     started: true,
     workingFolderDeleted: false,
     title: "t",
+    harness: "claude",
     model: "sonnet",
     status: "working",
     statusChangedAt: at,

@@ -15,7 +15,7 @@ import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
+import { migrations, runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServices } from "./handlers.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
@@ -102,6 +102,39 @@ test("a session keeps the model it was created with, in create and in the list",
 
   expect(created.model).toBe("opus")
   expect(listed.map((s) => s.model)).toEqual(["opus"])
+})
+
+test("a session reports the harness of the server's provider", async () => {
+  const { created, listed } = await withServer(newDatabase(), [], [], (client) =>
+    Effect.gen(function* () {
+      const created = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      return { created, listed: yield* client["session.list"]({ projectPath: "/p" }) }
+    }),
+  )
+
+  expect(created.harness).toBe("scripted")
+  expect(listed.map((s) => s.harness)).toEqual(["scripted"])
+})
+
+test("a session stored before sessions recorded their harness runs on claude", async () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(
+    runMigrations(
+      db,
+      migrations.filter((m) => m.version <= 9),
+    ),
+  )
+  db.prepare(
+    `INSERT INTO sessions (id, project_path, working_folder, title, created_at, last_activity_at)
+     VALUES ('s', '/p', '/p', 't', 0, 0)`,
+  ).run()
+  Effect.runSync(runMigrations(db))
+
+  const listed = await withServer(db, [], [], (client) =>
+    client["session.list"]({ projectPath: "/p" }),
+  )
+
+  expect(listed.map((s) => s.harness)).toEqual(["claude"])
 })
 
 test("a session is renamed, and an unknown session is not found", async () => {

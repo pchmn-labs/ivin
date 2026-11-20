@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import type { Harness } from "@ivin/contracts/session"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
@@ -7,7 +8,10 @@ import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { SessionList } from "./session-list.tsx"
 
-const setup = async (titles: ReadonlyArray<string>, options: { holdTabs?: boolean } = {}) => {
+const setup = async (
+  titles: ReadonlyArray<string>,
+  options: { holdTabs?: boolean; harness?: Harness } = {},
+) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
@@ -22,6 +26,7 @@ const setup = async (titles: ReadonlyArray<string>, options: { holdTabs?: boolea
       started: true,
       workingFolderDeleted: false,
       title,
+      harness: options.harness ?? "claude",
       model: "sonnet",
       status: "idle",
       statusChangedAt: at,
@@ -116,4 +121,19 @@ test("a session outside a git repository has no branch line", async () => {
   server.setStatus("s1", "working")
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Working")
   expect(page.getByTestId("session-location").query()).toBeNull()
+})
+
+test("a row draws its session's harness mark", async () => {
+  await setup(["One"], { harness: "codex" })
+  const row = page.getByTestId("session-item").element()
+  expect(row.querySelector(".iv-harness-mark--agent")).not.toBeNull()
+  expect(row.querySelector(".iv-harness-mark--claude")).toBeNull()
+})
+
+test("a claude session's row draws the Claude mark", async () => {
+  await setup(["One"])
+  await expect.element(page.getByTestId("session-item")).toBeVisible()
+  expect(
+    page.getByTestId("session-item").element().querySelector(".iv-harness-mark--claude"),
+  ).not.toBeNull()
 })

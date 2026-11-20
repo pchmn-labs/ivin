@@ -13,7 +13,7 @@ const workingFolderLabel = (item: WorkingFolderItem) => {
 }
 
 function Message({ item }: SlotProps["transcript.message"]) {
-  // Thinking stays in the transcript data but is not shown, as in the Claude CLI.
+  // Thinking stays in the transcript data but is not shown, as in the agent CLIs.
   if (item.type === "thinking") return null
   if (item.type === "interruption") {
     return (

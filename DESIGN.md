@@ -244,11 +244,11 @@ The design does without dense dashboards, IDE chrome and decoration.
 - System UI type at 13px body, with mono for code, commands and paths.
 - A 4px grid, 28px controls (`--iv-control-md`; 24px small, `--iv-control-sm`), 30px list rows (`--iv-row-height`), 6px corners on controls and 10px on surfaces.
 - Shadows only on overlays: menus, tooltips and dialogs. The sidebar card floats by inset and border, not shadow.
-- Every value is a `--iv-` token a theme file can override; the Claude mark is the one exception.
+- Every value is a `--iv-` token a theme file can override; a harness mark's brand colour is the one exception.
 
 ## Colors
 
-The palette is green-tinted neutrals, one yew-green accent, an amber and a cursor red signal, six project hues and the Claude brand orange. Each theme colour has a light-theme counterpart (the `-light` keys).
+The palette is green-tinted neutrals, one yew-green accent, an amber and a cursor red signal, six project hues and the harness marks' brand colours (Claude's orange). Each theme colour has a light-theme counterpart (the `-light` keys).
 
 ### Primary
 - **Yew Green** (`--iv-accent`): the primary button, the selected tab underline, the focus ring, the caret, links, text selection (32% mix), the connected dot, the "working" status mark and the working ring on the session mark. In light it darkens to a deep forest green so white text on it stays legible.
@@ -265,7 +265,7 @@ The palette is green-tinted neutrals, one yew-green accent, an amber and a curso
 
 ### Tertiary
 - **Project Hues** (`--iv-project-hue-0` to `-5`): sage, slate blue, ochre, lilac, clay and teal, muted in dark and deepened in light. A project's pixel creature takes one hue, chosen from its name. They identify projects and nothing else.
-- **Claude Orange** (`claude-mark`, set in `harness-mark.css`): the Claude mark on session rows and beside the model in the composer. It is the harness's brand colour, so it stays fixed across themes.
+- **Harness brand colours** (set in `harness-mark.css`): each harness mark keeps its harness's brand colour, fixed across themes; Claude's mark is orange (`claude-mark`). A harness with no mark of its own shows the neutral agent mark, a ring around a dot in muted text.
 
 ### Neutral
 - **Forest Ground** (`--iv-bg`): the window, the main area and the transcript.
@@ -281,7 +281,7 @@ The palette is green-tinted neutrals, one yew-green accent, an amber and a curso
 
 **The Amber Asks, Red Fails Rule.** Amber marks only what needs the user (waiting, an approval); cursor red marks only what went wrong (error, failure). A status colour goes through `--iv-status-working`, `--iv-status-waiting`, `--iv-status-idle` or `--iv-status-failed`, never a raw colour.
 
-**The Token-Only Rule.** No colour, font or size outside the `--iv-` tokens. Derived tints use `color-mix()` on a token (accent blocks at 8% fill and 40% border, the bubble at 14% or 16%, the checkout buttons at 14% and 22% on hover, the amber wash at 8% and 13%, the amber outline at 60%). The one exception is the Claude mark's brand orange, which belongs to the harness, not the theme.
+**The Token-Only Rule.** No colour, font or size outside the `--iv-` tokens. Derived tints use `color-mix()` on a token (accent blocks at 8% fill and 40% border, the bubble at 14% or 16%, the checkout buttons at 14% and 22% on hover, the amber wash at 8% and 13%, the amber outline at 60%). The one exception is a harness mark's brand colour, which belongs to the harness, not the theme.
 
 ## Typography
 
@@ -369,7 +369,7 @@ Phosphor icons at regular weight, 16px by default and 14px inline with small tex
 - **States:** hover wash; selected rows take the active wash and 500 weight; a row whose session waits on the user takes the dashed amber outline, inset by 1px; with controls under it, it also takes the amber wash (amber hover on hover). Row actions appear only on hover, focus or selection. Controls under a row (`below`) sit inside its frame, aligned with the title, and share its hover; a row's `tooltip` opens on its right.
 
 ### Session Mark
-The signature of the session list: the 16px Claude mark with a small circular overlay at its bottom-right, cut out from the card ground by a ring of the card colour. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px amber disc with a "!". Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
+The signature of the session list: the 16px mark of the session's harness with a small circular overlay at its bottom-right, cut out from the card ground by a ring of the card colour. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px amber disc with a "!". Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
 
 ### Status Mark
 A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv-duration-pulse`). Waiting is a larger 8px amber dot. Idle is a faint 1.5px ring. Failed is red. It always carries a label, visible or hidden.
@@ -378,7 +378,7 @@ A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv
 - **Project rail:** a 44px column of 32px project buttons with 8px corners (`--iv-rail-button-size`), each showing the 20px creature. The selected button takes the raised background, a 1px hairline ring and a faint shadow (`--iv-shadow-raised`); an unselected one takes the hover wash on hover. The label and tooltip are the project's name, with " · N waiting for you" when sessions wait. The amber pill badge (`--iv-badge-size` tall, 11px semibold tabular count) sits on the button's top-right corner, ringed in the card colour. The open-folder ghost icon button and the connection dot close the rail.
 - **List head:** 36px (`--iv-list-head-height`): creature, project name, New session with the model chevron, and a ghost ellipsis menu holding Close project.
 - **Session groups:** caption labels in faint text with a tabular count; "Needs you" is in amber.
-- **Model menu:** a small ghost chevron beside New session opens a menu of models; the current choice carries a check, and picking one starts a session with it. The composer then shows that session's model, fixed at creation, as muted 12px text beside a 14px Claude mark.
+- **Model menu:** a small ghost chevron beside New session opens a menu of models; the current choice carries a check, and picking one starts a session with it. The composer then shows that session's model, fixed at creation, as muted 12px text beside the 14px mark of its harness. The menu lists the models of the harness the server runs, which every new session starts on.
 - **Tab bar:** in the 40px main title bar, the selected project's tabs followed by a ghost New session icon button (plus; it starts a session with the model chosen in the model menu). A tab is `--iv-tab-height` (30px) tall with `--iv-radius-tab` (8px) corners, `--iv-tab-width` (240px) wide whatever its title, shrinking equally with the room left down to `--iv-tab-min-width` (180px) before the bar scrolls, 4px apart, its title cut with an ellipsis. It shows the session mark, then the title in muted 500-weight small text. The selected tab takes the raised background with a 1px hairline ring and a main-colour title; an unselected tab takes the hover wash on hover. A 20px close button (14px x) appears only on hover or keyboard focus; the title gives it room, the tab keeps its width. A middle click also closes a tab. The bar scrolls sideways with no visible scrollbar. Tabs reorder by drag, with a 2px yew drop line; Left, Right, Home and End move between tabs. Unselected tabs have no separators between them.
 - **Tabs (component):** the underlined tabs for inside a panel: 32px tall, muted 500-weight labels, a 2px yew underline on the active tab, over a hairline. The tab bar above does not use it.
 
@@ -413,7 +413,7 @@ Decided but not built, because the data they need does not exist yet. Build them
 ## Do's and Don'ts
 
 ### Do:
-- **Do** take every colour, size, radius and duration from a `--iv-` token, so a theme file can override it. The Claude mark's orange is the only literal colour.
+- **Do** take every colour, size, radius and duration from a `--iv-` token, so a theme file can override it. A harness mark's brand colour is the only literal colour.
 - **Do** keep yew green for focus, selection, the primary action and "working", and use at most one primary button per surface.
 - **Do** keep amber for "waiting for you" and approvals, and cursor red for errors and failures, through the `--iv-status-*` tokens.
 - **Do** mark anything the user must answer with the dashed `--iv-attention-outline`, and only that.
@@ -424,7 +424,7 @@ Decided but not built, because the data they need does not exist yet. Build them
 
 ### Don't:
 - **Don't** put a shadow on anything that does not float above the window, the sidebar card included.
-- **Don't** put Claude's answers in a bubble: only the user's message is one.
+- **Don't** put the agent's answers in a bubble: only the user's message is one.
 - **Don't** use dense dashboards, IDE chrome or decoration.
 - **Don't** add inline styles to screens or plugins, or import a UI library or an icon set into a plugin.
 - **Don't** add a font size, weight or radius outside the scales above.
