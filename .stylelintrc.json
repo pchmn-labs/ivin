@@ -1,0 +1,52 @@
+{
+  "ignoreFiles": [
+    "**/*.test.css",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/out/**",
+    "**/release/**"
+  ],
+  "rules": {
+    "color-no-hex": [
+      true,
+      {
+        "message": "Hard-coded colour: use a --iv- colour token from core/theme/tokens.css, or color-mix() on one (docs/conventions/ui.md#colour)"
+      }
+    ],
+    "color-named": [
+      "never",
+      {
+        "message": "Named colour: use a --iv- colour token from core/theme/tokens.css, or color-mix() on one (docs/conventions/ui.md#colour)"
+      }
+    ],
+    "function-disallowed-list": [
+      ["rgb", "rgba", "hsl", "hsla", "hwb", "lab", "lch", "oklab", "oklch", "color"],
+      {
+        "message": "Hard-coded colour function: use a --iv- colour token from core/theme/tokens.css, or color-mix() on one (docs/conventions/ui.md#colour)"
+      }
+    ],
+    "declaration-property-value-disallowed-list": [
+      {
+        "/.*/": [
+          "/var\\(\\s*--(?!iv-|available-height(?![\\w-])|available-width(?![\\w-])|transform-origin(?![\\w-]))/"
+        ]
+      },
+      {
+        "message": "Unknown variable: read a --iv- token from core/theme/tokens.css, or a variable the component library sets (--available-height, --available-width, --transform-origin) (docs/conventions/ui.md#styles)"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": [
+        "packages/ui/src/core/theme/tokens.css",
+        "packages/ui/src/core/components/harness-mark/harness-mark.css"
+      ],
+      "rules": {
+        "color-no-hex": null,
+        "color-named": null,
+        "function-disallowed-list": null
+      }
+    }
+  ]
+}

@@ -155,6 +155,88 @@
       "rules": {
         "no-restricted-imports": "off"
       }
+    },
+    {
+      "files": ["packages/ui/src/**/*.tsx"],
+      "plugins": ["react"],
+      "rules": {
+        "react/refs": "off",
+        "react/set-state-in-effect": "off",
+        "react-hooks/exhaustive-deps": "off",
+        "react/forbid-dom-props": [
+          "error",
+          {
+            "forbid": [
+              {
+                "propName": "style",
+                "message": "No inline style: give the element an iv- class in the .css file beside the component, see docs/conventions/ui.md#styles"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/ui/src/modules/**/*.tsx", "packages/ui/src/app/**/*.tsx"],
+      "plugins": ["react"],
+      "rules": {
+        "react/forbid-elements": [
+          "error",
+          {
+            "forbid": [
+              {
+                "element": "button",
+                "message": "use Button or IconButton from core/components/button instead of a native <button>, see docs/conventions/ui.md#styles"
+              },
+              {
+                "element": "input",
+                "message": "use TextField from core/components/text-field instead of a native <input>, see docs/conventions/ui.md#styles"
+              },
+              {
+                "element": "select",
+                "message": "use Select from core/components/select instead of a native <select>, see docs/conventions/ui.md#styles"
+              },
+              {
+                "element": "textarea",
+                "message": "use TextArea from core/components/text-field instead of a native <textarea>, see docs/conventions/ui.md#styles"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["packages/ui/src/core/components/resize-handle/**"],
+      "rules": {
+        "react/forbid-dom-props": "off"
+      },
+      "plugins": ["react"]
+    },
+    {
+      "files": [
+        "packages/ui/src/modules/project/ui/project-rail.tsx",
+        "packages/ui/src/modules/session/ui/branch-picker.tsx",
+        "packages/ui/src/modules/session/ui/checkout-sync.tsx",
+        "packages/ui/src/modules/session/ui/draft-images.tsx",
+        "packages/ui/src/modules/session/ui/pick-working-folder.tsx",
+        "packages/ui/src/modules/session/ui/run-options-menu.tsx",
+        "packages/ui/src/modules/session/ui/working-folder-picker.tsx",
+        "packages/ui/src/modules/tab/ui/tab-bar.tsx",
+        "packages/ui/src/modules/transcript/ui/image-marker.tsx",
+        "packages/ui/src/modules/transcript/ui/image-thumbnail.tsx"
+      ],
+      "rules": {
+        "react/forbid-elements": "off"
+      },
+      "plugins": ["react"]
+    },
+    {
+      "files": ["packages/ui/src/**/*.test.tsx"],
+      "rules": {
+        "react/forbid-dom-props": "off",
+        "react/forbid-elements": "off"
+      },
+      "plugins": ["react"]
     }
   ]
 }
