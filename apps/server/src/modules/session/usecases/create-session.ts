@@ -23,7 +23,7 @@ export const createSession = (projectPath: string) =>
       workingFolderDeleted: false,
       title: defaultTitle,
       harness,
-      ...newSessionRunOptions(runOptions, yield* store.lastRunOptions(projectPath)),
+      ...newSessionRunOptions(yield* runOptions, yield* store.lastRunOptions(projectPath)),
       relaunchFailure: null,
       status: "idle",
       statusChangedAt: now,

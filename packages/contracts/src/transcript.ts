@@ -74,10 +74,13 @@ const WorkingFolderBody = Schema.Struct({
   ...workingFolderFields,
 })
 
+// The names are kept as they read at the change, as the harness may later rename or drop a value.
 const runOptionFields = {
   option: RunOption,
   from: Schema.String,
   to: Schema.String,
+  fromName: Schema.String,
+  toName: Schema.String,
 }
 const RunOptionBody = Schema.Struct({ type: Schema.Literal("run_option"), ...runOptionFields })
 

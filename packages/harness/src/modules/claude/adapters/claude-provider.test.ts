@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { Effect, Stream } from "effect"
 import { expect, test, vi } from "vitest"
 import { HarnessProvider } from "../../../shared/harness-provider.ts"
+import { FALLBACK_MODELS } from "../rules/run-options.ts"
 import { layerClaude, layerClaudeWith } from "./claude-provider.ts"
 
 // Spawns the real `claude` CLI and calls the API; kept out of CI.
@@ -244,6 +245,52 @@ setInterval(() => {}, 1000)`,
       )
 
       expect(Date.now() - started).toBeLessThan(500)
+    },
+  )
+})
+
+// Answers the initialize request with one listed model, and counts its starts in FAKE_LOG.
+const answerInitialize = `
+const fs = require("node:fs")
+fs.appendFileSync(process.env.FAKE_LOG, "start\\n")
+require("node:readline").createInterface({ input: process.stdin }).on("line", (text) => {
+  const { request_id } = JSON.parse(text)
+  const models = [{ value: "opus", displayName: "Opus 9", description: "Big", supportedEffortLevels: ["low"] }]
+  console.log(JSON.stringify({ type: "control_response", response: { subtype: "success", request_id, response: { models } } }))
+})
+setInterval(() => {}, 1000)`
+
+const listedModels = (layer = layerClaude) =>
+  Effect.runPromise(
+    Effect.gen(function* () {
+      const { runOptions } = yield* HarnessProvider
+      return [yield* runOptions, yield* runOptions]
+    }).pipe(Effect.provide(layer)),
+  )
+
+test("the models are the ones Claude Code lists, asked for once", async () => {
+  await withFakeClaude(answerInitialize, async (dir) => {
+    process.env["FAKE_LOG"] = join(dir, "starts.log")
+    const [first, second] = await listedModels()
+
+    expect(first!.model.values).toEqual([
+      { value: "opus", name: "Opus 9", description: "Big", efforts: ["low"], older: false },
+    ])
+    expect(second).toEqual(first)
+    expect(readFileSync(join(dir, "starts.log"), "utf8")).toBe("start\n")
+  })
+})
+
+test("a Claude Code that does not answer in time gives the fixed models, and is asked again", async () => {
+  await withFakeClaude(
+    `require("node:fs").appendFileSync(process.env.FAKE_LOG, "start\\n")
+setInterval(() => {}, 1000)`,
+    async (dir) => {
+      process.env["FAKE_LOG"] = join(dir, "starts.log")
+      const [first] = await listedModels(layerClaudeWith("100 millis", "200 millis"))
+
+      expect(first!.model.values).toEqual(FALLBACK_MODELS)
+      expect(readFileSync(join(dir, "starts.log"), "utf8")).toBe("start\nstart\n")
     },
   )
 })

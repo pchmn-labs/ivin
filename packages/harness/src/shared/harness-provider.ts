@@ -50,7 +50,7 @@ export class HarnessProvider extends Context.Service<
   HarnessProvider,
   {
     readonly id: Harness
-    readonly runOptions: HarnessRunOptions
+    readonly runOptions: Effect.Effect<HarnessRunOptions>
     readonly start: (input: StartInput) => Effect.Effect<HarnessRun, HarnessError, Scope.Scope>
     readonly toolActivity: (call: ToolUse, result: ToolOutcome) => ToolActivity
   }

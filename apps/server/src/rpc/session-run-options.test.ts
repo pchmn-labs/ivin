@@ -195,8 +195,22 @@ test("each change appends a transcript line naming the old and the new value", a
   )
 
   expect(items).toMatchObject([
-    { type: "run_option", option: "effort", from: "low", to: "high" },
-    { type: "run_option", option: "permissionMode", from: "ask", to: "auto" },
+    {
+      type: "run_option",
+      option: "effort",
+      from: "low",
+      to: "high",
+      fromName: "Low",
+      toName: "High",
+    },
+    {
+      type: "run_option",
+      option: "permissionMode",
+      from: "ask",
+      to: "auto",
+      fromName: "Ask",
+      toName: "Auto",
+    },
   ])
 })
 

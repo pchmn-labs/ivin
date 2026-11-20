@@ -24,16 +24,28 @@ export const RunOptions = Schema.Struct({
 })
 export type RunOptions = typeof RunOptions.Type
 
-export const OfferedValues = Schema.Struct({
-  values: Schema.Array(Schema.String),
-  default: Schema.String,
+// `value` is what the harness takes; `name` is what the user reads.
+export const OfferedValue = Schema.Struct({
+  value: Schema.String,
+  name: Schema.String,
+  description: Schema.NullOr(Schema.String),
 })
+export type OfferedValue = typeof OfferedValue.Type
+
+export const OfferedModel = Schema.Struct({
+  ...OfferedValue.fields,
+  // The effort values this model accepts; empty when it takes no effort.
+  efforts: Schema.Array(Schema.String),
+  // A pinned earlier version, listed after the latest models.
+  older: Schema.Boolean,
+})
+export type OfferedModel = typeof OfferedModel.Type
 
 // What a harness offers for each run option, from its provider.
 export const HarnessRunOptions = Schema.Struct({
-  model: OfferedValues,
-  effort: OfferedValues,
-  permissionMode: OfferedValues,
+  model: Schema.Struct({ values: Schema.Array(OfferedModel), default: Schema.String }),
+  effort: Schema.Struct({ values: Schema.Array(OfferedValue), default: Schema.String }),
+  permissionMode: Schema.Struct({ values: Schema.Array(OfferedValue), default: Schema.String }),
 })
 export type HarnessRunOptions = typeof HarnessRunOptions.Type
 

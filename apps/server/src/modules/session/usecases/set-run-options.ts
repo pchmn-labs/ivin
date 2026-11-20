@@ -1,4 +1,5 @@
 import { type RunOptions, SessionNotFound } from "@ivin/contracts/session"
+import { HarnessProvider } from "@ivin/harness"
 import { DateTime, Effect } from "effect"
 import { runOptionChanges, runOptionsOf } from "../rules/run-options.ts"
 import { SessionFeed } from "./session-feed.ts"
@@ -12,7 +13,7 @@ export const setRunOptions = (sessionId: string, requested: Partial<RunOptions>)
     const feed = yield* SessionFeed
     const found = yield* store.findById(sessionId)
     if (!found) return yield* new SessionNotFound({ sessionId })
-    const changes = runOptionChanges(found, requested)
+    const changes = runOptionChanges(found, requested, yield* (yield* HarnessProvider).runOptions)
     if (changes.length > 0) {
       yield* store.setRunOptions(
         sessionId,

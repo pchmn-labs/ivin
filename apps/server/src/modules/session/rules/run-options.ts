@@ -6,7 +6,16 @@ export interface RunOptionChange {
   readonly option: RunOption
   readonly from: string
   readonly to: string
+  readonly fromName: string
+  readonly toName: string
 }
+
+const offers = (offered: HarnessRunOptions, option: RunOption, value: string) =>
+  offered[option].values.some((offer) => offer.value === value)
+
+// A value the harness no longer offers keeps its raw form.
+const nameOf = (offered: HarnessRunOptions, option: RunOption, value: string) =>
+  offered[option].values.find((offer) => offer.value === value)?.name ?? value
 
 export const newSessionRunOptions = (
   offered: HarnessRunOptions,
@@ -14,9 +23,7 @@ export const newSessionRunOptions = (
 ): RunOptions => {
   const pick = (option: RunOption) => {
     const value = last?.[option]
-    return value !== undefined && offered[option].values.includes(value)
-      ? value
-      : offered[option].default
+    return value !== undefined && offers(offered, option, value) ? value : offered[option].default
   }
   return { model: pick("model"), effort: pick("effort"), permissionMode: pick("permissionMode") }
 }
@@ -24,10 +31,14 @@ export const newSessionRunOptions = (
 export const runOptionChanges = (
   current: RunOptions,
   requested: Partial<RunOptions>,
+  offered: HarnessRunOptions,
 ): RunOptionChange[] =>
   OPTIONS.flatMap((option) => {
     const to = requested[option]
-    return to === undefined || to === current[option] ? [] : [{ option, from: current[option], to }]
+    const from = current[option]
+    if (to === undefined || to === from) return []
+    const fromName = nameOf(offered, option, from)
+    return [{ option, from, to, fromName, toName: nameOf(offered, option, to) }]
   })
 
 export const sameRunOptions = (a: RunOptions, b: RunOptions) =>

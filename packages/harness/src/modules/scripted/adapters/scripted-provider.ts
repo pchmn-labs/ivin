@@ -47,10 +47,18 @@ export interface ScriptedOptions {
   readonly runOptions?: HarnessRunOptions
 }
 
+const offered = (value: string, name: string) => ({ value, name, description: null })
+
 export const scriptedRunOptions: HarnessRunOptions = {
-  model: { values: ["scripted", "scripted-large"], default: "scripted" },
-  effort: { values: ["low", "high"], default: "low" },
-  permissionMode: { values: ["ask", "auto"], default: "ask" },
+  model: {
+    values: [
+      { ...offered("scripted", "Scripted"), efforts: ["low", "high"], older: false },
+      { ...offered("scripted-large", "Scripted large"), efforts: ["low", "high"], older: false },
+    ],
+    default: "scripted",
+  },
+  effort: { values: [offered("low", "Low"), offered("high", "High")], default: "low" },
+  permissionMode: { values: [offered("ask", "Ask"), offered("auto", "Auto")], default: "ask" },
 }
 
 export const layerScripted = (
@@ -73,7 +81,7 @@ export const layerScripted = (
     const played = new Map<string, number>()
     return {
       id: "scripted",
-      runOptions,
+      runOptions: Effect.succeed(runOptions),
       // Scripts replay recorded Claude output.
       toolActivity,
       start: (input) =>
