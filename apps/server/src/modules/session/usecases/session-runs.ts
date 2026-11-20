@@ -1,4 +1,9 @@
-import { ApprovalNotOpen, type Session, type SessionStatus } from "@ivin/contracts/session"
+import {
+  ApprovalNotOpen,
+  type RunOptions,
+  type Session,
+  type SessionStatus,
+} from "@ivin/contracts/session"
 import type {
   HarnessDelta,
   HarnessEvent,
@@ -18,6 +23,7 @@ import { logError } from "../../log/usecases/log-error.ts"
 import { ItemFeed } from "../../transcript/usecases/item-feed.ts"
 import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
+import { runOptionsOf, sameRunOptions } from "../rules/run-options.ts"
 import { followAgentWorktree } from "./follow-agent-worktree.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionStore } from "./session-store.ts"
@@ -58,6 +64,7 @@ export class SessionRuns extends Context.Service<
 
 interface ActiveRun {
   readonly cwd: string
+  readonly options: RunOptions
   readonly busy: () => boolean
   readonly turnStarted: Effect.Effect<void>
   readonly record: (event: HarnessEvent, id?: string) => Effect.Effect<void>
@@ -97,6 +104,19 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
         Effect.flatMap((at) => sessions.setStatus(sessionId, status, at)),
         Effect.andThen(sessionFeed.publish(sessionId)),
       )
+
+    const offerPreviousOptions = (
+      sessionId: string,
+      options: RunOptions,
+      message: string,
+      error: string | null,
+    ) =>
+      Effect.gen(function* () {
+        const previous = yield* sessions.confirmedRunOptions(sessionId)
+        if (previous === null || sameRunOptions(previous, options)) return
+        yield* sessions.setRelaunchFailure(sessionId, { previous, message, error })
+        yield* sessionFeed.publish(sessionId)
+      })
 
     const makeWriter = (session: Session) =>
       Effect.gen(function* () {
@@ -186,11 +206,12 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
       Effect.gen(function* () {
         const scope = yield* Scope.make()
         const storedProviderSessionId = yield* sessions.providerSessionId(session.id)
+        const options = runOptionsOf(session)
         const harness = yield* provider
           .start({
             sessionId: session.id,
             cwd: session.workingFolder,
-            model: session.model,
+            options,
             providerSessionId: storedProviderSessionId,
           })
           .pipe(
@@ -211,6 +232,15 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
 
         let providerSessionId = storedProviderSessionId
         let busy = false
+        let firstTurn: { readonly message: string; error: string | null } | null = null
+        const endFirstTurn = Effect.suspend(() => {
+          const turn = firstTurn
+          if (turn === null) return Effect.void
+          firstTurn = null
+          return turn.error !== null
+            ? offerPreviousOptions(session.id, options, turn.message, turn.error)
+            : sessions.setConfirmedRunOptions(session.id, options)
+        })
         const handle = (output: HarnessOutput) => {
           if (output.type === "delta") return writer.stream(output)
           if (output.type === "provider_session") {
@@ -219,28 +249,41 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             return sessions.setProviderSessionId(session.id, output.providerSessionId)
           }
           if (output.type === "status") busy = output.status === "running"
-          return writer
-            .record(output)
-            .pipe(
-              Effect.andThen(
-                output.type === "status" ? writer.turnStatus(output.status) : Effect.void,
-              ),
-              Effect.andThen(follower.observe(output)),
-            )
+          if (output.type === "error" && firstTurn !== null) firstTurn.error ??= output.message
+          const turnEnded = output.type === "status" && output.status === "idle"
+          return (turnEnded ? endFirstTurn : Effect.void).pipe(
+            Effect.andThen(writer.record(output)),
+            Effect.andThen(
+              output.type === "status" ? writer.turnStatus(output.status) : Effect.void,
+            ),
+            Effect.andThen(follower.observe(output)),
+          )
         }
 
         yield* Stream.runForEach(harness.events, handle).pipe(
           Effect.andThen(end.pipe(Effect.andThen(setStatus(session.id, "idle")))),
-          Effect.catchTag("HarnessError", (error) => end.pipe(Effect.andThen(writer.fail(error)))),
+          Effect.catchTag("HarnessError", (error) =>
+            Effect.suspend(() => {
+              if (firstTurn !== null) firstTurn.error ??= error.message
+              return endFirstTurn
+            }).pipe(Effect.andThen(end), Effect.andThen(writer.fail(error))),
+          ),
           Effect.forkIn(scope),
         )
 
+        let started = false
         const run: ActiveRun = {
           cwd: session.workingFolder,
+          options,
           busy: () => busy,
           turnStarted: follower.turnStarted,
           record: writer.record,
-          send: harness.send,
+          send: (message) =>
+            Effect.suspend(() => {
+              if (!started) firstTurn = { message: message.text, error: null }
+              started = true
+              return harness.send(message)
+            }),
           decide: writer.decide,
           respond: harness.respond,
           interrupt: harness.interrupt,
@@ -255,10 +298,11 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
       starting.withPermits(1)(
         Effect.suspend(() => {
           const existing = runs.get(session.id)
-          if (existing && (existing.cwd === session.workingFolder || existing.busy())) {
-            return Effect.succeed(existing)
-          }
-          // The session moved since the run started: its next turn resumes in the new folder.
+          const unchanged =
+            existing?.cwd === session.workingFolder &&
+            sameRunOptions(existing.options, runOptionsOf(session))
+          if (existing && (unchanged || existing.busy())) return Effect.succeed(existing)
+          // The session moved or changed run options since the run started: its next turn resumes with them.
           return (existing?.end ?? Effect.void).pipe(
             Effect.andThen(makeWriter(session)),
             Effect.flatMap((writer) =>
@@ -266,7 +310,18 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
                 Effect.catchTag("HarnessError", (error) =>
                   writer
                     .record(userMessageEvent(message), message.id)
-                    .pipe(Effect.andThen(writer.fail(error)), Effect.as(null)),
+                    .pipe(
+                      Effect.andThen(
+                        offerPreviousOptions(
+                          session.id,
+                          runOptionsOf(session),
+                          message.text,
+                          error.message,
+                        ),
+                      ),
+                      Effect.andThen(writer.fail(error)),
+                      Effect.as(null),
+                    ),
                 ),
               ),
             ),

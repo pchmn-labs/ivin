@@ -1,4 +1,4 @@
-import { layerScripted } from "@ivin/harness"
+import { layerScripted, scriptedRunOptions } from "@ivin/harness"
 import { Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
 import { expect, test } from "vitest"
@@ -40,6 +40,9 @@ test("server.getVersion answers with the version the server was built with", asy
   expect(await withServer((client) => client["server.getVersion"]())).toEqual({ version: "1.2.3" })
 })
 
-test("server.getHarness answers with the harness of the server's provider", async () => {
-  expect(await withServer((client) => client["server.getHarness"]())).toBe("scripted")
+test("server.getHarness answers with the harness of the server's provider and its run options", async () => {
+  expect(await withServer((client) => client["server.getHarness"]())).toEqual({
+    id: "scripted",
+    runOptions: scriptedRunOptions,
+  })
 })

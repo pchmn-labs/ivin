@@ -29,7 +29,7 @@ test("each send replays the next turn on the events stream and records what was 
       const harness = yield* provider.start({
         sessionId: "s1",
         cwd: "/p",
-        model: "m",
+        options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
       yield* harness.send({ text: "hello", images: [] })
@@ -55,7 +55,7 @@ test("sending with no turn left fails", async () => {
       const harness = yield* provider.start({
         sessionId: "s1",
         cwd: "/p",
-        model: "m",
+        options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
       return yield* Effect.flip(harness.send({ text: "hello", images: [] }))
@@ -71,7 +71,7 @@ test("with cycle, the turns start over once they are used up", async () => {
       const harness = yield* (yield* HarnessProvider).start({
         sessionId: "s1",
         cwd: "/p",
-        model: "m",
+        options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
       yield* harness.send({ text: "a", images: [] })
@@ -100,7 +100,7 @@ test("a turn pauses after an approval request and resumes on each decision", asy
         sessionId: "s1",
         cwd: "/p",
         providerSessionId: null,
-        model: "m",
+        options: { model: "m", effort: "e", permissionMode: "p" },
       })
       yield* harness.send({ text: "go", images: [] })
       const first = yield* Stream.runCollect(Stream.take(harness.events, 2))
@@ -136,7 +136,7 @@ test("responding with no paused turn fails", async () => {
       const harness = yield* provider.start({
         sessionId: "s1",
         cwd: "/p",
-        model: "m",
+        options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
       yield* harness.send({ text: "go", images: [] })
@@ -154,7 +154,7 @@ test("interrupt is recorded and offers an interruption then an idle status", asy
       const harness = yield* (yield* HarnessProvider).start({
         sessionId: "s1",
         cwd: "/p",
-        model: "m",
+        options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
       yield* harness.interrupt
@@ -175,7 +175,7 @@ test("a scripted failure fails the events stream at that point, after the events
         const harness = yield* provider.start({
           sessionId: "s1",
           cwd: "/p",
-          model: "m",
+          options: { model: "m", effort: "e", permissionMode: "p" },
           providerSessionId: null,
         })
         yield* harness.send({ text: "go", images: [] })
@@ -195,7 +195,12 @@ test("a start failure fails start, and closing the scope is reported", async () 
   await Effect.runPromise(
     Effect.gen(function* () {
       const provider = yield* HarnessProvider
-      yield* provider.start({ sessionId: "s1", cwd: "/p", model: "m", providerSessionId: null })
+      yield* provider.start({
+        sessionId: "s1",
+        cwd: "/p",
+        options: { model: "m", effort: "e", permissionMode: "p" },
+        providerSessionId: null,
+      })
     }).pipe(Effect.provide(layerScripted([], { closed })), Effect.scoped),
   )
   expect(closed).toEqual(["s1"])
@@ -206,7 +211,7 @@ test("a start failure fails start, and closing the scope is reported", async () 
         (yield* HarnessProvider).start({
           sessionId: "s1",
           cwd: "/p",
-          model: "m",
+          options: { model: "m", effort: "e", permissionMode: "p" },
           providerSessionId: null,
         }),
       )

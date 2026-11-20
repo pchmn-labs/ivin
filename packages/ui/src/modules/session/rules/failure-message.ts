@@ -10,7 +10,10 @@ import type {
   WorktreeFailure,
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
+import type { RunOption } from "@ivin/contracts/transcript"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
+import type { RunOptions } from "@ivin/contracts/session"
+import { RUN_OPTIONS } from "./run-options.ts"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 
 const isTag = <E extends { readonly _tag: string }>(error: unknown, tag: E["_tag"]) =>
@@ -70,6 +73,24 @@ export const pickWorkingFolderFailure = (error: unknown): ActionFailure => {
         : WORKTREE_FAILURES[reason]
   }
   return { text: "The working folder was not changed.", retryable: true }
+}
+
+const NOT_CHANGED: Record<RunOption, string> = {
+  model: "model",
+  effort: "effort",
+  permissionMode: "permission mode",
+}
+
+export const setRunOptionsFailure = (
+  error: unknown,
+  options: Partial<RunOptions>,
+): ActionFailure => {
+  if (isTag<SessionNotFound>(error, "SessionNotFound")) {
+    return { text: "This session no longer exists.", retryable: false }
+  }
+  const changed = RUN_OPTIONS.filter((option) => options[option] !== undefined)
+  const what = changed.length === 1 ? `The ${NOT_CHANGED[changed[0]!]} was` : "The run options were"
+  return { text: `${what} not changed.`, retryable: true }
 }
 
 export const createSessionFailure = (_error: unknown): ActionFailure => ({

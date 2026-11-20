@@ -4,6 +4,9 @@ import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type {
   Harness,
+  HarnessRunOptions,
+  RelaunchFailure,
+  RunOptions,
   Session,
   SessionChange,
   SessionStatus,
@@ -11,7 +14,12 @@ import type {
 } from "@ivin/contracts/session"
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
-import type { ImageData, TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
+import type {
+  ImageData,
+  TranscriptItem,
+  TranscriptItemChange,
+  RunOption,
+} from "@ivin/contracts/transcript"
 import type { Branch, CheckoutStatus, Worktree } from "@ivin/contracts/worktree"
 import { ProjectNotOpen } from "@ivin/contracts/project"
 import {
@@ -34,6 +42,8 @@ export interface FakeServer {
   readonly pushChange: (change: TranscriptItemChange) => void
   // Changes a session's status as the server would, and streams it to `session.watch`.
   readonly setStatus: (sessionId: string, status: SessionStatus) => void
+  // Marks the first turn after a change of run options as failed, as the server would.
+  readonly failRelaunch: (sessionId: string, failure: RelaunchFailure) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   readonly sentMessages: ReadonlyArray<{
     readonly text: string
@@ -78,10 +88,59 @@ export interface FakeCheckout extends CheckoutStatus {
   pullRefusal: string | null
 }
 
+const offer = (value: string, name: string, description: string | null = null) => ({
+  value,
+  name,
+  description,
+})
+const ALL_EFFORTS = ["low", "medium", "high", "xhigh"]
+
+export const fakeRunOptions: HarnessRunOptions = {
+  model: {
+    values: [
+      {
+        ...offer("sonnet", "Sonnet 5.5", "For everyday tasks"),
+        efforts: ALL_EFFORTS,
+        older: false,
+      },
+      { ...offer("opus", "Opus 5.5"), efforts: ALL_EFFORTS, older: false },
+      { ...offer("haiku", "Haiku 5.5"), efforts: ALL_EFFORTS, older: false },
+      { ...offer("claude-opus-4-6", "Opus 4.6"), efforts: ["low", "medium", "high"], older: true },
+      { ...offer("claude-haiku-4-5", "Haiku 4.5"), efforts: [], older: true },
+    ],
+    default: "sonnet",
+  },
+  effort: {
+    values: [
+      offer("low", "Low"),
+      offer("medium", "Medium"),
+      offer("high", "High"),
+      offer("xhigh", "Extra high"),
+    ],
+    default: "high",
+  },
+  permissionMode: {
+    values: [
+      offer("manual", "Manual", "Asks before edits and commands"),
+      offer("acceptEdits", "Accept edits", "Edits files without asking"),
+      offer("plan", "Plan", "Reads and plans, changes nothing"),
+    ],
+    default: "manual",
+  },
+}
+
+const fakeNameOf = (option: RunOption, value: string) =>
+  fakeRunOptions[option].values.find((offered) => offered.value === value)?.name ?? value
+
 export const makeFakeServer = (
-  options: { readonly project?: Project; readonly harness?: Harness } = {},
+  options: {
+    readonly project?: Project
+    readonly harness?: Harness
+    readonly runOptions?: HarnessRunOptions
+  } = {},
 ): FakeServer => {
   const harness = options.harness ?? "claude"
+  const runOptions = options.runOptions ?? fakeRunOptions
   let projects: Array<Project> = options.project ? [options.project] : []
   let selectedPath: string | null = options.project?.path ?? null
   let tabs: Array<{ sessionId: string; projectPath: string }> = []
@@ -201,7 +260,7 @@ export const makeFakeServer = (
 
   const client = {
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
-    "server.getHarness": () => Effect.succeed(harness),
+    "server.getHarness": () => Effect.succeed({ id: harness, runOptions }),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
     "keybinding.watch": () =>
       Stream.unwrap(
@@ -288,7 +347,7 @@ export const makeFakeServer = (
         tabs = [...tabs.filter((tab) => tab.projectPath !== projectPath), ...named, ...others]
         return projectTabs(projectPath)
       }),
-    "session.create": ({ projectPath, model }: { projectPath: string; model: string }) =>
+    "session.create": ({ projectPath }: { projectPath: string }) =>
       Effect.sync(() => {
         const at = tick()
         const session: Session = {
@@ -300,7 +359,10 @@ export const makeFakeServer = (
           started: false,
           workingFolderDeleted: false,
           harness,
-          model,
+          model: runOptions.model.default,
+          effort: runOptions.effort.default,
+          permissionMode: runOptions.permissionMode.default,
+          relaunchFailure: null,
           title: "New session",
           status: "idle",
           statusChangedAt: at,
@@ -311,6 +373,34 @@ export const makeFakeServer = (
         }
         sessions.set(session.id, session)
         return session
+      }),
+    "session.setRunOptions": ({
+      sessionId,
+      options: requested,
+    }: {
+      sessionId: string
+      options: Partial<RunOptions>
+    }) =>
+      Effect.suspend(() => {
+        const session = sessions.get(sessionId)
+        if (!session) return Effect.fail(new SessionNotFound({ sessionId }))
+        for (const option of ["model", "effort", "permissionMode"] as const) {
+          const to = requested[option]
+          if (to === undefined || to === session[option]) continue
+          const items = itemsOf(sessionId)
+          publish({
+            id: `run-option-${nextId++}`,
+            sessionId,
+            position: (items.at(-1)?.position ?? -1) + 1,
+            type: "run_option",
+            option,
+            from: session[option],
+            to,
+            fromName: fakeNameOf(option, session[option]),
+            toName: fakeNameOf(option, to),
+          })
+        }
+        return Effect.succeed(saveSession({ ...session, ...requested, relaunchFailure: null }))
       }),
     "session.watch": ({ projectPath }: { projectPath: string }) =>
       Stream.unwrap(
@@ -446,6 +536,7 @@ export const makeFakeServer = (
             }),
             started: true,
             workingFolderDeleted: false,
+            relaunchFailure: null,
             status: "working",
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
@@ -642,6 +733,8 @@ export const makeFakeServer = (
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
     setStatus: (sessionId, status) => void saveSession({ ...sessions.get(sessionId)!, status }),
+    failRelaunch: (sessionId, failure) =>
+      void saveSession({ ...sessions.get(sessionId)!, relaunchFailure: failure }),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
     holdNextSend: () => {
       let settle!: (ok: boolean) => void

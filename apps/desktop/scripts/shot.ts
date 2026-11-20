@@ -122,6 +122,12 @@ try {
     .first()
     .waitFor()
   await shoot("answer")
+  await window.getByTestId("run-options").click()
+  await window.getByRole("listbox", { name: "Permissions" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("run-options-menu")
+  await window.keyboard.press("Escape")
+  await window.getByRole("listbox", { name: "Permissions" }).waitFor({ state: "detached" })
   await sendMessage(window, "Run the tests")
   await window
     .getByTestId("transcript-item")

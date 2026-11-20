@@ -15,6 +15,14 @@ export const coreKeybindings: ReadonlyArray<DefaultKeybinding> = [
   { key: "mod+shift+backspace", command: "session.archive", when: null, pluginId: null },
   { key: "mod+shift+a", command: "session.showArchived", when: null, pluginId: null },
   { key: "mod+backspace", command: "session.delete", when: "archivedSessions", pluginId: null },
+  { key: "mod+shift+m", command: "composer.chooseModel", when: "composer", pluginId: null },
+  { key: "mod+shift+e", command: "composer.chooseEffort", when: "composer", pluginId: null },
+  {
+    key: "mod+shift+p",
+    command: "composer.choosePermissionMode",
+    when: "composer",
+    pluginId: null,
+  },
 ]
 
 export const defaultKeybindingsAtom = Atom.make<ReadonlyArray<DefaultKeybinding>>(

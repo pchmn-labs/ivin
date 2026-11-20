@@ -1,3 +1,5 @@
+import type { RunOptions } from "@ivin/contracts/session"
+
 const ARGS = [
   "-p",
   "--output-format",
@@ -13,9 +15,16 @@ const ARGS = [
   "stdio",
 ]
 
-export const claudeArgs = (model: string, providerSessionId: string | null) => [
+export const claudeArgs = (
+  { model, effort, permissionMode }: RunOptions,
+  providerSessionId: string | null,
+) => [
   ...ARGS,
   "--model",
   model,
+  "--effort",
+  effort,
+  "--permission-mode",
+  permissionMode,
   ...(providerSessionId === null ? [] : ["--resume", providerSessionId]),
 ]

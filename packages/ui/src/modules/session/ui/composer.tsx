@@ -1,8 +1,10 @@
 import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { Session } from "@ivin/contracts/session"
+import type { RunOptions, Session } from "@ivin/contracts/session"
+import type { RunOption } from "@ivin/contracts/transcript"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import { Cause, Exit } from "effect"
-import { useRef, useState } from "react"
+import { AsyncResult } from "effect/reactivity"
+import { useEffect, useRef, useState } from "react"
 import { hoveredImageAtom, imageViewerAtom } from "../../transcript/atoms/image-viewer.ts"
 import { imageDataUrl } from "../../transcript/rules/image-url.ts"
 import { ImagePreview } from "../../transcript/ui/image-preview.tsx"
@@ -21,11 +23,16 @@ import { type MessageEditorHandle, MessageEditor, carriesFiles } from "./message
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
-import { IconButton } from "../../../core/components/button/button.tsx"
-import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
-import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
+import { ActionSheet } from "../../../core/components/action-sheet/action-sheet.tsx"
+import { Button, IconButton } from "../../../core/components/button/button.tsx"
+import {
+  ErrorMessage,
+  type ErrorMessageProps,
+} from "../../../core/components/error-message/error-message.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { BranchPicker } from "./branch-picker.tsx"
+import { RunOptionsMenu, type RunOptionsMenuState } from "./run-options-menu.tsx"
+import { getHarnessAtom } from "../../server/atoms/get-harness.ts"
 import { PickWorkingFolder } from "./pick-working-folder.tsx"
 import { SessionLocation } from "./session-location.tsx"
 import { WorkingFolderPicker } from "./working-folder-picker.tsx"
@@ -34,8 +41,10 @@ import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { HARNESSES } from "../rules/harnesses.ts"
+import { RUN_OPTIONS, goBackLabel, relaunchFailureText } from "../rules/run-options.ts"
+import { setRunOptionsAtom } from "../atoms/set-run-options.ts"
 import { isRunning } from "../rules/is-running.ts"
-import { sendMessageFailure } from "../rules/failure-message.ts"
+import { sendMessageFailure, setRunOptionsFailure } from "../rules/failure-message.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import { sendMessageAtom } from "../atoms/send-message.ts"
 import "./composer.css"
@@ -59,6 +68,30 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const preparing = session?.status === "preparing_worktree"
   const choosing = session !== undefined && !session.started && !preparing
   const harness = session && HARNESSES[session.harness]
+  const setRunOptions = useAtomSet(setRunOptionsAtom, { mode: "promiseExit" })
+  const [optionsFailure, setOptionsFailure] = useState<
+    (ActionFailure & { options: Partial<RunOptions> }) | null
+  >(null)
+  const relaunchFailure = session?.relaunchFailure ?? null
+  const relaunchFailureKey = relaunchFailure && JSON.stringify(relaunchFailure)
+  const [menu, setMenu] = useState<RunOptionsMenuState>({ open: false, start: "model" })
+  const serverHarness = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
+  const offered = session && serverHarness?.id === session.harness ? serverHarness.runOptions : null
+
+  useEffect(() => {
+    if (relaunchFailure === null) return
+    setDraft((current) =>
+      current.text === "" ? { ...current, text: relaunchFailure.message } : current,
+    )
+  }, [relaunchFailureKey])
+
+  const changeRunOptions = (options: Partial<RunOptions>) => {
+    setOptionsFailure(null)
+    void setRunOptions({ projectPath, sessionId, options }).then((exit) => {
+      if (Exit.isSuccess(exit) || Cause.hasInterruptsOnly(exit.cause)) return
+      setOptionsFailure({ options, ...setRunOptionsFailure(Cause.squash(exit.cause), options) })
+    })
+  }
 
   const images = draftImages(draft)
   const maxImageBytes = harness?.maxImageBytes ?? 0
@@ -129,13 +162,53 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     target.closest(".iv-message-editor") !== null &&
     target.closest(".iv-composer") === root.current
 
-  const alertMessage = failure?.text ?? refusal
-  const alert = alertMessage !== null && alertMessage !== undefined && (
+  const shown: ErrorMessageProps | null = failure
+    ? {
+        message: failure.text,
+        ...(failure.retryable && { onRetry: () => sendDraft(failure.draft) }),
+      }
+    : refusal !== null
+      ? { message: refusal }
+      : optionsFailure
+        ? {
+            message: optionsFailure.text,
+            ...(optionsFailure.retryable && {
+              onRetry: () => changeRunOptions(optionsFailure.options),
+            }),
+          }
+        : null
+  const changed: RunOption =
+    (relaunchFailure &&
+      RUN_OPTIONS.find((option) => session?.[option] !== relaunchFailure.previous[option])) ??
+    "model"
+  const relaunchSheet = session && relaunchFailure && (
+    <ActionSheet
+      tone="danger"
+      icon="circle-alert"
+      title={relaunchFailureText(offered, session, relaunchFailure.previous)}
+      data-testid="composer-relaunch-failure"
+    >
+      {relaunchFailure.error !== null && (
+        <p className="iv-composer__sheet-error">{relaunchFailure.error}</p>
+      )}
+      <div className="iv-composer__sheet-row">
+        <span className="iv-composer__sheet-hint">Your message is back in the field.</span>
+        <Button variant="ghost" size="sm" onClick={() => setMenu({ open: true, start: changed })}>
+          Pick another
+        </Button>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => changeRunOptions(relaunchFailure.previous)}
+        >
+          {goBackLabel(offered, session, relaunchFailure.previous)}
+        </Button>
+      </div>
+    </ActionSheet>
+  )
+  const alert = shown && (
     <div className="iv-composer__alert" data-testid="composer-alert">
-      <ErrorMessage
-        message={alertMessage}
-        {...(failure?.retryable && { onRetry: () => sendDraft(failure.draft) })}
-      />
+      <ErrorMessage {...shown} />
     </div>
   )
   const statusLine = (
@@ -162,6 +235,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     <div className="iv-composer" ref={root} data-keybinding-area="composer">
       {alert}
       {session && <Slot slot="composer.above" props={{ session, isEmptyComposer }} />}
+      {relaunchSheet}
       <div
         className="iv-composer__surface"
         data-dragging={dragging > 0 || undefined}
@@ -214,11 +288,15 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         )}
         <Stack direction="row" align="center" justify="between" gap={2}>
           <Stack direction="row" align="center" gap={3}>
-            {session && harness && (
-              <span className="iv-composer__model" data-testid="composer-model">
-                <HarnessMark mark={harness.mark} size={14} />
-                {session.model}
-              </span>
+            {session && (
+              <RunOptionsMenu
+                session={session}
+                offered={offered}
+                previous={relaunchFailure?.previous ?? null}
+                state={menu}
+                onStateChange={setMenu}
+                onChange={changeRunOptions}
+              />
             )}
           </Stack>
           {session && (

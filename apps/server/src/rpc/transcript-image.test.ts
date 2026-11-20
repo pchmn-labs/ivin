@@ -83,7 +83,7 @@ test("a message with two images stores two files, references them, and hands the
     sent,
     (client) =>
       Effect.gen(function* () {
-        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        const session = yield* client["session.create"]({ projectPath: "/p" })
         yield* client["session.sendMessage"]({
           sessionId: session.id,
           messageId: "m1",
@@ -117,7 +117,7 @@ test("a message with two images stores two files, references them, and hands the
 test("a page of transcript items carries image references, not image bytes", async () => {
   const page = await withServer(newDatabase(), [], (client) =>
     Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      const session = yield* client["session.create"]({ projectPath: "/p" })
       yield* client["session.sendMessage"]({
         sessionId: session.id,
         messageId: "m1",
@@ -154,7 +154,7 @@ test("a message whose harness cannot start keeps its images", async () => {
     [],
     (client) =>
       Effect.gen(function* () {
-        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        const session = yield* client["session.create"]({ projectPath: "/p" })
         yield* client["session.sendMessage"]({
           sessionId: session.id,
           messageId: "m1",
@@ -176,7 +176,7 @@ test("the session's images are listed in transcript order, and the session knows
     [],
     (client) =>
       Effect.gen(function* () {
-        const created = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        const created = yield* client["session.create"]({ projectPath: "/p" })
         yield* client["session.sendMessage"]({
           sessionId: created.id,
           messageId: "m1",
@@ -214,7 +214,7 @@ test("deleting a session deletes its images", async () => {
     [],
     (client) =>
       Effect.gen(function* () {
-        const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+        const session = yield* client["session.create"]({ projectPath: "/p" })
         yield* client["session.sendMessage"]({
           sessionId: session.id,
           messageId: "m1",

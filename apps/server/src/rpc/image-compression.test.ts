@@ -103,7 +103,7 @@ const newDatabase = () => {
 
 const sessionWithImage = (client: Client, image: ImageData) =>
   Effect.gen(function* () {
-    const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+    const session = yield* client["session.create"]({ projectPath: "/p" })
     yield* client["tab.open"]({ sessionId: session.id })
     yield* client["session.sendMessage"]({
       sessionId: session.id,
