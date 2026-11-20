@@ -60,6 +60,30 @@ export class WorktreeNotCreated extends Schema.TaggedError<WorktreeNotCreated>()
   { sessionId: Schema.String, reason: WorktreeFailure },
 ) {}
 
+// Switching and fast-forwarding move the checkout under the agent, so only before the first message.
+export class SessionAlreadyStarted extends Schema.TaggedError<SessionAlreadyStarted>()(
+  "SessionAlreadyStarted",
+  { sessionId: Schema.String },
+) {}
+
+export class CheckoutHasLocalChanges extends Schema.TaggedError<CheckoutHasLocalChanges>()(
+  "CheckoutHasLocalChanges",
+  { sessionId: Schema.String },
+) {}
+
+// `message` is git's own output, which the user fixes the repository from.
+export class GitRefused extends Schema.TaggedError<GitRefused>()("GitRefused", {
+  sessionId: Schema.String,
+  message: Schema.String,
+  blockedByLocalChanges: Schema.Boolean,
+}) {}
+
+export const LocalChangesChoice = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("stash") }),
+  Schema.Struct({ kind: Schema.Literal("commit"), message: Schema.String }),
+])
+export type LocalChangesChoice = typeof LocalChangesChoice.Type
+
 export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.create", {
     payload: { projectPath: Schema.String, model: Schema.String },
@@ -96,6 +120,24 @@ export const SessionRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String },
     success: Session,
     error: SessionNotFound,
+  }),
+  // Checks out the default branch in the checkout, then fast-forwards it from origin.
+  // Without `localChanges`, a checkout with local changes is refused.
+  Rpc.make("session.switchToDefaultBranch", {
+    payload: { sessionId: Schema.String, localChanges: Schema.optional(LocalChangesChoice) },
+    success: Session,
+    error: Schema.Union([
+      SessionNotFound,
+      SessionAlreadyStarted,
+      CheckoutHasLocalChanges,
+      GitRefused,
+    ]),
+  }),
+  // Fast-forwards the checkout's branch from `origin/<branch>`, never merging nor rebasing.
+  Rpc.make("session.fastForward", {
+    payload: { sessionId: Schema.String, stash: Schema.optional(Schema.Boolean) },
+    success: Session,
+    error: Schema.Union([SessionNotFound, SessionAlreadyStarted, GitRefused]),
   }),
   // First every session of the project, read after the server subscribed; then each change.
   Rpc.make("session.watch", {

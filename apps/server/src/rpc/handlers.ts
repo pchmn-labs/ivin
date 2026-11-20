@@ -15,6 +15,8 @@ import { interruptSession } from "../modules/session/usecases/interrupt-session.
 import { createSession } from "../modules/session/usecases/create-session.ts"
 import { listSessions } from "../modules/session/usecases/list-sessions.ts"
 import { renameSession } from "../modules/session/usecases/rename-session.ts"
+import { fastForward } from "../modules/session/usecases/fast-forward.ts"
+import { switchToDefaultBranch } from "../modules/session/usecases/switch-to-default-branch.ts"
 import { sendMessage } from "../modules/session/usecases/send-message.ts"
 import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
 import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
@@ -32,6 +34,7 @@ import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
 import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
+import { checkoutStatus } from "../modules/worktree/usecases/checkout-status.ts"
 import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
@@ -90,6 +93,9 @@ export const handlers = Rpcs.toLayer(
       "session.answerApproval": ({ sessionId, requestId, allow }) =>
         answerApproval(sessionId, requestId, allow),
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
+      "session.switchToDefaultBranch": ({ sessionId, localChanges }) =>
+        switchToDefaultBranch(sessionId, localChanges),
+      "session.fastForward": ({ sessionId, stash }) => fastForward(sessionId, stash),
       "session.watch": ({ projectPath }) => watchSessions(projectPath),
       "worktree.list": ({ projectPath }) => listWorktrees(projectPath),
       "worktree.newBase": ({ projectPath }) =>
@@ -97,6 +103,8 @@ export const handlers = Rpcs.toLayer(
           // Git fails outside a repository, where no worktree can start.
           Effect.orElseSucceed(() => null),
         ),
+      "worktree.checkoutStatus": ({ projectPath }) =>
+        checkoutStatus(projectPath).pipe(Effect.orElseSucceed(() => null)),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

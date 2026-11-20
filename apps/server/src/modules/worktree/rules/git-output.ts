@@ -40,3 +40,9 @@ export const parseBranches = (output: string): Branches => {
       .map((ref) => ref.slice(REMOTES.length)),
   }
 }
+
+// Reads `git rev-list --left-right --count <branch>...<upstream>`.
+export const parseDivergence = (output: string) => {
+  const [ahead = 0, behind = 0] = output.trim().split(/\s+/).map(Number)
+  return { ahead, behind }
+}

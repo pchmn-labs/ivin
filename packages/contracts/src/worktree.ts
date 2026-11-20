@@ -8,6 +8,18 @@ export const Worktree = Schema.Struct({
 })
 export type Worktree = typeof Worktree.Type
 
+export const CheckoutStatus = Schema.Struct({
+  // Null on a detached HEAD.
+  branch: Schema.NullOr(Schema.String),
+  // Null without origin or when origin has no default branch.
+  defaultBranch: Schema.NullOr(Schema.String),
+  // Git refuses to check out a branch another worktree holds.
+  defaultBranchInWorktree: Schema.Boolean,
+  // Commits the branch can fast-forward from `origin/<branch>`; 0 when the two diverged.
+  behind: Schema.Number,
+})
+export type CheckoutStatus = typeof CheckoutStatus.Type
+
 export const WorktreeRpcs = RpcGroup.make(
   // The project's linked worktrees, without its checkout; none outside a git repository.
   Rpc.make("worktree.list", {
@@ -19,5 +31,10 @@ export const WorktreeRpcs = RpcGroup.make(
   Rpc.make("worktree.newBase", {
     payload: { projectPath: Schema.String },
     success: Schema.NullOr(Schema.String),
+  }),
+  // Fetches origin first, reusing a fetch younger than two minutes. Null outside a git repository.
+  Rpc.make("worktree.checkoutStatus", {
+    payload: { projectPath: Schema.String },
+    success: Schema.NullOr(CheckoutStatus),
   }),
 )
