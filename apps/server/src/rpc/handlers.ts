@@ -36,12 +36,14 @@ import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
 import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
+import { layerWorktreeCleanup } from "../modules/worktree/usecases/worktree-cleanup.ts"
 import { checkoutStatus } from "../modules/worktree/usecases/checkout-status.ts"
 import { listBranches } from "../modules/worktree/usecases/list-branches.ts"
 import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
-export const layerServices = Layer.mergeAll(layerSessionRuns, layerCurrentSettings).pipe(
+export const layerServices = layerWorktreeCleanup.pipe(
+  Layer.provideMerge(Layer.mergeAll(layerSessionRuns, layerCurrentSettings)),
   Layer.provideMerge(layerSessionFeed),
   Layer.provideMerge(layerOriginFetch),
   Layer.provideMerge(

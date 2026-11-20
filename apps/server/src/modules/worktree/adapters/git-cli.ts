@@ -4,6 +4,7 @@ import { realpathSync } from "node:fs"
 import {
   parseBranches,
   parseDivergence,
+  parsePatchIds,
   parseWorktreeList,
   underOpenedPath,
 } from "../rules/git-output.ts"
@@ -14,13 +15,13 @@ interface ExecFailure {
   readonly message?: string
 }
 
-const git = (cwd: string, args: readonly string[]) =>
+const git = (cwd: string, args: readonly string[], input?: string) =>
   Effect.callback<string, GitError>((resume, signal) => {
-    execFile(
+    const child = execFile(
       "git",
       args,
       // A fetch must never wait on a credential prompt nobody can answer.
-      { cwd, signal, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 16 << 20 },
+      { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 16 << 20 },
       (error, stdout) => {
         if (!error) return resume(Effect.succeed(stdout))
         const failure = error as ExecFailure
@@ -28,10 +29,50 @@ const git = (cwd: string, args: readonly string[]) =>
         resume(Effect.fail(new GitError({ message })))
       },
     )
+    if (input !== undefined) child.stdin?.end(input)
+    // Not execFile's `signal`: aborting a spawn that failed, such as on a missing cwd, kills our process group.
+    signal.addEventListener("abort", () => child.pid !== undefined && child.kill(), { once: true })
   })
 
 const orNull = <A>(effect: Effect.Effect<A, GitError>) =>
   effect.pipe(Effect.orElseSucceed(() => null))
+
+const patchIds = (cwd: string, patches: string) =>
+  git(cwd, ["patch-id", "--stable"], `${patches}\n`).pipe(Effect.map(parsePatchIds))
+
+// One commit of `base..target` carries the branch's whole diff, even if later commits edited its lines.
+const squashMerged = (folder: string, base: string, target: string) =>
+  Effect.gen(function* () {
+    const diff = yield* git(folder, ["diff", "--no-color", "--no-ext-diff", base, "HEAD"])
+    const [branchId] = yield* patchIds(folder, diff)
+    if (branchId === undefined) return false
+    const log = yield* git(folder, [
+      "log",
+      "-p",
+      "--no-color",
+      "--no-ext-diff",
+      "--no-merges",
+      `${base}..${target}`,
+    ])
+    return (yield* patchIds(folder, log)).includes(branchId)
+  })
+
+const isMergedInto = (folder: string, target: string) =>
+  Effect.gen(function* () {
+    const head = (yield* git(folder, ["rev-parse", "HEAD"])).trim()
+    const base = (yield* git(folder, ["merge-base", "HEAD", target])).trim()
+    // A branch landed by a merge commit has its tip off `target`'s first-parent line.
+    const hasCommits =
+      head !== base ||
+      !(yield* git(folder, ["rev-list", "--first-parent", target, "--not", "HEAD^@"]))
+        .split("\n")
+        .includes(head)
+    const targetTree = (yield* git(folder, ["rev-parse", `${target}^{tree}`])).trim()
+    // A conflict fails merge-tree; the patch-id match still answers.
+    const mergedTree = yield* orNull(git(folder, ["merge-tree", "--write-tree", target, "HEAD"]))
+    if (mergedTree?.split("\n")[0] === targetTree) return { merged: true, hasCommits }
+    return { merged: hasCommits && (yield* squashMerged(folder, base, target)), hasCommits }
+  })
 
 export const layerGitCli = Layer.succeed(Git)({
   listWorktrees: (repo) =>
@@ -64,6 +105,12 @@ export const layerGitCli = Layer.succeed(Git)({
     git(folder, ["status", "--porcelain", "--untracked-files=no"]).pipe(
       Effect.map((out) => out.trim() !== ""),
     ),
+  isClean: (folder) =>
+    git(folder, ["status", "--porcelain", "--untracked-files=normal"]).pipe(
+      Effect.map((out) => out.trim() === ""),
+    ),
+  isMergedInto,
+  removeWorktree: (repo, path) => git(repo, ["worktree", "remove", path]).pipe(Effect.asVoid),
   stash: (folder, message) =>
     git(folder, ["stash", "push", "--include-untracked", "-m", message]).pipe(Effect.asVoid),
   commitTracked: (folder, message) =>

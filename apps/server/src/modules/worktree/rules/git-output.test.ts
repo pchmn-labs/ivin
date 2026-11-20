@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { parseBranches, parseWorktreeList, underOpenedPath } from "./git-output.ts"
+import { parseBranches, parsePatchIds, parseWorktreeList, underOpenedPath } from "./git-output.ts"
 
 test("the porcelain worktree list gives each worktree's path and branch", () => {
   const output = [
@@ -54,4 +54,10 @@ test("worktree paths under the resolved repository take the path it was opened w
       "/private/var/repo",
     ).map((e) => e.path),
   ).toEqual(["/var/repo", "/var/repo/.worktrees/a", "/private/var/repo-b"])
+})
+
+test("patch-id gives one id per patch, in order", () => {
+  const output = ["aaa 1111", "bbb 0000000000000000000000000000000000000000", ""].join("\n")
+  expect(parsePatchIds(output)).toEqual(["aaa", "bbb"])
+  expect(parsePatchIds("")).toEqual([])
 })
