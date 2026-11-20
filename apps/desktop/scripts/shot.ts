@@ -102,6 +102,18 @@ try {
   await sidebar.getByTestId("inactive-session").nth(1).waitFor()
   await window.waitForTimeout(300)
   await shoot("inactive-sessions")
+  const inactive = sidebar.getByTestId("inactive-session").first()
+  await inactive.hover()
+  await inactive.getByRole("button", { name: /^Actions for/ }).click()
+  await window.getByRole("menuitem", { name: "Archive" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("session-menu")
+  await window.getByRole("menuitem", { name: "Archive" }).click()
+  await window.getByRole("menuitem").first().waitFor({ state: "detached" })
+  await window.keyboard.press(process.platform === "darwin" ? "Meta+Shift+A" : "Control+Shift+A")
+  await sidebar.getByTestId("archived-session").first().waitFor()
+  await window.waitForTimeout(300)
+  await shoot("archived-sessions")
 } finally {
   await app.close()
 }

@@ -4,6 +4,9 @@ import type { Session } from "@ivin/contracts/session"
 import { useHost } from "./host-context.ts"
 
 export type IconName =
+  | "archive"
+  | "trash"
+  | "restore"
   | "plus"
   | "folder-open"
   | "send"

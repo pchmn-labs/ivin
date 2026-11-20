@@ -3,7 +3,7 @@ import type { OpenProjects } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Tab } from "@ivin/contracts/tab"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
-import type { HostComponents } from "./components.ts"
+import type { HostComponents, MenuItem } from "./components.ts"
 
 export interface ActionFailure {
   readonly text: string
@@ -28,6 +28,11 @@ export interface UiHost {
     readonly requestId: string
     readonly allow: boolean
   }) => Promise<ActionFailure | undefined>
+  // Archive and Delete for the session's menu, and the last of them that failed.
+  readonly useSessionActions: (session: Session) => {
+    readonly items: ReadonlyArray<MenuItem>
+    readonly failure: string | null
+  }
   readonly components: HostComponents
 }
 

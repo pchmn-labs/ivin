@@ -64,6 +64,7 @@ const mountPanel = async (
       answers.push({ sessionId, ...answer })
       return answerFails ? { text: "The session has stopped.", retryable: true } : undefined
     },
+    useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }
   await render(

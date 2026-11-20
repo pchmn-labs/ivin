@@ -29,6 +29,7 @@ const mountSection = async (
     SlotProps["sidebar.section"]
   >
   const opened: string[] = []
+  const archived: string[] = []
   const host: UiHost = {
     useSession: () => undefined,
     useSessions: () => sessions,
@@ -38,6 +39,10 @@ const mountSection = async (
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
     useTranscript: () => [],
     useAnswerApproval: () => async () => undefined,
+    useSessionActions: (session) => ({
+      items: [{ label: "Archive", onSelect: () => void archived.push(session.id) }],
+      failure: session.title === "Failed" ? "The session was not archived." : null,
+    }),
     components: hostComponents,
   }
   await render(
@@ -45,7 +50,7 @@ const mountSection = async (
       <Section />
     </UiHostProvider>,
   )
-  return { opened }
+  return { opened, archived }
 }
 
 const fold = () => page.getByText(/^Inactive sessions/)
@@ -90,4 +95,16 @@ test("clicking an inactive session opens its tab", async () => {
 test("the section is absent when every session has a tab", async () => {
   await mountSection([session("s1", "Open one")], ["s1"])
   expect(fold().query()).toBeNull()
+})
+
+test("an inactive session's menu archives it, and a failure shows under its row", async () => {
+  const { archived } = await mountSection([session("s1", "Closed"), session("s2", "Failed")], [])
+  await fold().click()
+
+  await page.getByText("Closed").hover()
+  await page.getByRole("button", { name: "Actions for Closed" }).click()
+  await page.getByRole("menuitem", { name: "Archive" }).click()
+
+  expect(archived).toEqual(["s1"])
+  await expect.element(page.getByRole("alert")).toHaveTextContent("The session was not archived.")
 })

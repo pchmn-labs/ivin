@@ -1,7 +1,7 @@
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import { Menu } from "./menu.tsx"
+import { ContextMenu, Menu } from "./menu.tsx"
 
 const setup = async () => {
   const onRename = vi.fn()
@@ -89,4 +89,16 @@ test("checked items are one choice with a check on the chosen one, under their h
   await other.click()
   expect(onPick).toHaveBeenCalledOnce()
   await expect.element(page.getByRole("menu")).not.toBeInTheDocument()
+})
+
+test("a context menu opens on a right click and runs the chosen item", async () => {
+  const onArchive = vi.fn()
+  await render(
+    <ContextMenu items={[{ label: "Archive", onSelect: onArchive }]}>
+      <div>Tab</div>
+    </ContextMenu>,
+  )
+  await page.getByText("Tab").click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Archive" }).click()
+  expect(onArchive).toHaveBeenCalledOnce()
 })

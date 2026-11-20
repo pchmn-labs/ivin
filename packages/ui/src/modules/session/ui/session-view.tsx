@@ -4,6 +4,7 @@ import { transcriptOf } from "../../transcript/atoms/get-items.ts"
 import { projectsAtom } from "../../project/atoms/list-projects.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
+import { useRequestSessionAction } from "../hooks/use-session-actions.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
@@ -20,6 +21,14 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
     (project) => project.path === projectPath,
   )?.name
   const interrupt = useAtomSet(interruptSessionAtom)
+  const requestAction = useRequestSessionAction()
+  useCommandHandler(
+    "session.archive",
+    () => {
+      if (session) requestAction("archive", session)
+    },
+    session !== undefined,
+  )
   useCommandHandler(
     "session.interrupt",
     () => interrupt({ projectPath, sessionId }),

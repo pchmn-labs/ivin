@@ -1,7 +1,10 @@
-import { useAtomSet } from "@effect/atom-react"
+import { useAtom, useAtomSet } from "@effect/atom-react"
 import type { Project } from "@ivin/contracts/project"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
+import { useCommandKey } from "../../keybinding/hooks/use-key-hint.ts"
+import { archivedViewOpenAtom } from "../../session/atoms/archived-view.ts"
+import { ArchivedSessionList } from "../../session/ui/archived-session-list.tsx"
 import { NewSessionControls } from "../../session/ui/new-session-controls.tsx"
 import { SessionList } from "../../session/ui/session-list.tsx"
 import { closeProjectAtom } from "../atoms/close-project.ts"
@@ -10,6 +13,19 @@ import "./project-column.css"
 
 export function ProjectColumn({ project }: { project: Project }) {
   const closeProject = useAtomSet(closeProjectAtom)
+  const [archivedOpen, setArchivedOpen] = useAtom(archivedViewOpenAtom)
+  const archivedKey = useCommandKey("session.showArchived")
+  if (archivedOpen) {
+    return (
+      <div className="iv-project-column">
+        <ArchivedSessionList
+          projectPath={project.path}
+          projectName={project.name}
+          onBack={() => setArchivedOpen(false)}
+        />
+      </div>
+    )
+  }
   return (
     <div className="iv-project-column">
       <div className="iv-project-column__head">
@@ -22,6 +38,13 @@ export function ProjectColumn({ project }: { project: Project }) {
           align="end"
           trigger={<IconButton icon="ellipsis" label="Project actions" size="sm" />}
           items={[
+            {
+              label: "Archived sessions",
+              icon: "archive",
+              ...(archivedKey !== null && { hint: archivedKey }),
+              onSelect: () => setArchivedOpen(true),
+            },
+            "separator",
             {
               label: "Close project",
               icon: "x",

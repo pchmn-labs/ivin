@@ -1,4 +1,6 @@
 import {
+  Archive,
+  ArrowCounterClockwise,
   ArrowDown,
   ArrowLeft,
   ArrowRight,
@@ -24,6 +26,7 @@ import {
   Sparkle,
   Stop,
   Terminal,
+  Trash,
   User,
   WarningCircle,
   Wrench,
@@ -37,6 +40,9 @@ export type IconName = PluginIconProps["name"]
 export type IconProps = PluginIconProps
 
 const icons = {
+  archive: Archive,
+  trash: Trash,
+  restore: ArrowCounterClockwise,
   plus: Plus,
   "folder-open": FolderOpen,
   send: ArrowUp,

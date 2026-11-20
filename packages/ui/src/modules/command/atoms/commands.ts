@@ -16,6 +16,8 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "sidebar.toggle", title: "Toggle sidebar", pluginId: null },
   { id: "session.interrupt", title: "Interrupt", pluginId: null },
   { id: "composer.send", title: "Send", pluginId: null },
+  { id: "session.archive", title: "Archive session", pluginId: null },
+  { id: "session.showArchived", title: "Show archived sessions", pluginId: null },
 ]
 
 export const commandsAtom = Atom.make<ReadonlyArray<Command>>(coreCommands).pipe(Atom.keepAlive)
