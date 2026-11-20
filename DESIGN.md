@@ -343,6 +343,22 @@ Borders are 1px. The 2px lines are the selected tab underline and the tab drop l
 
 Components live in `packages/ui/src/core/components/<component>/`, one folder each, built on Base UI where behaviour matters (menu, dialog, tooltip, tabs). Plugins get them through the `HostComponents` in `packages/plugin-api/src/components.ts`, which take data rather than compound children.
 
+### Choosing a component
+Pick by what the user does; the sections below give each component's look.
+
+| When the user… | Use | Not |
+|---|---|---|
+| runs one action from a short list behind a button (Rename, Archive, Delete…), or picks one of a few choices there with a check on the current one (the model menu beside New session) | `Menu`; `ContextMenu` for the same list on a right click | `Select`, whose field shows the current value |
+| picks a value under the composer (working folder, branch) | `ComposerMenu` | `Menu`, which has no search field or footer |
+| sets a value in a form, among a few fixed options | `Select` | `Menu`, whose button does not show the current value |
+| answers an approval | `ActionSheet` on the composer, holding an `OptionList` | `Dialog`, which hides the transcript the approval depends on |
+| confirms an action that cannot be undone, or fills a short form before one | `Dialog` | `ActionSheet`, which only carries approvals |
+| reads the full text of a cut label, a command or a path | `Tooltip` | a tooltip holding a button or a link |
+| browses items to open or act on (sessions, archived sessions) | `ListRow`, inside a `ListSection` when the list is grouped | `OptionList`, which submits one choice |
+| sees that an action failed | `ErrorMessage` under what failed, with Retry when retrying can work, and a `CodeBlock` when there is output to read (git's) | a danger `Block`, which is for an error in the transcript |
+| reads code or a command's output | `CodeBlock`, inside a `Disclosure` when it is secondary, as tool output is | `Markdown`, which is for the agent's answer |
+| sees a session's status | `SessionMark` | `StatusMark`, which shows no harness |
+
 ### Buttons
 - **Shape:** 6px corners, a 1px border slot, 500 weight. Medium is 28px tall with 12px side padding; small is 24px tall with 8px padding and 12px text. Icon buttons are square.
 - **Primary:** yew fill with yew-contrast text. One per surface: Send, Open folder.
