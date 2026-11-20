@@ -18,6 +18,7 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "composer.send", title: "Send", pluginId: null },
   { id: "session.archive", title: "Archive session", pluginId: null },
   { id: "session.showArchived", title: "Show archived sessions", pluginId: null },
+  { id: "session.delete", title: "Delete session", pluginId: null },
 ]
 
 export const commandsAtom = Atom.make<ReadonlyArray<Command>>(coreCommands).pipe(Atom.keepAlive)

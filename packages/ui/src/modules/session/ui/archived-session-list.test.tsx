@@ -6,8 +6,14 @@ import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { makeTestSession } from "../../../core/test-session.ts"
+import { useKeyboardHandler } from "../../keybinding/hooks/use-keyboard-handler.ts"
 import { ArchivedSessionList } from "./archived-session-list.tsx"
 import { SessionActionDialog } from "./session-action-dialog.tsx"
+
+function KeyboardHandler() {
+  useKeyboardHandler()
+  return null
+}
 
 const setup = async (titles: ReadonlyArray<string>) => {
   const server = makeFakeServer({
@@ -23,6 +29,7 @@ const setup = async (titles: ReadonlyArray<string>) => {
   const onBack = vi.fn()
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <KeyboardHandler />
       <ArchivedSessionList projectPath="/p" projectName="p" onBack={onBack} />
       <SessionActionDialog />
     </RegistryProvider>,
@@ -70,7 +77,8 @@ test("deleting asks first, naming the session, and erases it only once confirmed
   const { server } = await setup(["Old spike"])
   await vi.waitFor(() => expect(document.activeElement?.textContent).toContain("Old spike"))
 
-  await userEvent.keyboard("{Meta>}{Backspace}{/Meta}")
+  const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
+  await userEvent.keyboard(`{${mod}>}{Backspace}{/${mod}}`)
   const dialog = page.getByRole("dialog")
   await expect.element(dialog.getByText("Delete “Old spike”?")).toBeVisible()
   await dialog.getByRole("button", { name: "Cancel" }).click()

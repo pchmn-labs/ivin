@@ -5,8 +5,8 @@ import { useEffect, useRef, type KeyboardEvent } from "react"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
-import { isMac } from "../../keybinding/adapters/platform.ts"
-import { formatKey } from "../../keybinding/rules/key.ts"
+import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
+import { useCommandKey } from "../../keybinding/hooks/use-key-hint.ts"
 import { archivedSessionsOf } from "../atoms/list-archived-sessions.ts"
 import { restoreSessionAtom } from "../atoms/restore-session.ts"
 import { sessionActionFailureOf } from "../atoms/session-action-failure.ts"
@@ -79,7 +79,16 @@ export function ArchivedSessionList({
   const view = useRef<HTMLElement>(null)
   const list = useRef<HTMLUListElement>(null)
   const focused = useRef(0)
-  const mac = isMac()
+  const deleteKey = useCommandKey("session.delete")
+  const focusedSession = () => {
+    const buttons = list.current ? rowButtons(list.current) : []
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+    return index < 0 ? undefined : sessions[index]
+  }
+  useCommandHandler("session.delete", () => {
+    const session = focusedSession()
+    if (session) request("delete", session)
+  })
 
   const ids = sessions.map((session) => session.id).join(" ")
   // Keeps the keyboard in the view as rows leave it.
@@ -108,9 +117,6 @@ export function ArchivedSessionList({
     } else if (event.key === "Enter" && session) {
       event.preventDefault()
       restore({ projectPath, sessionId: session.id })
-    } else if (event.key === "Backspace" && (mac ? event.metaKey : event.ctrlKey) && session) {
-      event.preventDefault()
-      request("delete", session)
     }
   }
 
@@ -118,6 +124,7 @@ export function ArchivedSessionList({
     <nav
       ref={view}
       className="iv-archived-session-list"
+      data-keybinding-area="archivedSessions"
       aria-label="Archived sessions"
       // Before the focused button's tooltip, which would keep Escape for itself.
       onKeyDownCapture={(event) => {
@@ -150,9 +157,11 @@ export function ArchivedSessionList({
           <span>
             <kbd>↵</kbd>Restore
           </span>
-          <span>
-            <kbd>{formatKey("mod+backspace", { mac })}</kbd>Delete
-          </span>
+          {deleteKey !== null && (
+            <span>
+              <kbd>{deleteKey}</kbd>Delete
+            </span>
+          )}
           <span>
             <kbd>esc</kbd>Back
           </span>

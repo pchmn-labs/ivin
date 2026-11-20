@@ -6,8 +6,9 @@ import { SessionStore } from "./session-store.ts"
 export const restoreSession = (sessionId: string) =>
   Effect.gen(function* () {
     const store = yield* SessionStore
-    if (!(yield* store.findById(sessionId))) return yield* new SessionNotFound({ sessionId })
+    const session = yield* store.findById(sessionId)
+    if (!session) return yield* new SessionNotFound({ sessionId })
     yield* store.setArchivedAt(sessionId, null)
     yield* (yield* SessionFeed).publish(sessionId)
-    return (yield* store.findById(sessionId))!
+    return { ...session, archivedAt: null }
   })

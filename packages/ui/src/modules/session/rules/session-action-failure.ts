@@ -1,5 +1,8 @@
 export type SessionAction = "archive" | "restore" | "delete"
 
+// The actions that may ask the user first.
+export type ConfirmedAction = Exclude<SessionAction, "restore">
+
 const verb: Record<SessionAction, string> = {
   archive: "archived",
   restore: "restored",
