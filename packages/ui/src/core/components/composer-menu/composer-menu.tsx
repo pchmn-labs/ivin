@@ -3,8 +3,8 @@ import { useState, type ReactElement, type ReactNode } from "react"
 import { Icon, type IconName } from "../icon/icon.tsx"
 import "./composer-menu.css"
 
-// As many 28px rows as the 360px menu holds; a longer list gets a search field.
-const ROWS_WITHOUT_SEARCH = 12
+// Rows the 360px menu holds beside a one-line footer.
+const ROWS_WITHOUT_SEARCH = 10
 
 export interface ComposerMenuItem<T> {
   readonly value: T
@@ -19,6 +19,14 @@ export interface ComposerMenuItem<T> {
   readonly hint?: string
   readonly checked?: boolean
   readonly testId?: string
+}
+
+export function ComposerMenuNote({ children }: { children: ReactNode }) {
+  return (
+    <div className="iv-composer-menu__note" role="status">
+      {children}
+    </div>
+  )
 }
 
 export interface ComposerMenuGroup<T> {
@@ -38,6 +46,7 @@ export interface ComposerMenuProps<T> {
   readonly onOpenChange?: (open: boolean) => void
   readonly keepOpenOnPick?: boolean
   readonly onHighlight?: (value: T | undefined) => void
+  readonly checkedLabel?: string
   readonly searchStatus?: ReactNode
   readonly status?: (query: string) => ReactNode
   readonly children?: ReactNode
@@ -58,14 +67,18 @@ export function ComposerMenu<T>({
   onOpenChange,
   keepOpenOnPick = false,
   onHighlight,
+  checkedLabel = "Chosen",
   searchStatus,
   status,
   children,
 }: ComposerMenuProps<T>) {
   const [ownOpen, setOwnOpen] = useState(false)
   const [query, setQuery] = useState("")
+  const [keptSearch, setKeptSearch] = useState(false)
   const open = openProp ?? ownOpen
-  const searchable = rowCount(groups) > ROWS_WITHOUT_SEARCH
+  const searchable = keptSearch || rowCount(groups) > ROWS_WITHOUT_SEARCH
+  // A list that shrinks while open keeps its search field and what the user typed in it.
+  if (open && searchable && !keptSearch) setKeptSearch(true)
   const trimmed = query.trim()
 
   return (
@@ -80,6 +93,7 @@ export function ComposerMenu<T>({
         if (!next && keepOpenOnPick && details.reason === "item-press") return
         setOwnOpen(next)
         if (next) setQuery("")
+        else setKeptSearch(false)
         onOpenChange?.(next)
       }}
       inputValue={query}
@@ -109,6 +123,8 @@ export function ComposerMenu<T>({
                   placeholder={searchPlaceholder}
                   aria-label={label}
                   spellCheck={false}
+                  // Takes focus from the hidden input when a list grows past the limit while open.
+                  autoFocus
                 />
                 {searchStatus}
               </div>
@@ -133,14 +149,14 @@ export function ComposerMenu<T>({
                       </Combobox.GroupLabel>
                     )}
                     <Combobox.Collection>
-                      {(item: ComposerMenuItem<T>) => <Row key={item.key} item={item} />}
+                      {(item: ComposerMenuItem<T>) => (
+                        <Row key={item.key} item={item} checkedLabel={checkedLabel} />
+                      )}
                     </Combobox.Collection>
                   </Combobox.Group>
                 )}
               </Combobox.List>
-              {!searchable && searchStatus && (
-                <div className="iv-composer-menu__note">{searchStatus}</div>
-              )}
+              {!searchable && searchStatus && <ComposerMenuNote>{searchStatus}</ComposerMenuNote>}
               {status?.(trimmed)}
             </div>
             {children}
@@ -151,7 +167,7 @@ export function ComposerMenu<T>({
   )
 }
 
-function Row<T>({ item }: { item: ComposerMenuItem<T> }) {
+function Row<T>({ item, checkedLabel }: { item: ComposerMenuItem<T>; checkedLabel: string }) {
   const shown =
     item.prefix !== undefined && item.label.startsWith(item.prefix)
       ? item.label.slice(item.prefix.length)
@@ -177,7 +193,7 @@ function Row<T>({ item }: { item: ComposerMenuItem<T> }) {
       {item.hint !== undefined && <span className="iv-composer-menu__hint">{item.hint}</span>}
       {item.checked !== undefined && (
         <span className="iv-composer-menu__check">
-          {item.checked && <Icon name="check" size={14} label="Chosen" />}
+          {item.checked && <Icon name="check" size={14} label={checkedLabel} />}
         </span>
       )}
     </Combobox.Item>

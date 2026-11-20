@@ -1,6 +1,7 @@
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
+import type { ReactNode } from "react"
 import { ComposerMenu, type ComposerMenuItem } from "./composer-menu.tsx"
 
 const itemsNamed = (names: ReadonlyArray<string>): ComposerMenuItem<string>[] =>
@@ -177,4 +178,40 @@ test("rows show their group heading, icon, tag, hint and the check on the chosen
       .getByLabelText("Chosen")
       .query(),
   ).toBeNull()
+})
+
+const fruitMenu = (names: ReadonlyArray<string>, footer?: ReactNode) => (
+  <ComposerMenu
+    label="Pick a fruit"
+    searchPlaceholder="Find a fruit…"
+    noMatch={() => ""}
+    trigger={
+      <button type="button" aria-label="Fruit">
+        Fruit
+      </button>
+    }
+    groups={[{ items: itemsNamed(names) }]}
+    onPick={() => {}}
+  >
+    {footer}
+  </ComposerMenu>
+)
+
+test("a list with a footer gets its search field before it scrolls", async () => {
+  await render(fruitMenu(manyNames.slice(0, 11), <div style={{ height: 29 }}>Footer</div>))
+  await trigger().click()
+  await expect.element(page.getByPlaceholder("Find a fruit…")).toBeVisible()
+})
+
+test("a list that grows past the limit while open gets a focused search field, which stays when it shrinks", async () => {
+  const screen = await render(fruitMenu(["apple", "pear"]))
+  await trigger().click()
+  await expect.element(page.getByRole("option", { name: "apple" })).toBeVisible()
+  expect(page.getByPlaceholder("Find a fruit…").query()).toBeNull()
+
+  await screen.rerender(fruitMenu(manyNames))
+  await expect.element(page.getByPlaceholder("Find a fruit…")).toHaveFocus()
+  await userEvent.keyboard("fruit-0")
+  await screen.rerender(fruitMenu(["fruit-01", "pear"]))
+  await expect.element(page.getByPlaceholder("Find a fruit…")).toHaveValue("fruit-0")
 })

@@ -156,12 +156,6 @@
   font-size: var(--iv-text-sm);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .iv-composer-menu {
-    transition: none;
-  }
-}
-
 .iv-composer-menu__keys {
   position: absolute;
   width: 1px;
@@ -170,4 +164,10 @@
   border: 0;
   clip-path: inset(50%);
   overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-composer-menu {
+    transition: none;
+  }
 }

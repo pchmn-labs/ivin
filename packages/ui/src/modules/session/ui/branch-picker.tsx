@@ -6,6 +6,7 @@ import { AsyncResult } from "effect/reactivity"
 import { useState } from "react"
 import {
   ComposerMenu,
+  ComposerMenuNote,
   type ComposerMenuItem,
 } from "../../../core/components/composer-menu/composer-menu.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
@@ -99,6 +100,7 @@ export function BranchPicker({
         if (!picking) void pick(picked)
       }}
       onHighlight={setHighlighted}
+      checkedLabel="Current branch"
       disabled={isRunning(session.status) || session.status === "preparing_worktree"}
       trigger={
         <button
@@ -124,15 +126,15 @@ export function BranchPicker({
       status={(query) => (
         <>
           {!hasRemote && query === "" && fetch === "fetching" && (
-            <div className="iv-branch-picker__note" role="status">
+            <ComposerMenuNote>
               <Icon name="loader" size={12} />
               Fetching remote branches…
-            </div>
+            </ComposerMenuNote>
           )}
           {fetch === "failed" && query === "" && (
-            <div className="iv-branch-picker__note" role="status">
+            <ComposerMenuNote>
               Could not fetch origin: its branches are as last fetched.
-            </div>
+            </ComposerMenuNote>
           )}
         </>
       )}

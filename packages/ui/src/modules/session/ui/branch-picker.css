@@ -51,16 +51,6 @@
   font-size: var(--iv-text-xs);
 }
 
-.iv-branch-picker__note {
-  display: flex;
-  align-items: center;
-  gap: var(--iv-space-2);
-  height: var(--iv-control-md);
-  padding: 0 var(--iv-space-2);
-  color: var(--iv-text-faint);
-  font-size: var(--iv-text-sm);
-}
-
 .iv-branch-picker__failure {
   flex: none;
   margin: 0 var(--iv-space-1) var(--iv-space-1);
