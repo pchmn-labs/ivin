@@ -223,7 +223,8 @@
         "packages/ui/src/modules/session/ui/working-folder-picker.tsx",
         "packages/ui/src/modules/tab/ui/tab-bar.tsx",
         "packages/ui/src/modules/transcript/ui/image-marker.tsx",
-        "packages/ui/src/modules/transcript/ui/image-thumbnail.tsx"
+        "packages/ui/src/modules/transcript/ui/image-thumbnail.tsx",
+        "packages/ui/src/modules/transcript/ui/turn-work.tsx"
       ],
       "plugins": ["react"],
       "rules": {

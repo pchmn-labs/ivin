@@ -6,8 +6,8 @@
   border-radius: var(--iv-radius-md);
   background: var(--iv-bg-subtle);
   font-family: var(--iv-font-mono);
-  font-size: var(--iv-text-sm);
-  line-height: var(--iv-text-md-lh);
+  font-size: var(--iv-text-mono);
+  line-height: var(--iv-text-mono-lh);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

@@ -1,4 +1,10 @@
-import { demoApprovalScript, demoScript, layerClaude, layerScripted } from "@ivin/harness"
+import {
+  demoApprovalScript,
+  demoScript,
+  demoShotScript,
+  layerClaude,
+  layerScripted,
+} from "@ivin/harness"
 import { Cause, Effect, Fiber, Layer } from "effect"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
@@ -55,6 +61,7 @@ const layerHarnesses = {
   claude: layerClaude,
   scripted: layerScripted(demoScript, { cycle: true }),
   "scripted-approval": layerScripted(demoApprovalScript),
+  "scripted-shot": layerScripted(demoShotScript),
 } as const
 if (!(harnessId in layerHarnesses)) {
   fail(

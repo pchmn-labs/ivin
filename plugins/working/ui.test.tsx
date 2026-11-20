@@ -17,6 +17,7 @@ const approval = (sessionId: string, command: string): TranscriptItem => ({
   id: `${sessionId}-approval`,
   sessionId,
   position: 1,
+  at: 0,
   type: "approval",
   requestId: `${sessionId}-request`,
   toolCallId: null,

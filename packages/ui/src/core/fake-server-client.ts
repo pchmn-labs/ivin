@@ -392,6 +392,7 @@ export const makeFakeServer = (
             id: `run-option-${nextId++}`,
             sessionId,
             position: (items.at(-1)?.position ?? -1) + 1,
+            at: 0,
             type: "run_option",
             option,
             from: session[option],
@@ -454,6 +455,7 @@ export const makeFakeServer = (
           id: `interruption-${nextId++}`,
           sessionId,
           position: items.length,
+          at: 0,
           type: "interruption",
         })
         return saveSession({ ...sessions.get(sessionId)!, status: "idle", lastActivityAt: tick() })
@@ -492,6 +494,7 @@ export const makeFakeServer = (
                     id: `error-${nextId++}`,
                     sessionId: input.sessionId,
                     position: itemsOf(input.sessionId).length,
+                    at: 0,
                     type: "error",
                     message: worktreeFailure!,
                   }),
@@ -512,6 +515,7 @@ export const makeFakeServer = (
             id: input.messageId,
             sessionId: input.sessionId,
             position: items.length,
+            at: 0,
             type: "message",
             role: "user",
             text: input.text,

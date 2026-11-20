@@ -16,12 +16,13 @@ const delta = (
 })
 
 test("deltas for an unknown item create it at the delta's position", () => {
-  const items = foldDeltas(() => undefined, [delta("a", "Hel"), delta("a", "lo")])
+  const items = foldDeltas(() => undefined, [delta("a", "Hel"), delta("a", "lo")], 0)
   expect(items).toEqual([
     {
       id: "a",
       sessionId: "s1",
       position: 3,
+      at: 0,
       type: "message",
       role: "assistant",
       text: "Hello",
@@ -35,12 +36,14 @@ test("deltas append to the item already held", () => {
     id: "a",
     sessionId: "s1",
     position: 3,
+    at: 0,
     type: "thinking",
     text: "Hm",
   }
   const items = foldDeltas(
     (id) => (id === "a" ? held : undefined),
     [delta("a", "m,", "thinking"), delta("b", "x", "thinking")],
+    0,
   )
   expect(items).toMatchObject([
     { id: "a", type: "thinking", text: "Hmm," },

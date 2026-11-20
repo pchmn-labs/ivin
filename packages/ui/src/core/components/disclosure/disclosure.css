@@ -65,3 +65,16 @@
 .iv-disclosure--panel > .iv-disclosure__body {
   padding-top: 0;
 }
+
+.iv-disclosure--row > .iv-disclosure__summary .iv-text--muted {
+  transition: color var(--iv-duration-fast) ease-out;
+}
+
+.iv-disclosure--row > .iv-disclosure__summary:hover .iv-text--muted,
+.iv-disclosure--row[open] > .iv-disclosure__summary .iv-text--muted {
+  color: var(--iv-text);
+}
+
+.iv-disclosure--row > .iv-disclosure__body {
+  padding-left: 22px;
+}

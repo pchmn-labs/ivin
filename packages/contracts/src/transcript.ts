@@ -175,7 +175,21 @@ const itemFields = {
   id: Schema.String,
   sessionId: Schema.String,
   position: Schema.Int,
+  // Epoch milliseconds of the event that opened the item.
+  at: Schema.Number,
 }
+
+// What a tool does, as its harness classifies it; `other` for a tool the harness does not know.
+export const ToolKind = Schema.Literals([
+  "command",
+  "read",
+  "edit",
+  "search",
+  "skill",
+  "agent",
+  "other",
+])
+export type ToolKind = typeof ToolKind.Type
 
 export const MessageItem = Schema.Struct({
   ...itemFields,
@@ -194,6 +208,7 @@ export const ToolCallItem = Schema.Struct({
   type: Schema.Literal("tool_call"),
   toolCallId: Schema.String,
   name: Schema.String,
+  kind: ToolKind,
   input: Schema.Unknown,
   status: Schema.Literals(["running", "done", "error"]),
   output: Schema.NullOr(Schema.String),

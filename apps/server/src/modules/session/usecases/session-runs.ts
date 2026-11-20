@@ -143,7 +143,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             }
             yield* transcript.append(stored)
             yield* sessions.touch(session.id, at)
-            const next = applyEvent(itemState, stored)
+            const next = applyEvent(itemState, stored, provider.toolKind)
             itemState = next.state
             if (next.item) yield* feed.publish({ type: "upsert", item: next.item })
             yield* sessionFeed.publish(session.id)

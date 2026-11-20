@@ -21,9 +21,11 @@ import {
   MagnifyingGlass,
   NotePencil,
   PencilSimple,
+  Robot,
   Plus,
   SidebarSimple,
   Sparkle,
+  Stack,
   Stop,
   Terminal,
   Trash,
@@ -72,6 +74,8 @@ const icons = {
   "panel-left": SidebarSimple,
   "new-session": NotePencil,
   search: MagnifyingGlass,
+  stack: Stack,
+  robot: Robot,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {

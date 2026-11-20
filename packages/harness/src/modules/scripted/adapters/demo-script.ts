@@ -38,6 +38,62 @@ export const demoTurn: readonly HarnessOutput[] = [
 
 export const demoScript: readonly (readonly HarnessOutput[])[] = [demoTurn]
 
+const call = (id: string, name: string, input: unknown, output: string, isError = false) =>
+  [
+    { type: "tool_call", toolCallId: id, name, input, raw: null },
+    { type: "tool_result", toolCallId: id, output, isError, raw: null },
+  ] as const
+
+const demoFixAnswer = [
+  "Fixed. `OrderList` mapped over `orders` before the first page arrived, so an empty page crashed it.",
+  "",
+  "- The list now starts from an empty array.",
+  "- A test covers the empty page.",
+  "",
+  "```ts",
+  "export function OrderList({ orders = [] }: { orders?: Order[] }) {",
+  "  return orders.map((order) => <OrderRow key={order.id} order={order} />)",
+  "}",
+  "```",
+  "",
+  "`pnpm test src/orders` passes.",
+].join("\n")
+
+// Several steps of tool calls, one failing, then a Markdown answer.
+export const demoWorkTurn: readonly HarnessOutput[] = [
+  { type: "status", status: "running", raw: null },
+  { type: "assistant_text", text: "I'll find where the order list reads its page.", raw: null },
+  ...call("demo-work-1", "Grep", { pattern: "OrderList" }, "src/orders/list.tsx:18"),
+  ...call(
+    "demo-work-2",
+    "Read",
+    { file_path: "src/orders/list.tsx" },
+    "export function OrderList…",
+  ),
+  ...call(
+    "demo-work-3",
+    "Bash",
+    { command: "pnpm test src/orders/list.test.ts" },
+    "TypeError: Cannot read properties of undefined (reading 'map')",
+    true,
+  ),
+  {
+    type: "assistant_text",
+    text: "The list maps over `orders` before the first page arrives. I'm giving it an empty default.",
+    raw: null,
+  },
+  ...call(
+    "demo-work-4",
+    "Edit",
+    { file_path: "src/orders/list.tsx" },
+    "Updated src/orders/list.tsx",
+  ),
+  ...call("demo-work-5", "Bash", { command: "pnpm test src/orders" }, "7 passed"),
+  { type: "assistant_text", text: demoFixAnswer, raw: null },
+  { type: "usage", ...demoUsage, raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
 export const demoApprovalTurn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: null },
   { type: "assistant_text", text: "I need to run the tests to check.", raw: null },
@@ -69,5 +125,11 @@ export const demoApprovalTurn: readonly HarnessOutput[] = [
 
 export const demoApprovalScript: readonly (readonly HarnessOutput[])[] = [
   demoTurn,
+  demoApprovalTurn,
+]
+
+export const demoShotScript: readonly (readonly HarnessOutput[])[] = [
+  demoTurn,
+  demoWorkTurn,
   demoApprovalTurn,
 ]

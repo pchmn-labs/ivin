@@ -36,6 +36,7 @@ test("answering an approval stores the decision on its item and updates the sess
       id: "a1",
       sessionId: "s1",
       position: 0,
+      at: 0,
       type: "approval",
       requestId: "r1",
       toolCallId: null,

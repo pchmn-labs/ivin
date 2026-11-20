@@ -14,6 +14,7 @@ import { listClaudeModels } from "./list-models.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
 import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
 import { toolActivity } from "../rules/tool-activity.ts"
+import { toolKind } from "../rules/tool-kind.ts"
 import { userMessageLine } from "../rules/user-message-line.ts"
 
 const EVENT_BUFFER = 64
@@ -78,6 +79,7 @@ export const layerClaudeWith = (
       runOptions: listedRunOptions(listTimeout),
       program: Effect.sync(() => ({ name: "claude", path: findOnPath("claude") })),
       toolActivity,
+      toolKind,
       start: ({ sessionId, cwd, options, providerSessionId }) =>
         Effect.gen(function* () {
           // spawn reports a missing cwd as ENOENT, the same as a missing binary.

@@ -17,6 +17,7 @@ const usage = (
     id: `u${position}`,
     sessionId: "s1",
     position,
+    at: 0,
     type: "usage",
     inputTokens,
     outputTokens,
