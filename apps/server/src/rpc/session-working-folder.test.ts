@@ -548,7 +548,7 @@ const pickAfterDeletion = (choice: (sessionId: string) => WorkingFolderChoice) =
   )
 }
 
-test("picking the checkout moves the session there, and the next message resumes Claude in it", async () => {
+test("picking the checkout moves the session there, and the next message resumes the agent in it", async () => {
   const { sessionId, picked, starts, closed, items } = await pickAfterDeletion(() => ({
     kind: "checkout",
   }))

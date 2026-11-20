@@ -129,10 +129,10 @@ export function PickWorkingFolder({ session }: { session: Session }) {
     >
       <Stack gap={1}>
         <Text size="lg" weight="semibold">
-          Where should Claude continue?
+          Where should the agent continue?
         </Text>
         <Text size="sm" tone="muted">
-          This session's worktree was deleted. Its conversation is kept, and Claude resumes it in
+          This session's worktree was deleted. Its conversation is kept, and the agent resumes it in
           the folder you pick.
         </Text>
         <Text size="xs" tone="faint" mono truncate title={session.workingFolder}>

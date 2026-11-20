@@ -47,7 +47,7 @@ export const sendMessageFailure = (error: unknown): ActionFailure => {
   }
   if (isTag<WorkingFolderDeleted>(error, "WorkingFolderDeleted")) {
     return {
-      text: "This session's worktree was deleted, so the message was not sent. Pick where Claude continues, then send it again.",
+      text: "This session's worktree was deleted, so the message was not sent. Pick where the agent continues, then send it again.",
       retryable: false,
     }
   }

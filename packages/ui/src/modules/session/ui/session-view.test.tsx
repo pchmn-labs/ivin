@@ -568,7 +568,7 @@ const continueHere = () =>
 test("a session whose worktree was deleted shows the working folder picker instead of the text field", async () => {
   const server = await mountDeletedFolderSession()
 
-  await expect.element(page.getByText("Where should Claude continue?")).toBeVisible()
+  await expect.element(page.getByText("Where should the agent continue?")).toBeVisible()
   await expect.element(page.getByRole("textbox", { name: "Message" })).not.toBeInTheDocument()
   await expect
     .element(page.getByTestId("session-location"))
