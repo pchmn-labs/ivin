@@ -1,6 +1,7 @@
 import "./harness-mark.css"
 
 type MarkSize = 14 | 16
+export type MarkName = "claude" | "agent"
 
 const RAYS = [0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
   const radians = (angle * Math.PI) / 180
@@ -48,7 +49,7 @@ export function AgentMark({ size = 16 }: { size?: MarkSize }) {
   )
 }
 
-export function HarnessMark({ mark, size }: { mark: "claude" | "agent"; size?: MarkSize }) {
+export function HarnessMark({ mark, size }: { mark: MarkName; size?: MarkSize }) {
   const Mark = mark === "claude" ? ClaudeMark : AgentMark
   return <Mark {...(size && { size })} />
 }

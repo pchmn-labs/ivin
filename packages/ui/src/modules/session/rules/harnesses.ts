@@ -1,8 +1,9 @@
 import type { Harness } from "@ivin/contracts/session"
+import type { MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
 
 export interface HarnessDisplay {
   readonly name: string
-  readonly mark: "claude" | "agent"
+  readonly mark: MarkName
   readonly models: ReadonlyArray<string>
   readonly defaultModel: string
 }

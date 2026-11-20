@@ -1,14 +1,16 @@
-import type { Harness, Session } from "@ivin/contracts/session"
+import type { Session } from "@ivin/contracts/session"
+import { HarnessProvider } from "@ivin/harness"
 import { DateTime, Effect } from "effect"
 import { Git } from "../../worktree/usecases/git.ts"
 import { SessionStore } from "./session-store.ts"
 
 export const defaultTitle = "New session"
 
-export const createSession = (projectPath: string, model: string, harness: Harness) =>
+export const createSession = (projectPath: string, model: string) =>
   Effect.gen(function* () {
     const store = yield* SessionStore
     const git = yield* Git
+    const { id: harness } = yield* HarnessProvider
     const now = yield* DateTime.now
     const session: Session = {
       id: crypto.randomUUID(),
