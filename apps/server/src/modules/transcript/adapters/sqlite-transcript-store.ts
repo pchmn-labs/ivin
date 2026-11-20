@@ -1,4 +1,4 @@
-import type { TranscriptEvent } from "@ivin/contracts/transcript"
+import type { ImageMediaType, TranscriptEvent } from "@ivin/contracts/transcript"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
 import { TranscriptStore } from "../usecases/transcript-store.ts"
@@ -48,16 +48,35 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
           return row.sequence ?? 0
         }),
       events: (sessionId) =>
-        Effect.sync(() =>
-          (
-            db
-              .prepare(
-                `SELECT id, session_id, sequence, type, at, payload FROM transcript_events
-                 WHERE session_id = ? ORDER BY sequence`,
-              )
-              .all(sessionId) as unknown as EventRow[]
-          ).map(toEvent),
-        ),
+        Effect.sync(() => {
+          const rows = db
+            .prepare(
+              `SELECT id, session_id, sequence, type, at, payload FROM transcript_events
+               WHERE session_id = ? ORDER BY sequence`,
+            )
+            .all(sessionId) as unknown as EventRow[]
+          const compressed = new Map(
+            (
+              db
+                .prepare(
+                  `SELECT id, compressed_media_type FROM images
+                   WHERE session_id = ? AND compressed_media_type IS NOT NULL`,
+                )
+                .all(sessionId) as { id: string; compressed_media_type: ImageMediaType }[]
+            ).map((row) => [row.id, row.compressed_media_type]),
+          )
+          return rows.map(toEvent).map((event) =>
+            event.type === "user_message" && event.images && compressed.size > 0
+              ? {
+                  ...event,
+                  images: event.images.map((image) => ({
+                    ...image,
+                    mediaType: compressed.get(image.id) ?? image.mediaType,
+                  })),
+                }
+              : event,
+          )
+        }),
     }
   }),
 )

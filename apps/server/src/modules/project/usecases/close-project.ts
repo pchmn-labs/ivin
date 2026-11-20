@@ -3,6 +3,7 @@ import { Effect } from "effect"
 import { selectionAfterRemoval } from "../../../shared/rules/selection-after-removal.ts"
 import { stopAgentOnTabClose } from "../../session/usecases/stop-agent-on-tab-close.ts"
 import { TabStore } from "../../tab/usecases/tab-store.ts"
+import { ImageCompression } from "../../transcript/usecases/image-compression.ts"
 import { WorktreeCleanup } from "../../worktree/usecases/worktree-cleanup.ts"
 import { ProjectStore } from "./project-store.ts"
 
@@ -18,6 +19,7 @@ export const closeProject = (path: string) =>
     const closingIds = closing.map((tab) => tab.sessionId)
     yield* stopAgentOnTabClose(closingIds)
     yield* (yield* WorktreeCleanup).afterTabsClosed(path, closingIds)
+    yield* (yield* ImageCompression).afterTabsClosed(closingIds)
     yield* store.removeOpen(path)
     if (open.selectedPath === path) yield* store.select(selectionAfterRemoval(order, path))
     return yield* store.listOpen

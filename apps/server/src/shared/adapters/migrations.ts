@@ -132,6 +132,10 @@ export const migrations: readonly Migration[] = [
         SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
       )`,
   },
+  {
+    version: 14,
+    sql: `ALTER TABLE images ADD COLUMN compressed_media_type TEXT`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

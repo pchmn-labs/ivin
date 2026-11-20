@@ -39,6 +39,7 @@ import { reorderTabs } from "../modules/tab/usecases/reorder-tabs.ts"
 import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlite-transcript-store.ts"
 import { layerFsImageStore } from "../modules/transcript/adapters/fs-image-store.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
+import { layerImageCompression } from "../modules/transcript/usecases/image-compression.ts"
 import { listImages } from "../modules/transcript/usecases/list-images.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
@@ -50,7 +51,7 @@ import { listBranches } from "../modules/worktree/usecases/list-branches.ts"
 import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
-export const layerServices = layerWorktreeCleanup.pipe(
+export const layerServices = Layer.mergeAll(layerWorktreeCleanup, layerImageCompression).pipe(
   Layer.provideMerge(Layer.mergeAll(layerSessionRuns, layerCurrentSettings)),
   Layer.provideMerge(layerSessionFeed),
   Layer.provideMerge(layerOriginFetch),
