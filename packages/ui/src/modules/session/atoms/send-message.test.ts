@@ -85,3 +85,25 @@ test("a message sent while another is still on its way does not cancel it", asyn
     { timeout: 500 },
   )
 })
+
+test("a message's images show as references at once and reach the server with their bytes", async () => {
+  const { registry, server, transcript } = await setup()
+  const send = server.holdNextSend()
+  const image = { id: "i1", number: 1, mediaType: "image/png" as const, base64: "iVBO" }
+
+  registry.set(sendMessageAtom, {
+    projectPath: project,
+    sessionId: "s1",
+    text: "see [Image #1]",
+    images: [image],
+  })
+  await vi.waitFor(() => expect(registry.get(transcript.list.ids)).toHaveLength(1))
+  const [id] = registry.get(transcript.list.ids)
+  expect(registry.get(transcript.list.item(id!))).toMatchObject({
+    images: [{ id: "i1", number: 1, mediaType: "image/png" }],
+  })
+  expect(JSON.stringify(registry.get(transcript.list.item(id!)))).not.toContain("iVBO")
+
+  send.release()
+  await vi.waitFor(() => expect(server.sentMessages.at(-1)?.images).toEqual([image]))
+})

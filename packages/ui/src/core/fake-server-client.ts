@@ -11,7 +11,13 @@ import type {
 } from "@ivin/contracts/session"
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
-import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
+import {
+  type ImageData,
+  type ImageFile,
+  ImageNotFound,
+  type TranscriptItem,
+  type TranscriptItemChange,
+} from "@ivin/contracts/transcript"
 import type { Branch, CheckoutStatus, Worktree } from "@ivin/contracts/worktree"
 import { ProjectNotOpen } from "@ivin/contracts/project"
 import {
@@ -35,7 +41,15 @@ export interface FakeServer {
   // Changes a session's status as the server would, and streams it to `session.watch`.
   readonly setStatus: (sessionId: string, status: SessionStatus) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
-  readonly sentMessages: ReadonlyArray<{ readonly workingFolder?: WorkingFolderChoice }>
+  readonly sentMessages: ReadonlyArray<{
+    readonly text: string
+    readonly images?: ReadonlyArray<ImageData>
+    readonly workingFolder?: WorkingFolderChoice
+  }>
+  // Stores an image as the server would, for `transcript.getImage`.
+  readonly seedImage: (imageId: string, file: ImageFile) => void
+  // The ids `transcript.getImage` was asked for, in order.
+  readonly fetchedImages: ReadonlyArray<string>
   readonly pickedFolders: ReadonlyArray<WorkingFolderChoice>
   // What `worktree.list` returns, for every project.
   readonly worktrees: Array<Worktree>
@@ -84,6 +98,8 @@ export const makeFakeServer = (
   const selectedTab = new Map<string, string | null>()
   const sessions = new Map<string, Session>()
   const transcripts = new Map<string, Array<TranscriptItem>>()
+  const images = new Map<string, ImageFile>()
+  const fetchedImages: Array<string> = []
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
   const sessionChanges = Effect.runSync(PubSub.unbounded<SessionChange>())
   let userKeybindings: UserKeybindings = { keybindings: [], problem: null }
@@ -97,7 +113,7 @@ export const makeFakeServer = (
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
   const failing = new Set<string>()
-  const sentMessages: Array<{ readonly workingFolder?: WorkingFolderChoice }> = []
+  const sentMessages: Array<FakeServer["sentMessages"][number]> = []
   const pickedFolders: Array<WorkingFolderChoice> = []
   let worktreeFailure: string | null = null
   const worktrees: Array<Worktree> = []
@@ -376,6 +392,7 @@ export const makeFakeServer = (
       sessionId: string
       messageId: string
       text: string
+      images?: ReadonlyArray<ImageData>
       workingFolder?: WorkingFolderChoice
     }) =>
       Effect.flatMap(
@@ -412,6 +429,8 @@ export const makeFakeServer = (
         Effect.map((session) => {
           const items = itemsOf(input.sessionId)
           const isFirstMessage = !session.started
+          const sent = input.images ?? []
+          for (const { id, mediaType, base64 } of sent) images.set(id, { mediaType, base64 })
           publish({
             id: input.messageId,
             sessionId: input.sessionId,
@@ -419,7 +438,7 @@ export const makeFakeServer = (
             type: "message",
             role: "user",
             text: input.text,
-            images: [],
+            images: sent.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
           })
           const choice = isFirstMessage ? input.workingFolder : undefined
           const worktree =
@@ -444,7 +463,7 @@ export const makeFakeServer = (
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
             archivedAt: null,
-            lastImageNumber: 0,
+            lastImageNumber: Math.max(session.lastImageNumber, ...sent.map((i) => i.number)),
           }
           return saveSession(updated)
         }),
@@ -575,6 +594,20 @@ export const makeFakeServer = (
         return updated
       }),
     "transcript.getItems": getItems,
+    "transcript.getImage": ({ imageId }: { imageId: string }) =>
+      Effect.suspend(() => {
+        fetchedImages.push(imageId)
+        const file = images.get(imageId)
+        return file ? Effect.succeed(file) : Effect.fail(new ImageNotFound({ imageId }))
+      }),
+    "transcript.listImages": ({ sessionId }: { sessionId: string }) =>
+      Effect.sync(() =>
+        itemsOf(sessionId).flatMap((item) =>
+          item.type === "message" && item.role === "user"
+            ? item.images.map((image) => ({ ...image, messageId: item.id, messageText: item.text }))
+            : [],
+        ),
+      ),
     "transcript.watchItems": ({ sessionId, before }: { sessionId: string; before: number }) =>
       Stream.unwrap(
         Effect.gen(function* () {
@@ -613,6 +646,8 @@ export const makeFakeServer = (
     sessions,
     errorReports,
     sentMessages,
+    seedImage: (imageId, file) => void images.set(imageId, file),
+    fetchedImages,
     pickedFolders,
     worktrees,
     checkout,

@@ -10,6 +10,7 @@ import { isRunning } from "../rules/is-running.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { statusLabel } from "../rules/status-label.ts"
+import { ImageViewer } from "../../transcript/ui/image-viewer.tsx"
 import { Composer } from "./composer.tsx"
 import "./session-view.css"
 
@@ -67,6 +68,7 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
         sessionId={sessionId}
         {...(blank && { placeholder: "Describe the task" })}
       />
+      <ImageViewer sessionId={sessionId} />
     </div>
   )
 }

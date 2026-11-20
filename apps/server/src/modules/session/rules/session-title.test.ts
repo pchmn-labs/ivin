@@ -15,3 +15,10 @@ test("a long first line is truncated with an ellipsis", () => {
 test("a blank message gives an empty title", () => {
   expect(titleFromMessage("  \n ")).toBe("")
 })
+
+test("image markers are left out of the title, and a message of images alone gives no title", () => {
+  expect(titleFromMessage("[Image #1]\nThe button  [Image #2] overflows")).toBe(
+    "The button overflows",
+  )
+  expect(titleFromMessage("[Image #1] [Image #2]")).toBe("")
+})

@@ -1,0 +1,104 @@
+.iv-image-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  grid-template-rows: 48px minmax(0, 1fr) auto;
+  background: var(--iv-bg-subtle);
+  transition: opacity var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.iv-image-viewer[data-starting-style],
+.iv-image-viewer[data-ending-style] {
+  opacity: 0;
+}
+
+.iv-image-viewer:focus-visible {
+  outline: none;
+}
+
+.iv-image-viewer__head {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-3);
+  min-width: 0;
+  padding: 0 var(--iv-space-3) 0 var(--iv-space-5);
+  border-bottom: 1px solid var(--iv-border);
+  font-size: var(--iv-text-sm);
+}
+
+.iv-image-viewer__title {
+  margin: 0;
+  flex: none;
+  color: var(--iv-text);
+  font-size: var(--iv-text-sm);
+  font-weight: var(--iv-weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-image-viewer__caption {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--iv-text-faint);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv-image-viewer__stage {
+  position: relative;
+  min-height: 0;
+}
+
+.iv-image-viewer__image {
+  position: absolute;
+  inset: var(--iv-space-6) 72px;
+  width: calc(100% - 144px);
+  height: calc(100% - 2 * var(--iv-space-6));
+  object-fit: contain;
+}
+
+.iv-image-viewer__step {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+}
+
+.iv-image-viewer__step[data-side="previous"] {
+  left: var(--iv-space-5);
+}
+
+.iv-image-viewer__step[data-side="next"] {
+  right: var(--iv-space-5);
+}
+
+.iv-image-viewer__strip {
+  display: flex;
+  justify-content: safe center;
+  gap: var(--iv-space-2);
+  padding: var(--iv-space-3) var(--iv-space-5) var(--iv-space-4);
+  border-top: 1px solid var(--iv-border);
+  overflow-x: auto;
+}
+
+.iv-image-viewer__strip .iv-image-thumbnail {
+  opacity: 0.55;
+  transition: opacity var(--iv-duration-fast) ease-out;
+}
+
+.iv-image-viewer__strip .iv-image-thumbnail:hover {
+  opacity: 0.85;
+}
+
+.iv-image-viewer__strip .iv-image-thumbnail[aria-current="true"] {
+  opacity: 1;
+  outline: var(--iv-line-bold) solid var(--iv-accent);
+  outline-offset: var(--iv-space-half);
+}
+
+.iv-image-viewer__separator {
+  flex: none;
+  width: 1px;
+  margin: var(--iv-space-1) var(--iv-space-1);
+  background: var(--iv-border-strong);
+}

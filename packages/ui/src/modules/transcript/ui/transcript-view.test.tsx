@@ -78,3 +78,45 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
   server.pushItem(message(41))
   await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
 })
+
+test("a transcript of 200 images loads only the images of the rows on screen", async () => {
+  const server = makeFakeServer()
+  const pixel =
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+  server.seedItems(
+    "s1",
+    Array.from({ length: 200 }, (_, i) => ({
+      id: `m${i}`,
+      sessionId: "s1",
+      position: i,
+      type: "message" as const,
+      role: "user" as const,
+      text: `shot ${i} [Image #${i + 1}]`,
+      images: [{ id: `img-${i + 1}`, number: i + 1, mediaType: "image/png" as const }],
+    })),
+  )
+  for (let i = 1; i <= 200; i++)
+    server.seedImage(`img-${i}`, { mediaType: "image/png", base64: pixel })
+
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+
+  await expect.element(page.getByText("shot 199", { exact: false })).toBeVisible()
+  await vi.waitFor(() => expect(server.fetchedImages).toContain("img-200"))
+  const onScreen = new Set(server.fetchedImages).size
+  expect(onScreen).toBeLessThan(20)
+
+  for (let i = 0; i < 5; i++) {
+    scroller().scrollTop = 0
+    await frames()
+  }
+  await vi.waitFor(() => expect(server.fetchedImages.length).toBeGreaterThan(onScreen))
+  expect(new Set(server.fetchedImages).size).toBeLessThan(200)
+})

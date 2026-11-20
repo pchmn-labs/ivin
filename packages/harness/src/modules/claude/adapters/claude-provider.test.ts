@@ -35,6 +35,38 @@ real(
   60_000,
 )
 
+// A 32×32 square of a single red.
+const RED_SQUARE =
+  "iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nGN4ampNU8QwasGoBaMWjFowasGoBaMWjFowasGoBaMWDBULANjfVEx+wBeAAAAAAElFTkSuQmCC"
+
+real(
+  "an image sent with a message reaches the real claude CLI, which describes it",
+  async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ivin-claude-"))
+    const outputs = await Effect.runPromise(
+      Effect.gen(function* () {
+        const harness = yield* (yield* HarnessProvider).start({
+          sessionId: "s1",
+          cwd,
+          model: "haiku",
+          providerSessionId: null,
+        })
+        yield* harness.send({
+          text: "What single colour fills [Image #1]? Answer with one lowercase word.",
+          images: [{ id: "i1", number: 1, mediaType: "image/png", base64: RED_SQUARE }],
+        })
+        return yield* Stream.runCollect(
+          Stream.takeUntil(harness.events, (o) => o.type === "status" && o.status === "idle"),
+        )
+      }).pipe(Effect.provide(layerClaude), Effect.scoped),
+    )
+
+    const answer = outputs.find((o) => o.type === "assistant_text")
+    expect(answer?.type === "assistant_text" && answer.text.toLowerCase()).toContain("red")
+  },
+  60_000,
+)
+
 real.each([
   { allow: true, isError: false, made: true },
   { allow: false, isError: true, made: false },

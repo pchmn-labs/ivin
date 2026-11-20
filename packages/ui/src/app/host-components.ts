@@ -19,6 +19,7 @@ import { ListSection } from "../core/components/list-section/list-section.tsx"
 import { ProjectCreature } from "../modules/project/ui/project-creature.tsx"
 import { RelativeTime } from "../modules/session/ui/relative-time.tsx"
 import { SessionMark } from "../modules/session/ui/session-mark.tsx"
+import { MessageImages, MessageText } from "../modules/transcript/ui/message-images.tsx"
 
 export const hostComponents = {
   Button,
@@ -42,4 +43,6 @@ export const hostComponents = {
   SessionMark,
   RelativeTime,
   ProjectMark: ProjectCreature,
+  MessageImages,
+  MessageText,
 } satisfies HostComponents

@@ -1,0 +1,12 @@
+.iv-message-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--iv-space-2);
+  margin-bottom: 10px;
+}
+
+.iv-message-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
