@@ -201,3 +201,23 @@ test("the session's images are listed in transcript order, and the session knows
   expect(images[2]?.messageText).toBe("and [Image #3]")
   expect(session?.lastImageNumber).toBe(3)
 })
+
+test("deleting a session deletes its images", async () => {
+  const db = newDatabase()
+  const missing = await withServer(db, [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      yield* client["session.sendMessage"]({
+        sessionId: session.id,
+        messageId: "m1",
+        text: "[Image #1]",
+        images: [screenshot],
+      })
+      yield* client["session.delete"]({ sessionId: session.id })
+      return yield* client["transcript.getImage"]({ imageId: "i1" }).pipe(Effect.flip)
+    }),
+  )
+
+  expect(missing._tag).toBe("ImageNotFound")
+  expect(db.prepare("SELECT COUNT(*) AS count FROM images").get()).toEqual({ count: 0 })
+})

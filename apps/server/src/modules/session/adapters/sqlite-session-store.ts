@@ -155,6 +155,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           db.exec("BEGIN IMMEDIATE")
           try {
             db.prepare("DELETE FROM transcript_events WHERE session_id = ?").run(id)
+            db.prepare("DELETE FROM images WHERE session_id = ?").run(id)
             db.prepare("DELETE FROM tabs WHERE session_id = ?").run(id)
             db.prepare(
               "UPDATE open_projects SET selected_session_id = NULL WHERE selected_session_id = ?",
