@@ -193,22 +193,30 @@
 }
 
 .iv-turn__calls {
-  position: relative;
   margin-bottom: var(--iv-space-1);
   padding-left: 18px;
 }
 
-/* Under the summary's icon, joining the calls to it. */
-.iv-turn__calls::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 6px;
-  left: 6.5px;
-  width: 1px;
-  background: var(--iv-border);
+.iv-turn__call {
+  position: relative;
+  padding: 2px 0;
 }
 
-.iv-turn__call {
-  padding: 2px 0;
+.iv-turn__call::before {
+  content: "";
+  position: absolute;
+  top: -16px;
+  left: -11.5px;
+  width: 8px;
+  height: 29px;
+  border-width: 0 0 1px 1px;
+  border-style: solid;
+  /* Opaque, so where two branches overlap the line does not darken. */
+  border-color: color-mix(in srgb, var(--iv-text) 9%, var(--iv-bg));
+  border-bottom-left-radius: 3px;
+}
+
+.iv-turn__call:first-child::before {
+  top: -6px;
+  height: 19px;
 }
