@@ -26,7 +26,8 @@ export const pickBranch = (sessionId: string, name: string, remote: boolean) =>
     const [branches, worktrees] = yield* Effect.all([
       git.listBranches(session.projectPath),
       git.listWorktrees(session.projectPath),
-    ]).pipe(Effect.mapError(refused))
+      // Not a refused checkout: the UI shows its generic failure.
+    ]).pipe(Effect.orDie)
     const pick = resolveBranchPick(
       { name, remote },
       { workingFolder: session.workingFolder, local: branches.local, worktrees },

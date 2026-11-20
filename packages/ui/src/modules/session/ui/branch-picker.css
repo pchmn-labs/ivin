@@ -14,7 +14,7 @@
   transition:
     background-color var(--iv-duration-fast) ease-out,
     color var(--iv-duration-fast) ease-out,
-    transform 160ms var(--iv-ease-out);
+    transform var(--iv-duration-press) var(--iv-ease-out);
 }
 
 .iv-branch-picker__trigger:active:not(:disabled) {

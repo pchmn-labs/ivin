@@ -4,7 +4,7 @@ import { layerScripted, type StartInput } from "@ivin/harness"
 import { Effect, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { mkdtempSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
@@ -145,6 +145,21 @@ test("origin is not fetched again within a minute", async () => {
   )
 
   expect(second?.branches.map((b) => b.name)).not.toContain("origin/feat/later")
+})
+
+test("a failed fetch of origin is not tried again within a minute", async () => {
+  const origin = join(root, "origin.git")
+  const lists = await withServer((client) =>
+    Effect.gen(function* () {
+      renameSync(origin, `${origin}.away`)
+      const failed = yield* lastList(client)
+      renameSync(`${origin}.away`, origin)
+      return { failed, again: yield* lastList(client) }
+    }),
+  )
+
+  expect(lists.failed?.fetch).toBe("failed")
+  expect(lists.again?.branches.map((b) => b.name)).not.toContain("origin/feat/remote")
 })
 
 test("a remote branch is checked out as a tracking branch, and the transcript records it", async () => {

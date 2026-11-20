@@ -18,7 +18,7 @@ export class Git extends Context.Service<
       worktree: { readonly path: string; readonly branch: string; readonly base: string },
     ) => Effect.Effect<void, GitError>
     readonly checkout: (folder: string, branch: string) => Effect.Effect<void, GitError>
-    // Creates `branch` from `remote` (`origin/<name>`), tracking it.
+    // `remote` is `origin/<name>`.
     readonly checkoutTracking: (
       folder: string,
       remote: string,

@@ -1,7 +1,7 @@
 import type { BranchList } from "@ivin/contracts/worktree"
 import { Effect, Stream } from "effect"
 import { logError } from "../../log/usecases/log-error.ts"
-import { branchList } from "../rules/branch-pick.ts"
+import { branchList } from "../rules/branch-list.ts"
 import { BRANCH_LIST_FETCH_REUSE_MS } from "../rules/fetch-reuse.ts"
 import { Git } from "./git.ts"
 import { OriginFetch } from "./origin-fetch.ts"
@@ -26,11 +26,15 @@ export const listBranches = (
         .hasRemote(projectPath, "origin")
         .pipe(Effect.orElseSucceed(() => false))
       if (!hasOrigin) return Stream.fromEffect(read("done"))
-      const fetched = origin.fetch(projectPath, BRANCH_LIST_FETCH_REUSE_MS).pipe(
-        Effect.as("done" as const),
-        Effect.catch((error) => logError("fetch origin", error).pipe(Effect.as("failed" as const))),
-        Effect.flatMap(read),
-      )
+      const fetched = origin
+        .fetch(projectPath, { reuseMs: BRANCH_LIST_FETCH_REUSE_MS, afterFailure: "wait" })
+        .pipe(
+          Effect.as("done" as const),
+          Effect.catch((error) =>
+            logError("fetch origin", error).pipe(Effect.as("failed" as const)),
+          ),
+          Effect.flatMap(read),
+        )
       return Stream.fromEffect(read("fetching")).pipe(Stream.concat(Stream.fromEffect(fetched)))
     }),
   )

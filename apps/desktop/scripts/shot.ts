@@ -17,8 +17,8 @@ const app = await electron.launch({
   env: { ...process.env, IVIN_BACKGROUND: "1", IVIN_HARNESS: "scripted-approval" },
 })
 
-// A repository with a linked worktree and a second branch, so the working folder menu and the
-// branch picker have something to list.
+// A repository with a linked worktree, a second branch and an origin, so the working folder menu
+// and the branch picker have something to list.
 const makeRepo = (dir: string) => {
   const env = {
     ...process.env,
@@ -34,6 +34,11 @@ const makeRepo = (dir: string) => {
   git("commit", "--quiet", "-m", "first")
   git("worktree", "add", "--quiet", "-b", "docs/adr", join(dir, ".worktrees", "docs-adr"))
   git("branch", "fix/typo")
+  git("init", "--quiet", "--bare", `${dir}.origin.git`)
+  git("remote", "add", "origin", `${dir}.origin.git`)
+  git("branch", "feat/remote")
+  git("push", "--quiet", "origin", "main", "feat/remote")
+  git("branch", "-D", "--quiet", "feat/remote")
 }
 
 const written: string[] = []
@@ -47,7 +52,7 @@ try {
 
   await shoot("new-session")
   await window.getByTestId("branch-picker").click()
-  await window.getByTestId("branch-row").filter({ hasText: "docs/adr" }).waitFor()
+  await window.getByTestId("branch-row").filter({ hasText: "feat/remote" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("branch-picker")
   await window.keyboard.press("Escape")

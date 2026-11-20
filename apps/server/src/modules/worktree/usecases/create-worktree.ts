@@ -17,7 +17,8 @@ export const createWorktree = (repo: string, sessionId: string) =>
     const origin = yield* OriginFetch
     const branch = generatedBranch(sessionId)
     const path = worktreePath(repo, branch)
-    if (yield* git.hasRemote(repo, "origin")) yield* origin.fetch(repo, WORKTREE_FETCH_REUSE_MS)
+    if (yield* git.hasRemote(repo, "origin"))
+      yield* origin.fetch(repo, { reuseMs: WORKTREE_FETCH_REUSE_MS, afterFailure: "retry" })
     const base = yield* newWorktreeBase(repo)
     if (base === null) return yield* new NoDefaultBranch()
     yield* git.createWorktree(repo, { path, branch, base })

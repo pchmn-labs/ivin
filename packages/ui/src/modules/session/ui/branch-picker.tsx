@@ -150,7 +150,9 @@ export function BranchPicker({
             )}
             <div className="iv-branch-picker__foot">
               <span className="iv-branch-picker__preview">
-                {highlighted ? pickPreview(highlighted, branches, session) : ""}
+                {highlighted
+                  ? pickPreview(highlighted, branches, session)
+                  : `On ${branch}. Pick a branch to switch to it.`}
               </span>
               <span className="iv-branch-picker__keys">↵ switch · esc</span>
             </div>
