@@ -20,7 +20,7 @@ export function ActionSheet({
     <div
       className="iv-action-sheet"
       data-tone={tone}
-      role="group"
+      role={tone === "danger" ? "alert" : "group"}
       aria-label={title}
       data-testid={testId}
       onMouseDown={(event) => {

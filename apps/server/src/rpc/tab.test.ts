@@ -57,7 +57,7 @@ const makeClient = () => RpcTest.makeClient(Rpcs)
 type Client = Effect.Success<ReturnType<typeof makeClient>>
 
 const newSession = (client: Client, projectPath: string) =>
-  client["session.create"]({ projectPath, model: "sonnet" })
+  client["session.create"]({ projectPath })
 
 test("opening a tab for a session twice yields one tab", async () => {
   const { first, second } = await withServer(newDatabase(), (client) =>

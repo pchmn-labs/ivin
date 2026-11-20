@@ -174,7 +174,7 @@ test("a failed fetch of origin is not tried again within a minute", async () => 
 test("a remote branch is checked out as a tracking branch, and the transcript records it", async () => {
   const { picked, items } = await withServer((client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       yield* listBranches(client)
       const picked = yield* client["session.pickBranch"]({
         sessionId: created.id,
@@ -204,7 +204,7 @@ test("a remote branch is checked out as a tracking branch, and the transcript re
 test("a local branch is checked out in the session's working folder", async () => {
   const picked = await withServer((client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       return yield* client["session.pickBranch"]({
         sessionId: created.id,
         name: "fix/local",
@@ -222,7 +222,7 @@ test("a branch held by another worktree moves the session there, and its next tu
   const { picked, items } = await withServer(
     (client) =>
       Effect.gen(function* () {
-        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        const created = yield* client["session.create"]({ projectPath: project })
         yield* client["session.sendMessage"]({ sessionId: created.id, messageId: "m1", text: "a" })
         yield* untilIdle(client, created.id)
         const picked = yield* client["session.pickBranch"]({
@@ -253,7 +253,7 @@ test("a checkout git refuses returns git's message and leaves the session where 
   writeFileSync(join(project, "first.txt"), "uncommitted")
   const { error, session, items } = await withServer((client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       const error = yield* Effect.flip(
         client["session.pickBranch"]({ sessionId: created.id, name: "fix/local", remote: false }),
       )
@@ -275,7 +275,7 @@ test("a project opened through a symlink sees its checkout and worktrees under t
   symlinkSync(project, linked)
   const { lists, picked } = await withServer((client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: linked, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: linked })
       const lists = yield* listBranches(client, linked)
       const picked = yield* client["session.pickBranch"]({
         sessionId: created.id,

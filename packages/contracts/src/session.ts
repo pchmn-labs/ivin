@@ -15,6 +15,47 @@ export type SessionStatus = typeof SessionStatus.Type
 export const Harness = Schema.Literals(["claude", "codex", "acp", "scripted"])
 export type Harness = typeof Harness.Type
 
+export const RunOptions = Schema.Struct({
+  model: Schema.String,
+  effort: Schema.String,
+  permissionMode: Schema.String,
+})
+export type RunOptions = typeof RunOptions.Type
+
+// `value` is what the harness takes; `name` is what the user reads.
+export const OfferedValue = Schema.Struct({
+  value: Schema.String,
+  name: Schema.String,
+  description: Schema.NullOr(Schema.String),
+})
+export type OfferedValue = typeof OfferedValue.Type
+
+export const OfferedModel = Schema.Struct({
+  ...OfferedValue.fields,
+  // The effort values this model accepts; empty when it takes no effort.
+  efforts: Schema.Array(Schema.String),
+  // A pinned earlier version, listed after the latest models.
+  older: Schema.Boolean,
+})
+export type OfferedModel = typeof OfferedModel.Type
+
+// What a harness offers for each run option, from its provider.
+export const HarnessRunOptions = Schema.Struct({
+  model: Schema.Struct({ values: Schema.Array(OfferedModel), default: Schema.String }),
+  effort: Schema.Struct({ values: Schema.Array(OfferedValue), default: Schema.String }),
+  permissionMode: Schema.Struct({ values: Schema.Array(OfferedValue), default: Schema.String }),
+})
+export type HarnessRunOptions = typeof HarnessRunOptions.Type
+
+// `message`: the text the failed turn was sent with, for the composer to put back.
+// `error`: what the agent reported, null when it reported nothing.
+export const RelaunchFailure = Schema.Struct({
+  previous: RunOptions,
+  message: Schema.String,
+  error: Schema.NullOr(Schema.String),
+})
+export type RelaunchFailure = typeof RelaunchFailure.Type
+
 export const Session = Schema.Struct({
   id: Schema.String,
   projectPath: Schema.String,
@@ -28,6 +69,9 @@ export const Session = Schema.Struct({
   title: Schema.String,
   harness: Harness,
   model: Schema.String,
+  effort: Schema.String,
+  permissionMode: Schema.String,
+  relaunchFailure: Schema.NullOr(RelaunchFailure),
   status: SessionStatus,
   statusChangedAt: Schema.DateTimeUtcFromMillis,
   createdAt: Schema.DateTimeUtcFromMillis,
@@ -123,7 +167,7 @@ export class CheckoutRefused extends Schema.TaggedError<CheckoutRefused>()("Chec
 
 export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.create", {
-    payload: { projectPath: Schema.String, model: Schema.String },
+    payload: { projectPath: Schema.String },
     success: Session,
   }),
   Rpc.make("session.list", {
@@ -168,6 +212,18 @@ export const SessionRpcs = RpcGroup.make(
     },
     success: Session,
     error: Schema.Union([SessionNotFound, WorktreeNotCreated, WorkingFolderDeleted]),
+  }),
+  Rpc.make("session.setRunOptions", {
+    payload: {
+      sessionId: Schema.String,
+      options: Schema.Struct({
+        model: Schema.optionalKey(Schema.String),
+        effort: Schema.optionalKey(Schema.String),
+        permissionMode: Schema.optionalKey(Schema.String),
+      }),
+    },
+    success: Session,
+    error: SessionNotFound,
   }),
   Rpc.make("session.pickWorkingFolder", {
     payload: { sessionId: Schema.String, workingFolder: WorkingFolderChoice },

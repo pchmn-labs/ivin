@@ -104,6 +104,19 @@ const WorkingFolderBody = Schema.Struct({
   ...workingFolderFields,
 })
 
+export const RunOption = Schema.Literals(["model", "effort", "permissionMode"])
+export type RunOption = typeof RunOption.Type
+
+// The names are kept as they read at the change, as the harness may later rename or drop a value.
+const runOptionFields = {
+  option: RunOption,
+  from: Schema.String,
+  to: Schema.String,
+  fromName: Schema.String,
+  toName: Schema.String,
+}
+const RunOptionBody = Schema.Struct({ type: Schema.Literal("run_option"), ...runOptionFields })
+
 const eventBodies = [
   UserMessageBody,
   AssistantTextBody,
@@ -117,6 +130,7 @@ const eventBodies = [
   ErrorBody,
   InterruptionBody,
   WorkingFolderBody,
+  RunOptionBody,
 ] as const
 
 const raw = { raw: Schema.Unknown }
@@ -220,6 +234,12 @@ export const WorkingFolderItem = Schema.Struct({
   ...workingFolderFields,
 })
 
+export const RunOptionItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("run_option"),
+  ...runOptionFields,
+})
+
 export const TranscriptItem = Schema.Union([
   MessageItem,
   ThinkingItem,
@@ -229,6 +249,7 @@ export const TranscriptItem = Schema.Union([
   ErrorItem,
   InterruptionItem,
   WorkingFolderItem,
+  RunOptionItem,
 ])
 export type TranscriptItem = typeof TranscriptItem.Type
 

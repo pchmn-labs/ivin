@@ -5,7 +5,7 @@ import { Menu } from "../../../core/components/menu/menu.tsx"
 import { useCommandKey } from "../../keybinding/hooks/use-key-hint.ts"
 import { archivedViewOpenAtom } from "../../session/atoms/archived-view.ts"
 import { ArchivedSessionList } from "../../session/ui/archived-session-list.tsx"
-import { NewSessionControls } from "../../session/ui/new-session-controls.tsx"
+import { NewSessionButton } from "../../session/ui/new-session-button.tsx"
 import { SessionList } from "../../session/ui/session-list.tsx"
 import { closeProjectAtom } from "../atoms/close-project.ts"
 import { ProjectCreature } from "./project-creature.tsx"
@@ -33,7 +33,7 @@ export function ProjectColumn({ project }: { project: Project }) {
         <h1 className="iv-project-column__name" data-testid="project-name" title={project.path}>
           {project.name}
         </h1>
-        <NewSessionControls projectPath={project.path} />
+        <NewSessionButton projectPath={project.path} icon="new-session" size="md" />
         <Menu
           align="end"
           trigger={<IconButton icon="ellipsis" label="Project actions" size="sm" />}

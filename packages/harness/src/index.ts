@@ -18,6 +18,7 @@ export {
 export {
   layerScripted,
   scriptedFailure,
+  scriptedRunOptions,
   type ScriptedElement,
   type ScriptedFailure,
   type ScriptedOptions,

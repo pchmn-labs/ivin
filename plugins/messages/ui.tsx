@@ -8,7 +8,7 @@ import {
   Text,
   defineUi,
 } from "@ivin/plugin-api/ui"
-import type { SlotProps, WorkingFolderItem } from "@ivin/plugin-api/ui"
+import type { RunOptionItem, SlotProps, WorkingFolderItem } from "@ivin/plugin-api/ui"
 
 const unignoredWorktrees =
   ".worktrees/ is not ignored by git, so the checkout lists it as untracked. Add .worktrees/ to .gitignore."
@@ -19,6 +19,12 @@ const workingFolderLabel = (item: WorkingFolderItem) => {
   if (item.cause === "branch_picker") return "Switched to"
   if (item.cause === "pick" && !item.inWorktree) return "Moved to the checkout on"
   return item.inWorktree ? "Moved to the worktree on" : "Back in the checkout on"
+}
+
+const RUN_OPTION_LABELS: Record<RunOptionItem["option"], string> = {
+  model: "Model",
+  effort: "Effort",
+  permissionMode: "Permissions",
 }
 
 function Message({ item, sessionId }: SlotProps["transcript.message"]) {
@@ -51,6 +57,22 @@ function Message({ item, sessionId }: SlotProps["transcript.message"]) {
             {unignoredWorktrees}
           </Text>
         )}
+      </Stack>
+    )
+  }
+  if (item.type === "run_option") {
+    return (
+      <Stack direction="row" gap={1} align="center">
+        <Text size="sm" tone="faint">
+          {RUN_OPTION_LABELS[item.option]}
+        </Text>
+        <Text size="sm" tone="muted">
+          {item.fromName}
+        </Text>
+        <Icon name="arrow-right" size={12} label="to" />
+        <Text size="sm" tone="muted">
+          {item.toName}
+        </Text>
       </Stack>
     )
   }

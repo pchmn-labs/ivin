@@ -104,7 +104,7 @@ test("a checkout session runs in the project folder, on the checkout's branch", 
   const starts: StartInput[] = []
   const { created, sent, items } = await withServer(starts, (client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       const sent = yield* client["session.sendMessage"]({
         sessionId: created.id,
         messageId: "m1",
@@ -133,7 +133,7 @@ test("a new worktree session gets a generated branch under .worktrees/, from ori
   const starts: StartInput[] = []
   const { sent, items } = await withServer(starts, (client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       const sent = yield* sendFirst(client, created.id, { kind: "new_worktree" })
       return { sent, items: yield* itemsOf(client, created.id) }
     }),
@@ -156,7 +156,7 @@ test("a new worktree session gets a generated branch under .worktrees/, from ori
 test("a session is preparing its new worktree before it works", async () => {
   const statuses = await withServer([], (client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       const watching = yield* client["session.watch"]({ projectPath: project }).pipe(
         Stream.filter((change) => change._tag === "changed"),
         Stream.map((change) => change.session),
@@ -179,7 +179,7 @@ test("a worktree that git cannot create stores git's error, and no run starts", 
   const starts: StartInput[] = []
   const { error, session, items } = await withServer(starts, (client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       const target = join(project, ".worktrees", `ivin-${created.id.slice(0, 8)}`)
       execFileSync("mkdir", ["-p", target])
       writeFileSync(join(target, "in-the-way.txt"), "")
@@ -219,7 +219,7 @@ test("a session started in an existing worktree runs there, on its branch", asyn
   const starts: StartInput[] = []
   const { sent, items } = await withServer(starts, (client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       const sent = yield* sendFirst(client, created.id, { kind: "existing_worktree", path })
       return { sent, items: yield* itemsOf(client, created.id) }
     }),
@@ -234,7 +234,7 @@ test("a folder that is not one of the project's worktrees is refused, and no run
   const starts: StartInput[] = []
   const error = await withServer(starts, (client) =>
     Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       return yield* Effect.flip(
         sendFirst(client, created.id, { kind: "existing_worktree", path: root }),
       )
@@ -251,7 +251,7 @@ test("a session outside a git repository has no branch, and its project no workt
   const { created, worktrees, base } = await withServer([], (client) =>
     Effect.gen(function* () {
       return {
-        created: yield* client["session.create"]({ projectPath: folder, model: "sonnet" }),
+        created: yield* client["session.create"]({ projectPath: folder }),
         worktrees: yield* client["worktree.list"]({ projectPath: folder }),
         base: yield* client["worktree.newBase"]({ projectPath: folder }),
       }
@@ -327,7 +327,7 @@ test("EnterWorktree moves the session to the worktree at once, and the next turn
     starts,
     (client) =>
       Effect.gen(function* () {
-        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        const created = yield* client["session.create"]({ projectPath: project })
         yield* send(client, created.id, "m1")
         const moved = yield* sessionOf(client, created.id)
         yield* send(client, created.id, "m2")
@@ -365,7 +365,7 @@ test("ExitWorktree moves the session back to the checkout", async () => {
     starts,
     (client) =>
       Effect.gen(function* () {
-        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        const created = yield* client["session.create"]({ projectPath: project })
         yield* send(client, created.id, "m1")
         yield* send(client, created.id, "m2")
         return {
@@ -392,7 +392,7 @@ test("a worktree the agent creates with git worktree add moves the session once 
     starts,
     (client) =>
       Effect.gen(function* () {
-        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        const created = yield* client["session.create"]({ projectPath: project })
         yield* client["session.sendMessage"]({ sessionId: created.id, messageId: "m1", text: "go" })
         yield* untilStatus(client, created.id, "waiting")
         // The approval holds the turn while git creates the worktree, as the real command would.
@@ -449,7 +449,7 @@ test("a git worktree add that failed moves nothing", async () => {
     starts,
     (client) =>
       Effect.gen(function* () {
-        const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+        const created = yield* client["session.create"]({ projectPath: project })
         yield* send(client, created.id, "m1")
         yield* send(client, created.id, "m2")
         return {
@@ -480,7 +480,7 @@ test("a git worktree add that failed moves nothing", async () => {
 const startInWorktree = (client: Client, path: string) =>
   Effect.gen(function* () {
     yield* client["project.open"]({ path: project })
-    const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+    const created = yield* client["session.create"]({ projectPath: project })
     yield* sendFirst(client, created.id, { kind: "existing_worktree", path })
     return created.id
   })
@@ -642,7 +642,7 @@ test("a session whose own new worktree was deleted gets another new worktree, on
   const { sessionId, picked, status } = await withServer(starts, (client) =>
     Effect.gen(function* () {
       yield* client["project.open"]({ path: project })
-      const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+      const created = yield* client["session.create"]({ projectPath: project })
       const first = yield* sendFirst(client, created.id, { kind: "new_worktree" })
       rmSync(first.workingFolder, { recursive: true, force: true })
       yield* client["tab.open"]({ sessionId: created.id })

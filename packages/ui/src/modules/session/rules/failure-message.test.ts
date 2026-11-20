@@ -4,6 +4,7 @@ import {
   checkoutFailure,
   createSessionFailure,
   sendMessageFailure,
+  setRunOptionsFailure,
 } from "./failure-message.ts"
 
 const sessionNotFound = { _tag: "SessionNotFound", sessionId: "s1" }
@@ -107,4 +108,14 @@ test("a switch after the first message, or for a removed session, offers no retr
     gitMessage: null,
     blockedByLocalChanges: false,
   })
+})
+
+test("a run option change that failed names the option and offers a retry", () => {
+  expect(setRunOptionsFailure(new Error("lost"), { model: "opus" })).toEqual({
+    text: "The model was not changed.",
+    retryable: true,
+  })
+  expect(setRunOptionsFailure(new Error("lost"), { model: "a", effort: "b" }).text).toBe(
+    "The run options were not changed.",
+  )
 })

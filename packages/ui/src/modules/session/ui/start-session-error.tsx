@@ -8,12 +8,12 @@ export function StartSessionError({ projectPath }: { projectPath: string }) {
   const failed = useAtomValue(startSessionFailureAtom)
   const startSession = useStartSession()
   if (failed === null || failed.projectPath !== projectPath) return null
-  const { model, failure } = failed
+  const { failure } = failed
   return (
     <div className="iv-start-session-error">
       <ErrorMessage
         message={failure.text}
-        {...(failure.retryable && { onRetry: () => void startSession(projectPath, model) })}
+        {...(failure.retryable && { onRetry: () => void startSession(projectPath) })}
       />
     </div>
   )

@@ -158,3 +158,42 @@ test("a session already stored counts its status as changed at its last activity
     { status_changed_at: 42 },
   ])
 })
+
+test("a stored session gets claude's default effort and permission mode, confirmed once it started", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 10)))
+  db.exec(
+    `INSERT INTO sessions (id, project_path, title, model, created_at, last_activity_at)
+     VALUES ('started', '/p', 't', 'opus', 7, 9), ('fresh', '/p', 't', 'opus', 8, 8);
+     INSERT INTO transcript_events (id, session_id, sequence, type, at, payload)
+     VALUES ('e', 'started', 1, 'user_message', 9, '{}')`,
+  )
+
+  Effect.runSync(runMigrations(db))
+
+  expect(
+    db
+      .prepare(
+        `SELECT id, effort, permission_mode, run_options_at, confirmed_run_options, relaunch_failure
+         FROM sessions ORDER BY id`,
+      )
+      .all(),
+  ).toEqual([
+    {
+      id: "fresh",
+      effort: "high",
+      permission_mode: "manual",
+      run_options_at: 8,
+      confirmed_run_options: null,
+      relaunch_failure: null,
+    },
+    {
+      id: "started",
+      effort: "high",
+      permission_mode: "manual",
+      run_options_at: 7,
+      confirmed_run_options: '{"model":"opus","effort":"high","permissionMode":"manual"}',
+      relaunch_failure: null,
+    },
+  ])
+})

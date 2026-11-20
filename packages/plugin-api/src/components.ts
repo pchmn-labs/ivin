@@ -218,7 +218,8 @@ export interface MarkdownProps {
 }
 
 export interface ActionSheetProps {
-  readonly tone?: "attention" | "neutral"
+  // `danger` is announced as an alert.
+  readonly tone?: "attention" | "danger" | "neutral"
   readonly icon?: IconName
   readonly title: string
   readonly detail?: string
@@ -248,6 +249,8 @@ export interface OptionListProps {
 export interface ErrorMessageProps {
   readonly message: string
   readonly onRetry?: () => void
+  // Offered in place of Retry when the way out is another action.
+  readonly action?: { readonly label: string; readonly onSelect: () => void }
   readonly "data-testid"?: string
 }
 

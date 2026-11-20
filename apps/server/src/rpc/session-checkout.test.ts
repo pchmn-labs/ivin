@@ -98,8 +98,7 @@ const withServer = <A, E>(
 
 const statusOf = (client: Client) => client["worktree.checkoutStatus"]({ projectPath: project })
 
-const newSession = (client: Client) =>
-  client["session.create"]({ projectPath: project, model: "sonnet" })
+const newSession = (client: Client) => client["session.create"]({ projectPath: project })
 
 test("on another branch, switching to the default branch checks it out level with origin", async () => {
   git(project, "checkout", "--quiet", "-b", "feature")

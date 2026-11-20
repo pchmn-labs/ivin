@@ -1,4 +1,10 @@
-import type { Harness, Session, SessionStatus } from "@ivin/contracts/session"
+import type {
+  Harness,
+  RelaunchFailure,
+  RunOptions,
+  Session,
+  SessionStatus,
+} from "@ivin/contracts/session"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
 import { SessionStore } from "../usecases/session-store.ts"
@@ -13,6 +19,9 @@ interface SessionRow {
   title: string
   harness: Harness
   model: string
+  effort: string
+  permission_mode: string
+  relaunch_failure: string | null
   status: SessionStatus
   status_changed_at: number
   created_at: number
@@ -32,6 +41,13 @@ const toSession = (row: SessionRow): Session => ({
   title: row.title,
   harness: row.harness,
   model: row.model,
+  effort: row.effort,
+  permissionMode: row.permission_mode,
+  relaunchFailure:
+    row.relaunch_failure === null
+      ? null
+      : // Stored before the agent's error was kept.
+        { error: null, ...(JSON.parse(row.relaunch_failure) as Omit<RelaunchFailure, "error">) },
   status: row.status,
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
   createdAt: DateTime.makeUnsafe(row.created_at),
@@ -40,7 +56,8 @@ const toSession = (row: SessionRow): Session => ({
   lastImageNumber: row.last_image_number,
 })
 
-const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model, status,
+const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model,
+  effort, permission_mode, relaunch_failure, status,
   status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
   ) AS started,
@@ -54,8 +71,9 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         Effect.sync(() => {
           db.prepare(
             `INSERT INTO sessions (id, project_path, working_folder, branch, title, harness, model,
-               status, status_changed_at, created_at, last_activity_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+               effort, permission_mode, run_options_at, status, status_changed_at, created_at,
+               last_activity_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           ).run(
             session.id,
             session.projectPath,
@@ -64,6 +82,9 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             session.title,
             session.harness,
             session.model,
+            session.effort,
+            session.permissionMode,
+            DateTime.toEpochMillis(session.createdAt),
             session.status,
             DateTime.toEpochMillis(session.statusChangedAt),
             DateTime.toEpochMillis(session.createdAt),
@@ -109,6 +130,49 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         Effect.sync(() => {
           db.prepare("UPDATE sessions SET provider_session_id = ? WHERE id = ?").run(
             providerSessionId,
+            id,
+          )
+        }),
+      setRunOptions: (id, { model, effort, permissionMode }, at) =>
+        Effect.sync(() => {
+          db.prepare(
+            `UPDATE sessions SET model = ?, effort = ?, permission_mode = ?, run_options_at = ?
+             WHERE id = ?`,
+          ).run(model, effort, permissionMode, DateTime.toEpochMillis(at), id)
+        }),
+      lastRunOptions: (projectPath) =>
+        Effect.sync(() => {
+          const row = db
+            .prepare(
+              `SELECT model, effort, permission_mode FROM sessions WHERE project_path = ?
+               ORDER BY run_options_at DESC, rowid DESC LIMIT 1`,
+            )
+            .get(projectPath) as
+            | { model: string; effort: string; permission_mode: string }
+            | undefined
+          return row
+            ? { model: row.model, effort: row.effort, permissionMode: row.permission_mode }
+            : null
+        }),
+      confirmedRunOptions: (id) =>
+        Effect.sync(() => {
+          const row = db
+            .prepare("SELECT confirmed_run_options FROM sessions WHERE id = ?")
+            .get(id) as { confirmed_run_options: string | null } | undefined
+          const stored = row?.confirmed_run_options ?? null
+          return stored === null ? null : (JSON.parse(stored) as RunOptions)
+        }),
+      setConfirmedRunOptions: (id, options) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET confirmed_run_options = ? WHERE id = ?").run(
+            JSON.stringify(options),
+            id,
+          )
+        }),
+      setRelaunchFailure: (id, failure) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET relaunch_failure = ? WHERE id = ?").run(
+            failure === null ? null : JSON.stringify(failure),
             id,
           )
         }),

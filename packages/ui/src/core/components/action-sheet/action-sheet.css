@@ -12,6 +12,10 @@
   border-bottom: 0;
 }
 
+.iv-action-sheet[data-tone="danger"] {
+  border-color: color-mix(in srgb, var(--iv-danger) 40%, transparent);
+}
+
 .iv-action-sheet__head {
   display: flex;
   align-items: baseline;
@@ -31,6 +35,11 @@
 
 .iv-action-sheet[data-tone="attention"] .iv-action-sheet__title {
   color: var(--iv-attention);
+}
+
+.iv-action-sheet[data-tone="danger"] .iv-action-sheet__title,
+.iv-action-sheet[data-tone="danger"] .iv-action-sheet__head .iv-icon {
+  color: var(--iv-danger);
 }
 
 .iv-action-sheet__detail {

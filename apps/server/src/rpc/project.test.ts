@@ -130,7 +130,7 @@ test("closing a project closes its tabs and keeps its sessions", async () => {
   const { sessions, tabs } = await withServer(newDatabase(), (client) =>
     Effect.gen(function* () {
       yield* client["project.open"]({ path: "/a/first" })
-      const session = yield* client["session.create"]({ projectPath: "/a/first", model: "sonnet" })
+      const session = yield* client["session.create"]({ projectPath: "/a/first" })
       yield* client["tab.open"]({ sessionId: session.id })
       yield* client["project.close"]({ path: "/a/first" })
       yield* client["project.open"]({ path: "/a/first" })

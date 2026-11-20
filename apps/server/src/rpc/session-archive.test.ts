@@ -109,7 +109,7 @@ const withServer = <A, E>(
 
 const startSession = (client: Client, workingFolder: WorkingFolderChoice = { kind: "checkout" }) =>
   Effect.gen(function* () {
-    const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+    const created = yield* client["session.create"]({ projectPath: project })
     yield* client["tab.open"]({ sessionId: created.id })
     return yield* client["session.sendMessage"]({
       sessionId: created.id,
