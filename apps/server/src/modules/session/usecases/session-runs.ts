@@ -36,6 +36,8 @@ export class SessionRuns extends Context.Service<
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
     // No-op with no run.
     readonly stop: (sessionId: string) => Effect.Effect<void>
+    // True from the agent's start until it stops, idle between turns included.
+    readonly isRunning: (sessionId: string) => Effect.Effect<boolean>
     // Appends to the transcript with or without a run.
     readonly record: (session: Session, event: HarnessEvent) => Effect.Effect<void>
   }
@@ -301,6 +303,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           // Closing the run's scope also interrupts the fiber that would have set the status.
           return run ? run.end.pipe(Effect.andThen(setStatus(sessionId, "idle"))) : Effect.void
         }),
+      isRunning: (sessionId) => Effect.sync(() => runs.has(sessionId)),
       record: (session, event) =>
         starting.withPermits(1)(
           Effect.suspend(

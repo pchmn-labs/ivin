@@ -57,3 +57,10 @@ export const underOpenedPath = (
       ? { ...entry, path: opened + entry.path.slice(resolved.length) }
       : entry,
   )
+
+// Reads `git patch-id --stable`: one `<patch id> <commit>` line per patch.
+export const parsePatchIds = (output: string) =>
+  output
+    .split("\n")
+    .map((line) => line.split(" ")[0] ?? "")
+    .filter((id) => id !== "")

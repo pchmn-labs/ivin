@@ -1,6 +1,7 @@
 import { Context, Data, type Effect } from "effect"
 import type { Divergence } from "../rules/checkout-sync.ts"
 import type { Branches, WorktreeEntry } from "../rules/git-output.ts"
+import type { WorktreeState } from "../rules/worktree-removal.ts"
 
 // `message` is git's own output.
 export class GitError extends Data.TaggedError("GitError")<{ readonly message: string }> {}
@@ -29,6 +30,14 @@ export class Git extends Context.Service<
     readonly currentBranch: (folder: string) => Effect.Effect<string | null>
     // Tracked files only: untracked ones survive a checkout unless git names them.
     readonly hasLocalChanges: (folder: string) => Effect.Effect<boolean, GitError>
+    readonly isClean: (folder: string) => Effect.Effect<boolean, GitError>
+    // Squash merges included: a squashed branch is not an ancestor of `target`.
+    readonly isMergedInto: (
+      folder: string,
+      target: string,
+    ) => Effect.Effect<Pick<WorktreeState, "merged" | "hasCommits">, GitError>
+    // Git refuses a worktree with changes.
+    readonly removeWorktree: (repo: string, path: string) => Effect.Effect<void, GitError>
     // Untracked files included, so they no longer block a checkout or a fast-forward.
     readonly stash: (folder: string, message: string) => Effect.Effect<void, GitError>
     // Untracked files stay out, as the user was never shown them.
