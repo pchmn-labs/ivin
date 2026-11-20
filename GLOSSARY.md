@@ -34,6 +34,10 @@ _Avoid_: history, log, conversation
 One normalised entry of a transcript, such as a user message, a tool call or an approval request, stored as it streams. A streamed token is not an event.
 _Avoid_: message (for anything but a user or assistant message), log entry
 
+**Image marker**:
+`[Image #N]` in a user message's text: where image N of the session goes. The composer and the transcript draw it as the image's marker; the agent reads the image right after it.
+_Avoid_: attachment, placeholder
+
 **Transcript items**:
 The read model derived from a transcript's events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled.
 

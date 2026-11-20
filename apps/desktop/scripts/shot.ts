@@ -64,7 +64,58 @@ try {
   await window.getByRole("option", { name: "New worktree" }).click()
   await window.getByText(/^New branch from/).waitFor()
   await shoot("new-worktree")
-  await sendMessage(window, "How many files are there?")
+  // A pasted screenshot: a terminal with a failing test, drawn in the window.
+  const box = window.getByRole("textbox", { name: "Message" })
+  await box.click()
+  await window.keyboard.type("How many files are there? The tests fail here: ")
+  await box.evaluate(
+    (field) =>
+      new Promise<void>((resolve) => {
+        const canvas = document.createElement("canvas")
+        canvas.width = 960
+        canvas.height = 540
+        const g = canvas.getContext("2d")!
+        g.fillStyle = "#14181b"
+        g.fillRect(0, 0, 960, 540)
+        g.font = "20px Menlo, monospace"
+        const lines: Array<[string, string]> = [
+          ["#9aa5ad", "$ pnpm test src/orders"],
+          ["#61c554", "✓ src/orders/total.test.ts (6)"],
+          ["#e5533b", "✗ src/orders/list.test.ts > lists an empty page"],
+          ["#e5533b", "  TypeError: Cannot read properties of undefined (reading 'map')"],
+          ["#7d8a93", "    at OrderList (src/orders/list.tsx:18:22)"],
+        ]
+        lines.forEach(([colour, text], i) => {
+          g.fillStyle = colour
+          g.fillText(text, 32, 60 + i * 40)
+        })
+        canvas.toBlob((blob) => {
+          const data = new DataTransfer()
+          data.items.add(new File([blob!], "Screenshot.png", { type: "image/png" }))
+          field.dispatchEvent(
+            new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+          )
+          resolve()
+        })
+      }),
+  )
+  await window.getByTestId("draft-images").waitFor()
+  await window.keyboard.type("can you check?")
+  await shoot("composer-image")
+  await box.press("Enter")
+  await window.getByRole("button", { name: "View image #1" }).first().waitFor()
+  await window
+    .getByTestId("composer-status")
+    .getByText(/tokens|\$/)
+    .first()
+    .waitFor()
+  await shoot("message-image")
+  await window.getByRole("button", { name: "View image #1" }).first().click()
+  await window.getByRole("dialog").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("image-viewer")
+  await window.keyboard.press("Escape")
+  await window.getByRole("dialog").waitFor({ state: "detached" })
   await window
     .getByTestId("composer-status")
     .getByText(/tokens|\$/)

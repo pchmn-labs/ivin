@@ -23,13 +23,19 @@ export const applyEvent = (
   const base = { id: event.id, sessionId: event.sessionId, position: event.sequence }
   switch (event.type) {
     case "user_message": {
-      const item: MessageItem = { ...base, type: "message", role: "user", text: event.text }
+      const item: MessageItem = {
+        ...base,
+        type: "message",
+        role: "user",
+        text: event.text,
+        images: event.images ?? [],
+      }
       return { state: { ...state, openMessage: null }, item }
     }
     case "assistant_text": {
       const item: MessageItem = state.openMessage
         ? { ...state.openMessage, text: `${state.openMessage.text}\n\n${event.text}` }
-        : { ...base, type: "message", role: "assistant", text: event.text }
+        : { ...base, type: "message", role: "assistant", text: event.text, images: [] }
       return { state: { ...state, openMessage: item }, item }
     }
     case "thinking": {

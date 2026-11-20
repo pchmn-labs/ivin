@@ -32,8 +32,8 @@ test("each send replays the next turn on the events stream and records what was 
         model: "m",
         providerSessionId: null,
       })
-      yield* harness.send({ text: "hello" })
-      yield* harness.send({ text: "again" })
+      yield* harness.send({ text: "hello", images: [] })
+      yield* harness.send({ text: "again", images: [] })
       return yield* Stream.runCollect(Stream.take(harness.events, 3))
     }),
   )
@@ -44,8 +44,8 @@ test("each send replays the next turn on the events stream and records what was 
     "three",
   ])
   expect(sent).toEqual([
-    { sessionId: "s1", text: "hello" },
-    { sessionId: "s1", text: "again" },
+    { sessionId: "s1", text: "hello", images: [] },
+    { sessionId: "s1", text: "again", images: [] },
   ])
 })
 
@@ -58,7 +58,7 @@ test("sending with no turn left fails", async () => {
         model: "m",
         providerSessionId: null,
       })
-      return yield* Effect.flip(harness.send({ text: "hello" }))
+      return yield* Effect.flip(harness.send({ text: "hello", images: [] }))
     }),
   )
 
@@ -74,8 +74,8 @@ test("with cycle, the turns start over once they are used up", async () => {
         model: "m",
         providerSessionId: null,
       })
-      yield* harness.send({ text: "a" })
-      yield* harness.send({ text: "b" })
+      yield* harness.send({ text: "a", images: [] })
+      yield* harness.send({ text: "b", images: [] })
       return yield* Stream.runCollect(Stream.take(harness.events, 2))
     }).pipe(Effect.provide(layerScripted([[text("only")]], { cycle: true })), Effect.scoped),
   )
@@ -102,7 +102,7 @@ test("a turn pauses after an approval request and resumes on each decision", asy
         providerSessionId: null,
         model: "m",
       })
-      yield* harness.send({ text: "go" })
+      yield* harness.send({ text: "go", images: [] })
       const first = yield* Stream.runCollect(Stream.take(harness.events, 2))
       yield* harness.respond({ requestId: "a", allow: true })
       const second = yield* Stream.runCollect(Stream.take(harness.events, 2))
@@ -139,7 +139,7 @@ test("responding with no paused turn fails", async () => {
         model: "m",
         providerSessionId: null,
       })
-      yield* harness.send({ text: "go" })
+      yield* harness.send({ text: "go", images: [] })
       return yield* Effect.flip(harness.respond({ requestId: "a", allow: true }))
     }),
   )
@@ -178,7 +178,7 @@ test("a scripted failure fails the events stream at that point, after the events
           model: "m",
           providerSessionId: null,
         })
-        yield* harness.send({ text: "go" })
+        yield* harness.send({ text: "go", images: [] })
         const seen: string[] = []
         const error = yield* Stream.runForEach(harness.events, (e) =>
           Effect.sync(() => void seen.push(e.type)),

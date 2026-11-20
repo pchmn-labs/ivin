@@ -176,7 +176,7 @@ Queries run in the server against SQLite and stream their results; the renderer 
 
 Targets, checked in CI on every PR: idle memory of all processes, cold start to first paint, and heap growth after the leak scenario below.
 
-- **Transcripts are paged, not loaded.** The renderer holds a window of events around the viewport (virtualised list) and asks the server for more; large tool outputs and images are stored as blobs and fetched when unfolded.
+- **Transcripts are paged, not loaded.** The renderer holds a window of events around the viewport (virtualised list) and asks the server for more; large tool outputs are stored as blobs and fetched when unfolded. A user message's images are files in the `images` folder beside the database, one folder per session, with their numbers in an `images` table; the event references them by id and number, and a thumbnail loads its file through `ivin-image://` when it mounts ([ADR-0005](adr/0005-sent-images-are-files-served-to-the-window-by-the-desktop-app.md)).
 - **Atoms die with their readers.** No `keepAlive` by default; per-session atom families are released when no component reads them.
 - **Everything long-lived is scoped.** Child processes, watchers, subscriptions and timers live in an Effect `Scope` (server) or in the plugin's `ctx` (plugins), closed with their session, tab or plugin.
 - **Bounded streams.** Harness and RPC streams have bounded buffers with backpressure; a slow renderer drops to snapshots instead of queuing events.

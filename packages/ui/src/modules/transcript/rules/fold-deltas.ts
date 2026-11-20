@@ -12,7 +12,7 @@ export const foldDeltas = (
       folded.set(
         delta.itemId,
         delta.kind === "message"
-          ? { ...base, type: "message", role: "assistant", text: delta.text }
+          ? { ...base, type: "message", role: "assistant", text: delta.text, images: [] }
           : { ...base, type: "thinking", text: delta.text },
       )
     } else if (current.type === "message" || current.type === "thinking") {

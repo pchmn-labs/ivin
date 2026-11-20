@@ -1,4 +1,4 @@
-import type { HarnessOutput } from "@ivin/contracts/transcript"
+import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
 import { Cause, type Duration, Effect, Layer, Queue, Stream } from "effect"
 import {
   type ApprovalDecision,
@@ -12,6 +12,7 @@ import { toolActivity } from "../../claude/rules/tool-activity.ts"
 export interface ScriptedSend {
   readonly sessionId: string
   readonly text: string
+  readonly images: readonly ImageData[]
 }
 
 export interface ScriptedFailure {
@@ -103,9 +104,9 @@ export const layerScripted = (
           }
           const run: HarnessRun = {
             events: Stream.fromQueue(queue),
-            send: ({ text }) =>
+            send: ({ text, images }) =>
               Effect.suspend(() => {
-                sent.push({ sessionId, text })
+                sent.push({ sessionId, text, images })
                 const next = played.get(sessionId) ?? 0
                 played.set(sessionId, next + 1)
                 const turn = turns[cycle ? next % turns.length : next]

@@ -38,6 +38,7 @@ const mountApp = async (
       createdAt: at,
       lastActivityAt: at,
       archivedAt: null,
+      lastImageNumber: 0,
     })
   }
   server.openTab("s1")

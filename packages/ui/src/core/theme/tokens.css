@@ -68,6 +68,10 @@
 
   --iv-opacity-disabled: 0.45;
 
+  /* Over an image, whatever the theme. */
+  --iv-image-label-bg: rgba(5, 10, 8, 0.72);
+  --iv-image-label-text: #ffffff;
+
   --iv-duration-fast: 120ms;
   --iv-duration-base: 180ms;
   --iv-duration-press: 160ms;
