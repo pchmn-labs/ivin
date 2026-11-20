@@ -10,9 +10,10 @@ import {
   type UtilityProcess,
 } from "electron"
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { delimiter, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
+import { writeCliCommand } from "./cli-command.ts"
 import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
 
 const devUrl = process.env["IVIN_DEV_URL"]
@@ -24,6 +25,9 @@ if (openInBackground && process.platform === "darwin") app.setActivationPolicy("
 const serverEntry = app.isPackaged
   ? join(app.getAppPath(), "server/main.js")
   : join(import.meta.dirname, "../../server/dist/main.js")
+const cliEntry = app.isPackaged
+  ? join(process.resourcesPath, "cli/ivin.js")
+  : join(import.meta.dirname, "../../cli/dist/ivin.js")
 const rendererEntry = app.isPackaged
   ? join(app.getAppPath(), "renderer/index.html")
   : join(import.meta.dirname, "../../../packages/ui/dist/index.html")
@@ -111,6 +115,8 @@ void app.whenReady().then(() => {
     const file = imageFile(imageFolder, request.url)
     return file ? net.fetch(pathToFileURL(file).toString()) : new Response(null, { status: 404 })
   })
+  const cliFolder = join(app.getPath("userData"), "bin")
+  writeCliCommand(cliFolder, process.execPath, cliEntry)
   server = utilityProcess.fork(
     serverEntry,
     [
@@ -123,7 +129,16 @@ void app.whenReady().then(() => {
       "--images",
       imageFolder,
     ],
-    { serviceName: "ivin-server", stdio: "inherit" },
+    {
+      serviceName: "ivin-server",
+      stdio: "inherit",
+      // The server's agents inherit both, so they reach this app with `ivin`.
+      env: {
+        ...process.env,
+        IVIN_SOCKET: join(ivinHome, "run", "ivin.sock"),
+        PATH: [cliFolder, process.env["PATH"]].filter(Boolean).join(delimiter),
+      },
+    },
   )
   server.once("exit", () => {
     serverExited = true

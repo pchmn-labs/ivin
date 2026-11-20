@@ -1,0 +1,74 @@
+import type { Effect } from "effect"
+import type { Server } from "./connection.ts"
+
+export const exitCode = { ok: 0, failed: 1, usage: 2, notRunning: 3 } as const
+
+export interface Option {
+  readonly type: "string" | "boolean"
+  readonly description: string
+  readonly value?: string
+}
+
+export interface Result {
+  readonly ok: boolean
+  readonly text: string
+  readonly json: Record<string, unknown>
+}
+
+export interface Command {
+  readonly name: string
+  readonly summary: string
+  readonly usage: string
+  readonly description: string
+  readonly options: Readonly<Record<string, Option>>
+  // How many positional arguments the command takes at most.
+  readonly arguments: number
+  readonly run: (input: {
+    readonly values: Readonly<Record<string, string | boolean | (string | boolean)[] | undefined>>
+    readonly positionals: readonly string[]
+  }) => Effect.Effect<Result, never, Server>
+}
+
+export const sharedOptions: Readonly<Record<string, Option>> = {
+  json: { type: "boolean", description: "Print the result as JSON on stdout" },
+  help: { type: "boolean", description: "Show this help" },
+}
+
+const optionLines = (options: Readonly<Record<string, Option>>) => {
+  const labels = Object.entries(options).map(([name, option]) => ({
+    label: option.value ? `--${name} <${option.value}>` : `--${name}`,
+    description: option.description,
+  }))
+  const width = Math.max(...labels.map(({ label }) => label.length))
+  return labels.map(({ label, description }) => `  ${label.padEnd(width)}  ${description}`)
+}
+
+export const commandHelp = (command: Command) =>
+  [
+    `ivin ${command.name}: ${command.summary}`,
+    "",
+    `Usage: ${command.usage}`,
+    "",
+    command.description,
+    "",
+    "Options:",
+    ...optionLines({ ...command.options, ...sharedOptions }),
+  ].join("\n")
+
+export const mainHelp = (commands: readonly Command[]) => {
+  const width = Math.max(...commands.map(({ name }) => name.length))
+  return [
+    "ivin: talk to the running ivin app from a shell.",
+    "",
+    "Usage: ivin <command> [options]",
+    "",
+    "Commands:",
+    ...commands.map(({ name, summary }) => `  ${name.padEnd(width)}  ${summary}`),
+    "",
+    "Options:",
+    ...optionLines(sharedOptions),
+    "",
+    "Run `ivin <command> --help` for a command's options.",
+    "Exit codes: 0 ok, 1 failed, 2 invalid usage, 3 ivin is not running.",
+  ].join("\n")
+}

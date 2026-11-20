@@ -5,6 +5,7 @@ import { createInterface } from "node:readline"
 import type { HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Duration, Effect, Layer, Stream } from "effect"
+import { findOnPath } from "../../../shared/find-on-path.ts"
 import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/harness-provider.ts"
 import { approvalResponseLine } from "../rules/approval-response.ts"
 import { claudeArgs } from "../rules/claude-args.ts"
@@ -75,6 +76,7 @@ export const layerClaudeWith = (
     HarnessProvider.of({
       id: "claude",
       runOptions: listedRunOptions(listTimeout),
+      program: Effect.sync(() => ({ name: "claude", path: findOnPath("claude") })),
       toolActivity,
       start: ({ sessionId, cwd, options, providerSessionId }) =>
         Effect.gen(function* () {
