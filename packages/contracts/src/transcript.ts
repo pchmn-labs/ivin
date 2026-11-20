@@ -23,9 +23,6 @@ export const ImageData = Schema.Struct({
 })
 export type ImageData = typeof ImageData.Type
 
-export const ImageFile = Schema.Struct({ mediaType: ImageMediaType, base64: Schema.String })
-export type ImageFile = typeof ImageFile.Type
-
 export const SessionImage = Schema.Struct({
   ...ImageRef.fields,
   messageId: Schema.String,
@@ -258,10 +255,6 @@ export const TranscriptItemChange = Schema.Union([
 export type TranscriptItemChange = typeof TranscriptItemChange.Type
 export type TranscriptDelta = Extract<TranscriptItemChange, { type: "delta" }>
 
-export class ImageNotFound extends Schema.TaggedError<ImageNotFound>()("ImageNotFound", {
-  imageId: Schema.String,
-}) {}
-
 export const TranscriptRpcs = RpcGroup.make(
   // `position: null` anchors the page at the end of the transcript.
   Rpc.make("transcript.getItems", {
@@ -278,11 +271,6 @@ export const TranscriptRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String, before: Schema.Int },
     success: TranscriptItemChange,
     stream: true,
-  }),
-  Rpc.make("transcript.getImage", {
-    payload: { imageId: Schema.String },
-    success: ImageFile,
-    error: ImageNotFound,
   }),
   // Every image the user sent in the session, in transcript order.
   Rpc.make("transcript.listImages", {

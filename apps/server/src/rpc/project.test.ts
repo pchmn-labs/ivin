@@ -10,6 +10,10 @@ import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { handlers, layerServices } from "./handlers.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 const newDatabase = () => {
   const db = new DatabaseSync(":memory:")
@@ -29,6 +33,9 @@ const withServer = <A, E>(
           Layer.provide(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
+          Layer.provide(
+            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+          ),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf([])),
           Layer.provide(layerScripted([])),

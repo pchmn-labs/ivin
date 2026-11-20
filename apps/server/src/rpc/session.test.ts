@@ -19,6 +19,10 @@ import { migrations, runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServices } from "./handlers.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 const turn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: { from: "scripted" } },
@@ -53,6 +57,9 @@ const withServer = <A, E>(
           Layer.provide(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
+          Layer.provide(
+            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+          ),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf([])),
           Layer.provide(layerScripted(turns, { reportSession: true, ...options, sent })),
@@ -727,6 +734,7 @@ test("a run started by one client is seen, interrupted and continued by another,
           Layer.provideMerge(
             Layer.mergeAll(
               Layer.succeed(Database)(db),
+              Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
               layerKeybindingsFileOf([]),
               layerSettingsFileOf([]),
               layerScripted([[running, said("Working")], [said("Noted")]], { sent, interrupted }),

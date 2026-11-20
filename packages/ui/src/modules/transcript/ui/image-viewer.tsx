@@ -8,10 +8,10 @@ import { draftOf } from "../../session/atoms/draft.ts"
 import { draftImages } from "../../session/rules/draft.ts"
 import { type ImageViewerState, imageViewerAtom } from "../atoms/image-viewer.ts"
 import { sessionImagesOf } from "../atoms/list-images.ts"
+import { imageSrc } from "../atoms/sent-images.ts"
 import { imageDataUrl } from "../rules/image-url.ts"
 import { withoutImageMarkers } from "../rules/message-parts.ts"
 import { ImageThumbnail } from "./image-thumbnail.tsx"
-import { StoredImage } from "./stored-image.tsx"
 import "./image-viewer.css"
 
 interface Entry {
@@ -20,7 +20,7 @@ interface Entry {
   // Images that share a group were sent in the same message.
   readonly group: string
   readonly caption: string
-  readonly src?: string
+  readonly src: string
 }
 
 const quote = (text: string) =>
@@ -43,6 +43,7 @@ function useEntries({ sessionId, images }: ImageViewerState): ReadonlyArray<Entr
     number: image.number,
     group: image.messageId,
     caption: quote(image.messageText),
+    src: imageSrc(sessionId, image),
   }))
 }
 
@@ -85,12 +86,9 @@ function Viewer({ state, onStep }: { state: ImageViewerState; onStep: (id: strin
         <BaseDialog.Close render={<IconButton icon="x" label="Close" variant="ghost" />} />
       </div>
       <div className="iv-image-viewer__stage">
-        {current &&
-          (current.src === undefined ? (
-            <StoredImage key={current.id} imageId={current.id} className="iv-image-viewer__image" />
-          ) : (
-            <img className="iv-image-viewer__image" src={current.src} alt="" />
-          ))}
+        {current && (
+          <img key={current.id} className="iv-image-viewer__image" src={current.src} alt="" />
+        )}
         <span className="iv-image-viewer__step" data-side="previous">
           <IconButton
             icon="arrow-left"
@@ -122,8 +120,8 @@ function Viewer({ state, onStep }: { state: ImageViewerState; onStep: (id: strin
               size="sm"
               current={entry.id === state.imageId}
               lazy
+              src={entry.src}
               onOpen={() => onStep(entry.id)}
-              {...(entry.src !== undefined && { src: entry.src })}
             />
           </Fragment>
         ))}

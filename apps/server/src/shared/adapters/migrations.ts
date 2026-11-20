@@ -115,7 +115,6 @@ export const migrations: readonly Migration[] = [
       session_id TEXT NOT NULL REFERENCES sessions (id),
       number INTEGER NOT NULL,
       media_type TEXT NOT NULL,
-      data BLOB NOT NULL,
       UNIQUE (session_id, number)
     )`,
   },

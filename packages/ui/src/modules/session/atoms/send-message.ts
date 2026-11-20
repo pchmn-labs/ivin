@@ -4,7 +4,7 @@ import type { ImageData, TranscriptItem } from "@ivin/contracts/transcript"
 import { optimistic } from "@ivin/state/optimistic"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 import { transcriptOf } from "../../transcript/atoms/get-items.ts"
-import { forgetSentImages, rememberSentImages } from "../../transcript/atoms/image.ts"
+import { forgetSentImages, rememberSentImages } from "../../transcript/atoms/sent-images.ts"
 import { sessionsOf } from "./list-sessions.ts"
 
 export const sendMessageAtom = serverRuntime.fn<{

@@ -177,8 +177,6 @@ const seedTranscript = (server: FakeServer) => {
     message("m1", 0, "the card overflows [Image #1]", [1]),
     message("m2", 1, "a test fails [Image #2] and the chart [Image #3]", [2, 3]),
   ])
-  for (const number of [1, 2, 3])
-    server.seedImage(`img-${number}`, { mediaType: "image/png", base64: PIXEL })
 }
 
 test("a sent image opens full screen; the arrows move through the session's images and Escape returns to the thumbnail", async () => {
@@ -243,7 +241,6 @@ test("the full-screen view draws the images of its strip only as they scroll int
       images: numbers.map((number) => ({ id: `img-${number}`, number, mediaType: "image/png" })),
     },
   ])
-  for (const n of numbers) server.seedImage(`img-${n}`, { mediaType: "image/png", base64: PIXEL })
   await render(view(server, "s1"))
 
   await page.getByRole("button", { name: "View image #1" }).first().click()

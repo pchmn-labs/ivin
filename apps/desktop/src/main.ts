@@ -4,12 +4,16 @@ import {
   dialog,
   ipcMain,
   MessageChannelMain,
+  net,
+  protocol,
   utilityProcess,
   type UtilityProcess,
 } from "electron"
 import { homedir } from "node:os"
 import { join } from "node:path"
+import { pathToFileURL } from "node:url"
 import { PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
+import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
 
 const devUrl = process.env["IVIN_DEV_URL"]
 const openInBackground = process.env["IVIN_BACKGROUND"] === "1"
@@ -30,6 +34,11 @@ process.on("uncaughtException", (error) => {
 })
 
 let server: UtilityProcess
+
+// Registered before ready: the window loads a user's sent images straight from their files.
+protocol.registerSchemesAsPrivileged([
+  { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true } },
+])
 
 const createWindow = async () => {
   const window = new BrowserWindow({
@@ -97,6 +106,11 @@ const ivinHome = process.env["IVIN_HOME"] ?? join(homedir(), ".ivin")
 
 void app.whenReady().then(() => {
   if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
+  const imageFolder = join(app.getPath("userData"), "images")
+  protocol.handle(IMAGE_SCHEME, (request) => {
+    const file = imageFile(imageFolder, request.url)
+    return file ? net.fetch(pathToFileURL(file).toString()) : new Response(null, { status: 404 })
+  })
   server = utilityProcess.fork(
     serverEntry,
     [
@@ -106,6 +120,8 @@ void app.whenReady().then(() => {
       join(ivinHome, "logs", "ivin.log"),
       "--home",
       ivinHome,
+      "--images",
+      imageFolder,
     ],
     { serviceName: "ivin-server", stdio: "inherit" },
   )

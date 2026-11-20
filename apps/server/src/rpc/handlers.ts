@@ -36,8 +36,7 @@ import { listTabs } from "../modules/tab/usecases/list-tabs.ts"
 import { openTab } from "../modules/tab/usecases/open-tab.ts"
 import { reorderTabs } from "../modules/tab/usecases/reorder-tabs.ts"
 import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlite-transcript-store.ts"
-import { layerSqliteImageStore } from "../modules/transcript/adapters/sqlite-image-store.ts"
-import { getImage } from "../modules/transcript/usecases/get-image.ts"
+import { layerFsImageStore } from "../modules/transcript/adapters/fs-image-store.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
 import { listImages } from "../modules/transcript/usecases/list-images.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
@@ -61,7 +60,7 @@ export const layerServices = layerWorktreeCleanup.pipe(
       layerSqliteSessionStore,
       layerSqliteTabStore,
       layerSqliteTranscriptStore,
-      layerSqliteImageStore,
+      layerFsImageStore,
       layerItemFeed,
     ),
   ),
@@ -137,7 +136,6 @@ export const handlers = Rpcs.toLayer(
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),
-      "transcript.getImage": ({ imageId }) => getImage(imageId),
       "transcript.listImages": ({ sessionId }) => listImages(sessionId),
     }),
   ),

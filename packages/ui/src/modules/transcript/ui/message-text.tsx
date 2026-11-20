@@ -1,4 +1,5 @@
 import type { MessageTextProps } from "@ivin/plugin-api/ui"
+import { imageSrc } from "../atoms/sent-images.ts"
 import { messageParts } from "../rules/message-parts.ts"
 import { ImageMarker } from "./image-marker.tsx"
 import { useOpenSessionImage } from "./message-images.tsx"
@@ -16,6 +17,7 @@ export function MessageText({ sessionId, text, images }: MessageTextProps) {
             key={index}
             imageId={part.image.id}
             number={part.image.number}
+            src={imageSrc(sessionId, part.image)}
             onOpen={() => openImage(part.image.id)}
           />
         ),

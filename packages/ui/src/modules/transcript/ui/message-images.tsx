@@ -1,6 +1,7 @@
 import { useAtomSet } from "@effect/atom-react"
 import type { MessageImagesProps } from "@ivin/plugin-api/ui"
 import { imageViewerAtom } from "../atoms/image-viewer.ts"
+import { imageSrc } from "../atoms/sent-images.ts"
 import { ImageThumbnail } from "./image-thumbnail.tsx"
 import "./message-images.css"
 
@@ -19,6 +20,7 @@ export function MessageImages({ sessionId, images }: MessageImagesProps) {
           key={image.id}
           imageId={image.id}
           number={image.number}
+          src={imageSrc(sessionId, image)}
           size="lg"
           showNumber
           onOpen={() => openImage(image.id)}

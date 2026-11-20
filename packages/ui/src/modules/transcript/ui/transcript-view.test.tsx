@@ -21,6 +21,9 @@ const message = (position: number): TranscriptItem => ({
 })
 
 const scroller = () => document.querySelector<HTMLElement>('[data-testid="transcript"]')!
+// The image files the transcript asks the window to load: one per <img> it has drawn.
+const loadedImages = () =>
+  [...document.querySelectorAll<HTMLImageElement>("img")].map((image) => image.getAttribute("src"))
 const frames = () => new Promise((resolve) => setTimeout(resolve, 150))
 
 test("the transcript stays put when scrolled up and follows when at the bottom", async () => {
@@ -81,8 +84,6 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
 
 test("a transcript of 200 images loads only the images of the rows on screen", async () => {
   const server = makeFakeServer()
-  const pixel =
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
   server.seedItems(
     "s1",
     Array.from({ length: 200 }, (_, i) => ({
@@ -95,8 +96,6 @@ test("a transcript of 200 images loads only the images of the rows on screen", a
       images: [{ id: `img-${i + 1}`, number: i + 1, mediaType: "image/png" as const }],
     })),
   )
-  for (let i = 1; i <= 200; i++)
-    server.seedImage(`img-${i}`, { mediaType: "image/png", base64: pixel })
 
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
@@ -109,14 +108,14 @@ test("a transcript of 200 images loads only the images of the rows on screen", a
   )
 
   await expect.element(page.getByText("shot 199", { exact: false })).toBeVisible()
-  await vi.waitFor(() => expect(server.fetchedImages).toContain("img-200"))
-  const onScreen = new Set(server.fetchedImages).size
-  expect(onScreen).toBeLessThan(20)
+  await vi.waitFor(() => expect(loadedImages()).toContain("ivin-image://s1/img-200.png"))
+  const onScreen = new Set(loadedImages())
+  expect(onScreen.size).toBeLessThan(20)
 
   for (let i = 0; i < 5; i++) {
     scroller().scrollTop = 0
     await frames()
   }
-  await vi.waitFor(() => expect(server.fetchedImages.length).toBeGreaterThan(onScreen))
-  expect(new Set(server.fetchedImages).size).toBeLessThan(200)
+  await vi.waitFor(() => expect(loadedImages().some((src) => !onScreen.has(src))).toBe(true))
+  expect(new Set(loadedImages()).size).toBeLessThan(200)
 })

@@ -7,6 +7,10 @@ import { serveOverPort } from "../rpc/serve.ts"
 import { layerDatabase } from "./adapters/database.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 test("serves the rpc group over a message port", async () => {
   const { port1, port2 } = new MessageChannel()
@@ -26,6 +30,9 @@ test("serves the rpc group over a message port", async () => {
         server.pipe(
           Layer.provide(layerServices),
           Layer.provide(layerDatabase(":memory:")),
+          Layer.provide(
+            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+          ),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf([])),
           Layer.provide(layerScripted([])),

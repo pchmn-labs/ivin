@@ -17,6 +17,7 @@ import { WorktreeCleanup } from "../modules/worktree/usecases/worktree-cleanup.t
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 // Each test runs about twenty git commands, a fetch and a merge check among them.
 vi.setConfig({ testTimeout: 5000 })
@@ -94,6 +95,9 @@ const withServer = <A, E>(
           Layer.provideMerge(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
+          Layer.provide(
+            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+          ),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf(settings)),
           Layer.provide(layerScripted(turns)),

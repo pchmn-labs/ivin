@@ -208,7 +208,6 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         {preview && (
           <ImagePreview
             anchor={preview.anchor}
-            imageId={preview.image.id}
             number={preview.image.number}
             src={imageDataUrl(preview.image)}
           />
