@@ -30,7 +30,7 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 
 ### Toolchain
 
-All build and quality tools come from the VoidZero open-source stack (MIT):
+All build and quality tools but one come from the VoidZero open-source stack (MIT):
 
 | Tool | Used for |
 |---|---|
@@ -38,9 +38,11 @@ All build and quality tools come from the VoidZero open-source stack (MIT):
 | tsdown | `main`, `preload`, `server`, `cli` and the publishable packages (`contracts`, `plugin-api`) |
 | Rolldown | plugin compilation at runtime (its JS API, with host modules as externals) |
 | Vitest | unit and component tests; Vitest browser mode for UI tests |
-| Oxlint | lint, with type-aware rules; it also enforces the import rules of the [code layout](#code-layout) |
+| Oxlint | lint, with type-aware rules; it also enforces the import rules of the [code layout](#code-layout) and the style rules of the UI's TSX |
 | Oxfmt | format |
 | Vite+ (`vp`) | single entry point for the above, cached monorepo tasks, Node and pnpm versions |
+
+Stylelint (MIT) lints the UI's CSS against its colour and token rules, as Oxlint reads no CSS; `pnpm lint` runs both.
 
 Vite+ is still in beta: the repo keeps a plain config per tool, so dropping `vp` for direct tool calls stays a script change. `vp lint` and `vp fmt` are passed their config with `-c` (`.oxlintrc.json`, `.oxfmtrc.json`), because `vp` only reads such options from `vite.config.ts`; `vp check` has no `-c` and is not used. Each package that bundles keeps its options in `tsdown.config.ts`, and its `vite.config.ts` imports them as `pack`. Build, dev and type-check tasks run through `vp run`. Electron packaging (electron-builder) and end-to-end tests (Playwright driving Electron) are outside this stack.
 
@@ -107,7 +109,7 @@ packages/             what is imported
     core/             design system (`components/<component>/`, `theme/`), the RPC client service
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts` and `ui.ts`: types + runtime shims (the only package plugins import)
-tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json`, `test-setup/` runs before every `node` test
+tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json` and the UI style rules of `.oxlintrc.json` and `.stylelintrc.json`, `test-setup/` runs before every `node` test
 plugins/<id>/         built-in plugins, same format as user plugins; `rules/` beside the two halves when one has logic
 docs/
 ```
