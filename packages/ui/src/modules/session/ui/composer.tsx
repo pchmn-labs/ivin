@@ -286,7 +286,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
             src={imageDataUrl(preview.image)}
           />
         )}
-        <Stack direction="row" align="center" justify="between" gap={2}>
+        <Stack direction="row" align="end" justify="between" gap={2}>
           <Stack direction="row" align="center" gap={3}>
             {session && (
               <RunOptionsMenu

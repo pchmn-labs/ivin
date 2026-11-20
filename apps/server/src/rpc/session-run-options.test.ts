@@ -190,17 +190,18 @@ test("a change while running leaves the running turn alone and applies to the ne
 })
 
 test("a change before the first message appends no transcript line", async () => {
-  const items = await withServer(newDatabase(), [], (client) =>
+  const { changed, items } = await withServer(newDatabase(), [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.setRunOptions"]({
+      const changed = yield* client["session.setRunOptions"]({
         sessionId: session.id,
         options: { effort: "high" },
       })
-      return yield* itemsOf(client, session.id)
+      return { changed, items: yield* itemsOf(client, session.id) }
     }),
   )
 
+  expect(changed.effort).toBe("high")
   expect(items).toEqual([])
 })
 
