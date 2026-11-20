@@ -123,6 +123,16 @@ test("while the turn runs only its last step is open; once it ends every step is
   expect(work.steps.map((_, index) => stepOpenByDefault(work, index, false))).toEqual([true, true])
 })
 
+test("a finished turn of more than 8 calls opens its steps folded", () => {
+  const calls = Array.from({ length: 9 }, (_, index) => call(`c${index}`))
+  const work = turnWork("w", [text("t1"), ...calls.slice(0, 4), text("t2"), ...calls.slice(4)], [])
+
+  expect(work.steps.map((_, index) => stepOpenByDefault(work, index, false))).toEqual([
+    false,
+    false,
+  ])
+})
+
 test("a folded step keeps its failed calls and its subagent calls", () => {
   const [step] = turnWork(
     "w",

@@ -73,7 +73,7 @@ function StepView({
           onClick={onToggle}
         >
           <span className="iv-turn__lead">
-            <span className="iv-turn__mark">
+            <span className="iv-turn__mark" data-state={running ? "running" : undefined}>
               {running ? <Icon name="loader" size={12} /> : <Icon name="stack" size={14} />}
             </span>
             <span className="iv-turn__chevron">
@@ -99,6 +99,9 @@ function StepView({
   )
 }
 
+// Kept in view while the turn is open; a check gives way to the chevron.
+const STATE_MARKS = new Set<Outcome>(["stopped", "failed"])
+
 const MARKS: Record<Outcome, IconName> = {
   answered: "check",
   silent: "check",
@@ -111,7 +114,11 @@ function TurnLine({ work, live }: { work: Work; live: boolean }): ReactNode {
   return (
     <>
       <span className="iv-turn__lead">
-        <span className="iv-turn__mark" data-outcome={live ? undefined : work.outcome}>
+        <span
+          className="iv-turn__mark"
+          data-outcome={live ? undefined : work.outcome}
+          data-state={live ? "running" : STATE_MARKS.has(work.outcome) ? work.outcome : undefined}
+        >
           {live ? <Icon name="loader" size={12} /> : <Icon name={MARKS[work.outcome]} size={14} />}
         </span>
         <span className="iv-turn__chevron">

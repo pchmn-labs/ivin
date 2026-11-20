@@ -165,19 +165,19 @@
 
 .iv-turn__line--toggle:hover .iv-turn__mark,
 .iv-turn__line--toggle:focus-visible .iv-turn__mark,
-.iv-turn__line[aria-expanded="true"] .iv-turn__mark,
+.iv-turn__line[aria-expanded="true"] .iv-turn__mark:not([data-state]),
 .iv-turn__summary:hover .iv-turn__mark,
 .iv-turn__summary:focus-visible .iv-turn__mark,
-.iv-turn__summary[aria-expanded="true"] .iv-turn__mark {
+.iv-turn__summary[aria-expanded="true"] .iv-turn__mark:not([data-state]) {
   opacity: 0;
 }
 
 .iv-turn__line--toggle:hover .iv-turn__chevron,
 .iv-turn__line--toggle:focus-visible .iv-turn__chevron,
-.iv-turn__line[aria-expanded="true"] .iv-turn__chevron,
+.iv-turn__line[aria-expanded="true"] .iv-turn__mark:not([data-state]) + .iv-turn__chevron,
 .iv-turn__summary:hover .iv-turn__chevron,
 .iv-turn__summary:focus-visible .iv-turn__chevron,
-.iv-turn__summary[aria-expanded="true"] .iv-turn__chevron {
+.iv-turn__summary[aria-expanded="true"] .iv-turn__mark:not([data-state]) + .iv-turn__chevron {
   opacity: 1;
 }
 
@@ -202,21 +202,39 @@
   padding: 2px 0;
 }
 
-.iv-turn__call::before {
+.iv-turn__call::before,
+.iv-turn__call::after {
   content: "";
   position: absolute;
-  top: -16px;
   left: -11.5px;
-  width: 8px;
-  height: 29px;
-  border-width: 0 0 1px 1px;
-  border-style: solid;
-  /* Opaque, so where two branches overlap the line does not darken. */
-  border-color: color-mix(in srgb, var(--iv-text) 9%, var(--iv-bg));
-  border-bottom-left-radius: 3px;
+  /* Opaque, so where a branch meets the line the stroke does not darken. */
+  border: 0 solid color-mix(in srgb, var(--iv-text) 9%, var(--iv-bg));
+}
+
+.iv-turn__call::before {
+  top: 0;
+  bottom: 0;
+  border-left-width: 1px;
 }
 
 .iv-turn__call:first-child::before {
   top: -6px;
-  height: 19px;
+}
+
+.iv-turn__call:last-child::before {
+  bottom: auto;
+  height: 5px;
+}
+
+.iv-turn__call:first-child:last-child::before {
+  height: 11px;
+}
+
+.iv-turn__call::after {
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+  border-bottom-left-radius: 3px;
 }
