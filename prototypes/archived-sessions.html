@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Prototype · Archived sessions</title>
+<link rel="stylesheet" href="../packages/ui/src/core/theme/tokens.css" />
+<link rel="stylesheet" href="../packages/ui/src/core/theme/base.css" />
+<link rel="stylesheet" href="../packages/ui/src/core/components/list-row/list-row.css" />
+<link rel="stylesheet" href="../packages/ui/src/core/components/list-section/list-section.css" />
+<link rel="stylesheet" href="../packages/ui/src/core/components/dialog/dialog.css" />
+<link rel="stylesheet" href="../packages/ui/src/core/components/menu/menu.css" />
+<link rel="stylesheet" href="../packages/ui/src/core/components/button/button.css" />
+<style>
+  /* App shell, mocked after DESIGN.md's layout. */
+  .ap-window { display: grid; grid-template-columns: var(--iv-card-width) 1fr; height: 100vh; }
+  .ap-card {
+    display: flex; flex-direction: column; margin: 8px 0 8px 8px; min-height: 0;
+    background: var(--iv-bg-card); border: 1px solid var(--iv-border); border-radius: var(--iv-radius-card);
+  }
+  .ap-card__top { display: flex; align-items: center; height: 40px; padding: 0 8px 0 var(--iv-traffic-lights-width); gap: 2px; flex: none; }
+  .ap-lights { position: absolute; left: 23px; top: 22px; display: flex; gap: 8px; }
+  .ap-lights i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+  .ap-lights i:nth-child(2) { background: #febc2e; } .ap-lights i:nth-child(3) { background: #28c840; }
+  .ap-spacer { flex: 1; }
+  .ap-body { display: grid; grid-template-columns: var(--iv-rail-width) 1fr; flex: 1; min-height: 0; }
+  .ap-rail { display: flex; flex-direction: column; align-items: center; gap: 6px; padding-top: 2px; border-right: 1px solid var(--iv-border); }
+  .ap-rail__btn { width: var(--iv-rail-button-size); height: var(--iv-rail-button-size); border-radius: var(--iv-radius-rail-button); display: grid; place-items: center; }
+  .ap-rail__btn[data-selected] { background: var(--iv-bg-raised); box-shadow: 0 0 0 1px var(--iv-border-strong), var(--iv-shadow-raised); }
+  .ap-creature { display: grid; grid-template-columns: repeat(8, 1fr); width: 20px; height: 20px; image-rendering: pixelated; }
+  .ap-creature--16 { width: 16px; height: 16px; }
+  .ap-creature i { background: transparent; } .ap-creature i[data-on] { background: var(--iv-project-hue-0); }
+  .ap-creature--b i[data-on] { background: var(--iv-project-hue-1); }
+  .ap-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .ap-head { display: flex; align-items: center; gap: 8px; height: var(--iv-list-head-height); padding: 0 8px 0 16px; flex: none; }
+  .ap-head__name { flex: 1; min-width: 0; margin: 0; font-size: var(--iv-text-lg); line-height: var(--iv-text-lg-lh); font-weight: var(--iv-weight-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ap-scroll { flex: 1; overflow-y: auto; padding: 0 8px 8px; }
+  .ap-menu-anchor { position: relative; }
+  .ap-menu-anchor .iv-menu { position: absolute; right: 0; top: 30px; z-index: 20; min-width: 200px; }
+  .ap-main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .ap-tabs { display: flex; align-items: center; gap: 4px; height: 40px; margin-top: 8px; padding: 0 12px; flex: none; }
+  .ap-tab { display: flex; align-items: center; gap: 8px; width: var(--iv-tab-width); height: var(--iv-tab-height); padding: 0 var(--iv-tab-padding); border-radius: var(--iv-radius-tab); color: var(--iv-text-muted); font-size: var(--iv-text-sm); font-weight: var(--iv-weight-medium); }
+  .ap-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ap-tab[data-selected] { background: var(--iv-bg-raised); box-shadow: 0 0 0 1px var(--iv-border-strong); color: var(--iv-text); }
+  .ap-transcript { flex: 1; overflow: hidden; display: flex; justify-content: center; padding: 24px; }
+  .ap-transcript__col { width: 100%; max-width: var(--iv-content-width); display: flex; flex-direction: column; gap: 16px; }
+  .ap-bubble { align-self: stretch; padding: 10px 12px; background: var(--iv-bubble); border-radius: 10px 10px 4px 10px; }
+  .ap-answer { color: var(--iv-text); }
+  .ap-answer p { margin: 0 0 8px; }
+  .ap-composer { margin: 0 auto 24px; width: calc(100% - 48px); max-width: var(--iv-content-width); min-height: 84px; border: 1px solid var(--iv-border-strong); border-radius: var(--iv-radius-lg); background: var(--iv-bg-raised); padding: 12px; color: var(--iv-text-faint); }
+  .ap-icon { width: 16px; height: 16px; flex: none; }
+  .ap-icon--14 { width: 14px; height: 14px; }
+  .ap-mark { position: relative; display: inline-flex; width: 16px; height: 16px; }
+  .ap-sub { display: inline-flex; align-items: center; gap: 4px; min-width: 0; color: var(--iv-text-faint); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); font-family: var(--iv-font-mono); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .ap-sub span { overflow: hidden; text-overflow: ellipsis; }
+  .ap-kbd { display: inline-flex; align-items: center; gap: 4px; color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+  .ap-kbd kbd { font-family: var(--iv-font-sans); padding: 0 4px; min-width: 16px; text-align: center; border: 1px solid var(--iv-border-strong); border-radius: var(--iv-radius-sm); line-height: 14px; }
+  .ap-error { display: flex; align-items: flex-start; gap: 6px; color: var(--iv-danger); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); }
+  .ap-empty { margin: 0; padding: 24px 8px; color: var(--iv-text-faint); text-align: center; }
+  .ap-empty strong { display: block; color: var(--iv-text-muted); font-weight: var(--iv-weight-medium); margin-bottom: 4px; }
+  .ap-search { display: flex; align-items: center; gap: 8px; height: var(--iv-control-md); padding: 0 8px; border: 1px solid var(--iv-border-strong); border-radius: var(--iv-radius-md); background: var(--iv-bg-subtle); color: var(--iv-text-faint); }
+  .ap-search:focus-within { border-color: var(--iv-focus-ring); }
+  .ap-search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--iv-text); }
+  .ap-search input::placeholder { color: var(--iv-text-faint); }
+  .ap-reopen { position: fixed; top: 12px; right: 16px; z-index: 5; }
+
+  /* Variant 1 — dialog */
+  .v1-dialog { gap: 12px; width: min(480px, calc(100vw - 32px)); padding: 16px; top: 18%; translate: -50% 0; }
+  .v1-dialog__head { display: flex; align-items: center; gap: 8px; }
+  .v1-dialog__head h2 { flex: 1; }
+  .v1-count { color: var(--iv-text-faint); font-weight: var(--iv-weight-regular); font-variant-numeric: tabular-nums; }
+  .v1-list { display: flex; flex-direction: column; gap: 2px; max-height: 320px; overflow-y: auto; margin: 0 -4px; padding: 0 4px; list-style: none; }
+  .v1-row { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 8px; border-radius: var(--iv-radius-md); }
+  .v1-row[data-active] { background: var(--iv-bg-active); }
+  .v1-row__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .v1-row__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .v1-row__meta { color: var(--iv-text-faint); font-size: var(--iv-text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .v1-row__actions { display: none; gap: 2px; }
+  .v1-row[data-active] .v1-row__actions { display: flex; }
+  .v1-row[data-active] .v1-row__meta { display: none; }
+  .v1-foot { display: flex; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid var(--iv-border); }
+  .v1-foot .ap-error { flex: 1; }
+
+  /* Variant 2 — sidebar view */
+  .v2-head__back { margin-left: -8px; }
+  .v2-hint { padding: 8px 8px 0; color: var(--iv-text-faint); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); }
+  .v2-row .iv-list-row__main { outline: none; }
+  .v2-row:focus-within { background: var(--iv-bg-active); }
+  .v2-row .ap-error { padding: 0 8px 8px 32px; }
+  .v2-foot { flex: none; display: flex; flex-wrap: wrap; gap: 4px 10px; padding: 8px 12px 10px; border-top: 1px solid var(--iv-border); }
+
+  /* Variant 3 — page in the main area */
+  .v3-page { flex: 1; overflow-y: auto; display: flex; justify-content: center; padding: 32px 24px; }
+  .v3-col { width: 100%; max-width: var(--iv-content-width); display: flex; flex-direction: column; gap: 16px; }
+  .v3-title { margin: 0; font-size: var(--iv-text-xl); line-height: var(--iv-text-xl-lh); font-weight: var(--iv-weight-semibold); }
+  .v3-lead { margin: 4px 0 0; color: var(--iv-text-muted); }
+  .v3-bar { display: flex; align-items: center; gap: 12px; }
+  .v3-bar .ap-search { width: 260px; }
+  .v3-table { display: flex; flex-direction: column; border: 1px solid var(--iv-border); border-radius: var(--iv-radius-md); overflow: hidden; background: var(--iv-bg-subtle); }
+  .v3-row { display: grid; grid-template-columns: 16px 1fr auto auto; align-items: center; column-gap: 12px; padding: 10px 12px; border-top: 1px solid var(--iv-border); outline: none; }
+  .v3-row:first-child { border-top: 0; }
+  .v3-row:focus-visible, .v3-row:focus-within { background: var(--iv-bg-active); }
+  .v3-row:hover { background: var(--iv-bg-hover); }
+  .v3-row__text { display: flex; flex-direction: column; min-width: 0; }
+  .v3-row__title { font-weight: var(--iv-weight-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .v3-row__line { display: flex; gap: 8px; min-width: 0; color: var(--iv-text-faint); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); }
+  .v3-row__when { color: var(--iv-text-faint); font-size: var(--iv-text-sm); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .v3-row__actions { display: flex; gap: 4px; }
+  .v3-row .ap-error { grid-column: 2 / -1; padding-top: 6px; }
+  .v3-ghost-danger { color: var(--iv-danger); }
+  .v3-tab-icon { color: var(--iv-text-muted); }
+
+  /* Picker — verbatim from PICKER.md */
+  .proto-picker { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 2147483647; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(10, 10, 10, 0.82); -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 8px 24px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; line-height: 1; -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+  .proto-picker-highlight { position: absolute; top: 4px; left: 0; height: 28px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+  .proto-picker[data-ready] .proto-picker-highlight { transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1), width 250ms cubic-bezier(0.23, 1, 0.32, 1); }
+  @media (prefers-reduced-motion: reduce) { .proto-picker[data-ready] .proto-picker-highlight { transition: none; } }
+  .proto-picker-item { position: relative; display: flex; align-items: center; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.55); font: inherit; cursor: pointer; transition: color 150ms ease-out, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+  @media (hover: hover) and (pointer: fine) { .proto-picker-item:hover { color: rgba(255, 255, 255, 0.85); } }
+  .proto-picker-item:active { transform: scale(0.97); }
+  .proto-picker-item:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.4); outline-offset: 2px; }
+  .proto-picker-item[data-active] { color: #fff; }
+  .proto-picker-divider { width: 1px; height: 16px; margin: 0 4px; background: rgba(255, 255, 255, 0.12); }
+  .proto-picker-replay { padding: 0 10px; font-size: 14px; }
+  .proto-picker[data-position="top"] { bottom: auto; top: 24px; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<nav class="proto-picker" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Dialog</button>
+  <button class="proto-picker-item">Sidebar view</button>
+  <button class="proto-picker-item">Page</button>
+  <span class="proto-picker-divider" aria-hidden="true"></span>
+  <button class="proto-picker-item proto-picker-replay" aria-label="Replay animation (R)">↻</button>
+</nav>
+
+<script>
+const icon = (name, size = 16) => {
+  const paths = {
+    ellipsis: '<circle cx="5" cy="12" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="19" cy="12" r="1.3" fill="currentColor"/>',
+    archive: '<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>',
+    trash: '<path d="M4 6h16M9 6V4h6v2M6 6l1 14h10l1-14M10 10v6M14 10v6"/>',
+    restore: '<path d="M4 12a8 8 0 1 0 2.4-5.7L4 8.6"/><path d="M4 4v4.6h4.6"/>',
+    back: '<path d="M15 5l-7 7 7 7"/>',
+    x: '<path d="M6 6l12 12M18 6L6 18"/>',
+    search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/>',
+    branch: '<circle cx="6" cy="5" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="18" cy="7" r="2"/><path d="M6 7v10M18 9c0 5-6 4-12 8"/>',
+    folder: '<path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+    left: '<path d="M14 6l-6 6 6 6"/>',
+    right: '<path d="M10 6l6 6-6 6"/>',
+    alert: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.2v.3"/>',
+    chevron: '<path d="M7 10l5 5 5-5"/>',
+    newSession: '<path d="M12 20h8M4 20l1-4L16 5a2.1 2.1 0 0 1 3 3L8 19z"/>',
+  }
+  return `<svg class="ap-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`
+}
+// The harness's brand mark keeps its colour, as in DESIGN.md.
+const harnessMark = `<span class="ap-mark"><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="#d97757" d="M12 2.5l1.6 6.2 5.4-3.4-3.4 5.4 6.2 1.6-6.2 1.6 3.4 5.4-5.4-3.4L12 22l-1.6-6.1-5.4 3.4 3.4-5.4L2.3 12.3l6.1-1.6L5 5.3l5.4 3.4z"/></svg></span>`
+const creature = (variant = "", size = "") => {
+  const grid = "0011110001111110110110111111111101111110001001000100001001100110"
+  return `<span class="ap-creature ${variant} ${size}" aria-hidden="true">${[...grid].map((c) => (c === "1" ? "<i data-on></i>" : "<i></i>")).join("")}</span>`
+}
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c])
+
+const freshData = () => ({
+  archived: [
+    { id: "a1", title: "Fix flaky worktree cleanup test on CI", branch: "ivin/3fa81c02", where: ".worktrees/ivin-3fa81c02", archived: "2 h ago", archivedShort: "2h", active: "Yesterday", messages: 14 },
+    { id: "a2", title: "Add the usage plugin's cost column", branch: "feat/usage-cost", where: ".worktrees/feat-usage-cost", archived: "Yesterday", archivedShort: "1d", active: "3 days ago", messages: 31, failsOnDelete: true },
+    { id: "a3", title: "Why does pnpm 12 reject the lockfile?", branch: "main", where: "checkout", archived: "3 days ago", archivedShort: "3d", active: "4 days ago", messages: 6 },
+    { id: "a4", title: "Rename transcript items to match the glossary", branch: "refactor/transcript-items", where: ".worktrees/refactor-transcript-items", archived: "Nov 12", archivedShort: "8d", active: "Nov 11", messages: 22 },
+    { id: "a5", title: "Spike: ACP harness over stdio", branch: "spike/acp-stdio", where: ".worktrees/spike-acp-stdio", archived: "Nov 3", archivedShort: "17d", active: "Nov 2", messages: 48 },
+  ],
+  inactive: [{ id: "i1", title: "Review PR #96 worktree removal", branch: "main", ago: "5d" }],
+  open: [
+    { id: "s1", title: "Archive a session to hide it", branch: "feat/100-archive", ago: "now" },
+    { id: "s2", title: "Investigate slow transcript paging", branch: "main", ago: "1h" },
+  ],
+  errors: {},
+})
+
+const sessionRow = (s, { selected = false } = {}) => `
+  <li><div class="iv-list-row" ${selected ? "data-selected" : ""}>
+    <div class="iv-list-row__line"><button class="iv-list-row__main" tabindex="-1">
+      <span class="iv-list-row__leading">${harnessMark}</span>
+      <span class="iv-list-row__text"><span class="iv-list-row__title">${esc(s.title)}</span>
+      <span class="iv-list-row__subtitle"><span class="ap-sub">${icon("branch", 12)}<span>${esc(s.branch)}</span></span></span></span>
+      <span class="iv-list-row__meta">${s.ago}</span></button></div></div></li>`
+
+const projectMenu = (open) => !open ? "" : `
+  <div class="iv-menu" role="menu" data-project-menu>
+    <div class="iv-menu__item" role="menuitem" tabindex="-1" data-open-archived>${icon("archive")}<span class="iv-menu__label">Archived sessions</span><span class="iv-menu__hint">⇧⌘A</span></div>
+    <div class="iv-menu__separator"></div>
+    <div class="iv-menu__item" role="menuitem" tabindex="-1">${icon("x")}<span class="iv-menu__label">Close project</span></div>
+  </div>`
+
+const shell = ({ column, main, overlay = "" }) => `
+  <div class="ap-window">
+    <aside class="ap-card">
+      <div class="ap-lights"><i></i><i></i><i></i></div>
+      <div class="ap-card__top">
+        <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="Toggle sidebar">${icon("panel")}</button>
+        <span class="ap-spacer"></span>
+        <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="Back">${icon("left")}</button>
+        <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="Forward">${icon("right")}</button>
+      </div>
+      <div class="ap-body">
+        <nav class="ap-rail">
+          <span class="ap-rail__btn" data-selected>${creature()}</span>
+          <span class="ap-rail__btn">${creature("ap-creature--b")}</span>
+        </nav>
+        <div class="ap-column">${column}</div>
+      </div>
+    </aside>
+    <main class="ap-main">${main}</main>
+  </div>${overlay}`
+
+const sessionsColumn = (data, menuOpen) => `
+  <div class="ap-head">
+    ${creature("", "ap-creature--16")}<h2 class="ap-head__name">ivin</h2>
+    <button class="iv-button iv-button--ghost iv-button--sm" >${icon("newSession", 14)}New session</button>
+    <span class="ap-menu-anchor"><button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="Project actions" data-project-trigger>${icon("ellipsis")}</button>${projectMenu(menuOpen)}</span>
+  </div>
+  <div class="ap-scroll">
+    <section class="iv-list-section"><h3 class="iv-list-section__label">Sessions <span class="iv-list-section__count">${data.open.length}</span></h3>
+      <ul class="iv-list-section__rows">${data.open.map((s, i) => sessionRow(s, { selected: i === 0 })).join("")}</ul></section>
+    <section class="iv-list-section"><h3 class="iv-list-section__label">Inactive sessions <span class="iv-list-section__count">${data.inactive.length}</span></h3>
+      <ul class="iv-list-section__rows">${data.inactive.map((s) => sessionRow(s)).join("")}</ul></section>
+  </div>`
+
+const sessionMain = (data) => `
+  <div class="ap-tabs">
+    ${data.open.map((s, i) => `<div class="ap-tab" ${i === 0 ? "data-selected" : ""}>${harnessMark}<span>${esc(s.title)}</span></div>`).join("")}
+    <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="New session">${icon("plus")}</button>
+  </div>
+  <div class="ap-transcript"><div class="ap-transcript__col">
+    <div class="ap-bubble">Let me archive the sessions I'm done with, and delete the ones I'll never reopen.</div>
+    <div class="ap-answer"><p>Archiving keeps the session and its transcript in the database and takes it out of the sidebar. You can restore it later from the project's menu, under Archived sessions.</p><p>Deleting erases the session and its transcript for good.</p></div>
+  </div></div>
+  <div class="ap-composer">Ask the agent…</div>`
+
+const emptyState = `<p class="ap-empty"><strong>No archived sessions in ivin</strong>Archive a session from its menu to hide it from the sidebar.</p>`
+
+const errorLine = (message) => `<div class="ap-error" role="alert">${icon("alert", 14)}<span>${message}</span></div>`
+
+// Shared actions; each variant re-renders after them.
+const makeActions = (data, rerender) => ({
+  restore(id) {
+    const s = data.archived.find((x) => x.id === id)
+    data.archived = data.archived.filter((x) => x.id !== id)
+    data.inactive = [{ id: s.id, title: s.title, branch: s.branch, ago: s.archivedShort }, ...data.inactive]
+    delete data.errors[id]
+    rerender()
+  },
+  delete(id) {
+    const s = data.archived.find((x) => x.id === id)
+    if (s.failsOnDelete) {
+      s.failsOnDelete = false
+      data.errors[id] = "Couldn't delete this session. The database is busy; try again."
+    } else {
+      data.archived = data.archived.filter((x) => x.id !== id)
+      delete data.errors[id]
+    }
+    rerender()
+  },
+})
+
+// Delete confirmation, the same dialog in every variant.
+const confirmDelete = (s, onConfirm, onCancel) => {
+  const layer = document.createElement("div")
+  layer.innerHTML = `
+    <div class="iv-dialog__backdrop" data-starting-style></div>
+    <div class="iv-dialog" role="alertdialog" aria-modal="true" aria-labelledby="cd-title" data-starting-style>
+      <h2 class="iv-dialog__title" id="cd-title">Delete “${esc(s.title)}”?</h2>
+      <p class="iv-dialog__description">Its transcript of ${s.messages} messages is erased. This can't be undone.</p>
+      <div class="iv-dialog__actions">
+        <button class="iv-button iv-button--secondary iv-button--md" data-cancel>Cancel</button>
+        <button class="iv-button iv-button--danger iv-button--md" data-confirm>Delete session</button>
+      </div>
+    </div>`
+  document.body.append(layer)
+  const dialog = layer.querySelector(".iv-dialog")
+  requestAnimationFrame(() => layer.querySelectorAll("[data-starting-style]").forEach((el) => el.removeAttribute("data-starting-style")))
+  const close = (fn) => { layer.remove(); document.removeEventListener("keydown", onKey, true); fn() }
+  const onKey = (e) => {
+    if (e.key === "Escape") { e.stopPropagation(); e.preventDefault(); close(onCancel) }
+    if (e.key === "Tab") {
+      const buttons = [...dialog.querySelectorAll("button")]
+      const i = buttons.indexOf(document.activeElement)
+      e.preventDefault()
+      buttons[(i + (e.shiftKey ? -1 : 1) + buttons.length) % buttons.length].focus()
+    }
+    e.stopPropagation()
+  }
+  document.addEventListener("keydown", onKey, true)
+  layer.querySelector("[data-cancel]").onclick = () => close(onCancel)
+  layer.querySelector("[data-confirm]").onclick = () => close(onConfirm)
+  layer.querySelector(".iv-dialog__backdrop").onclick = () => close(onCancel)
+  layer.querySelector("[data-cancel]").focus()
+}
+
+const cleanups = []
+const onDocKey = (fn) => { document.addEventListener("keydown", fn); cleanups.push(() => document.removeEventListener("keydown", fn)) }
+
+/* Variant 1 — Dialog: a keyboard-first list over the app. */
+function variantDialog(stage) {
+  const data = freshData()
+  let open = true, menuOpen = false, active = 0, query = ""
+  const actions = makeActions(data, () => render())
+  const visible = () => data.archived.filter((s) => s.title.toLowerCase().includes(query.toLowerCase()))
+  const render = (focusSearch = false) => {
+    const rows = visible()
+    active = Math.min(active, Math.max(rows.length - 1, 0))
+    const activeErr = rows[active] && data.errors[rows[active].id]
+    stage.innerHTML = shell({
+      column: sessionsColumn(data, menuOpen),
+      main: sessionMain(data),
+      overlay: !open ? `<button class="iv-button iv-button--secondary iv-button--sm ap-reopen" data-reopen>Open Archived sessions (⇧⌘A)</button>` : `
+        <div class="iv-dialog__backdrop" data-close></div>
+        <div class="iv-dialog v1-dialog" role="dialog" aria-modal="true" aria-labelledby="v1-title">
+          <div class="v1-dialog__head"><h2 class="iv-dialog__title" id="v1-title">Archived sessions <span class="v1-count">${data.archived.length}</span></h2>
+            <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="Close" data-close>${icon("x")}</button></div>
+          ${data.archived.length === 0 ? emptyState : `
+          <label class="ap-search">${icon("search", 14)}<input data-search placeholder="Search archived sessions" value="${esc(query)}" aria-controls="v1-list" /></label>
+          <ul class="v1-list" id="v1-list" role="listbox" aria-label="Archived sessions">
+            ${rows.length === 0 ? `<p class="ap-empty">No archived session matches “${esc(query)}”.</p>` : rows.map((s, i) => `
+              <li class="v1-row" role="option" aria-selected="${i === active}" ${i === active ? "data-active" : ""} data-index="${i}">
+                ${harnessMark}
+                <span class="v1-row__text"><span class="v1-row__title">${esc(s.title)}</span>
+                  <span class="ap-sub">${icon("branch", 12)}<span>${esc(s.branch)}</span></span></span>
+                <span class="v1-row__meta">${s.archived}</span>
+                <span class="v1-row__actions">
+                  <button class="iv-button iv-button--secondary iv-button--sm" data-restore="${s.id}" tabindex="-1">${icon("restore", 14)}Restore</button>
+                  <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="Delete ${esc(s.title)}" data-delete="${s.id}" tabindex="-1">${icon("trash", 14)}</button>
+                </span>
+              </li>`).join("")}
+          </ul>
+          <div class="v1-foot">${activeErr ? errorLine(activeErr) : `<span class="ap-spacer"></span>`}
+            <span class="ap-kbd"><kbd>↑</kbd><kbd>↓</kbd> Move</span><span class="ap-kbd"><kbd>↵</kbd> Restore</span><span class="ap-kbd"><kbd>⌘</kbd><kbd>⌫</kbd> Delete</span><span class="ap-kbd"><kbd>esc</kbd> Close</span></div>`}
+        </div>`,
+    })
+    wire()
+    const search = stage.querySelector("[data-search]")
+    if (open && search && focusSearch !== null) { search.focus(); search.setSelectionRange(query.length, query.length) }
+    if (open && !search) stage.querySelector(".v1-dialog [data-close]")?.focus()
+    stage.querySelector(".v1-row[data-active]")?.scrollIntoView({ block: "nearest" })
+  }
+  const askDelete = (id) => {
+    const s = data.archived.find((x) => x.id === id)
+    confirmDelete(s, () => actions.delete(id), () => render())
+  }
+  const wire = () => {
+    stage.querySelectorAll("[data-close]").forEach((el) => (el.onclick = () => { open = false; render() }))
+    stage.querySelector("[data-reopen]")?.addEventListener("click", () => { open = true; render() })
+    stage.querySelector("[data-project-trigger]").onclick = () => { menuOpen = !menuOpen; render(null) }
+    stage.querySelector("[data-open-archived]")?.addEventListener("click", () => { menuOpen = false; open = true; render() })
+    stage.querySelectorAll("[data-restore]").forEach((el) => (el.onclick = () => actions.restore(el.dataset.restore)))
+    stage.querySelectorAll("[data-delete]").forEach((el) => (el.onclick = () => askDelete(el.dataset.delete)))
+    stage.querySelectorAll(".v1-row").forEach((el) => (el.onmousemove = () => { if (active !== +el.dataset.index) { active = +el.dataset.index; render() } }))
+    const search = stage.querySelector("[data-search]")
+    if (search) search.oninput = () => { query = search.value; active = 0; render() }
+  }
+  onDocKey((e) => {
+    if (document.querySelector('[role="alertdialog"]')) return
+    if (e.key === "A" && e.shiftKey && e.metaKey) { e.preventDefault(); open = true; menuOpen = false; render(); return }
+    if (!open) return
+    const rows = visible()
+    if (e.key === "Escape") { e.preventDefault(); open = false; render() }
+    else if (e.key === "ArrowDown") { e.preventDefault(); active = Math.min(active + 1, rows.length - 1); render() }
+    else if (e.key === "ArrowUp") { e.preventDefault(); active = Math.max(active - 1, 0); render() }
+    else if (e.key === "Enter" && rows[active]) { e.preventDefault(); actions.restore(rows[active].id) }
+    else if (e.key === "Backspace" && e.metaKey && rows[active]) { e.preventDefault(); askDelete(rows[active].id) }
+  })
+  render()
+}
+
+/* Variant 2 — Sidebar view: the list column becomes the archived list. */
+function variantSidebar(stage) {
+  const data = freshData()
+  let view = "archived", menuOpen = false, focusId = null, menuFor = null
+  const actions = makeActions(data, () => render())
+  const render = () => {
+    const column = view === "sessions" ? sessionsColumn(data, menuOpen) : `
+      <div class="ap-head">
+        <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon v2-head__back" aria-label="Back to sessions" data-back>${icon("back")}</button>
+        <h2 class="ap-head__name">Archived sessions</h2>
+        <span class="iv-list-section__count ap-kbd">${data.archived.length}</span>
+      </div>
+      <div class="ap-scroll">
+        ${data.archived.length === 0 ? emptyState : `
+        <ul class="iv-list-section__rows" aria-label="Archived sessions">
+          ${data.archived.map((s) => `
+            <li><div class="iv-list-row v2-row" data-id="${s.id}">
+              <div class="iv-list-row__line">
+                <button class="iv-list-row__main" data-row="${s.id}" aria-label="${esc(s.title)}, archived ${s.archived}">
+                  <span class="iv-list-row__leading">${harnessMark}</span>
+                  <span class="iv-list-row__text"><span class="iv-list-row__title">${esc(s.title)}</span>
+                    <span class="iv-list-row__subtitle"><span class="ap-sub">${icon("branch", 12)}<span>${esc(s.branch)}</span></span></span></span>
+                  <span class="iv-list-row__meta">${s.archivedShort}</span>
+                </button>
+                <span class="iv-list-row__actions ap-menu-anchor">
+                  <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="Restore" title="Restore (↵)" data-restore="${s.id}" tabindex="-1">${icon("restore")}</button>
+                  <button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="More" data-more="${s.id}" tabindex="-1">${icon("ellipsis")}</button>
+                  ${menuFor === s.id ? `<div class="iv-menu" role="menu">
+                    <div class="iv-menu__item" role="menuitem" data-restore="${s.id}">${icon("restore")}<span class="iv-menu__label">Restore</span><span class="iv-menu__hint">↵</span></div>
+                    <div class="iv-menu__separator"></div>
+                    <div class="iv-menu__item iv-menu__item--danger" role="menuitem" data-delete="${s.id}">${icon("trash")}<span class="iv-menu__label">Delete…</span><span class="iv-menu__hint">⌘⌫</span></div>
+                  </div>` : ""}
+                </span>
+              </div>
+              ${data.errors[s.id] ? errorLine(data.errors[s.id]) : ""}
+            </div></li>`).join("")}
+        </ul>`}
+      </div>
+      <div class="v2-foot"><span class="ap-kbd"><kbd>↵</kbd> Restore</span><span class="ap-kbd"><kbd>⌘</kbd><kbd>⌫</kbd> Delete</span><span class="ap-kbd"><kbd>esc</kbd> Back</span></div>`
+    stage.innerHTML = shell({ column, main: sessionMain(data) })
+    wire()
+    const target = stage.querySelector(`[data-row="${focusId}"]`) || stage.querySelector("[data-row]")
+    if (view === "archived") (target || stage.querySelector("[data-back]")).focus()
+  }
+  const rowIds = () => data.archived.map((s) => s.id)
+  const neighbour = (id) => { const ids = rowIds(); const i = ids.indexOf(id); return ids[i + 1] ?? ids[i - 1] ?? null }
+  const askDelete = (id) => {
+    menuFor = null
+    const s = data.archived.find((x) => x.id === id)
+    confirmDelete(s, () => { const next = neighbour(id); actions.delete(id); if (!data.archived.find((x) => x.id === id)) focusId = next; else focusId = id; render() }, () => { focusId = id; render() })
+  }
+  const restore = (id) => { menuFor = null; focusId = neighbour(id); actions.restore(id) }
+  const wire = () => {
+    stage.querySelector("[data-back]")?.addEventListener("click", () => { view = "sessions"; render() })
+    stage.querySelector("[data-project-trigger]")?.addEventListener("click", () => { menuOpen = !menuOpen; render() })
+    stage.querySelector("[data-open-archived]")?.addEventListener("click", () => { menuOpen = false; view = "archived"; focusId = null; render() })
+    stage.querySelectorAll("[data-restore]").forEach((el) => (el.onclick = (e) => { e.stopPropagation(); restore(el.dataset.restore) }))
+    stage.querySelectorAll("[data-delete]").forEach((el) => (el.onclick = (e) => { e.stopPropagation(); askDelete(el.dataset.delete) }))
+    stage.querySelectorAll("[data-more]").forEach((el) => (el.onclick = (e) => { e.stopPropagation(); focusId = el.dataset.more; menuFor = menuFor === el.dataset.more ? null : el.dataset.more; render() }))
+    stage.querySelectorAll("[data-row]").forEach((el) => (el.onfocus = () => { focusId = el.dataset.row }))
+  }
+  onDocKey((e) => {
+    if (document.querySelector('[role="alertdialog"]')) return
+    if (e.key === "A" && e.shiftKey && e.metaKey) { e.preventDefault(); view = "archived"; menuOpen = false; render(); return }
+    if (view !== "archived") return
+    const ids = rowIds(), i = ids.indexOf(focusId)
+    if (e.key === "Escape") { e.preventDefault(); if (menuFor) { menuFor = null; render() } else { view = "sessions"; render() } }
+    else if (e.key === "ArrowDown" && ids.length) { e.preventDefault(); focusId = ids[Math.min(i + 1, ids.length - 1)]; render() }
+    else if (e.key === "ArrowUp" && ids.length) { e.preventDefault(); focusId = ids[Math.max(i - 1, 0)]; render() }
+    else if (e.key === "Enter" && focusId && document.activeElement?.dataset.row) { e.preventDefault(); restore(focusId) }
+    else if (e.key === "Backspace" && e.metaKey && focusId) { e.preventDefault(); askDelete(focusId) }
+  })
+  render()
+}
+
+/* Variant 3 — Page: a full view in the main area, with each session's details. */
+function variantPage(stage) {
+  const data = freshData()
+  let view = "archived", menuOpen = false, focusId = null, query = ""
+  const actions = makeActions(data, () => render())
+  const visible = () => data.archived.filter((s) => s.title.toLowerCase().includes(query.toLowerCase()))
+  const render = (keepSearch = false) => {
+    const rows = visible()
+    const main = view === "sessions" ? sessionMain(data) : `
+      <div class="ap-tabs">
+        ${data.open.map((s) => `<div class="ap-tab">${harnessMark}<span>${esc(s.title)}</span></div>`).join("")}
+        <div class="ap-tab" data-selected><span class="v3-tab-icon">${icon("archive", 14)}</span><span>Archived sessions</span>
+          <span class="ap-spacer"></span><button class="iv-button iv-button--ghost iv-button--sm iv-button--icon" aria-label="Close archived sessions" data-close>${icon("x", 14)}</button></div>
+      </div>
+      <div class="v3-page"><div class="v3-col">
+        <div><h2 class="v3-title">Archived sessions in ivin</h2>
+          <p class="v3-lead">Restored sessions come back under Inactive sessions. Deleting one erases its transcript.</p></div>
+        ${data.archived.length === 0 ? emptyState : `
+        <div class="v3-bar"><label class="ap-search">${icon("search", 14)}<input data-search placeholder="Search" value="${esc(query)}" /></label>
+          <span class="ap-spacer"></span>
+          <span class="ap-kbd"><kbd>↑</kbd><kbd>↓</kbd> Move</span><span class="ap-kbd"><kbd>↵</kbd> Restore</span><span class="ap-kbd"><kbd>⌘</kbd><kbd>⌫</kbd> Delete</span></div>
+        <div class="v3-table" role="list" aria-label="Archived sessions">
+          ${rows.length === 0 ? `<p class="ap-empty">No archived session matches “${esc(query)}”.</p>` : rows.map((s) => `
+            <div class="v3-row" role="listitem" tabindex="0" data-row="${s.id}" aria-label="${esc(s.title)}, archived ${s.archived}">
+              ${harnessMark}
+              <div class="v3-row__text"><span class="v3-row__title">${esc(s.title)}</span>
+                <span class="v3-row__line"><span class="ap-sub">${icon(s.where === "checkout" ? "folder" : "branch", 12)}<span>${esc(s.branch)}</span></span><span>·</span><span>${s.messages} messages</span><span>·</span><span>last active ${s.active}</span></span></div>
+              <span class="v3-row__when">Archived ${s.archived}</span>
+              <span class="v3-row__actions">
+                <button class="iv-button iv-button--secondary iv-button--sm" data-restore="${s.id}" tabindex="-1">Restore</button>
+                <button class="iv-button iv-button--ghost iv-button--sm v3-ghost-danger" data-delete="${s.id}" tabindex="-1">Delete</button>
+              </span>
+              ${data.errors[s.id] ? errorLine(data.errors[s.id]) : ""}
+            </div>`).join("")}
+        </div>`}
+      </div></div>`
+    stage.innerHTML = shell({ column: sessionsColumn(data, menuOpen), main })
+    wire()
+    if (view !== "archived") return
+    const search = stage.querySelector("[data-search]")
+    if (keepSearch && search) { search.focus(); search.setSelectionRange(query.length, query.length); return }
+    ;(stage.querySelector(`[data-row="${focusId}"]`) || stage.querySelector("[data-row]") || stage.querySelector("[data-close]"))?.focus()
+  }
+  const ids = () => visible().map((s) => s.id)
+  const neighbour = (id) => { const list = ids(); const i = list.indexOf(id); return list[i + 1] ?? list[i - 1] ?? null }
+  const askDelete = (id) => {
+    const s = data.archived.find((x) => x.id === id)
+    confirmDelete(s, () => { const next = neighbour(id); actions.delete(id); focusId = data.archived.find((x) => x.id === id) ? id : next; render() }, () => { focusId = id; render() })
+  }
+  const restore = (id) => { focusId = neighbour(id); actions.restore(id) }
+  const wire = () => {
+    stage.querySelector("[data-close]")?.addEventListener("click", () => { view = "sessions"; render() })
+    stage.querySelector("[data-project-trigger]").onclick = () => { menuOpen = !menuOpen; render() }
+    stage.querySelector("[data-open-archived]")?.addEventListener("click", () => { menuOpen = false; view = "archived"; render() })
+    stage.querySelectorAll("[data-restore]").forEach((el) => (el.onclick = () => restore(el.dataset.restore)))
+    stage.querySelectorAll("[data-delete]").forEach((el) => (el.onclick = () => askDelete(el.dataset.delete)))
+    stage.querySelectorAll("[data-row]").forEach((el) => (el.onfocus = () => { focusId = el.dataset.row }))
+    const search = stage.querySelector("[data-search]")
+    if (search) search.oninput = () => { query = search.value; render(true) }
+  }
+  onDocKey((e) => {
+    if (document.querySelector('[role="alertdialog"]')) return
+    if (e.key === "A" && e.shiftKey && e.metaKey) { e.preventDefault(); view = "archived"; menuOpen = false; render(); return }
+    if (view !== "archived") return
+    const list = ids(), i = list.indexOf(focusId)
+    const inSearch = document.activeElement?.dataset?.search !== undefined
+    if (e.key === "ArrowDown" && list.length) { e.preventDefault(); focusId = list[inSearch ? 0 : Math.min(i + 1, list.length - 1)]; render() }
+    else if (e.key === "ArrowUp" && list.length && !inSearch) { e.preventDefault(); focusId = list[Math.max(i - 1, 0)]; render() }
+    else if (e.key === "Enter" && document.activeElement?.dataset?.row) { e.preventDefault(); restore(focusId) }
+    else if (e.key === "Backspace" && e.metaKey && document.activeElement?.dataset?.row) { e.preventDefault(); askDelete(focusId) }
+    else if (e.key === "Escape" && !inSearch) { e.preventDefault(); view = "sessions"; render() }
+  })
+  render()
+}
+
+const variants = [variantDialog, variantSidebar, variantPage]
+
+// Picker wiring — PICKER.md's reference, with each variant rendering into the stage itself.
+const stage = document.getElementById("stage")
+const picker = document.querySelector(".proto-picker")
+const highlight = picker.querySelector(".proto-picker-highlight")
+const items = [...picker.querySelectorAll(".proto-picker-item:not(.proto-picker-replay)")]
+const replay = picker.querySelector(".proto-picker-replay")
+let current = 0
+
+function moveHighlight() {
+  const el = items[current]
+  highlight.style.width = el.offsetWidth + "px"
+  highlight.style.transform = `translateX(${el.offsetLeft}px)`
+}
+
+function mount(i) {
+  cleanups.splice(0).forEach((fn) => fn())
+  document.querySelectorAll('[role="alertdialog"]').forEach((el) => el.parentElement.remove())
+  stage.innerHTML = ""
+  requestAnimationFrame(() => variants[i](stage))
+}
+
+function setActive(i) {
+  if (i < 0 || i >= variants.length) return
+  current = i
+  items.forEach((el, j) => {
+    el.toggleAttribute("data-active", j === i)
+    if (j === i) el.setAttribute("aria-current", "true")
+    else el.removeAttribute("aria-current")
+  })
+  moveHighlight()
+  const url = new URL(location)
+  url.searchParams.set("v", i + 1)
+  history.replaceState(null, "", url)
+  mount(i)
+}
+
+items.forEach((el, i) => el.addEventListener("click", () => setActive(i)))
+replay?.addEventListener("click", () => mount(current))
+window.addEventListener("resize", moveHighlight)
+
+document.addEventListener("keydown", (e) => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  if (document.querySelector('[role="alertdialog"]')) return
+  const num = parseInt(e.key, 10)
+  if (num >= 1 && num <= variants.length) setActive(num - 1)
+  else if (e.key === "ArrowRight") setActive((current + 1) % variants.length)
+  else if (e.key === "ArrowLeft") setActive((current - 1 + variants.length) % variants.length)
+  else if (e.key === "r" || e.key === "R") mount(current)
+})
+
+const requested = parseInt(new URLSearchParams(location.search).get("v"), 10)
+setActive(requested >= 1 && requested <= variants.length ? requested - 1 : 0)
+requestAnimationFrame(() => requestAnimationFrame(() => picker.setAttribute("data-ready", "")))
+</script>
+</body>
+</html>
