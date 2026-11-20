@@ -189,10 +189,27 @@ test("a change while running leaves the running turn alone and applies to the ne
   expect(starts.map((start) => start.options.model)).toEqual(["scripted", "scripted-large"])
 })
 
-test("each change appends a transcript line naming the old and the new value", async () => {
+test("a change before the first message appends no transcript line", async () => {
   const items = await withServer(newDatabase(), [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
+      yield* client["session.setRunOptions"]({
+        sessionId: session.id,
+        options: { effort: "high" },
+      })
+      return yield* itemsOf(client, session.id)
+    }),
+  )
+
+  expect(items).toEqual([])
+})
+
+test("each change appends a transcript line naming the old and the new value", async () => {
+  const items = await withServer(newDatabase(), [answered("one")], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p" })
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "a" })
+      yield* untilIdle(client, session.id)
       yield* client["session.setRunOptions"]({
         sessionId: session.id,
         options: { model: "scripted", effort: "high", permissionMode: "auto" },
@@ -201,7 +218,7 @@ test("each change appends a transcript line naming the old and the new value", a
     }),
   )
 
-  expect(items).toMatchObject([
+  expect(items.filter((item) => item.type === "run_option")).toMatchObject([
     {
       type: "run_option",
       option: "effort",
