@@ -9,7 +9,7 @@ import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { makeTestSession } from "../../../core/test-session.ts"
 import { SessionView } from "./session-view.tsx"
 
-const mount = async () => {
+const mount = async (extraBranches = 0) => {
   const server = makeFakeServer()
   server.sessions.set("s1", makeTestSession({ id: "s1", title: "t" }))
   server.branches.push(
@@ -19,6 +19,11 @@ const mount = async () => {
     { name: "origin/main", remote: true, worktreePath: null },
     { name: "origin/feat/login", remote: true, worktreePath: null },
     { name: "origin/feat/new", remote: true, worktreePath: null },
+    ...Array.from({ length: extraBranches }, (_, i) => ({
+      name: `chore/branch-${String(i).padStart(2, "0")}`,
+      remote: false,
+      worktreePath: null,
+    })),
   )
   server.worktrees.push({ path: "/p/.worktrees/feat-login", branch: "feat/login" })
   await render(
@@ -43,22 +48,23 @@ test("remote branches are fetched on open, and the list marks the current branch
   fetch.release()
   await expect.element(row("origin/feat/new")).toBeVisible()
 
-  await expect.element(row("main").getByLabelText("Current branch")).toBeInTheDocument()
-  await expect.element(row("feat/login")).toHaveAttribute("data-mark", "worktree")
+  await expect.element(row("main").getByLabelText("Chosen")).toBeInTheDocument()
   await expect.element(row("feat/login").getByText("in worktree")).toBeVisible()
-  await expect.element(row("fix/typo")).not.toHaveAttribute("data-mark")
+  expect(row("fix/typo").getByText(/^in /).query()).toBeNull()
   for (const remote of ["origin/main", "origin/feat/login", "origin/feat/new"]) {
-    await expect.element(row(remote)).toHaveAttribute("data-remote")
-    await expect.element(row(remote)).not.toHaveAttribute("data-mark")
+    await expect.element(row(remote)).toHaveAttribute("data-muted")
     expect(row(remote).getByText("in worktree").query()).toBeNull()
-    expect(row(remote).getByLabelText("Current branch").query()).toBeNull()
+    expect(row(remote).getByLabelText("Chosen").query()).toBeNull()
   }
 })
 
-test("typing filters the branches, and picking one held by a worktree moves the session there", async () => {
-  await mount()
+test("40 branches scroll inside the menu, and typing filters them; picking one held by a worktree moves the session there", async () => {
+  await mount(40)
   await page.getByTestId("branch-picker").click()
-  await expect.element(page.getByRole("combobox", { name: "Branch" })).toHaveFocus()
+  await expect.element(page.getByRole("combobox", { name: "Switch branch" })).toHaveFocus()
+  const viewport = document.querySelector<HTMLElement>(".iv-composer-menu__viewport")!
+  await expect.element(row("chore/branch-00")).toBeVisible()
+  expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight)
   await userEvent.keyboard("login")
   await expect.element(row("fix/typo")).not.toBeInTheDocument()
   await row("feat/login").click()
@@ -81,4 +87,23 @@ test("a checkout git refuses shows git's message in the open picker", async () =
     .element(page.getByTestId("branch-picker-git-message"))
     .toHaveTextContent("error: Your local changes would be overwritten by checkout")
   await expect.element(page.getByTestId("branch-picker")).toHaveTextContent("main")
+})
+
+test("keyboard only: open, filter, move, pick and Escape, with focus back on the branch button", async () => {
+  await mount(40)
+  const trigger = page.getByTestId("branch-picker")
+  trigger.element().focus()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(page.getByRole("combobox", { name: "Switch branch" })).toHaveFocus()
+  await userEvent.keyboard("{Escape}")
+  await expect.element(row("main")).not.toBeInTheDocument()
+  await expect.element(trigger).toHaveFocus()
+
+  await userEvent.keyboard("{Enter}")
+  await userEvent.keyboard("typo")
+  await expect.element(row("fix/typo")).toHaveAttribute("data-highlighted")
+  await userEvent.keyboard("{Enter}")
+  await expect.element(trigger).toHaveTextContent("fix/typo")
+  await expect.element(row("main")).not.toBeInTheDocument()
+  await expect.element(trigger).toHaveFocus()
 })

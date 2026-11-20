@@ -415,7 +415,7 @@ const mountNewSession = async (checkout: Partial<FakeCheckout> = {}) => {
 const picker = () => page.getByTestId("working-folder-picker")
 const choose = async (name: string | RegExp) => {
   await picker().click()
-  await page.getByRole("menuitemradio", { name }).click()
+  await page.getByRole("option", { name }).click()
 }
 const sendText = async (text: string) => {
   await page.getByRole("textbox", { name: "Message" }).fill(text)
@@ -446,10 +446,31 @@ test("a new session asks for its task with the composer in the middle, and the w
   ])
 })
 
+test("15 worktrees scroll inside the working folder menu; keyboard only filters, picks and returns focus", async () => {
+  const server = await mountNewSession()
+  for (let i = 0; i < 15; i++) {
+    server.worktrees.push({ path: `/p/.worktrees/wt-${i}`, branch: `chore/wt-${i}` })
+  }
+  picker().element().focus()
+  await userEvent.keyboard("{Enter}")
+  const search = page.getByRole("combobox", { name: "Working folder" })
+  await expect.element(search).toHaveFocus()
+  const viewport = document.querySelector<HTMLElement>(".iv-composer-menu__viewport")!
+  await expect.element(page.getByRole("option", { name: "chore/wt-0" })).toBeVisible()
+  expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight)
+
+  await userEvent.keyboard("wt-14")
+  await expect.element(page.getByRole("option", { name: "chore/wt-0" })).not.toBeInTheDocument()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(page.getByText("chore/wt-14", { exact: true })).toBeVisible()
+  expect(picker().element().textContent).toBe("Worktree")
+  await expect.element(picker()).toHaveFocus()
+})
+
 test("the menu lists the project's worktrees with the session using each, and one can be picked", async () => {
   const server = await mountNewSession()
   await picker().click()
-  const existing = page.getByRole("menuitemradio", { name: /docs\/adr/ })
+  const existing = page.getByRole("option", { name: /docs\/adr/ })
   expect(existing.element().textContent).toContain("Write the ADR")
   await existing.click()
 
