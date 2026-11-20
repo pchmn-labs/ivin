@@ -1,14 +1,7 @@
-import type { HarnessEvent } from "@ivin/contracts/transcript"
-
-export type ToolCall = Pick<Extract<HarnessEvent, { type: "tool_call" }>, "name" | "input">
-type ToolResult = Pick<Extract<HarnessEvent, { type: "tool_result" }>, "output" | "isError">
-
-const WORKTREE_TOOLS = new Set(["EnterWorktree", "ExitWorktree"])
-const SHELL_TOOL = "Bash"
+import type { ToolActivity } from "@ivin/harness"
 
 // A shell command can create a worktree, through git or a script that wraps it.
-export const needsWorktreeList = (call: ToolCall) =>
-  call.name === SHELL_TOOL || WORKTREE_TOOLS.has(call.name)
+export const needsWorktreeList = (activity: ToolActivity) => activity.type !== "other"
 
 const PATH_CHAR = /[\w.\-~]/
 const CREATION = /git\s+(?:-C\s+\S+\s+)?worktree\s+add\b[^;&|\n]*/g
@@ -47,32 +40,28 @@ const lastMentioned = (text: string, folders: readonly string[], from: string) =
   return best?.folder ?? null
 }
 
-const inputText = (input: unknown) =>
-  typeof input === "object" &&
-  input !== null &&
-  "command" in input &&
-  typeof input.command === "string"
-    ? input.command
-    : (JSON.stringify(input) ?? "")
-
 // Where the agent works after this tool call, or null when it stays.
 // `folders`: the checkout and the worktrees git lists; `created`: those the agent made and has not entered.
 export const folderAfterTool = ({
-  call,
-  result,
+  activity,
   workingFolder,
   folders,
   created,
 }: {
-  readonly call: ToolCall
-  readonly result: ToolResult
+  readonly activity: ToolActivity
   readonly workingFolder: string
   readonly folders: readonly string[]
   readonly created: readonly string[]
 }): string | null => {
-  if (result.isError) return null
-  const target = WORKTREE_TOOLS.has(call.name)
-    ? lastMentioned(result.output, folders, workingFolder)
-    : lastMentioned(inputText(call.input).replace(CREATION, ""), created, workingFolder)
+  const target =
+    activity.type === "folder_switch"
+      ? folders.includes(activity.path)
+        ? activity.path
+        : null
+      : lastMentioned(
+          activity.type === "shell" ? activity.command.replace(CREATION, "") : activity.text,
+          created,
+          workingFolder,
+        )
   return target === workingFolder ? null : target
 }

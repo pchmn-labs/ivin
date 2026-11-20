@@ -188,10 +188,11 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           return Scope.close(scope, Exit.void)
         })
 
-        const follower = yield* followAgentWorktree(session, writer.record).pipe(
-          Effect.provideService(Git, git),
-          Effect.provideService(SessionStore, sessions),
-        )
+        const follower = yield* followAgentWorktree(
+          session,
+          writer.record,
+          provider.toolActivity,
+        ).pipe(Effect.provideService(Git, git), Effect.provideService(SessionStore, sessions))
 
         let providerSessionId = storedProviderSessionId
         let busy = false

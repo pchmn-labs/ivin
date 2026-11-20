@@ -9,6 +9,7 @@ import { approvalResponseLine } from "../rules/approval-response.ts"
 import { claudeArgs } from "../rules/claude-args.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
 import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
+import { toolActivity } from "../rules/tool-activity.ts"
 
 const EVENT_BUFFER = 64
 const STDERR_LIMIT = 8_192
@@ -54,6 +55,7 @@ const spawnClaude = (
 export const layerClaudeWith = (killGrace: Duration.Input) =>
   Layer.succeed(HarnessProvider)({
     id: "claude",
+    toolActivity,
     start: ({ sessionId, cwd, model, providerSessionId }) =>
       Effect.gen(function* () {
         // spawn reports a missing cwd as ENOENT, the same as a missing binary.

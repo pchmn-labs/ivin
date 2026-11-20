@@ -6,7 +6,7 @@ Reasons: [ADR-0001](../adr/0001-code-grouped-by-subject-and-layered-by-test.md).
 packages/harness/src/
   index.ts              the entry point: the HarnessProvider port and one Layer per provider
   modules/<provider>/   claude, codex, acp, scripted
-    rules/              provider output line → transcript events
+    rules/              provider output line → transcript events; what a tool call did, in the port's terms
     adapters/           the process and its stdio
   shared/               HarnessProvider, HarnessError, what every provider reads
 ```

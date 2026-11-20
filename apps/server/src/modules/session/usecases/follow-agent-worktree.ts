@@ -1,22 +1,24 @@
 import type { Session } from "@ivin/contracts/session"
 import type { HarnessEvent, HarnessOutput } from "@ivin/contracts/transcript"
 import type { Worktree } from "@ivin/contracts/worktree"
+import type { ToolActivity, ToolOutcome, ToolUse } from "@ivin/harness"
 import { Effect } from "effect"
 import { Git } from "../../worktree/usecases/git.ts"
 import { listWorktrees } from "../../worktree/usecases/list-worktrees.ts"
-import { folderAfterTool, needsWorktreeList, type ToolCall } from "../rules/agent-worktree.ts"
+import { folderAfterTool, needsWorktreeList } from "../rules/agent-worktree.ts"
 import { SessionStore } from "./session-store.ts"
 
 export const followAgentWorktree = (
   session: Session,
   record: (event: HarnessEvent) => Effect.Effect<void>,
+  toolActivity: (call: ToolUse, result: ToolOutcome) => ToolActivity,
 ) =>
   Effect.gen(function* () {
     const git = yield* Git
     const store = yield* SessionStore
     const known = new Set<string>()
     const created = new Set<string>()
-    const calls = new Map<string, ToolCall>()
+    const calls = new Map<string, ToolUse>()
     let worktrees: readonly Worktree[] = []
 
     const refreshWorktrees = listWorktrees(session.projectPath).pipe(
@@ -59,7 +61,8 @@ export const followAgentWorktree = (
         const call = calls.get(output.toolCallId)
         calls.delete(output.toolCallId)
         if (!call || output.isError) return
-        if (needsWorktreeList(call)) {
+        const activity = toolActivity(call, output)
+        if (needsWorktreeList(activity)) {
           for (const worktree of yield* refreshWorktrees) {
             if (!known.has(worktree.path)) created.add(worktree.path)
             known.add(worktree.path)
@@ -69,8 +72,7 @@ export const followAgentWorktree = (
         if (!current) return
         const listed = new Set(worktrees.map((w) => w.path))
         const target = folderAfterTool({
-          call,
-          result: output,
+          activity,
           workingFolder: current.workingFolder,
           folders: [session.projectPath, ...listed],
           created: [...created].filter((path) => listed.has(path)),
