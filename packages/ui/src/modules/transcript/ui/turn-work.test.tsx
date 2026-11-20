@@ -230,6 +230,9 @@ test("a session of 200 turns of 30 calls scrolls without rendering the folded ca
     await new Promise((resolve) => setTimeout(resolve, 100))
     expect(toolRows()).toHaveLength(0)
   }
-  await vi.waitFor(() => expect(page.getByText("Answer 190").query()).not.toBeNull())
+  // Older pages load one after another, which outlasts the default second on CI.
+  await vi.waitFor(() => expect(page.getByText("Answer 190").query()).not.toBeNull(), {
+    timeout: 5_000,
+  })
   expect(document.querySelectorAll('[data-testid="turn"]').length).toBeLessThan(20)
 })
