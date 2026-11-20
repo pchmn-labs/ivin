@@ -1,0 +1,34 @@
+.iv-checkout-sync__button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--iv-space-1);
+  height: 20px;
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-sm);
+  background: color-mix(in srgb, var(--iv-accent) 14%, transparent);
+  color: var(--iv-accent);
+  font: inherit;
+  transition:
+    background-color var(--iv-duration-fast) ease-out,
+    transform var(--iv-duration-press) var(--iv-ease-out);
+}
+
+.iv-checkout-sync__button--count {
+  font-family: var(--iv-font-mono);
+}
+
+.iv-checkout-sync__button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.iv-checkout-sync__button:disabled {
+  opacity: var(--iv-opacity-disabled);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-checkout-sync__button:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--iv-accent) 22%, transparent);
+  }
+}

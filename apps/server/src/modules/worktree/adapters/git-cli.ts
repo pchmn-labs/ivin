@@ -1,7 +1,12 @@
 import { Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
 import { realpathSync } from "node:fs"
-import { parseBranches, parseWorktreeList, underOpenedPath } from "../rules/git-output.ts"
+import {
+  parseBranches,
+  parseDivergence,
+  parseWorktreeList,
+  underOpenedPath,
+} from "../rules/git-output.ts"
 import { Git, GitError } from "../usecases/git.ts"
 
 interface ExecFailure {
@@ -54,6 +59,20 @@ export const layerGitCli = Layer.succeed(Git)({
   currentBranch: (folder) =>
     orNull(git(folder, ["symbolic-ref", "--quiet", "--short", "HEAD"])).pipe(
       Effect.map((out) => out?.trim() || null),
+    ),
+  hasLocalChanges: (folder) =>
+    git(folder, ["status", "--porcelain", "--untracked-files=no"]).pipe(
+      Effect.map((out) => out.trim() !== ""),
+    ),
+  stash: (folder, message) =>
+    git(folder, ["stash", "push", "--include-untracked", "-m", message]).pipe(Effect.asVoid),
+  commitTracked: (folder, message) =>
+    git(folder, ["commit", "--quiet", "--all", "-m", message]).pipe(Effect.asVoid),
+  fastForward: (folder, upstream) =>
+    git(folder, ["merge", "--ff-only", "--quiet", upstream]).pipe(Effect.asVoid),
+  divergence: (folder, branch, upstream) =>
+    git(folder, ["rev-list", "--left-right", "--count", `${branch}...${upstream}`]).pipe(
+      Effect.map(parseDivergence),
     ),
   isIgnored: (repo, path) =>
     git(repo, ["check-ignore", "--quiet", path]).pipe(

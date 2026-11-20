@@ -8,6 +8,7 @@ import { newWorktreeBaseOf, worktreesOf } from "../../worktree/atoms/list-worktr
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
 import { folderName, newBranchLabel, type WorkingFolderLabel } from "../rules/session-location.ts"
+import { CheckoutSync } from "./checkout-sync.tsx"
 import { BranchPicker } from "./branch-picker.tsx"
 import "./working-folder-picker.css"
 
@@ -101,6 +102,7 @@ export function WorkingFolderPicker({
           )}
         </span>
       )}
+      {location.kind === "checkout" && <CheckoutSync session={session} />}
     </span>
   )
 }

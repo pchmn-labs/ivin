@@ -1,6 +1,9 @@
 import type {
   ApprovalNotOpen,
+  CheckoutInUse,
   CheckoutRefused,
+  GitRefused,
+  SessionAlreadyStarted,
   SessionWorking,
   SessionNotFound,
   WorktreeFailure,
@@ -58,6 +61,51 @@ export const answerApprovalFailure = (error: unknown): ActionFailure =>
           retryable: false,
         }
       : { text: "Your answer was not sent.", retryable: true }
+
+export type CheckoutAction = "switch" | "fastForward"
+
+export interface CheckoutFailure extends ActionFailure {
+  readonly gitMessage: string | null
+  readonly blockedByLocalChanges: boolean
+}
+
+const NOT_DONE: Record<CheckoutAction, string> = {
+  switch: "The checkout was not switched to the default branch, or not brought up to date.",
+  fastForward: "The branch was not pulled.",
+}
+
+export const checkoutFailure = (error: unknown, action: CheckoutAction): CheckoutFailure => {
+  const none = { gitMessage: null, blockedByLocalChanges: false }
+  if (isTag<GitRefused>(error, "GitRefused")) {
+    const { message, blockedByLocalChanges } = error as GitRefused
+    return {
+      text: blockedByLocalChanges
+        ? `${NOT_DONE[action]} Local changes are in the way: stash them, or fix what git reports.`
+        : `${NOT_DONE[action]} Fix what git reports, then retry.`,
+      retryable: true,
+      gitMessage: message,
+      blockedByLocalChanges,
+    }
+  }
+  if (isTag<CheckoutInUse>(error, "CheckoutInUse")) {
+    return {
+      text: "Another session's agent is working in the checkout. Retry once it is done, or start this session in a new worktree.",
+      retryable: true,
+      ...none,
+    }
+  }
+  if (isTag<SessionAlreadyStarted>(error, "SessionAlreadyStarted")) {
+    return {
+      text: "The session has started, so its checkout stays as it is.",
+      retryable: false,
+      ...none,
+    }
+  }
+  if (isTag<SessionNotFound>(error, "SessionNotFound")) {
+    return { text: "This session no longer exists.", retryable: false, ...none }
+  }
+  return { text: NOT_DONE[action], retryable: true, ...none }
+}
 
 // `gitMessage` is shown under the text, because the user fixes the repository from it.
 export const pickBranchFailure = (

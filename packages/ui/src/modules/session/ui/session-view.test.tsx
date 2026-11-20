@@ -5,7 +5,7 @@ import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
-import { makeFakeServer } from "../../../core/fake-server-client.ts"
+import { type FakeCheckout, makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { SessionList } from "./session-list.tsx"
 import { SessionView } from "./session-view.tsx"
@@ -341,10 +341,11 @@ test("Enter on the focused Interrupt button presses it rather than running compo
   await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
 })
 
-const mountNewSession = async () => {
+const mountNewSession = async (checkout: Partial<FakeCheckout> = {}) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
+  Object.assign(server.checkout, checkout)
   const at = DateTime.makeUnsafe(0)
   const session = {
     id: "s1",
@@ -460,4 +461,67 @@ test("a session preparing its worktree says so under the transcript until the ru
   await expect.element(page.getByRole("button", { name: "Send" })).toBeDisabled()
   server.setStatus("s1", "working")
   await expect.element(preparing).not.toBeInTheDocument()
+})
+
+const switchButton = () => page.getByRole("button", { name: "Switch to main" })
+
+test("on another branch, a checkout with local changes asks to stash, commit or cancel before switching", async () => {
+  const server = await mountNewSession({ branch: "feat/search", dirty: true })
+  await switchButton().click()
+  const dialog = page.getByRole("dialog", { name: "Uncommitted changes" })
+  await expect.element(dialog).toBeVisible()
+
+  await dialog.getByRole("button", { name: "Cancel" }).click()
+  await expect.element(dialog).not.toBeInTheDocument()
+  expect(server.checkout.branch).toBe("feat/search")
+
+  await switchButton().click()
+  const commit = page.getByRole("button", { name: "Commit & switch" })
+  await expect.element(commit).toBeDisabled()
+  await page.getByRole("textbox", { name: /Commit message/ }).fill("Keep the search draft")
+  await commit.click()
+
+  await expect.element(switchButton()).not.toBeInTheDocument()
+  expect(server.localChangesChoices).toEqual([{ kind: "commit", message: "Keep the search draft" }])
+  expect(server.checkout.branch).toBe("main")
+})
+
+test("stashing the local changes switches to the default branch", async () => {
+  const server = await mountNewSession({ branch: "feat/search", dirty: true })
+  await switchButton().click()
+  await page.getByRole("button", { name: "Stash & switch" }).click()
+
+  await expect.element(switchButton()).not.toBeInTheDocument()
+  expect(server.localChangesChoices).toEqual([{ kind: "stash" }])
+  await expect.element(page.getByText("main", { exact: true })).toBeVisible()
+})
+
+test("a branch behind origin pulls in one click, and a pull refused by local changes shows git's message and stashes on request", async () => {
+  const gitMessage =
+    "error: Your local changes to the following files would be overwritten by merge"
+  const server = await mountNewSession({ behind: 3, dirty: true, pullRefusal: gitMessage })
+  const pull = page.getByRole("button", { name: "Pull 3 commits from origin/main" })
+  expect(pull.element().textContent).toBe("3")
+  await pull.click()
+
+  const dialog = page.getByRole("dialog", { name: "Pull failed" })
+  await expect.element(dialog.getByText(gitMessage, { exact: true })).toBeVisible()
+  await dialog.getByRole("button", { name: "Stash & pull" }).click()
+
+  await expect.element(pull).not.toBeInTheDocument()
+  expect(server.localChangesChoices).toEqual(["stash before pull"])
+})
+
+test("the switch and pull buttons are gone once the first message is sent, and absent for a worktree", async () => {
+  await mountNewSession({ branch: "feat/search", behind: 2 })
+  await expect.element(switchButton()).toBeVisible()
+  await choose("New worktree")
+  await expect.element(switchButton()).not.toBeInTheDocument()
+  await choose("Current checkout")
+  await expect.element(switchButton()).toBeVisible()
+
+  await sendText("go")
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("")
+  await expect.element(switchButton()).not.toBeInTheDocument()
+  await expect.element(page.getByRole("button", { name: /^Pull/ })).not.toBeInTheDocument()
 })

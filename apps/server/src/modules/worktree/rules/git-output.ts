@@ -41,6 +41,11 @@ export const parseBranches = (output: string): Branches => {
   }
 }
 
+// Reads `git rev-list --left-right --count <branch>...<upstream>`.
+export const parseDivergence = (output: string) => {
+  const [ahead = 0, behind = 0] = output.trim().split(/\s+/).map(Number)
+  return { ahead, behind }
+}
 // Git prints resolved paths; a repository opened through a symlink keeps the path it was opened with.
 export const underOpenedPath = (
   entries: readonly WorktreeEntry[],
