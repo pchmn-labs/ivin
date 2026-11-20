@@ -108,7 +108,7 @@ test("a failed harness run adds a server line", async () => {
 
   await withServer(logPath, (client) =>
     Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
+      const session = yield* client["session.create"]({ projectPath: "/p" })
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
     }),
   )

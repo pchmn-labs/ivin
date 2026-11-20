@@ -2,16 +2,16 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { Session } from "@ivin/contracts/session"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import { Cause, Exit } from "effect"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
-import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { TextArea } from "../../../core/components/text-field/text-field.tsx"
 import { BranchPicker } from "./branch-picker.tsx"
+import { RunOptionMenus } from "./run-option-menus.tsx"
 import { PickWorkingFolder } from "./pick-working-folder.tsx"
 import { SessionLocation } from "./session-location.tsx"
 import { WorkingFolderPicker } from "./working-folder-picker.tsx"
@@ -20,6 +20,8 @@ import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { HARNESSES } from "../rules/harnesses.ts"
+import { goBackLabel, relaunchFailureText } from "../rules/run-options.ts"
+import { setRunOptionsAtom } from "../atoms/set-run-options.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { sendMessageFailure } from "../rules/failure-message.ts"
 import { statusLabel } from "../rules/status-label.ts"
@@ -38,6 +40,14 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const preparing = session?.status === "preparing_worktree"
   const choosing = session !== undefined && !session.started && !preparing
   const harness = session && HARNESSES[session.harness]
+  const setRunOptions = useAtomSet(setRunOptionsAtom)
+  const relaunchFailure = session?.relaunchFailure ?? null
+  const relaunchFailureKey = relaunchFailure && JSON.stringify(relaunchFailure)
+
+  useEffect(() => {
+    if (relaunchFailure === null) return
+    setText((current) => (current === "" ? relaunchFailure.message : current))
+  }, [relaunchFailureKey])
 
   const sendText = (message: string) => {
     if (preparing) return
@@ -68,13 +78,27 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     target instanceof HTMLTextAreaElement &&
     target.closest(".iv-composer") === root.current
 
-  const alert = failure && (
+  const alert = failure ? (
     <div className="iv-composer__alert" data-testid="composer-alert">
       <ErrorMessage
         message={failure.text}
         {...(failure.retryable && { onRetry: () => sendText(failure.message) })}
       />
     </div>
+  ) : (
+    session &&
+    relaunchFailure && (
+      <div className="iv-composer__alert" data-testid="composer-alert">
+        <ErrorMessage
+          message={relaunchFailureText(session, relaunchFailure.previous)}
+          action={{
+            label: goBackLabel(session, relaunchFailure.previous),
+            onSelect: () =>
+              setRunOptions({ projectPath, sessionId, options: relaunchFailure.previous }),
+          }}
+        />
+      </div>
+    )
   )
   const statusLine = (
     <div className="iv-composer__statusline">
@@ -110,12 +134,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         />
         <Stack direction="row" align="center" justify="between" gap={2}>
           <Stack direction="row" align="center" gap={3}>
-            {session && harness && (
-              <span className="iv-composer__model" data-testid="composer-model">
-                <HarnessMark mark={harness.mark} size={14} />
-                {session.model}
-              </span>
-            )}
+            {session && <RunOptionMenus session={session} />}
           </Stack>
           {session && (
             // The state shows on the session mark; screen readers hear it from here.

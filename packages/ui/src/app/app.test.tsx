@@ -33,6 +33,9 @@ const mountApp = async (
       title,
       harness: "claude",
       model: "sonnet",
+      effort: "high",
+      permissionMode: "manual",
+      relaunchFailure: null,
       status: "idle",
       statusChangedAt: at,
       createdAt: at,
@@ -204,10 +207,9 @@ test("picking another project shows its own tabs, and closing a project drops it
   await expect.element(page.getByRole("main").getByText(/No session open/)).toBeVisible()
 })
 
-test("the plus after the tabs starts a session with the chosen model, and arrow keys walk the tabs", async () => {
+test("the plus after the tabs starts a session, and arrow keys walk the tabs", async () => {
   const server = await mountApp()
-  await page.getByRole("button", { name: "Model for the next session" }).click()
-  await page.getByRole("menuitem", { name: "opus" }).click()
+  await page.getByRole("button", { name: "New session" }).first().click()
   await vi.waitFor(() => expect(server.sessions.size).toBe(3))
 
   await page.getByRole("tablist").getByRole("tab").first().click()
@@ -218,7 +220,6 @@ test("the plus after the tabs starts a session with the chosen model, and arrow 
 
   await page.getByRole("main").getByRole("button", { name: "New session" }).click()
   await vi.waitFor(() => expect(server.sessions.size).toBe(4))
-  expect([...server.sessions.values()].at(-1)?.model).toBe("opus")
   await expect.element(page.getByRole("tab")).toHaveLength(4)
 })
 
@@ -283,7 +284,7 @@ test("a key keybindings.json gives that ivin cannot read is reported", async () 
     .toBeVisible()
 })
 
-test("a session that was not created shows why, and Retry creates it with the same model", async () => {
+test("a session that was not created shows why, and Retry creates it", async () => {
   const server = await mountApp()
   server.failNextCall("session.create")
   await page.getByRole("main").getByRole("button", { name: "New session" }).click()
@@ -381,4 +382,11 @@ test("a failed archive from a session's menu says so under its row and keeps its
 
   await expect.element(row.getByRole("alert")).toHaveTextContent("The session was not archived.")
   await expect.element(page.getByRole("tab")).toHaveLength(2)
+})
+
+test("mod+shift+m in the composer opens the model menu", async () => {
+  await mountApp()
+  await page.getByRole("textbox", { name: "Message" }).click()
+  await userEvent.keyboard(`{${mod}>}{Shift>}m{/Shift}{/${mod}}`)
+  await expect.element(page.getByTestId("run-option-model-opus")).toBeVisible()
 })

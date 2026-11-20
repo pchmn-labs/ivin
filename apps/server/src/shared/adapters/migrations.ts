@@ -108,6 +108,20 @@ export const migrations: readonly Migration[] = [
     version: 11,
     sql: `ALTER TABLE sessions ADD COLUMN archived_at INTEGER`,
   },
+  {
+    version: 12,
+    sql: `ALTER TABLE sessions ADD COLUMN effort TEXT NOT NULL DEFAULT 'high';
+    ALTER TABLE sessions ADD COLUMN permission_mode TEXT NOT NULL DEFAULT 'manual';
+    ALTER TABLE sessions ADD COLUMN run_options_at INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE sessions ADD COLUMN confirmed_run_options TEXT;
+    ALTER TABLE sessions ADD COLUMN relaunch_failure TEXT;
+    UPDATE sessions SET run_options_at = created_at;
+    UPDATE sessions
+      SET confirmed_run_options = json_object('model', model, 'effort', effort, 'permissionMode', permission_mode)
+      WHERE EXISTS (
+        SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
+      )`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

@@ -14,6 +14,34 @@ export type SessionStatus = typeof SessionStatus.Type
 export const Harness = Schema.Literals(["claude", "codex", "acp", "scripted"])
 export type Harness = typeof Harness.Type
 
+export const RunOption = Schema.Literals(["model", "effort", "permissionMode"])
+export type RunOption = typeof RunOption.Type
+
+export const RunOptions = Schema.Struct({
+  model: Schema.String,
+  effort: Schema.String,
+  permissionMode: Schema.String,
+})
+export type RunOptions = typeof RunOptions.Type
+
+export const OfferedValues = Schema.Struct({
+  values: Schema.Array(Schema.String),
+  default: Schema.String,
+})
+
+// What a harness offers for each run option, from its provider.
+export const HarnessRunOptions = Schema.Struct({
+  model: OfferedValues,
+  effort: OfferedValues,
+  permissionMode: OfferedValues,
+})
+export type HarnessRunOptions = typeof HarnessRunOptions.Type
+
+// The first turn after a change of run options failed. `previous`: the options of the last turn that worked;
+// `message`: the text of the message that turn was sent with.
+export const RelaunchFailure = Schema.Struct({ previous: RunOptions, message: Schema.String })
+export type RelaunchFailure = typeof RelaunchFailure.Type
+
 export const Session = Schema.Struct({
   id: Schema.String,
   projectPath: Schema.String,
@@ -27,6 +55,9 @@ export const Session = Schema.Struct({
   title: Schema.String,
   harness: Harness,
   model: Schema.String,
+  effort: Schema.String,
+  permissionMode: Schema.String,
+  relaunchFailure: Schema.NullOr(RelaunchFailure),
   status: SessionStatus,
   statusChangedAt: Schema.DateTimeUtcFromMillis,
   createdAt: Schema.DateTimeUtcFromMillis,
@@ -120,7 +151,7 @@ export class CheckoutRefused extends Schema.TaggedError<CheckoutRefused>()("Chec
 
 export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.create", {
-    payload: { projectPath: Schema.String, model: Schema.String },
+    payload: { projectPath: Schema.String },
     success: Session,
   }),
   Rpc.make("session.list", {
@@ -164,6 +195,19 @@ export const SessionRpcs = RpcGroup.make(
     },
     success: Session,
     error: Schema.Union([SessionNotFound, WorktreeNotCreated, WorkingFolderDeleted]),
+  }),
+  // Applies from the next message: a running turn finishes with the options it started with.
+  Rpc.make("session.setRunOptions", {
+    payload: {
+      sessionId: Schema.String,
+      options: Schema.Struct({
+        model: Schema.optionalKey(Schema.String),
+        effort: Schema.optionalKey(Schema.String),
+        permissionMode: Schema.optionalKey(Schema.String),
+      }),
+    },
+    success: Session,
+    error: SessionNotFound,
   }),
   Rpc.make("session.pickWorkingFolder", {
     payload: { sessionId: Schema.String, workingFolder: WorkingFolderChoice },

@@ -1,3 +1,4 @@
+import type { HarnessRunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Cause, type Duration, Effect, Layer, Queue, Stream } from "effect"
 import {
@@ -43,6 +44,13 @@ export interface ScriptedOptions {
   readonly responded?: ApprovalDecision[]
   // Announces a provider session id on start, as an adapter does when it learns one.
   readonly reportSession?: boolean
+  readonly runOptions?: HarnessRunOptions
+}
+
+export const scriptedRunOptions: HarnessRunOptions = {
+  model: { values: ["scripted", "scripted-large"], default: "scripted" },
+  effort: { values: ["low", "high"], default: "low" },
+  permissionMode: { values: ["ask", "auto"], default: "ask" },
 }
 
 export const layerScripted = (
@@ -57,6 +65,7 @@ export const layerScripted = (
     closeDelay = 0,
     startFailure,
     reportSession = false,
+    runOptions = scriptedRunOptions,
   }: ScriptedOptions = {},
 ) =>
   Layer.sync(HarnessProvider)(() => {
@@ -64,6 +73,7 @@ export const layerScripted = (
     const played = new Map<string, number>()
     return {
       id: "scripted",
+      runOptions,
       // Scripts replay recorded Claude output.
       toolActivity,
       start: (input) =>

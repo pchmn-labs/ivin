@@ -247,6 +247,8 @@ export interface OptionListProps {
 export interface ErrorMessageProps {
   readonly message: string
   readonly onRetry?: () => void
+  // Offered in place of Retry when the way out is another action.
+  readonly action?: { readonly label: string; readonly onSelect: () => void }
   readonly "data-testid"?: string
 }
 

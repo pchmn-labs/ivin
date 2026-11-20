@@ -50,14 +50,6 @@
   padding-bottom: var(--iv-space-2);
 }
 
-.iv-composer__model {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--iv-text-muted);
-  font-size: var(--iv-text-sm);
-}
-
 .iv-composer:has(.iv-action-sheet) .iv-composer__surface {
   border-top-left-radius: 0;
   border-top-right-radius: 0;

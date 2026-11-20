@@ -2,11 +2,13 @@ import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
 import { randomUUID } from "node:crypto"
 import { createInterface } from "node:readline"
+import type { RunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Duration, Effect, Layer, Stream } from "effect"
 import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/harness-provider.ts"
 import { approvalResponseLine } from "../rules/approval-response.ts"
 import { claudeArgs } from "../rules/claude-args.ts"
+import { claudeRunOptions } from "../rules/run-options.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
 import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
 import { toolActivity } from "../rules/tool-activity.ts"
@@ -18,10 +20,10 @@ const DEFAULT_KILL_GRACE: Duration.Input = "2 seconds"
 const spawnClaude = (
   sessionId: string,
   cwd: string,
-  model: string,
+  options: RunOptions,
   providerSessionId: string | null,
 ) => {
-  const child = spawn("claude", claudeArgs(model, providerSessionId), {
+  const child = spawn("claude", claudeArgs(options, providerSessionId), {
     cwd,
     env: { ...process.env, IVIN_SESSION_ID: sessionId },
     stdio: ["pipe", "pipe", "pipe"],
@@ -55,8 +57,9 @@ const spawnClaude = (
 export const layerClaudeWith = (killGrace: Duration.Input) =>
   Layer.succeed(HarnessProvider)({
     id: "claude",
+    runOptions: claudeRunOptions,
     toolActivity,
-    start: ({ sessionId, cwd, model, providerSessionId }) =>
+    start: ({ sessionId, cwd, options, providerSessionId }) =>
       Effect.gen(function* () {
         // spawn reports a missing cwd as ENOENT, the same as a missing binary.
         if (!existsSync(cwd)) {
@@ -64,7 +67,7 @@ export const layerClaudeWith = (killGrace: Duration.Input) =>
         }
         let stoppedByIvin = false
         const { child, lines, exited, started, stderr } = yield* Effect.acquireRelease(
-          Effect.sync(() => spawnClaude(sessionId, cwd, model, providerSessionId)),
+          Effect.sync(() => spawnClaude(sessionId, cwd, options, providerSessionId)),
           ({ child, exited }) =>
             Effect.gen(function* () {
               stoppedByIvin = true

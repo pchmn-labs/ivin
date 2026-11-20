@@ -100,7 +100,8 @@ export const applyEvent = (
       const item: TranscriptItem = { ...base, type: "interruption" }
       return { state: { ...state, openMessage: null }, item }
     }
-    case "working_folder": {
+    case "working_folder":
+    case "run_option": {
       const { id: _id, sessionId: _s, sequence: _q, at: _at, raw: _raw, ...change } = event
       const item: TranscriptItem = { ...base, ...change }
       return { state: { ...state, openMessage: null }, item }

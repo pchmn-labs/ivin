@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
+import { RunOption } from "./session.ts"
 
 const UserMessageBody = Schema.Struct({
   type: Schema.Literal("user_message"),
@@ -73,6 +74,13 @@ const WorkingFolderBody = Schema.Struct({
   ...workingFolderFields,
 })
 
+const runOptionFields = {
+  option: RunOption,
+  from: Schema.String,
+  to: Schema.String,
+}
+const RunOptionBody = Schema.Struct({ type: Schema.Literal("run_option"), ...runOptionFields })
+
 const eventBodies = [
   UserMessageBody,
   AssistantTextBody,
@@ -86,6 +94,7 @@ const eventBodies = [
   ErrorBody,
   InterruptionBody,
   WorkingFolderBody,
+  RunOptionBody,
 ] as const
 
 const raw = { raw: Schema.Unknown }
@@ -188,6 +197,12 @@ export const WorkingFolderItem = Schema.Struct({
   ...workingFolderFields,
 })
 
+export const RunOptionItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("run_option"),
+  ...runOptionFields,
+})
+
 export const TranscriptItem = Schema.Union([
   MessageItem,
   ThinkingItem,
@@ -197,6 +212,7 @@ export const TranscriptItem = Schema.Union([
   ErrorItem,
   InterruptionItem,
   WorkingFolderItem,
+  RunOptionItem,
 ])
 export type TranscriptItem = typeof TranscriptItem.Type
 

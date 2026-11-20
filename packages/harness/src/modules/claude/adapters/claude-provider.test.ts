@@ -18,7 +18,7 @@ real(
         const harness = yield* (yield* HarnessProvider).start({
           sessionId: "s1",
           cwd,
-          model: "haiku",
+          options: { model: "haiku", effort: "low", permissionMode: "manual" },
           providerSessionId: null,
         })
         yield* harness.send({ text: "Reply with exactly: pong" })
@@ -47,7 +47,7 @@ real.each([
         const harness = yield* (yield* HarnessProvider).start({
           sessionId: "s1",
           cwd,
-          model: "haiku",
+          options: { model: "haiku", effort: "low", permissionMode: "manual" },
           providerSessionId: null,
         })
         yield* harness.send({
@@ -81,7 +81,7 @@ test("a process that fails to start ends the stream with a HarnessError", async 
       const harness = yield* (yield* HarnessProvider).start({
         sessionId: "s1",
         cwd: "/does/not/exist",
-        model: "haiku",
+        options: { model: "haiku", effort: "low", permissionMode: "manual" },
         providerSessionId: null,
       })
       return yield* Stream.runCollect(harness.events)
@@ -118,7 +118,7 @@ test("answering a request that is not open fails with a HarnessError", async () 
         const harness = yield* (yield* HarnessProvider).start({
           sessionId: "s1",
           cwd: dir,
-          model: "haiku",
+          options: { model: "haiku", effort: "low", permissionMode: "manual" },
           providerSessionId: null,
         })
         return yield* Effect.flip(harness.respond({ requestId: "nope", allow: true }))
@@ -141,7 +141,7 @@ setInterval(() => {}, 1000)`,
           const harness = yield* (yield* HarnessProvider).start({
             sessionId: "s1",
             cwd: dir,
-            model: "haiku",
+            options: { model: "haiku", effort: "low", permissionMode: "manual" },
             providerSessionId: null,
           })
           yield* harness.interrupt
@@ -176,7 +176,7 @@ setInterval(() => {}, 1000)`,
           yield* (yield* HarnessProvider).start({
             sessionId: "s1",
             cwd: dir,
-            model: "haiku",
+            options: { model: "haiku", effort: "low", permissionMode: "manual" },
             providerSessionId: null,
           })
           yield* Effect.promise(() => vi.waitFor(() => expect(existsSync(pidFile)).toBe(true)))
@@ -198,7 +198,7 @@ test("start fails with plain words when claude is not on the PATH", async () => 
         yield* (yield* HarnessProvider).start({
           sessionId: "s1",
           cwd: tmpdir(),
-          model: "haiku",
+          options: { model: "haiku", effort: "low", permissionMode: "manual" },
           providerSessionId: null,
         })
       }).pipe(Effect.provide(layerClaude), Effect.scoped),
@@ -216,7 +216,7 @@ test("start names a project folder that does not exist", async () => {
       yield* (yield* HarnessProvider).start({
         sessionId: "s1",
         cwd: "/does/not/exist",
-        model: "haiku",
+        options: { model: "haiku", effort: "low", permissionMode: "manual" },
         providerSessionId: null,
       })
     }).pipe(Effect.provide(layerClaude), Effect.scoped),
@@ -236,7 +236,7 @@ setInterval(() => {}, 1000)`,
           yield* (yield* HarnessProvider).start({
             sessionId: "s1",
             cwd: dir,
-            model: "haiku",
+            options: { model: "haiku", effort: "low", permissionMode: "manual" },
             providerSessionId: null,
           })
           yield* Effect.sleep("200 millis")

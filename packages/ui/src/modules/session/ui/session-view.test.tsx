@@ -58,6 +58,9 @@ test("the transcript renders through the plugins and the status line shows the u
     title: "t",
     harness: "claude",
     model: "sonnet",
+    effort: "high",
+    permissionMode: "manual",
+    relaunchFailure: null,
     status: "idle",
     statusChangedAt: at,
     createdAt: at,
@@ -98,6 +101,9 @@ const mountSession = async (
     title: "t",
     harness,
     model: "sonnet",
+    effort: "high",
+    permissionMode: "manual",
+    relaunchFailure: null,
     status,
     statusChangedAt: at,
     createdAt: at,
@@ -117,7 +123,7 @@ const mountSession = async (
 test("a codex session's composer names Codex and draws no Claude mark", async () => {
   await mountSession("idle", "codex")
   await expect.element(page.getByPlaceholder("Message Codex")).toBeVisible()
-  const model = page.getByTestId("composer-model").element()
+  const model = page.getByTestId("run-option-model").element()
   expect(model.querySelector(".iv-harness-mark--agent")).not.toBeNull()
   expect(document.querySelector(".iv-composer .iv-harness-mark--claude")).toBeNull()
 })
@@ -126,7 +132,7 @@ test("a claude session's composer names Claude and draws the Claude mark", async
   await mountSession("idle")
   await expect.element(page.getByPlaceholder("Message Claude")).toBeVisible()
   expect(
-    page.getByTestId("composer-model").element().querySelector(".iv-harness-mark--claude"),
+    page.getByTestId("run-option-model").element().querySelector(".iv-harness-mark--claude"),
   ).not.toBeNull()
 })
 
@@ -218,6 +224,9 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
     title: "t",
     harness: "claude",
     model: "sonnet",
+    effort: "high",
+    permissionMode: "manual",
+    relaunchFailure: null,
     status: "working",
     statusChangedAt: at,
     createdAt: at,
@@ -342,6 +351,9 @@ test("Escape closes an open menu without interrupting the session", async () => 
     title: "t",
     harness: "claude",
     model: "sonnet",
+    effort: "high",
+    permissionMode: "manual",
+    relaunchFailure: null,
     status: "working",
     statusChangedAt: at,
     createdAt: at,
@@ -390,6 +402,9 @@ const mountNewSession = async (checkout: Partial<FakeCheckout> = {}) => {
     title: "New session",
     harness: "claude" as const,
     model: "sonnet",
+    effort: "high",
+    permissionMode: "manual",
+    relaunchFailure: null,
     status: "idle" as const,
     statusChangedAt: at,
     createdAt: at,
@@ -496,6 +511,12 @@ test("a worktree git cannot create shows git's message in the transcript and kee
   await sendText("go")
 
   const alert = page.getByTestId("composer-alert")
+  await vi.waitFor(() => expect(alert.query()).not.toBeNull())
+  console.log(
+    "DEBUG",
+    JSON.stringify(alert.element().textContent),
+    page.getByTestId("composer-alert").elements().length,
+  )
   await expect.element(alert).toBeVisible()
   expect(alert.element().textContent).toMatch(/^The worktree was not created/)
   await expect
@@ -599,6 +620,9 @@ const mountDeletedFolderSession = async () => {
     title: "Add the Working panel",
     harness: "claude",
     model: "sonnet",
+    effort: "high",
+    permissionMode: "manual",
+    relaunchFailure: null,
     status: "idle",
     statusChangedAt: at,
     createdAt: at,
@@ -662,4 +686,78 @@ test("a pick that fails says so beside the picker, keeps the choice and offers a
   await expect.element(page.getByRole("radio", { name: /docs\/adr/ })).toBeChecked()
   await page.getByRole("button", { name: "Retry" }).click()
   await expect.element(page.getByRole("textbox", { name: "Message" })).toBeVisible()
+})
+
+test("the composer shows the session's model, effort and permission mode as three menus", async () => {
+  await mountSession("idle")
+  await expect.element(page.getByRole("combobox", { name: "Model: sonnet" })).toBeVisible()
+  await expect.element(page.getByRole("combobox", { name: "Effort: high" })).toBeVisible()
+  await expect
+    .element(page.getByRole("combobox", { name: "Permission mode: manual" }))
+    .toBeVisible()
+
+  await page.getByRole("combobox", { name: "Permission mode: manual" }).click()
+  for (const mode of ["manual", "acceptEdits", "plan"]) {
+    await expect.element(page.getByTestId(`run-option-permissionMode-${mode}`)).toBeVisible()
+  }
+  await expect
+    .element(page.getByTestId("run-option-permissionMode-manual").getByLabelText("Current"))
+    .toBeVisible()
+})
+
+test("picking a model changes it for the session and adds a line to the transcript", async () => {
+  const server = await mountSession("idle")
+  await page.getByRole("combobox", { name: "Model: sonnet" }).click()
+  await page.getByTestId("run-option-model-opus").click()
+
+  await expect.element(page.getByRole("combobox", { name: "Model: opus" })).toBeVisible()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.model).toBe("opus"))
+  await vi.waitFor(() =>
+    expect(page.getByTestId("transcript-item").last().element().textContent).toBe(
+      "Model changed from sonnet to opus",
+    ),
+  )
+})
+
+test("keyboard only: open the effort menu, move to low and pick it, with focus back on its button", async () => {
+  const server = await mountSession("idle")
+  const trigger = page.getByRole("combobox", { name: "Effort: high" })
+  trigger.element().focus()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(page.getByTestId("run-option-effort-low")).toBeVisible()
+  await userEvent.keyboard("{Home}{Enter}")
+
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.effort).toBe("low"))
+  await expect.element(page.getByRole("combobox", { name: "Effort: low" })).toHaveFocus()
+})
+
+test("while the agent works, a run option menu says the change applies from the next message", async () => {
+  await mountSession("working")
+  await page.getByRole("combobox", { name: "Model: sonnet" }).click()
+  await expect.element(page.getByText("Applies from the next message.")).toBeVisible()
+})
+
+test("a failed relaunch shows why under the composer, puts the message back and offers the previous model", async () => {
+  const server = await mountSession("idle")
+  await page.getByRole("combobox", { name: "Model: sonnet" }).click()
+  await page.getByTestId("run-option-model-haiku").click()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.model).toBe("haiku"))
+
+  server.failRelaunch("s1", {
+    previous: { model: "sonnet", effort: "high", permissionMode: "manual" },
+    message: "fix the tests",
+  })
+
+  const alert = page.getByTestId("composer-alert")
+  await vi.waitFor(() =>
+    expect(alert.element().textContent).toContain(
+      "The agent failed on the first message with model haiku.",
+    ),
+  )
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("fix the tests")
+
+  await alert.getByRole("button", { name: "Back to sonnet" }).click()
+  await expect.element(page.getByRole("combobox", { name: "Model: sonnet" })).toBeVisible()
+  await expect.element(alert).not.toBeInTheDocument()
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("fix the tests")
 })

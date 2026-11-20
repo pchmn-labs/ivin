@@ -107,7 +107,7 @@ const withServer = <A, E>(
 // A session with an open tab, started in `workingFolder`.
 const startSession = (client: Client, workingFolder: WorkingFolderChoice) =>
   Effect.gen(function* () {
-    const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+    const created = yield* client["session.create"]({ projectPath: project })
     yield* client["tab.open"]({ sessionId: created.id })
     return yield* client["session.sendMessage"]({
       sessionId: created.id,

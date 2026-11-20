@@ -4,6 +4,9 @@ import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type {
   Harness,
+  HarnessRunOptions,
+  RelaunchFailure,
+  RunOptions,
   Session,
   SessionChange,
   SessionStatus,
@@ -34,6 +37,8 @@ export interface FakeServer {
   readonly pushChange: (change: TranscriptItemChange) => void
   // Changes a session's status as the server would, and streams it to `session.watch`.
   readonly setStatus: (sessionId: string, status: SessionStatus) => void
+  // Marks the first turn after a change of run options as failed, as the server would.
+  readonly failRelaunch: (sessionId: string, failure: RelaunchFailure) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   readonly sentMessages: ReadonlyArray<{ readonly workingFolder?: WorkingFolderChoice }>
   readonly pickedFolders: ReadonlyArray<WorkingFolderChoice>
@@ -74,10 +79,21 @@ export interface FakeCheckout extends CheckoutStatus {
   pullRefusal: string | null
 }
 
+export const fakeRunOptions: HarnessRunOptions = {
+  model: { values: ["sonnet", "opus", "haiku"], default: "sonnet" },
+  effort: { values: ["low", "medium", "high"], default: "high" },
+  permissionMode: { values: ["manual", "acceptEdits", "plan"], default: "manual" },
+}
+
 export const makeFakeServer = (
-  options: { readonly project?: Project; readonly harness?: Harness } = {},
+  options: {
+    readonly project?: Project
+    readonly harness?: Harness
+    readonly runOptions?: HarnessRunOptions
+  } = {},
 ): FakeServer => {
   const harness = options.harness ?? "claude"
+  const runOptions = options.runOptions ?? fakeRunOptions
   let projects: Array<Project> = options.project ? [options.project] : []
   let selectedPath: string | null = options.project?.path ?? null
   let tabs: Array<{ sessionId: string; projectPath: string }> = []
@@ -197,7 +213,7 @@ export const makeFakeServer = (
 
   const client = {
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
-    "server.getHarness": () => Effect.succeed(harness),
+    "server.getHarness": () => Effect.succeed({ id: harness, runOptions }),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
     "keybinding.watch": () =>
       Stream.unwrap(
@@ -284,7 +300,7 @@ export const makeFakeServer = (
         tabs = [...tabs.filter((tab) => tab.projectPath !== projectPath), ...named, ...others]
         return projectTabs(projectPath)
       }),
-    "session.create": ({ projectPath, model }: { projectPath: string; model: string }) =>
+    "session.create": ({ projectPath }: { projectPath: string }) =>
       Effect.sync(() => {
         const at = tick()
         const session: Session = {
@@ -296,7 +312,10 @@ export const makeFakeServer = (
           started: false,
           workingFolderDeleted: false,
           harness,
-          model,
+          model: runOptions.model.default,
+          effort: runOptions.effort.default,
+          permissionMode: runOptions.permissionMode.default,
+          relaunchFailure: null,
           title: "New session",
           status: "idle",
           statusChangedAt: at,
@@ -306,6 +325,32 @@ export const makeFakeServer = (
         }
         sessions.set(session.id, session)
         return session
+      }),
+    "session.setRunOptions": ({
+      sessionId,
+      options: requested,
+    }: {
+      sessionId: string
+      options: Partial<RunOptions>
+    }) =>
+      Effect.suspend(() => {
+        const session = sessions.get(sessionId)
+        if (!session) return Effect.fail(new SessionNotFound({ sessionId }))
+        for (const option of ["model", "effort", "permissionMode"] as const) {
+          const to = requested[option]
+          if (to === undefined || to === session[option]) continue
+          const items = itemsOf(sessionId)
+          publish({
+            id: `run-option-${nextId++}`,
+            sessionId,
+            position: (items.at(-1)?.position ?? -1) + 1,
+            type: "run_option",
+            option,
+            from: session[option],
+            to,
+          })
+        }
+        return Effect.succeed(saveSession({ ...session, ...requested, relaunchFailure: null }))
       }),
     "session.watch": ({ projectPath }: { projectPath: string }) =>
       Stream.unwrap(
@@ -438,6 +483,7 @@ export const makeFakeServer = (
             }),
             started: true,
             workingFolderDeleted: false,
+            relaunchFailure: null,
             status: "working",
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
@@ -625,6 +671,8 @@ export const makeFakeServer = (
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
     setStatus: (sessionId, status) => void saveSession({ ...sessions.get(sessionId)!, status }),
+    failRelaunch: (sessionId, failure) =>
+      void saveSession({ ...sessions.get(sessionId)!, relaunchFailure: failure }),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
     holdNextSend: () => {
       let settle!: (ok: boolean) => void

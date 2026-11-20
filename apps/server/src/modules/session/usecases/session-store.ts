@@ -1,4 +1,4 @@
-import type { Session, SessionStatus } from "@ivin/contracts/session"
+import type { RelaunchFailure, RunOptions, Session, SessionStatus } from "@ivin/contracts/session"
 import { Context, type Effect } from "effect"
 
 export class SessionStore extends Context.Service<
@@ -13,6 +13,20 @@ export class SessionStore extends Context.Service<
     readonly setTitleIfUnset: (id: string, title: string) => Effect.Effect<void>
     readonly providerSessionId: (id: string) => Effect.Effect<string | null>
     readonly setProviderSessionId: (id: string, providerSessionId: string) => Effect.Effect<void>
+    readonly setRunOptions: (
+      id: string,
+      options: RunOptions,
+      at: Session["lastActivityAt"],
+    ) => Effect.Effect<void>
+    // The options last set on any of the project's sessions, at creation or by a change.
+    readonly lastRunOptions: (projectPath: string) => Effect.Effect<RunOptions | null>
+    // The options of the last run whose first turn ended without an error.
+    readonly confirmedRunOptions: (id: string) => Effect.Effect<RunOptions | null>
+    readonly setConfirmedRunOptions: (id: string, options: RunOptions) => Effect.Effect<void>
+    readonly setRelaunchFailure: (
+      id: string,
+      failure: RelaunchFailure | null,
+    ) => Effect.Effect<void>
     readonly setWorkingFolder: (
       id: string,
       workingFolder: string,

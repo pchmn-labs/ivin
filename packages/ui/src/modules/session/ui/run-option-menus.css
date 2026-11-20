@@ -1,0 +1,53 @@
+.iv-run-option-menus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  min-width: 0;
+}
+
+.iv-run-option-menus__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 24px;
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-sm);
+  background: transparent;
+  color: var(--iv-text-muted);
+  font: inherit;
+  font-size: var(--iv-text-sm);
+  font-weight: 500;
+  transition:
+    background-color var(--iv-duration-fast) ease-out,
+    color var(--iv-duration-fast) ease-out,
+    transform var(--iv-duration-press) var(--iv-ease-out);
+}
+
+.iv-run-option-menus__trigger:first-child {
+  margin-left: calc(-1 * var(--iv-space-1));
+}
+
+.iv-run-option-menus__trigger:active {
+  transform: scale(0.97);
+}
+
+.iv-run-option-menus__trigger[data-popup-open] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-run-option-menus__trigger:hover {
+    background: var(--iv-bg-hover);
+    color: var(--iv-text);
+  }
+}
+
+.iv-run-option-menus__value {
+  overflow: hidden;
+  max-width: 160px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

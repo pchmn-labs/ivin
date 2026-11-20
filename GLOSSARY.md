@@ -20,11 +20,15 @@ Where a session's agent runs: the checkout or one worktree. Several sessions may
 _Avoid_: cwd, workspace
 
 **Session**:
-One agent conversation, bound to a project folder, a working folder, a branch, a harness and a model. Its status is preparing worktree, working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript. An **archived** session is hidden from the sidebar, with no tab and no running agent, until the user restores it; deleting a session erases it with its transcript.
+One agent conversation, bound to a project folder, a working folder, a branch, a harness and its run options. Its status is preparing worktree, working, waiting (on the user, such as for an approval), idle or failed. Owns a transcript. An **archived** session is hidden from the sidebar, with no tab and no running agent, until the user restores it; deleting a session erases it with its transcript.
 _Avoid_: conversation, chat, thread
 
 **Harness**:
 The agent CLI a session runs on: Claude Code, Codex or an ACP agent.
+
+**Run options**:
+The model, effort and permission mode a session's agent runs with, chosen from the values its harness offers. A change applies from the next message; a turn already running keeps the options it started with.
+_Avoid_: settings (the word for ivin's own settings file)
 
 **Transcript**:
 The append-only list of a session's normalised events, each with a stable id, owned by ivin.

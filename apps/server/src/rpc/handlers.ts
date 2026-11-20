@@ -24,6 +24,7 @@ import { pickWorkingFolder } from "../modules/session/usecases/pick-working-fold
 import { renameSession } from "../modules/session/usecases/rename-session.ts"
 import { fastForward } from "../modules/session/usecases/fast-forward.ts"
 import { switchToDefaultBranch } from "../modules/session/usecases/switch-to-default-branch.ts"
+import { setRunOptions } from "../modules/session/usecases/set-run-options.ts"
 import { sendMessage } from "../modules/session/usecases/send-message.ts"
 import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
 import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
@@ -96,7 +97,8 @@ export const handlers = Rpcs.toLayer(
       "tab.close": ({ sessionId }) => closeTab(sessionId),
       "tab.reorder": ({ projectPath, sessionIds }) => reorderTabs(projectPath, sessionIds),
       "tab.list": ({ projectPath }) => listTabs(projectPath),
-      "session.create": ({ projectPath, model }) => createSession(projectPath, model),
+      "session.create": ({ projectPath }) => createSession(projectPath),
+      "session.setRunOptions": ({ sessionId, options }) => setRunOptions(sessionId, options),
       "session.list": ({ projectPath }) => listSessions(projectPath),
       "session.listArchived": ({ projectPath }) => listArchivedSessions(projectPath),
       "session.archive": ({ sessionId }) => archiveSession(sessionId),
