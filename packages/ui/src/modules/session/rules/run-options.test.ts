@@ -4,7 +4,7 @@ import {
   goBackLabel,
   offeredValues,
   relaunchFailureText,
-  runOptionNames,
+  shownRunOptions,
   usableEfforts,
 } from "./run-options.ts"
 
@@ -69,20 +69,13 @@ test("an effort with no accepted level below it moves to the lowest accepted, or
 })
 
 test("the trigger names the values, and leaves out the effort of a model that takes none", () => {
-  expect(runOptionNames(offered, { model: "big", effort: "max", permissionMode: "ask" })).toEqual([
-    "Big 2",
-    "Max",
-    "Ask",
-  ])
-  expect(runOptionNames(offered, { model: "tiny", effort: "max", permissionMode: "ask" })).toEqual([
-    "Tiny 1",
-    "Ask",
-  ])
-  expect(runOptionNames(null, { model: "big", effort: "max", permissionMode: "ask" })).toEqual([
-    "big",
-    "max",
-    "ask",
-  ])
+  const names = (offeredOrNull: typeof offered | null, model: string) =>
+    shownRunOptions(offeredOrNull, { model, effort: "max", permissionMode: "ask" }).map(
+      ({ option, name }) => `${option}=${name}`,
+    )
+  expect(names(offered, "big")).toEqual(["model=Big 2", "effort=Max", "permissionMode=Ask"])
+  expect(names(offered, "tiny")).toEqual(["model=Tiny 1", "permissionMode=Ask"])
+  expect(names(null, "big")).toEqual(["model=big", "effort=max", "permissionMode=ask"])
 })
 
 test("a failed relaunch names the changed values and offers the previous one back", () => {

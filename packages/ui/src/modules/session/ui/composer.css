@@ -64,6 +64,19 @@
   border-top-color: var(--iv-attention-outline);
 }
 
+.iv-composer__sheet-error {
+  display: -webkit-box;
+  margin: 0 0 var(--iv-space-3) var(--iv-space-1);
+  overflow: hidden;
+  color: var(--iv-text-muted);
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .iv-composer__sheet-row {
   display: flex;
   align-items: center;

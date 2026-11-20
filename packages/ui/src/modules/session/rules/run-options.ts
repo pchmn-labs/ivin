@@ -44,11 +44,11 @@ export const effortFor = (offered: HarnessRunOptions, model: string, effort: str
   return lower ?? levels.find((level) => usable.includes(level)) ?? effort
 }
 
-export const runOptionNames = (offered: HarnessRunOptions | null, options: RunOptions) =>
+export const shownRunOptions = (offered: HarnessRunOptions | null, options: RunOptions) =>
   RUN_OPTIONS.filter(
     (option) =>
       option !== "effort" || offered === null || usableEfforts(offered, options.model).length > 0,
-  ).map((option) => nameOf(offered, option, options[option]))
+  ).map((option) => ({ option, name: nameOf(offered, option, options[option]) }))
 
 const changedRunOptions = (current: RunOptions, previous: RunOptions) =>
   RUN_OPTIONS.filter((option) => current[option] !== previous[option])

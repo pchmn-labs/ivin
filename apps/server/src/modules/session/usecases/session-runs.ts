@@ -92,12 +92,16 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
         Effect.andThen(sessionFeed.publish(sessionId)),
       )
 
-    // The first turn after a change of run options failed: offer the options that last worked.
-    const offerPreviousOptions = (sessionId: string, options: RunOptions, message: string) =>
+    const offerPreviousOptions = (
+      sessionId: string,
+      options: RunOptions,
+      message: string,
+      error: string | null,
+    ) =>
       Effect.gen(function* () {
         const previous = yield* sessions.confirmedRunOptions(sessionId)
         if (previous === null || sameRunOptions(previous, options)) return
-        yield* sessions.setRelaunchFailure(sessionId, { previous, message })
+        yield* sessions.setRelaunchFailure(sessionId, { previous, message, error })
         yield* sessionFeed.publish(sessionId)
       })
 
@@ -215,13 +219,13 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
 
         let providerSessionId = storedProviderSessionId
         let busy = false
-        let firstTurn: { readonly message: string; erred: boolean } | null = null
+        let firstTurn: { readonly message: string; error: string | null } | null = null
         const endFirstTurn = Effect.suspend(() => {
           const turn = firstTurn
           if (turn === null) return Effect.void
           firstTurn = null
-          return turn.erred
-            ? offerPreviousOptions(session.id, options, turn.message)
+          return turn.error !== null
+            ? offerPreviousOptions(session.id, options, turn.message, turn.error)
             : sessions.setConfirmedRunOptions(session.id, options)
         })
         const handle = (output: HarnessOutput) => {
@@ -232,7 +236,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             return sessions.setProviderSessionId(session.id, output.providerSessionId)
           }
           if (output.type === "status") busy = output.status === "running"
-          if (output.type === "error" && firstTurn !== null) firstTurn.erred = true
+          if (output.type === "error" && firstTurn !== null) firstTurn.error ??= output.message
           const turnEnded = output.type === "status" && output.status === "idle"
           return (turnEnded ? endFirstTurn : Effect.void).pipe(
             Effect.andThen(writer.record(output)),
@@ -247,7 +251,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           Effect.andThen(end.pipe(Effect.andThen(setStatus(session.id, "idle")))),
           Effect.catchTag("HarnessError", (error) =>
             Effect.suspend(() => {
-              if (firstTurn !== null) firstTurn.erred = true
+              if (firstTurn !== null) firstTurn.error ??= error.message
               return endFirstTurn
             }).pipe(Effect.andThen(end), Effect.andThen(writer.fail(error))),
           ),
@@ -263,7 +267,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           record: writer.record,
           send: (text) =>
             Effect.suspend(() => {
-              if (!started) firstTurn = { message: text, erred: false }
+              if (!started) firstTurn = { message: text, error: null }
               started = true
               return harness.send({ text })
             }),
@@ -295,7 +299,12 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
                     .record({ type: "user_message", text: message.text, raw: null }, message.id)
                     .pipe(
                       Effect.andThen(
-                        offerPreviousOptions(session.id, runOptionsOf(session), message.text),
+                        offerPreviousOptions(
+                          session.id,
+                          runOptionsOf(session),
+                          message.text,
+                          error.message,
+                        ),
                       ),
                       Effect.andThen(writer.fail(error)),
                       Effect.as(null),

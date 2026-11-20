@@ -43,7 +43,10 @@ const toSession = (row: SessionRow): Session => ({
   effort: row.effort,
   permissionMode: row.permission_mode,
   relaunchFailure:
-    row.relaunch_failure === null ? null : (JSON.parse(row.relaunch_failure) as RelaunchFailure),
+    row.relaunch_failure === null
+      ? null
+      : // Stored before the agent's error was kept.
+        { error: null, ...(JSON.parse(row.relaunch_failure) as Omit<RelaunchFailure, "error">) },
   status: row.status,
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
   createdAt: DateTime.makeUnsafe(row.created_at),

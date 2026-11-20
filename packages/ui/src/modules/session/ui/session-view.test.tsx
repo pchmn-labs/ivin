@@ -788,9 +788,11 @@ test("a failed relaunch docks a sheet above the composer, puts the message back 
   server.failRelaunch("s1", {
     previous: { model: "sonnet", effort: "high", permissionMode: "manual" },
     message: "fix the tests",
+    error: "There's an issue with the selected model",
   })
 
   const sheet = page.getByTestId("composer-relaunch-failure")
+  await expect.element(sheet.getByText("There's an issue with the selected model")).toBeVisible()
   await expect.element(sheet).toHaveAttribute("role", "alert")
   await vi.waitFor(() =>
     expect(sheet.element().textContent).toContain("The agent did not start with Haiku 5.5."),

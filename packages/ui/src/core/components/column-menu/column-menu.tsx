@@ -93,7 +93,6 @@ const edgeRow = (columns: ReadonlyArray<ColumnMenuColumn>, column: number, last:
   return row === undefined ? { column, row: 0 } : { column, row }
 }
 
-// Keeps the row when the next column has it, else the nearest usable row; a column with none is skipped.
 const stepColumn = (columns: ReadonlyArray<ColumnMenuColumn>, spot: Spot, step: 1 | -1): Spot => {
   for (let offset = 1; offset < columns.length; offset++) {
     const column = (spot.column + step * offset + columns.length) % columns.length

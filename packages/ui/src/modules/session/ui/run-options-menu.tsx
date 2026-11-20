@@ -1,6 +1,4 @@
-import { useAtomValue } from "@effect/atom-react"
 import type { HarnessRunOptions, RunOption, RunOptions, Session } from "@ivin/contracts/session"
-import { AsyncResult } from "effect/reactivity"
 import {
   ColumnMenu,
   ColumnMenuNote,
@@ -10,7 +8,6 @@ import {
 import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
-import { getHarnessAtom } from "../../server/atoms/get-harness.ts"
 import { HARNESSES } from "../rules/harnesses.ts"
 import { isRunning } from "../rules/is-running.ts"
 import {
@@ -18,7 +15,7 @@ import {
   effortFor,
   nameOf,
   offeredValues,
-  runOptionNames,
+  shownRunOptions,
   usableEfforts,
 } from "../rules/run-options.ts"
 import "./run-options-menu.css"
@@ -91,20 +88,21 @@ const columnsFor = (offered: HarnessRunOptions | null, session: Session): Column
 
 export function RunOptionsMenu({
   session,
+  offered,
   previous,
   state,
   onStateChange,
   onChange,
 }: {
   session: Session
+  // Null until the server answers, or when the session runs on another harness than the server's.
+  offered: HarnessRunOptions | null
   // The options that last worked, when the agent failed after a change.
   previous: RunOptions | null
   state: RunOptionsMenuState
   onStateChange: (state: RunOptionsMenuState) => void
   onChange: (options: Partial<RunOptions>) => void
 }) {
-  const harness = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
-  const offered = harness?.id === session.harness ? harness.runOptions : null
   useCommandHandler(COMMANDS.model, () => onStateChange({ open: true, start: "model" }))
   useCommandHandler(COMMANDS.effort, () => onStateChange({ open: true, start: "effort" }))
   useCommandHandler(COMMANDS.permissionMode, () =>
@@ -119,10 +117,7 @@ export function RunOptionsMenu({
     onChange(effort === session.effort ? { model: value } : { model: value, effort })
   }
 
-  const names = runOptionNames(offered, session)
-  const shown = (["model", "effort", "permissionMode"] as const).filter(
-    (option) => option !== "effort" || names.length === 3,
-  )
+  const shown = shownRunOptions(offered, session)
 
   return (
     <ColumnMenu
@@ -138,10 +133,10 @@ export function RunOptionsMenu({
           type="button"
           className="iv-run-options-menu__trigger"
           data-testid="run-options"
-          aria-label={`Run options: ${names.join(", ")}`}
+          aria-label={`Run options: ${shown.map(({ name }) => name).join(", ")}`}
         >
           <HarnessMark mark={HARNESSES[session.harness].mark} size={14} />
-          {shown.map((option, index) => (
+          {shown.map(({ option, name }, index) => (
             <span key={option} className="iv-run-options-menu__part">
               {index > 0 && <span className="iv-run-options-menu__sep">·</span>}
               <span
@@ -150,7 +145,7 @@ export function RunOptionsMenu({
                   (previous !== null && previous[option] !== session[option]) || undefined
                 }
               >
-                {names[index]}
+                {name}
               </span>
             </span>
           ))}

@@ -50,7 +50,12 @@ export const HarnessRunOptions = Schema.Struct({
 export type HarnessRunOptions = typeof HarnessRunOptions.Type
 
 // `message`: the text the failed turn was sent with, for the composer to put back.
-export const RelaunchFailure = Schema.Struct({ previous: RunOptions, message: Schema.String })
+// `error`: what the agent reported, null when it reported nothing.
+export const RelaunchFailure = Schema.Struct({
+  previous: RunOptions,
+  message: Schema.String,
+  error: Schema.NullOr(Schema.String),
+})
 export type RelaunchFailure = typeof RelaunchFailure.Type
 
 export const Session = Schema.Struct({

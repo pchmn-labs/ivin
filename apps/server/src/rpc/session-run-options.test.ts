@@ -252,11 +252,11 @@ const failedTurn: readonly ScriptedElement[] = [
 ]
 
 test.each([
-  ["ends its first turn with an error", failedTurn],
-  ["stops before its first turn ends", [running, scriptedFailure("exit code 1")]],
+  ["ends its first turn with an error", failedTurn, "There's an issue with the selected model"],
+  ["stops before its first turn ends", [running, scriptedFailure("exit code 1")], "exit code 1"],
 ])(
-  "a run started after a change that %s offers the previous options back, with the message",
-  async (_, turn) => {
+  "a run started after a change that %s offers the previous options back, with the message and the error",
+  async (_, turn, error) => {
     const { failed, after } = await withServer(newDatabase(), [answered("one"), turn], (client) =>
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p" })
@@ -283,7 +283,7 @@ test.each([
       }),
     )
 
-    expect(failed?.relaunchFailure).toEqual({ previous: defaults, message: "again" })
+    expect(failed?.relaunchFailure).toEqual({ previous: defaults, message: "again", error })
     expect(after.relaunchFailure).toBeNull()
   },
 )

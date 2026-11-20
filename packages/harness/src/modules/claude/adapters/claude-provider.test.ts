@@ -281,7 +281,7 @@ test("the models are the ones Claude Code lists, asked for once", async () => {
   })
 })
 
-test("a Claude Code that does not answer in time gives the fixed models, and is asked again", async () => {
+test("a Claude Code that does not answer in time gives the fixed models, asked for once", async () => {
   await withFakeClaude(
     `require("node:fs").appendFileSync(process.env.FAKE_LOG, "start\\n")
 setInterval(() => {}, 1000)`,
@@ -290,7 +290,7 @@ setInterval(() => {}, 1000)`,
       const [first] = await listedModels(layerClaudeWith("100 millis", "1500 millis"))
 
       expect(first!.model.values).toEqual(FALLBACK_MODELS)
-      expect(readFileSync(join(dir, "starts.log"), "utf8")).toBe("start\nstart\n")
+      expect(readFileSync(join(dir, "starts.log"), "utf8")).toBe("start\n")
     },
   )
 }, 10_000)

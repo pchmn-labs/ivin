@@ -53,8 +53,8 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const relaunchFailure = session?.relaunchFailure ?? null
   const relaunchFailureKey = relaunchFailure && JSON.stringify(relaunchFailure)
   const [menu, setMenu] = useState<RunOptionsMenuState>({ open: false, start: "model" })
-  const harnessInfo = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
-  const offered = session && harnessInfo?.id === session.harness ? harnessInfo.runOptions : null
+  const serverHarness = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
+  const offered = session && serverHarness?.id === session.harness ? serverHarness.runOptions : null
 
   useEffect(() => {
     if (relaunchFailure === null) return
@@ -122,6 +122,9 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
       title={relaunchFailureText(offered, session, relaunchFailure.previous)}
       data-testid="composer-relaunch-failure"
     >
+      {relaunchFailure.error !== null && (
+        <p className="iv-composer__sheet-error">{relaunchFailure.error}</p>
+      )}
       <div className="iv-composer__sheet-row">
         <span className="iv-composer__sheet-hint">Your message is back in the field.</span>
         <Button variant="ghost" size="sm" onClick={() => setMenu({ open: true, start: changed })}>
@@ -180,6 +183,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
             {session && (
               <RunOptionsMenu
                 session={session}
+                offered={offered}
                 previous={relaunchFailure?.previous ?? null}
                 state={menu}
                 onStateChange={setMenu}

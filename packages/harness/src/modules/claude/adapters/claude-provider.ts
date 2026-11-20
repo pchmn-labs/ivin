@@ -56,18 +56,13 @@ const spawnClaude = (
   return { child, lines, exited, started, stderr: () => stderr.trim() }
 }
 
-// A failed listing is not kept, so the next call asks Claude Code again.
+// Kept even when Claude Code did not answer: each question runs the user's hooks.
 const listedRunOptions = (timeout: Duration.Input) => {
   let listed: HarnessRunOptions | null = null
   return Effect.suspend(() =>
     listed
       ? Effect.succeed(listed)
-      : listClaudeModels(timeout).pipe(
-          Effect.map((models) => {
-            if (models.length > 0) listed = claudeRunOptions(models)
-            return claudeRunOptions(models)
-          }),
-        ),
+      : listClaudeModels(timeout).pipe(Effect.map((models) => (listed = claudeRunOptions(models)))),
   )
 }
 
