@@ -118,6 +118,10 @@ export const migrations: readonly Migration[] = [
       UNIQUE (session_id, number)
     )`,
   },
+  {
+    version: 13,
+    sql: `ALTER TABLE images ADD COLUMN compressed_media_type TEXT`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>
