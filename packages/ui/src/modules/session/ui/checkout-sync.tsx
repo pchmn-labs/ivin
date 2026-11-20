@@ -2,7 +2,7 @@ import { useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { LocalChangesChoice, Session } from "@ivin/contracts/session"
 import { Cause, Exit } from "effect"
 import { AsyncResult } from "effect/reactivity"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "../../../core/components/button/button.tsx"
 import { CodeBlock } from "../../../core/components/code-block/code-block.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
@@ -32,6 +32,13 @@ export function CheckoutSync({ session }: { session: Session }) {
   const refreshStatus = useAtomRefresh(statusAtom)
   const switchToDefault = useAtomSet(switchToDefaultBranchAtom, { mode: "promiseExit" })
   const fastForward = useAtomSet(fastForwardAtom, { mode: "promiseExit" })
+  // The branch picker can move the checkout too.
+  const shownBranch = useRef(session.branch)
+  useEffect(() => {
+    if (shownBranch.current === session.branch) return
+    shownBranch.current = session.branch
+    refreshStatus()
+  }, [session.branch, refreshStatus])
   const [busy, setBusy] = useState<CheckoutAction | null>(null)
   const [askingLocalChanges, setAskingLocalChanges] = useState(false)
   const [commitMessage, setCommitMessage] = useState("")

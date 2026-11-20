@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { parseBranches, parseWorktreeList } from "./git-output.ts"
+import { parseBranches, parseWorktreeList, underOpenedPath } from "./git-output.ts"
 
 test("the porcelain worktree list gives each worktree's path and branch", () => {
   const output = [
@@ -39,4 +39,19 @@ test("refs split into local and remote branches, without the remote's HEAD", () 
     local: ["main", "feat/login"],
     remote: ["origin/main", "origin/fix/a"],
   })
+})
+
+test("worktree paths under the resolved repository take the path it was opened with", () => {
+  const entry = (path: string) => ({ path, branch: null, prunable: false })
+  expect(
+    underOpenedPath(
+      [
+        entry("/private/var/repo"),
+        entry("/private/var/repo/.worktrees/a"),
+        entry("/private/var/repo-b"),
+      ],
+      "/var/repo",
+      "/private/var/repo",
+    ).map((e) => e.path),
+  ).toEqual(["/var/repo", "/var/repo/.worktrees/a", "/private/var/repo-b"])
 })

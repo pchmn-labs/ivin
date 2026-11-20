@@ -313,3 +313,18 @@ test("the checkout does not move while another session's agent works in it", asy
   expect(refused._tag).toBe("CheckoutInUse")
   expect(git(project, "branch", "--show-current")).toBe("feature")
 })
+
+test("a default branch with no local copy is checked out as a tracking branch", async () => {
+  git(project, "checkout", "--quiet", "-b", "feature")
+  git(project, "branch", "--quiet", "-D", "main")
+  await withServer([], (client) =>
+    Effect.gen(function* () {
+      const created = yield* newSession(client)
+      yield* client["session.switchToDefaultBranch"]({ sessionId: created.id })
+    }),
+  )
+
+  expect(git(project, "branch", "--show-current")).toBe("main")
+  expect(git(project, "rev-parse", "--abbrev-ref", "main@{upstream}")).toBe("origin/main")
+  expect(existsSync(join(project, "ahead.txt"))).toBe(true)
+})

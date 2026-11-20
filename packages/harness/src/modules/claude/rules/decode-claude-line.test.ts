@@ -2,7 +2,11 @@ import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
 import { decodeClaudeLine } from "./decode-claude-line.ts"
 import apiError from "./fixtures/api-error.jsonl?raw"
+import enterWorktree from "./fixtures/enter-worktree.jsonl?raw"
+import exitWorktree from "./fixtures/exit-worktree.jsonl?raw"
 import failedToolCall from "./fixtures/failed-tool-call.jsonl?raw"
+import gitWorktreeAdd from "./fixtures/git-worktree-add.jsonl?raw"
+import gitWorktreeAddFailed from "./fixtures/git-worktree-add-failed.jsonl?raw"
 import permissionAllow from "./fixtures/permission-allow.jsonl?raw"
 import permissionDeny from "./fixtures/permission-deny.jsonl?raw"
 import interruption from "./fixtures/interruption.jsonl?raw"
@@ -15,6 +19,10 @@ import toolCall from "./fixtures/tool-call.jsonl?raw"
 
 const fixtures = {
   "api-error": apiError,
+  "enter-worktree": enterWorktree,
+  "exit-worktree": exitWorktree,
+  "git-worktree-add": gitWorktreeAdd,
+  "git-worktree-add-failed": gitWorktreeAddFailed,
   "failed-tool-call": failedToolCall,
   "permission-allow": permissionAllow,
   "permission-deny": permissionDeny,
@@ -233,4 +241,51 @@ test("a logged-out claude becomes an error saying to log in", () => {
 
   expect(errors).toHaveLength(1)
   expect(errors[0]).toMatchObject({ message: "Not logged in · Please run /login" })
+})
+
+const toolCallAndResult = (name: keyof typeof fixtures, tool: string) => {
+  const events = stored(fixture(name))
+  const call = events.find((o) => o.type === "tool_call" && o.name === tool)
+  const result = events.find(
+    (o) =>
+      o.type === "tool_result" && call?.type === "tool_call" && o.toolCallId === call.toolCallId,
+  )
+  return { call, result }
+}
+
+test("EnterWorktree's result names the worktree the agent now works in", () => {
+  const { call, result } = toolCallAndResult("enter-worktree", "EnterWorktree")
+
+  expect(call).toMatchObject({ input: { name: "try-adopt" } })
+  expect(result).toMatchObject({
+    isError: false,
+    output: expect.stringContaining("“/private/tmp/ivin-rec/repo/.claude/worktrees/try-adopt”"),
+  })
+})
+
+test("ExitWorktree's result names the folder the agent is back in, last", () => {
+  const { result } = toolCallAndResult("exit-worktree", "ExitWorktree")
+
+  expect(result).toMatchObject({ isError: false })
+  expect(result?.type === "tool_result" && result.output).toMatch(
+    /Session is now back in “\/private\/tmp\/ivin-rec\/repo”\.$/,
+  )
+})
+
+test("git worktree add through Bash is a Bash tool call whose command creates the worktree", () => {
+  const { call, result } = toolCallAndResult("git-worktree-add", "Bash")
+
+  expect(call).toMatchObject({
+    input: { command: "git worktree add .worktrees/try-adopt -b try/adopt" },
+  })
+  expect(result).toMatchObject({ isError: false })
+})
+
+test("a git worktree add that fails gives a tool result flagged as an error", () => {
+  const { result } = toolCallAndResult("git-worktree-add-failed", "Bash")
+
+  expect(result).toMatchObject({
+    isError: true,
+    output: expect.stringContaining("a branch named 'try/adopt' already exists"),
+  })
 })

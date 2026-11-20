@@ -46,3 +46,14 @@ export const parseDivergence = (output: string) => {
   const [ahead = 0, behind = 0] = output.trim().split(/\s+/).map(Number)
   return { ahead, behind }
 }
+// Git prints resolved paths; a repository opened through a symlink keeps the path it was opened with.
+export const underOpenedPath = (
+  entries: readonly WorktreeEntry[],
+  opened: string,
+  resolved: string,
+): WorktreeEntry[] =>
+  entries.map((entry) =>
+    entry.path === resolved || entry.path.startsWith(`${resolved}/`)
+      ? { ...entry, path: opened + entry.path.slice(resolved.length) }
+      : entry,
+  )

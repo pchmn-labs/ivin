@@ -1,8 +1,10 @@
 import type {
   ApprovalNotOpen,
   CheckoutInUse,
+  CheckoutRefused,
   GitRefused,
   SessionAlreadyStarted,
+  SessionWorking,
   SessionNotFound,
   WorktreeFailure,
   WorktreeNotCreated,
@@ -103,4 +105,29 @@ export const checkoutFailure = (error: unknown, action: CheckoutAction): Checkou
     return { text: "This session no longer exists.", retryable: false, ...none }
   }
   return { text: NOT_DONE[action], retryable: true, ...none }
+}
+
+// `gitMessage` is shown under the text, because the user fixes the repository from it.
+export const pickBranchFailure = (
+  error: unknown,
+  branch: string,
+): ActionFailure & { readonly gitMessage: string | null } => {
+  if (isTag<CheckoutRefused>(error, "CheckoutRefused")) {
+    return {
+      text: `Git refused to check out ${branch}. Fix what it reports, then pick the branch again.`,
+      retryable: true,
+      gitMessage: (error as CheckoutRefused).gitMessage,
+    }
+  }
+  if (isTag<SessionWorking>(error, "SessionWorking")) {
+    return {
+      text: "The agent is working. Switch branches once it stops.",
+      retryable: true,
+      gitMessage: null,
+    }
+  }
+  if (isTag<SessionNotFound>(error, "SessionNotFound")) {
+    return { text: "This session no longer exists.", retryable: false, gitMessage: null }
+  }
+  return { text: `${branch} was not checked out.`, retryable: true, gitMessage: null }
 }

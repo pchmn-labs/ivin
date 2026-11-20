@@ -89,6 +89,17 @@ export const LocalChangesChoice = Schema.Union([
 ])
 export type LocalChangesChoice = typeof LocalChangesChoice.Type
 
+// A branch can only be picked while the agent is not running a turn.
+export class SessionWorking extends Schema.TaggedError<SessionWorking>()("SessionWorking", {
+  sessionId: Schema.String,
+}) {}
+
+export class CheckoutRefused extends Schema.TaggedError<CheckoutRefused>()("CheckoutRefused", {
+  sessionId: Schema.String,
+  // Git's own output, shown to the user, who fixes the repository from it.
+  gitMessage: Schema.String,
+}) {}
+
 export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.create", {
     payload: { projectPath: Schema.String, model: Schema.String },
@@ -119,6 +130,13 @@ export const SessionRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String, requestId: Schema.String, allow: Schema.Boolean },
     success: Session,
     error: Schema.Union([SessionNotFound, ApprovalNotOpen]),
+  }),
+  // A branch held by another worktree, the checkout included, moves the session there; a remote
+  // one (`origin/<name>`) is checked out as a tracking branch.
+  Rpc.make("session.pickBranch", {
+    payload: { sessionId: Schema.String, name: Schema.String, remote: Schema.Boolean },
+    success: Session,
+    error: Schema.Union([SessionNotFound, SessionWorking, CheckoutRefused]),
   }),
   // Stops the running turn; the agent keeps its process and the events received so far.
   Rpc.make("session.interrupt", {

@@ -32,6 +32,7 @@ export type IconName =
   | "arrows-left-right"
   | "panel-left"
   | "new-session"
+  | "search"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"

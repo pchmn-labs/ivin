@@ -22,6 +22,22 @@ export interface ApprovalDecision {
   readonly allow: boolean
 }
 
+export interface ToolUse {
+  readonly name: string
+  readonly input: unknown
+}
+
+export interface ToolOutcome {
+  readonly output: string
+}
+
+// What a successful tool call did to where the agent works.
+// `folder_switch`: the agent itself now works in `path`; `shell`: a command, which may create a worktree.
+export type ToolActivity =
+  | { readonly type: "folder_switch"; readonly path: string }
+  | { readonly type: "shell"; readonly command: string }
+  | { readonly type: "other"; readonly text: string }
+
 export interface HarnessRun {
   readonly events: Stream.Stream<HarnessOutput, HarnessError>
   readonly send: (message: UserMessage) => Effect.Effect<void, HarnessError>
@@ -34,5 +50,6 @@ export class HarnessProvider extends Context.Service<
   {
     readonly id: "claude" | "codex" | "acp" | "scripted"
     readonly start: (input: StartInput) => Effect.Effect<HarnessRun, HarnessError, Scope.Scope>
+    readonly toolActivity: (call: ToolUse, result: ToolOutcome) => ToolActivity
   }
 >()("ivin/harness/HarnessProvider") {}

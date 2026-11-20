@@ -12,6 +12,8 @@ import {
 import { logError } from "../../log/usecases/log-error.ts"
 import { ItemFeed } from "../../transcript/usecases/item-feed.ts"
 import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
+import { Git } from "../../worktree/usecases/git.ts"
+import { followAgentWorktree } from "./follow-agent-worktree.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionStore } from "./session-store.ts"
 
@@ -40,6 +42,9 @@ export class SessionRuns extends Context.Service<
 >()("ivin/server/SessionRuns") {}
 
 interface ActiveRun {
+  readonly cwd: string
+  readonly busy: () => boolean
+  readonly turnStarted: Effect.Effect<void>
   readonly record: (event: HarnessEvent, id?: string) => Effect.Effect<void>
   readonly send: (text: string) => Effect.Effect<void, HarnessError>
   readonly decide: (decision: ApprovalDecision) => Effect.Effect<void, ApprovalNotOpen>
@@ -56,6 +61,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
     const transcript = yield* TranscriptStore
     const feed = yield* ItemFeed
     const sessionFeed = yield* SessionFeed
+    const git = yield* Git
     const runs = new Map<string, ActiveRun>()
     const starting = yield* Semaphore.make(1)
 
@@ -182,7 +188,14 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           return Scope.close(scope, Exit.void)
         })
 
+        const follower = yield* followAgentWorktree(
+          session,
+          writer.record,
+          provider.toolActivity,
+        ).pipe(Effect.provideService(Git, git), Effect.provideService(SessionStore, sessions))
+
         let providerSessionId = storedProviderSessionId
+        let busy = false
         const handle = (output: HarnessOutput) => {
           if (output.type === "delta") return writer.stream(output)
           if (output.type === "provider_session") {
@@ -190,12 +203,14 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             providerSessionId = output.providerSessionId
             return sessions.setProviderSessionId(session.id, output.providerSessionId)
           }
+          if (output.type === "status") busy = output.status === "running"
           return writer
             .record(output)
             .pipe(
               Effect.andThen(
                 output.type === "status" ? writer.turnStatus(output.status) : Effect.void,
               ),
+              Effect.andThen(follower.observe(output)),
             )
         }
 
@@ -206,6 +221,9 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
         )
 
         const run: ActiveRun = {
+          cwd: session.workingFolder,
+          busy: () => busy,
+          turnStarted: follower.turnStarted,
           record: writer.record,
           send: (text) => harness.send({ text }),
           decide: writer.decide,
@@ -222,8 +240,12 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
       starting.withPermits(1)(
         Effect.suspend(() => {
           const existing = runs.get(session.id)
-          if (existing) return Effect.succeed(existing)
-          return makeWriter(session).pipe(
+          if (existing && (existing.cwd === session.workingFolder || existing.busy())) {
+            return Effect.succeed(existing)
+          }
+          // The session moved since the run started: its next turn resumes in the new folder.
+          return (existing?.end ?? Effect.void).pipe(
+            Effect.andThen(makeWriter(session)),
             Effect.flatMap((writer) =>
               startRun(session, writer).pipe(
                 Effect.catchTag("HarnessError", (error) =>
@@ -243,6 +265,8 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           yield* setStatus(session.id, "working")
           const run = yield* runOf(session, message)
           if (!run) return
+          // Mid-turn, a worktree the agent just made would be taken for one that was already there.
+          if (!run.busy()) yield* run.turnStarted
           yield* run.record({ type: "user_message", text: message.text, raw: null }, message.id)
           yield* run
             .send(message.text)

@@ -18,6 +18,13 @@ export class Git extends Context.Service<
       repo: string,
       worktree: { readonly path: string; readonly branch: string; readonly base: string },
     ) => Effect.Effect<void, GitError>
+    readonly checkout: (folder: string, branch: string) => Effect.Effect<void, GitError>
+    // `remote` is `origin/<name>`.
+    readonly checkoutTracking: (
+      folder: string,
+      remote: string,
+      branch: string,
+    ) => Effect.Effect<void, GitError>
     // Null outside a repository and on a detached HEAD.
     readonly currentBranch: (folder: string) => Effect.Effect<string | null>
     // Tracked files only: untracked ones survive a checkout unless git names them.
@@ -26,7 +33,6 @@ export class Git extends Context.Service<
     readonly stash: (folder: string, message: string) => Effect.Effect<void, GitError>
     // Untracked files stay out, as the user was never shown them.
     readonly commitTracked: (folder: string, message: string) => Effect.Effect<void, GitError>
-    readonly checkout: (folder: string, branch: string) => Effect.Effect<void, GitError>
     readonly fastForward: (folder: string, upstream: string) => Effect.Effect<void, GitError>
     readonly divergence: (
       folder: string,

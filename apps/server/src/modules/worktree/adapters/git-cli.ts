@@ -1,6 +1,12 @@
 import { Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
-import { parseBranches, parseDivergence, parseWorktreeList } from "../rules/git-output.ts"
+import { realpathSync } from "node:fs"
+import {
+  parseBranches,
+  parseDivergence,
+  parseWorktreeList,
+  underOpenedPath,
+} from "../rules/git-output.ts"
 import { Git, GitError } from "../usecases/git.ts"
 
 interface ExecFailure {
@@ -29,7 +35,9 @@ const orNull = <A>(effect: Effect.Effect<A, GitError>) =>
 
 export const layerGitCli = Layer.succeed(Git)({
   listWorktrees: (repo) =>
-    git(repo, ["worktree", "list", "--porcelain"]).pipe(Effect.map(parseWorktreeList)),
+    git(repo, ["worktree", "list", "--porcelain"]).pipe(
+      Effect.map((out) => underOpenedPath(parseWorktreeList(out), repo, realpathSync(repo))),
+    ),
   listBranches: (repo) =>
     git(repo, ["for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"]).pipe(
       Effect.map(parseBranches),
@@ -44,6 +52,10 @@ export const layerGitCli = Layer.succeed(Git)({
   createWorktree: (repo, { path, branch, base }) =>
     // `--no-track`: a push must never go to the default branch the worktree started from.
     git(repo, ["worktree", "add", "--no-track", "-b", branch, path, base]).pipe(Effect.asVoid),
+  checkout: (folder, branch) =>
+    git(folder, ["checkout", "--quiet", branch, "--"]).pipe(Effect.asVoid),
+  checkoutTracking: (folder, remote, branch) =>
+    git(folder, ["checkout", "--quiet", "--track", "-b", branch, remote, "--"]).pipe(Effect.asVoid),
   currentBranch: (folder) =>
     orNull(git(folder, ["symbolic-ref", "--quiet", "--short", "HEAD"])).pipe(
       Effect.map((out) => out?.trim() || null),
@@ -56,7 +68,6 @@ export const layerGitCli = Layer.succeed(Git)({
     git(folder, ["stash", "push", "--include-untracked", "-m", message]).pipe(Effect.asVoid),
   commitTracked: (folder, message) =>
     git(folder, ["commit", "--quiet", "--all", "-m", message]).pipe(Effect.asVoid),
-  checkout: (folder, branch) => git(folder, ["checkout", "--quiet", branch]).pipe(Effect.asVoid),
   fastForward: (folder, upstream) =>
     git(folder, ["merge", "--ff-only", "--quiet", upstream]).pipe(Effect.asVoid),
   divergence: (folder, branch, upstream) =>

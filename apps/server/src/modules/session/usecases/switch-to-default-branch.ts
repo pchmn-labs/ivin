@@ -30,7 +30,12 @@ export const switchToDefaultBranch = (sessionId: string, localChanges?: LocalCha
       if (!localChanges) return yield* new CheckoutHasLocalChanges({ sessionId })
       yield* git.commitTracked(checkout, localChanges.message).pipe(Effect.mapError(refused))
     }
-    yield* git.checkout(checkout, branch).pipe(
+    const { local } = yield* git.listBranches(checkout).pipe(Effect.mapError(refused))
+    yield* (
+      local.includes(branch)
+        ? git.checkout(checkout, branch)
+        : git.checkoutTracking(checkout, `origin/${branch}`, branch)
+    ).pipe(
       Effect.andThen(git.fastForward(checkout, `origin/${branch}`)),
       Effect.mapError(refused),
       // A fast-forward refused after the checkout still leaves the session on the new branch.

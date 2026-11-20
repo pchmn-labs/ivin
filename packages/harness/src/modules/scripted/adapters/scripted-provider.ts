@@ -7,6 +7,7 @@ import {
   type HarnessRun,
   type StartInput,
 } from "../../../shared/harness-provider.ts"
+import { toolActivity } from "../../claude/rules/tool-activity.ts"
 
 export interface ScriptedSend {
   readonly sessionId: string
@@ -63,6 +64,8 @@ export const layerScripted = (
     const played = new Map<string, number>()
     return {
       id: "scripted",
+      // Scripts replay recorded Claude output.
+      toolActivity,
       start: (input) =>
         Effect.gen(function* () {
           const { sessionId } = input
