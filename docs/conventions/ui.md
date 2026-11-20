@@ -29,14 +29,23 @@ packages/ui/src/
 - A mutation atom is named for the server use case it calls: `atoms/rename-session.ts` for `usecases/rename-session.ts`.
 - A module has the server's name for the subject.
 - A file that needs a mock to reach one of its functions holds two layers: split it.
+
+## Styles
+
 - A component's styles live in a `.css` file beside it, with `iv-` classes and `--iv-` tokens only; no inline `style`. A screen in `modules/<subject>/ui/` does the same. The one exception is `core/components/resize-handle`, which sets the size the user dragged as a custom property on its parent, for the parent's stylesheet to read.
+- A `var()` reads a `--iv-` token, or a variable the component library sets on its popups: `--available-height`, `--available-width`, `--transform-origin`.
+- `modules/` and `app/` use the `core/components` controls, not a native `<button>`, `<input>`, `<select>` or `<textarea>`. The exceptions are the files whose controls no core component draws yet (the tabs, the project rail, the composer's triggers, the image thumbnails…), listed in the `.oxlintrc.json` override that turns `react/forbid-elements` off.
+
+## Colour
+
+Every colour is a `--iv-` token, or `color-mix()` on one, with one exception: a harness mark keeps its brand colour (in `core/components/harness-mark/harness-mark.css`).
+
+## Checked by `pnpm lint`
+
+The rules of Styles and Colour fail `pnpm lint` in `packages/ui/src`, test files left out: Stylelint checks the CSS (`.stylelintrc.json`), Oxlint the TSX (`.oxlintrc.json`), and `tools/lint-rules/ui-styles.test.ts` tests both. An exception goes in the config and its test, not only in this file.
 
 ## Tests
 
 - `rules/`: called directly.
 - `atoms/`: in an atom registry, with a fake RPC client.
 - `hooks/` and `ui/`: Vitest browser mode, with the same fake RPC client.
-
-## Colour
-
-Every colour is a `--iv-` token, with one exception: a harness mark keeps its brand colour (in `core/components/harness-mark/harness-mark.css`).
