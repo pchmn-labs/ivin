@@ -37,8 +37,7 @@ export const HarnessRunOptions = Schema.Struct({
 })
 export type HarnessRunOptions = typeof HarnessRunOptions.Type
 
-// The first turn after a change of run options failed. `previous`: the options of the last turn that worked;
-// `message`: the text of the message that turn was sent with.
+// `message`: the text the failed turn was sent with, for the composer to put back.
 export const RelaunchFailure = Schema.Struct({ previous: RunOptions, message: Schema.String })
 export type RelaunchFailure = typeof RelaunchFailure.Type
 
@@ -196,7 +195,6 @@ export const SessionRpcs = RpcGroup.make(
     success: Session,
     error: Schema.Union([SessionNotFound, WorktreeNotCreated, WorkingFolderDeleted]),
   }),
-  // Applies from the next message: a running turn finishes with the options it started with.
   Rpc.make("session.setRunOptions", {
     payload: {
       sessionId: Schema.String,

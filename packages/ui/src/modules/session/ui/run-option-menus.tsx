@@ -1,5 +1,5 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { RunOption, Session } from "@ivin/contracts/session"
+import { useAtomValue } from "@effect/atom-react"
+import type { RunOption, RunOptions, Session } from "@ivin/contracts/session"
 import { AsyncResult } from "effect/reactivity"
 import { useState } from "react"
 import {
@@ -10,32 +10,44 @@ import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { getHarnessAtom } from "../../server/atoms/get-harness.ts"
-import { setRunOptionsAtom } from "../atoms/set-run-options.ts"
 import { HARNESSES } from "../rules/harnesses.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { RUN_OPTION_LABELS, RUN_OPTIONS, offeredValues } from "../rules/run-options.ts"
 import "./run-option-menus.css"
 
-export const RUN_OPTION_COMMANDS: Record<RunOption, string> = {
+const RUN_OPTION_COMMANDS: Record<RunOption, string> = {
   model: "composer.chooseModel",
   effort: "composer.chooseEffort",
   permissionMode: "composer.choosePermissionMode",
 }
 
-export function RunOptionMenus({ session }: { session: Session }) {
+export function RunOptionMenus({
+  session,
+  onChange,
+}: {
+  session: Session
+  onChange: (options: Partial<RunOptions>) => void
+}) {
   return (
     <span className="iv-run-option-menus">
       {RUN_OPTIONS.map((option) => (
-        <RunOptionMenu key={option} session={session} option={option} />
+        <RunOptionMenu key={option} session={session} option={option} onChange={onChange} />
       ))}
     </span>
   )
 }
 
-function RunOptionMenu({ session, option }: { session: Session; option: RunOption }) {
+function RunOptionMenu({
+  session,
+  option,
+  onChange,
+}: {
+  session: Session
+  option: RunOption
+  onChange: (options: Partial<RunOptions>) => void
+}) {
   const [open, setOpen] = useState(false)
   const harness = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
-  const setRunOptions = useAtomSet(setRunOptionsAtom)
   useCommandHandler(RUN_OPTION_COMMANDS[option], () => setOpen(true))
   const current = session[option]
   const offered = harness?.id === session.harness ? harness.runOptions : null
@@ -62,11 +74,7 @@ function RunOptionMenu({ session, option }: { session: Session; option: RunOptio
       ]}
       onPick={(value) => {
         if (value === current) return
-        setRunOptions({
-          projectPath: session.projectPath,
-          sessionId: session.id,
-          options: { [option]: value },
-        })
+        onChange({ [option]: value })
       }}
       trigger={
         <button
@@ -82,7 +90,7 @@ function RunOptionMenu({ session, option }: { session: Session; option: RunOptio
       }
     >
       {isRunning(session.status) && (
-        <ComposerMenuNote>Applies from the next message.</ComposerMenuNote>
+        <ComposerMenuNote>Applies once the agent finishes this turn.</ComposerMenuNote>
       )}
     </ComposerMenu>
   )

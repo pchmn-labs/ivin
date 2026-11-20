@@ -731,13 +731,13 @@ test("keyboard only: open the effort menu, move to low and pick it, with focus b
   await expect.element(page.getByRole("combobox", { name: "Effort: low" })).toHaveFocus()
 })
 
-test("while the agent works, a run option menu says the change applies from the next message", async () => {
+test("while the agent works, a run option menu says the change waits for the end of the turn", async () => {
   await mountSession("working")
   await page.getByRole("combobox", { name: "Model: sonnet" }).click()
-  await expect.element(page.getByText("Applies from the next message.")).toBeVisible()
+  await expect.element(page.getByText("Applies once the agent finishes this turn.")).toBeVisible()
 })
 
-test("a failed relaunch shows why under the composer, puts the message back and offers the previous model", async () => {
+test("a failed relaunch shows why above the composer, puts the message back and offers the previous model", async () => {
   const server = await mountSession("idle")
   await page.getByRole("combobox", { name: "Model: sonnet" }).click()
   await page.getByTestId("run-option-model-haiku").click()
@@ -760,4 +760,21 @@ test("a failed relaunch shows why under the composer, puts the message back and 
   await expect.element(page.getByRole("combobox", { name: "Model: sonnet" })).toBeVisible()
   await expect.element(alert).not.toBeInTheDocument()
   await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveValue("fix the tests")
+})
+
+test("a model change the server did not take goes back, says so above the composer and retries", async () => {
+  const server = await mountSession("idle")
+  server.failNextCall("session.setRunOptions")
+  await page.getByRole("combobox", { name: "Model: sonnet" }).click()
+  await page.getByTestId("run-option-model-opus").click()
+
+  const alert = page.getByTestId("composer-alert")
+  await vi.waitFor(() =>
+    expect(alert.element().textContent).toContain("The model was not changed."),
+  )
+  await expect.element(page.getByRole("combobox", { name: "Model: sonnet" })).toBeVisible()
+
+  await alert.getByRole("button", { name: "Retry" }).click()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.model).toBe("opus"))
+  await expect.element(alert).not.toBeInTheDocument()
 })

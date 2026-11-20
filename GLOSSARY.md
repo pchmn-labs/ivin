@@ -27,7 +27,7 @@ _Avoid_: conversation, chat, thread
 The agent CLI a session runs on: Claude Code, Codex or an ACP agent.
 
 **Run options**:
-The model, effort and permission mode a session's agent runs with, chosen from the values its harness offers. A change applies from the next message; a turn already running keeps the options it started with.
+The model, effort and permission mode a session's agent runs with, chosen from the values its harness offers. A change applies from the next message; a turn already running keeps the options it started with. When the first turn after a change fails, the session carries a **relaunch failure**, which offers the options that last worked.
 _Avoid_: settings (the word for ivin's own settings file)
 
 **Transcript**:

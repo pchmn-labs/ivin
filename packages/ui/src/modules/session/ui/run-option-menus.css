@@ -8,9 +8,9 @@
 .iv-run-option-menus__trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--iv-space-1);
   min-width: 0;
-  height: 24px;
+  height: var(--iv-control-sm);
   padding: 0 var(--iv-space-2);
   border: 0;
   border-radius: var(--iv-radius-sm);
@@ -47,7 +47,7 @@
 
 .iv-run-option-menus__value {
   overflow: hidden;
-  max-width: 160px;
+  max-width: calc(4 * var(--iv-space-10));
   text-overflow: ellipsis;
   white-space: nowrap;
 }

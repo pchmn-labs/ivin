@@ -1,5 +1,5 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { Session } from "@ivin/contracts/session"
+import type { RunOptions, Session } from "@ivin/contracts/session"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import { Cause, Exit } from "effect"
 import { useEffect, useRef, useState } from "react"
@@ -7,7 +7,10 @@ import { Slot } from "../../../app/slot-renderer.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { IconButton } from "../../../core/components/button/button.tsx"
-import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
+import {
+  ErrorMessage,
+  type ErrorMessageProps,
+} from "../../../core/components/error-message/error-message.tsx"
 import { Stack } from "../../../core/components/stack/stack.tsx"
 import { TextArea } from "../../../core/components/text-field/text-field.tsx"
 import { BranchPicker } from "./branch-picker.tsx"
@@ -23,7 +26,7 @@ import { HARNESSES } from "../rules/harnesses.ts"
 import { goBackLabel, relaunchFailureText } from "../rules/run-options.ts"
 import { setRunOptionsAtom } from "../atoms/set-run-options.ts"
 import { isRunning } from "../rules/is-running.ts"
-import { sendMessageFailure } from "../rules/failure-message.ts"
+import { sendMessageFailure, setRunOptionsFailure } from "../rules/failure-message.ts"
 import { statusLabel } from "../rules/status-label.ts"
 import { sendMessageAtom } from "../atoms/send-message.ts"
 import "./composer.css"
@@ -40,7 +43,10 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const preparing = session?.status === "preparing_worktree"
   const choosing = session !== undefined && !session.started && !preparing
   const harness = session && HARNESSES[session.harness]
-  const setRunOptions = useAtomSet(setRunOptionsAtom)
+  const setRunOptions = useAtomSet(setRunOptionsAtom, { mode: "promiseExit" })
+  const [optionsFailure, setOptionsFailure] = useState<
+    (ActionFailure & { options: Partial<RunOptions> }) | null
+  >(null)
   const relaunchFailure = session?.relaunchFailure ?? null
   const relaunchFailureKey = relaunchFailure && JSON.stringify(relaunchFailure)
 
@@ -48,6 +54,14 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     if (relaunchFailure === null) return
     setText((current) => (current === "" ? relaunchFailure.message : current))
   }, [relaunchFailureKey])
+
+  const changeRunOptions = (options: Partial<RunOptions>) => {
+    setOptionsFailure(null)
+    void setRunOptions({ projectPath, sessionId, options }).then((exit) => {
+      if (Exit.isSuccess(exit) || Cause.hasInterruptsOnly(exit.cause)) return
+      setOptionsFailure({ options, ...setRunOptionsFailure(Cause.squash(exit.cause), options) })
+    })
+  }
 
   const sendText = (message: string) => {
     if (preparing) return
@@ -78,27 +92,31 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     target instanceof HTMLTextAreaElement &&
     target.closest(".iv-composer") === root.current
 
-  const alert = failure ? (
+  const shown: ErrorMessageProps | null = failure
+    ? {
+        message: failure.text,
+        ...(failure.retryable && { onRetry: () => sendText(failure.message) }),
+      }
+    : optionsFailure
+      ? {
+          message: optionsFailure.text,
+          ...(optionsFailure.retryable && {
+            onRetry: () => changeRunOptions(optionsFailure.options),
+          }),
+        }
+      : session && relaunchFailure
+        ? {
+            message: relaunchFailureText(session, relaunchFailure.previous),
+            action: {
+              label: goBackLabel(session, relaunchFailure.previous),
+              onSelect: () => changeRunOptions(relaunchFailure.previous),
+            },
+          }
+        : null
+  const alert = shown && (
     <div className="iv-composer__alert" data-testid="composer-alert">
-      <ErrorMessage
-        message={failure.text}
-        {...(failure.retryable && { onRetry: () => sendText(failure.message) })}
-      />
+      <ErrorMessage {...shown} />
     </div>
-  ) : (
-    session &&
-    relaunchFailure && (
-      <div className="iv-composer__alert" data-testid="composer-alert">
-        <ErrorMessage
-          message={relaunchFailureText(session, relaunchFailure.previous)}
-          action={{
-            label: goBackLabel(session, relaunchFailure.previous),
-            onSelect: () =>
-              setRunOptions({ projectPath, sessionId, options: relaunchFailure.previous }),
-          }}
-        />
-      </div>
-    )
   )
   const statusLine = (
     <div className="iv-composer__statusline">
@@ -134,7 +152,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         />
         <Stack direction="row" align="center" justify="between" gap={2}>
           <Stack direction="row" align="center" gap={3}>
-            {session && <RunOptionMenus session={session} />}
+            {session && <RunOptionMenus session={session} onChange={changeRunOptions} />}
           </Stack>
           {session && (
             // The state shows on the session mark; screen readers hear it from here.
