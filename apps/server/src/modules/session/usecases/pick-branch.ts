@@ -42,8 +42,6 @@ export const pickBranch = (sessionId: string, name: string, remote: boolean) =>
     }
 
     const path = pick.kind === "move" ? pick.path : session.workingFolder
-    // The agent's process keeps the folder it started in, so the next turn starts a new one there.
-    if (path !== session.workingFolder) yield* runs.stop(sessionId)
     yield* store.setWorkingFolder(sessionId, path, pick.branch)
     yield* runs.record(session, {
       type: "working_folder",
