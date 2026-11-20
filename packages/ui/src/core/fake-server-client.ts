@@ -386,7 +386,7 @@ export const makeFakeServer = (
         if (!session) return Effect.fail(new SessionNotFound({ sessionId }))
         for (const option of ["model", "effort", "permissionMode"] as const) {
           const to = requested[option]
-          if (to === undefined || to === session[option]) continue
+          if (to === undefined || to === session[option] || !session.started) continue
           const items = itemsOf(sessionId)
           publish({
             id: `run-option-${nextId++}`,

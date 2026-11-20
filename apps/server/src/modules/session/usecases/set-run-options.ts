@@ -23,9 +23,11 @@ export const setRunOptions = (sessionId: string, requested: Partial<RunOptions>)
     }
     if (found.relaunchFailure !== null) yield* store.setRelaunchFailure(sessionId, null)
     const session = (yield* store.findById(sessionId)) ?? found
-    yield* Effect.forEach(changes, (change) =>
-      runs.record(session, { type: "run_option", ...change, raw: null }),
-    )
+    if (found.started) {
+      yield* Effect.forEach(changes, (change) =>
+        runs.record(session, { type: "run_option", ...change, raw: null }),
+      )
+    }
     yield* feed.publish(sessionId)
     return session
   })
