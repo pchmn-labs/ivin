@@ -13,7 +13,8 @@ export class FetchTimedOut extends Data.TaggedError("FetchTimedOut")<{}> {
 export class OriginFetch extends Context.Service<
   OriginFetch,
   {
-    readonly fetch: (repo: string) => Effect.Effect<void, GitError | FetchTimedOut>
+    // No-op when the last fetch of `repo` is younger than `reuseMs`.
+    readonly fetch: (repo: string, reuseMs: number) => Effect.Effect<void, GitError | FetchTimedOut>
   }
 >()("ivin/server/OriginFetch") {}
 
@@ -22,9 +23,9 @@ export const layerOriginFetch = Layer.effect(OriginFetch)(
     const git = yield* Git
     const lastFetchAt = new Map<string, number>()
     return {
-      fetch: (repo) =>
+      fetch: (repo, reuseMs) =>
         Effect.gen(function* () {
-          if (isFetchRecent(lastFetchAt.get(repo), yield* Clock.currentTimeMillis)) return
+          if (isFetchRecent(lastFetchAt.get(repo), yield* Clock.currentTimeMillis, reuseMs)) return
           yield* git.fetch(repo, "origin").pipe(
             Effect.timeoutOrElse({
               duration: FETCH_TIMEOUT,

@@ -14,6 +14,7 @@ import { answerApproval } from "../modules/session/usecases/answer-approval.ts"
 import { interruptSession } from "../modules/session/usecases/interrupt-session.ts"
 import { createSession } from "../modules/session/usecases/create-session.ts"
 import { listSessions } from "../modules/session/usecases/list-sessions.ts"
+import { pickBranch } from "../modules/session/usecases/pick-branch.ts"
 import { renameSession } from "../modules/session/usecases/rename-session.ts"
 import { sendMessage } from "../modules/session/usecases/send-message.ts"
 import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
@@ -32,6 +33,7 @@ import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
 import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
+import { listBranches } from "../modules/worktree/usecases/list-branches.ts"
 import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
@@ -89,6 +91,7 @@ export const handlers = Rpcs.toLayer(
         sendMessage(sessionId, messageId, text, workingFolder),
       "session.answerApproval": ({ sessionId, requestId, allow }) =>
         answerApproval(sessionId, requestId, allow),
+      "session.pickBranch": ({ sessionId, name, remote }) => pickBranch(sessionId, name, remote),
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
       "session.watch": ({ projectPath }) => watchSessions(projectPath),
       "worktree.list": ({ projectPath }) => listWorktrees(projectPath),
@@ -97,6 +100,7 @@ export const handlers = Rpcs.toLayer(
           // Git fails outside a repository, where no worktree can start.
           Effect.orElseSucceed(() => null),
         ),
+      "worktree.listBranches": ({ projectPath }) => listBranches(projectPath),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

@@ -44,6 +44,12 @@ export const layerGitCli = Layer.succeed(Git)({
   createWorktree: (repo, { path, branch, base }) =>
     // `--no-track`: a push must never go to the default branch the worktree started from.
     git(repo, ["worktree", "add", "--no-track", "-b", branch, path, base]).pipe(Effect.asVoid),
+  checkout: (folder, branch) =>
+    git(folder, ["checkout", "--quiet", branch, "--"]).pipe(Effect.asVoid),
+  checkoutTracking: (folder, remote, branch) =>
+    git(folder, ["checkout", "--quiet", "--track", "-b", branch, remote, "--"]).pipe(
+      Effect.asVoid,
+    ),
   currentBranch: (folder) =>
     orNull(git(folder, ["symbolic-ref", "--quiet", "--short", "HEAD"])).pipe(
       Effect.map((out) => out?.trim() || null),
