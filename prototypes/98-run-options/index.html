@@ -71,7 +71,14 @@ button { color: inherit; font: inherit; }
 .menu.columns { width: 560px; max-height: none; }
 .menu.columns .menu-viewport { display: grid; grid-template-columns: 1fr 1fr 1.5fr; gap: var(--iv-space-1); }
 .menu.columns .menu-group + .menu-group { margin-top: 0; padding-top: 0; border-top: 0; padding-left: var(--iv-space-1); border-left: 1px solid var(--iv-border); }
-.menu.columns .menu-note { grid-column: 1 / -1; border-top: 1px solid var(--iv-border); }
+.menu.columns .menu-viewport { overflow: visible; }
+.menu.columns .menu-group { max-height: 236px; overflow-y: auto; }
+.menu.columns .menu-group .menu-note { min-height: 0; padding: var(--iv-space-1) var(--iv-space-2); font-size: var(--iv-text-xs); }
+.menu.columns > .menu-viewport > .menu-note { grid-column: 1 / -1; border-top: 1px solid var(--iv-border); }
+.menu-heading { position: sticky; top: 0; z-index: 1; background: var(--iv-bg-raised); }
+.menu-subheading { position: static; margin-top: var(--iv-space-1); border-top: 1px solid var(--iv-border); padding-top: var(--iv-space-2); }
+.menu-item[aria-disabled="true"] { color: var(--iv-text-faint); }
+.menu-item[aria-disabled="true"][data-highlighted] { background: transparent; }
 .menu-foot { display: flex; align-items: center; justify-content: space-between; gap: var(--iv-space-2); padding: 6px var(--iv-space-3); border-top: 1px solid var(--iv-border); color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
 .kbd { font-family: var(--iv-font-mono); }
 
@@ -230,18 +237,39 @@ button { color: inherit; font: inherit; }
 </nav>
 
 <script>
+const ALL_EFFORTS = ["low", "medium", "high", "xhigh", "max"]
+const NO_XHIGH = ["low", "medium", "high", "max"]
+// Verbatim from Claude Code's initialize response, minus "default".
+const MODELS = [
+  { value: "opus", name: "Opus 5.5", description: "For complex work and everyday tasks", efforts: ALL_EFFORTS },
+  { value: "fable", name: "Fable 5.2", description: "For your toughest challenges", efforts: ALL_EFFORTS },
+  { value: "sonnet", name: "Sonnet 5.5", description: "Most efficient for simpler tasks", efforts: ALL_EFFORTS },
+  { value: "haiku", name: "Haiku 5.5", description: "Fastest for quick answers", efforts: ALL_EFFORTS },
+  { value: "claude-fable-5-1", name: "Fable 5.1", description: "Most capable for your hardest and longest-running tasks", efforts: ALL_EFFORTS, older: true },
+  { value: "claude-haiku-4-5-20251001", name: "Haiku 4.5", description: "Fastest for quick answers", efforts: [], older: true },
+  { value: "claude-sonnet-5", name: "Sonnet 5", description: "Efficient for routine tasks", efforts: ALL_EFFORTS, older: true },
+  { value: "claude-opus-5", name: "Opus 5", description: "Best for everyday, complex tasks", efforts: ALL_EFFORTS, older: true },
+  { value: "claude-fable-5", name: "Fable 5", description: "Most capable for your hardest and longest-running tasks", efforts: ALL_EFFORTS, older: true },
+  { value: "claude-opus-4-8", name: "Opus 4.8", description: "Best for everyday, complex tasks", efforts: ALL_EFFORTS, older: true },
+  { value: "claude-opus-4-7", name: "Opus 4.7", description: "Best for everyday, complex tasks", efforts: ALL_EFFORTS, older: true },
+  { value: "claude-opus-4-6", name: "Opus 4.6", description: "Best for everyday, complex tasks", efforts: NO_XHIGH, older: true },
+  { value: "claude-sonnet-4-6", name: "Sonnet 4.6", description: "Efficient for routine tasks", efforts: NO_XHIGH, older: true },
+]
+const modelOf = (value) => MODELS.find((m) => m.value === value)
+const FIRST_OLDER = MODELS.find((m) => m.older).value
 const OFFERED = {
-  model: ["fable", "opus", "sonnet", "haiku"],
+  model: MODELS.map((m) => m.value),
   effort: ["low", "medium", "high", "xhigh", "max"],
   permissionMode: ["manual", "acceptEdits", "auto", "dontAsk", "plan", "bypassPermissions"],
 }
 const LABEL = { model: "Model", effort: "Effort", permissionMode: "Permissions" }
 const NAME = {
-  fable: "Fable", opus: "Opus", sonnet: "Sonnet", haiku: "Haiku",
+  ...Object.fromEntries(MODELS.map((m) => [m.value, m.name])),
   low: "Low", medium: "Medium", high: "High", xhigh: "Extra high", max: "Max",
   manual: "Manual", acceptEdits: "Accept edits", auto: "Auto", dontAsk: "Don't ask", plan: "Plan", bypassPermissions: "Bypass permissions",
 }
 const name = (v) => NAME[v] ?? v
+const effortDisabled = (model, effort) => !modelOf(model).efforts.includes(effort)
 const HINTS = {
   manual: "Asks before edits and commands", acceptEdits: "Edits without asking", auto: "A classifier decides",
   dontAsk: "Denies what is not allowed", plan: "Reads and plans, changes nothing", bypassPermissions: "Never asks",
@@ -285,6 +313,11 @@ function setOption(option, value) {
   if (from === value) return
   state.opts = { ...state.opts, [option]: value }
   state.changes = [...state.changes, { option, from, to: value }]
+  const efforts = modelOf(state.opts.model).efforts
+  if (option === "model" && efforts.length && !efforts.includes(state.opts.effort)) {
+    const lower = ALL_EFFORTS.slice(0, ALL_EFFORTS.indexOf(state.opts.effort)).reverse().find((e) => efforts.includes(e))
+    setOption("effort", lower)
+  }
   if (state.previous && OPTIONS.every((o) => state.opts[o] === state.previous[o])) state.previous = null
 }
 
@@ -338,15 +371,18 @@ function menuHtml(which) {
       ${g.label ? `<div class="menu-heading">${g.label}</div>` : ""}
       ${g.values.map((v) => {
         const i = index++
+        const sub = g.option === "model" && v === FIRST_OLDER ? `<div class="menu-heading menu-subheading">Older models</div>` : ""
+        const disabled = g.option === "effort" && effortDisabled(state.opts.model, v)
         const hint = g.option === "permissionMode" && state.variant !== 1 ? `<span class="menu-hint">${HINTS[v]}</span>` : ""
-        return `<div class="menu-item" role="option" data-index="${i}" ${i === state.highlight ? "data-highlighted" : ""} aria-selected="${state.opts[g.option] === v}">
+        return `${sub}<div class="menu-item" role="option" data-index="${i}" ${i === state.highlight ? "data-highlighted" : ""} ${disabled ? 'aria-disabled="true"' : ""} aria-selected="${state.opts[g.option] === v}">
           <span class="menu-label">${name(v)}</span>${hint}
-          <span class="menu-check">${state.opts[g.option] === v ? svg.check : ""}</span></div>`
+          <span class="menu-check">${state.opts[g.option] === v && !disabled ? svg.check : ""}</span></div>`
       }).join("")}
+      ${g.option === "effort" && !modelOf(state.opts.model).efforts.length ? `<div class="menu-note">${name(state.opts.model)} has no effort setting.</div>` : ""}
     </div>`).join("")
   const note = state.scenario === "working" ? `<div class="menu-note">Applies once the agent finishes this turn.</div>` : ""
   const lit = flatItems(which)[state.highlight]
-  const hint = lit?.option === "permissionMode" ? HINTS[lit.value] : "Applies to this session"
+  const hint = lit?.option === "permissionMode" ? HINTS[lit.value] : lit?.option === "model" ? modelOf(lit.value).description : "Applies to this session"
   const foot = which === "all" ? `<div class="menu-foot"><span>${hint}</span><span><span class="kbd">←↑↓→</span> move · <span class="kbd">↵</span> pick · <span class="kbd">esc</span> close</span></div>` : ""
   return `<div class="menu ${which === "all" ? "columns" : ""}" role="listbox" aria-label="${which === "all" ? "Run options" : LABEL[which]}"><div class="menu-viewport">${groups}${note}</div>${foot}</div>`
 }
@@ -372,7 +408,7 @@ function failureWhat() {
 /* ---------- 2 · One summary ---------- */
 function v2Controls() {
   return `<span class="anchor"><button class="trigger summary" data-key="trigger-all" data-menu="all" ${state.menu === "all" ? "data-open" : ""} aria-label="Run options: ${OPTIONS.map((o) => name(state.opts[o])).join(", ")}" aria-haspopup="listbox" aria-expanded="${state.menu === "all"}">
-    ${svg.claude()}${name(state.opts.model)} <span class="sep">·</span> ${name(state.opts.effort)} <span class="sep">·</span> <span ${state.previous ? 'style="color:var(--iv-danger)"' : ""}>${name(state.opts.permissionMode)}</span>${svg.chev}
+    ${svg.claude()}${name(state.opts.model)} <span class="sep">·</span> ${modelOf(state.opts.model).efforts.length ? `${name(state.opts.effort)} <span class="sep">·</span>` : ""} <span ${state.previous ? 'style="color:var(--iv-danger)"' : ""}>${name(state.opts.permissionMode)}</span>${svg.chev}
   </button>${state.menu === "all" ? menuHtml("all") : ""}</span>`
 }
 
@@ -434,6 +470,7 @@ function render() {
   const t = stage.querySelector(".transcript")
   t.scrollTop = scroll ?? t.scrollHeight
   if (state.changes.length) t.scrollTop = t.scrollHeight
+  stage.querySelector(".menu-item[data-highlighted]")?.scrollIntoView({ block: "nearest" })
   if (state.focus) {
     const el = stage.querySelector(`[data-key="${state.focus}"]`)
     el?.focus()
@@ -459,6 +496,7 @@ function closeMenu(refocus = true) {
 function pick(index) {
   const which = state.menu
   const item = flatItems(which)[index]
+  if (item.option === "effort" && effortDisabled(state.opts.model, item.value)) return
   setOption(item.option, item.value)
   if (which === "all") {
     state.highlight = index
@@ -505,7 +543,12 @@ stage.addEventListener("keydown", (e) => {
       state.highlight = items.findIndex((it) => it.option === next && it.value === value)
       state.focus = "trigger-all"; render()
     }
-    else if (e.key in keys) { state.highlight = (state.highlight + keys[e.key] + count) % count; state.focus = `trigger-${state.menu}`; render() }
+    else if (e.key in keys) {
+      const items = flatItems(state.menu)
+      const usable = (i) => !(items[i].option === "effort" && effortDisabled(state.opts.model, items[i].value))
+      let next = state.highlight
+      do next = (next + keys[e.key] + count) % count; while (!usable(next) && next !== state.highlight)
+      state.highlight = next; state.focus = `trigger-${state.menu}`; render() }
     else if (e.key === "Home") { state.highlight = 0; state.focus = `trigger-${state.menu}`; render() }
     else if (e.key === "End") { state.highlight = count - 1; state.focus = `trigger-${state.menu}`; render() }
     else if (e.key === "Enter" || e.key === " ") pick(state.highlight)
