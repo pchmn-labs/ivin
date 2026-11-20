@@ -31,8 +31,16 @@ export const Session = Schema.Struct({
   statusChangedAt: Schema.DateTimeUtcFromMillis,
   createdAt: Schema.DateTimeUtcFromMillis,
   lastActivityAt: Schema.DateTimeUtcFromMillis,
+  archivedAt: Schema.NullOr(Schema.DateTimeUtcFromMillis),
 })
 export type Session = typeof Session.Type
+
+// `removed`: the session was archived or deleted.
+export const SessionChange = Schema.Union([
+  Schema.TaggedStruct("changed", { session: Session }),
+  Schema.TaggedStruct("removed", { sessionId: Schema.String, projectPath: Schema.String }),
+])
+export type SessionChange = typeof SessionChange.Type
 
 export class SessionNotFound extends Schema.TaggedError<SessionNotFound>()("SessionNotFound", {
   sessionId: Schema.String,
@@ -119,6 +127,27 @@ export const SessionRpcs = RpcGroup.make(
     payload: { projectPath: Schema.String },
     success: Schema.Array(Session),
   }),
+  // Most recently archived first.
+  Rpc.make("session.listArchived", {
+    payload: { projectPath: Schema.String },
+    success: Schema.Array(Session),
+  }),
+  // Stops the agent and closes the session's tab.
+  Rpc.make("session.archive", {
+    payload: { sessionId: Schema.String },
+    error: SessionNotFound,
+  }),
+  // The session comes back with no tab.
+  Rpc.make("session.restore", {
+    payload: { sessionId: Schema.String },
+    success: Session,
+    error: SessionNotFound,
+  }),
+  // Stops the agent, closes the session's tab and erases the session with its transcript.
+  Rpc.make("session.delete", {
+    payload: { sessionId: Schema.String },
+    error: SessionNotFound,
+  }),
   Rpc.make("session.rename", {
     payload: { sessionId: Schema.String, title: Schema.String },
     success: Session,
@@ -178,10 +207,11 @@ export const SessionRpcs = RpcGroup.make(
     success: Session,
     error: Schema.Union([SessionNotFound, SessionAlreadyStarted, CheckoutInUse, GitRefused]),
   }),
-  // First every session of the project, read after the server subscribed; then each change.
+  // First every session of the project but the archived ones, read after the server subscribed;
+  // then each change.
   Rpc.make("session.watch", {
     payload: { projectPath: Schema.String },
-    success: Session,
+    success: SessionChange,
     stream: true,
   }),
 )

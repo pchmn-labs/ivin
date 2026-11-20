@@ -37,6 +37,7 @@ const mountApp = async (
       statusChangedAt: at,
       createdAt: at,
       lastActivityAt: at,
+      archivedAt: null,
     })
   }
   server.openTab("s1")

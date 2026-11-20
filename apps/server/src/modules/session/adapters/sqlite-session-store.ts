@@ -17,6 +17,7 @@ interface SessionRow {
   status_changed_at: number
   created_at: number
   last_activity_at: number
+  archived_at: number | null
 }
 
 const toSession = (row: SessionRow): Session => ({
@@ -34,10 +35,11 @@ const toSession = (row: SessionRow): Session => ({
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
   createdAt: DateTime.makeUnsafe(row.created_at),
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
+  archivedAt: row.archived_at === null ? null : DateTime.makeUnsafe(row.archived_at),
 })
 
 const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model, status,
-  status_changed_at, created_at, last_activity_at, EXISTS (
+  status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
   ) AS started`
 
@@ -137,6 +139,29 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             DateTime.toEpochMillis(at),
             id,
           )
+        }),
+      setArchivedAt: (id, at) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET archived_at = ? WHERE id = ?").run(
+            at === null ? null : DateTime.toEpochMillis(at),
+            id,
+          )
+        }),
+      delete: (id) =>
+        Effect.sync(() => {
+          db.exec("BEGIN IMMEDIATE")
+          try {
+            db.prepare("DELETE FROM transcript_events WHERE session_id = ?").run(id)
+            db.prepare("DELETE FROM tabs WHERE session_id = ?").run(id)
+            db.prepare(
+              "UPDATE open_projects SET selected_session_id = NULL WHERE selected_session_id = ?",
+            ).run(id)
+            db.prepare("DELETE FROM sessions WHERE id = ?").run(id)
+            db.exec("COMMIT")
+          } catch (error) {
+            db.exec("ROLLBACK")
+            throw error
+          }
         }),
     }
   }),

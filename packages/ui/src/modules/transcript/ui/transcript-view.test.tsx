@@ -44,6 +44,7 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
+    archivedAt: null,
   })
 
   await render(

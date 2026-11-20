@@ -632,6 +632,8 @@ test("watching a project's sessions streams each status and title change", async
       const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
       yield* client["session.create"]({ projectPath: "/other", model: "sonnet" })
       const watching = yield* client["session.watch"]({ projectPath: "/p" }).pipe(
+        Stream.filter((change) => change._tag === "changed"),
+        Stream.map((change) => change.session),
         Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
         Stream.runCollect,
         Effect.forkChild,
@@ -653,6 +655,8 @@ test("a session's status keeps the time it changed until it changes again", asyn
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p", model: "sonnet" })
       const watching = yield* client["session.watch"]({ projectPath: "/p" }).pipe(
+        Stream.filter((change) => change._tag === "changed"),
+        Stream.map((change) => change.session),
         Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
         Stream.runCollect,
         Effect.forkChild,
@@ -778,6 +782,8 @@ test("watching a project's sessions starts with every current session of the pro
       yield* client["session.create"]({ projectPath: "/other", model: "sonnet" })
       return {
         current: yield* client["session.watch"]({ projectPath: "/p" }).pipe(
+          Stream.filter((change) => change._tag === "changed"),
+          Stream.map((change) => change.session),
           Stream.take(2),
           Stream.runCollect,
         ),

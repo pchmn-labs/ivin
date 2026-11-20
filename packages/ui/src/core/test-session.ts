@@ -19,5 +19,6 @@ export const makeTestSession = (
   statusChangedAt: DateTime.makeUnsafe(0),
   createdAt: DateTime.makeUnsafe(0),
   lastActivityAt: DateTime.makeUnsafe(0),
+  archivedAt: null,
   ...session,
 })

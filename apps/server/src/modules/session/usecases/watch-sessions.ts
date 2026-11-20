@@ -1,14 +1,16 @@
+import type { SessionChange } from "@ivin/contracts/session"
 import { Effect, Stream } from "effect"
 import { SessionFeed } from "./session-feed.ts"
-import { SessionStore } from "./session-store.ts"
+import { listSessions } from "./list-sessions.ts"
 
 export const watchSessions = (projectPath: string) =>
   Stream.unwrap(
     Effect.gen(function* () {
       const feed = yield* SessionFeed
-      const store = yield* SessionStore
       const changes = yield* feed.watch(projectPath)
-      const current = yield* store.listByProject(projectPath)
-      return Stream.fromIterable(current).pipe(Stream.concat(changes))
+      const current = yield* listSessions(projectPath)
+      return Stream.fromIterable(
+        current.map((session): SessionChange => ({ _tag: "changed", session })),
+      ).pipe(Stream.concat(changes))
     }),
   )

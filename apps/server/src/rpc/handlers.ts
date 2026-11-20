@@ -11,6 +11,10 @@ import { selectProject } from "../modules/project/usecases/select-project.ts"
 import { getHarness } from "../modules/server/usecases/get-harness.ts"
 import { getVersion } from "../modules/server/usecases/get-version.ts"
 import { layerSqliteSessionStore } from "../modules/session/adapters/sqlite-session-store.ts"
+import { archiveSession } from "../modules/session/usecases/archive-session.ts"
+import { deleteSession } from "../modules/session/usecases/delete-session.ts"
+import { listArchivedSessions } from "../modules/session/usecases/list-archived-sessions.ts"
+import { restoreSession } from "../modules/session/usecases/restore-session.ts"
 import { answerApproval } from "../modules/session/usecases/answer-approval.ts"
 import { interruptSession } from "../modules/session/usecases/interrupt-session.ts"
 import { createSession } from "../modules/session/usecases/create-session.ts"
@@ -94,6 +98,10 @@ export const handlers = Rpcs.toLayer(
       "tab.list": ({ projectPath }) => listTabs(projectPath),
       "session.create": ({ projectPath, model }) => createSession(projectPath, model),
       "session.list": ({ projectPath }) => listSessions(projectPath),
+      "session.listArchived": ({ projectPath }) => listArchivedSessions(projectPath),
+      "session.archive": ({ sessionId }) => archiveSession(sessionId),
+      "session.restore": ({ sessionId }) => restoreSession(sessionId),
+      "session.delete": ({ sessionId }) => deleteSession(sessionId),
       "session.rename": ({ sessionId, title }) => renameSession(sessionId, title),
       "session.sendMessage": ({ sessionId, messageId, text, workingFolder }) =>
         sendMessage(sessionId, messageId, text, workingFolder),

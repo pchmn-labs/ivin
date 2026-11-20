@@ -104,6 +104,10 @@ export const migrations: readonly Migration[] = [
     version: 10,
     sql: `ALTER TABLE sessions ADD COLUMN harness TEXT NOT NULL DEFAULT 'claude'`,
   },
+  {
+    version: 11,
+    sql: `ALTER TABLE sessions ADD COLUMN archived_at INTEGER`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

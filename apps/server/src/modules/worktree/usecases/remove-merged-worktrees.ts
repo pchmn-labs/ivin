@@ -1,3 +1,4 @@
+import type { Session } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { checkWorkingFolders } from "../../session/usecases/check-working-folder.ts"
 import { SessionRuns } from "../../session/usecases/session-runs.ts"
@@ -11,7 +12,12 @@ import { newWorktreeBase } from "./new-worktree-base.ts"
 import { OriginFetch } from "./origin-fetch.ts"
 
 // Run once the closed sessions' agents have stopped: a running agent keeps its worktree.
-export const removeMergedWorktrees = (projectPath: string, closedSessionIds: readonly string[]) =>
+// `deletedSessions` are gone from the store, yet their worktrees count as just closed.
+export const removeMergedWorktrees = (
+  projectPath: string,
+  closedSessionIds: readonly string[],
+  deletedSessions: readonly Session[] = [],
+) =>
   Effect.gen(function* () {
     const { worktrees } = yield* (yield* CurrentSettings).get
     if (!worktrees.removeOnTabClose) return
@@ -25,7 +31,10 @@ export const removeMergedWorktrees = (projectPath: string, closedSessionIds: rea
     if (target === null) return
 
     const sessionUses = Effect.gen(function* () {
-      const sessions = yield* (yield* SessionStore).listByProject(projectPath)
+      const sessions = [
+        ...(yield* (yield* SessionStore).listByProject(projectPath)),
+        ...deletedSessions,
+      ]
       const tabs = yield* (yield* TabStore).listByProject(projectPath)
       const open = new Set(tabs.map((tab) => tab.sessionId))
       const runs = yield* SessionRuns
@@ -57,5 +66,9 @@ export const removeMergedWorktrees = (projectPath: string, closedSessionIds: rea
         ),
       ),
     )
-    yield* checkWorkingFolders(projectPath, sessions)
+    const deleted = new Set(deletedSessions.map((session) => session.id))
+    yield* checkWorkingFolders(
+      projectPath,
+      sessions.filter((session) => !deleted.has(session.id)),
+    )
   })

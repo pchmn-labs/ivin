@@ -100,6 +100,7 @@ const seeded = () => {
       statusChangedAt: at,
       createdAt: at,
       lastActivityAt: at,
+      archivedAt: null,
     })
     server.openTab(id)
   }

@@ -2,7 +2,13 @@ import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
-import type { Harness, Session, SessionStatus, WorkingFolderChoice } from "@ivin/contracts/session"
+import type {
+  Harness,
+  Session,
+  SessionChange,
+  SessionStatus,
+  WorkingFolderChoice,
+} from "@ivin/contracts/session"
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import type { TranscriptItem, TranscriptItemChange } from "@ivin/contracts/transcript"
@@ -285,6 +291,7 @@ export const makeFakeServer = (
           statusChangedAt: at,
           createdAt: at,
           lastActivityAt: at,
+          archivedAt: null,
         }
         sessions.set(session.id, session)
         return session
@@ -295,6 +302,7 @@ export const makeFakeServer = (
           Stream.fromIterable([...sessions.values()]).pipe(
             Stream.concat(Stream.fromSubscription(subscription)),
             Stream.filter((session) => session.projectPath === projectPath),
+            Stream.map((session): SessionChange => ({ _tag: "changed", session })),
           ),
         ),
       ),
@@ -387,6 +395,7 @@ export const makeFakeServer = (
             status: "working",
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
+            archivedAt: null,
           }
           return saveSession(updated)
         }),

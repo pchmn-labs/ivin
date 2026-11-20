@@ -154,6 +154,8 @@ test("a session is preparing its new worktree before it works", async () => {
     Effect.gen(function* () {
       const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
       const watching = yield* client["session.watch"]({ projectPath: project }).pipe(
+        Stream.filter((change) => change._tag === "changed"),
+        Stream.map((change) => change.session),
         Stream.map((session) => session.status),
         Stream.takeUntil((status) => status === "working"),
         Stream.runCollect,

@@ -32,6 +32,7 @@ const setup = async (
       statusChangedAt: at,
       createdAt: at,
       lastActivityAt: at,
+      archivedAt: null,
     })
     if (title !== "Closed") server.openTab(`s${index + 1}`)
   })
