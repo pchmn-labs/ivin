@@ -1,10 +1,14 @@
 import { useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Combobox } from "@base-ui/react/combobox"
 import type { Session } from "@ivin/contracts/session"
 import type { Branch } from "@ivin/contracts/worktree"
 import { Cause, Exit } from "effect"
 import { AsyncResult } from "effect/reactivity"
 import { useState } from "react"
+import {
+  ComposerMenu,
+  ComposerMenuNote,
+  type ComposerMenuItem,
+} from "../../../core/components/composer-menu/composer-menu.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { branchesOf } from "../../worktree/atoms/list-branches.ts"
@@ -28,7 +32,6 @@ export function BranchPicker({
   onPicked?: (session: Session) => void
 }) {
   const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState("")
   const [highlighted, setHighlighted] = useState<Branch | undefined>(undefined)
   const [picking, setPicking] = useState(false)
   const [failure, setFailure] = useState<Failure | null>(null)
@@ -60,142 +63,100 @@ export function BranchPicker({
     }
   }
 
+  const items: ComposerMenuItem<Branch>[] = branches.map((b) => {
+    const mark = branchMark(b, session)
+    const held = mark === "checkout" || mark === "worktree"
+    return {
+      value: b,
+      key: `${b.remote}:${b.name}`,
+      label: b.name,
+      ...(b.remote && { prefix: "origin/", muted: true }),
+      icon: mark === "worktree" ? "worktree" : mark === "checkout" ? "folder" : "git-branch",
+      accent: held,
+      mono: true,
+      ...(held && { tag: MARK_TAGS[mark] }),
+      ...(mark === "current" && { checked: true }),
+      testId: "branch-row",
+    }
+  })
+
   return (
-    <Combobox.Root<Branch>
-      items={branches}
-      value={null}
-      itemToStringLabel={(b) => b.name}
-      isItemEqualToValue={(a, b) => a.name === b.name && a.remote === b.remote}
-      autoHighlight
+    <ComposerMenu
+      label="Switch branch"
+      searchPlaceholder="Switch to a branch…"
+      noMatch={(query) => `No branch matches “${query}”.`}
+      groups={[{ items }]}
       open={open}
-      onOpenChange={(next, details) => {
-        // The popup stays open until the pick lands, so a refusal shows where the user picked.
-        if (!next && details.reason === "item-press") return
+      // The menu stays open until the pick lands, so a refusal shows where the user picked.
+      keepOpenOnPick
+      onOpenChange={(next) => {
         setOpen(next)
         if (next) {
-          setQuery("")
           setFailure(null)
           refresh()
         }
       }}
-      inputValue={query}
-      onInputValueChange={(value, details) => {
-        if (details.reason === "input-change" || details.reason === "input-clear") setQuery(value)
+      onPick={(picked) => {
+        if (!picking) void pick(picked)
       }}
-      onValueChange={(picked) => {
-        if (picked && !picking) void pick(picked)
-      }}
-      onItemHighlighted={(b) => setHighlighted(b)}
-    >
-      <Combobox.Trigger
-        className="iv-branch-picker__trigger"
-        data-testid="branch-picker"
-        disabled={isRunning(session.status) || session.status === "preparing_worktree"}
-        aria-label={`Branch ${branch}. Switch branch`}
-      >
-        <Icon name={picking ? "loader" : "git-branch"} size={12} />
-        <span className="iv-branch-picker__name">{branch}</span>
-        <Icon name="chevron-down" size={12} />
-      </Combobox.Trigger>
-      <Combobox.Portal>
-        <Combobox.Positioner align="start" side="top" sideOffset={4}>
-          <Combobox.Popup className="iv-branch-picker" aria-label="Switch branch">
-            <div className="iv-branch-picker__search">
-              <Icon name="search" size={14} />
-              <Combobox.Input
-                className="iv-branch-picker__input"
-                placeholder="Switch to a branch…"
-                aria-label="Branch"
-                spellCheck={false}
-              />
-              {fetch === "fetching" && hasRemote && (
-                <span className="iv-branch-picker__fetching">
-                  <Icon name="loader" size={12} />
-                  Fetching
-                </span>
-              )}
-            </div>
-            <div className="iv-branch-picker__viewport">
-              <Combobox.Empty>
-                {query.trim() !== "" && (
-                  <div className="iv-branch-picker__note">No branch matches “{query.trim()}”.</div>
-                )}
-              </Combobox.Empty>
-              <Combobox.List className="iv-branch-picker__list">
-                {(b: Branch) => (
-                  <BranchRow key={`${b.remote}:${b.name}`} branch={b} session={session} />
-                )}
-              </Combobox.List>
-              {!hasRemote && query.trim() === "" && fetch === "fetching" && (
-                <div className="iv-branch-picker__note" role="status">
-                  <Icon name="loader" size={12} />
-                  Fetching remote branches…
-                </div>
-              )}
-              {fetch === "failed" && query.trim() === "" && (
-                <div className="iv-branch-picker__note" role="status">
-                  Could not fetch origin: its branches are as last fetched.
-                </div>
-              )}
-            </div>
-            {failure && (
-              <div className="iv-branch-picker__failure">
-                <ErrorMessage message={failure.text} />
-                {failure.gitMessage !== null && (
-                  <pre className="iv-branch-picker__git" data-testid="branch-picker-git-message">
-                    {failure.gitMessage}
-                  </pre>
-                )}
-              </div>
-            )}
-            <div className="iv-branch-picker__foot">
-              <span className="iv-branch-picker__preview">
-                {highlighted
-                  ? pickPreview(highlighted, branches, session)
-                  : `On ${branch}. Pick a branch to switch to it.`}
-              </span>
-              <span className="iv-branch-picker__keys">↵ switch · esc</span>
-            </div>
-          </Combobox.Popup>
-        </Combobox.Positioner>
-      </Combobox.Portal>
-    </Combobox.Root>
-  )
-}
-
-function BranchRow({ branch, session }: { branch: Branch; session: Session }) {
-  const mark = branchMark(branch, session)
-  const held = mark === "checkout" || mark === "worktree"
-  return (
-    <Combobox.Item
-      value={branch}
-      className="iv-branch-picker__item"
-      data-remote={branch.remote || undefined}
-      data-mark={mark ?? undefined}
-      data-testid="branch-row"
-    >
-      <span className="iv-branch-picker__icon">
-        <Icon
-          name={mark === "worktree" ? "worktree" : mark === "checkout" ? "folder" : "git-branch"}
-          size={14}
-        />
-      </span>
-      <span className="iv-branch-picker__label">
-        {branch.remote ? (
-          <>
-            <span className="iv-branch-picker__prefix">origin/</span>
-            {branch.name.slice("origin/".length)}
-          </>
-        ) : (
-          branch.name
-        )}
-      </span>
-      {held && <span className="iv-branch-picker__tag">{MARK_TAGS[mark]}</span>}
-      {mark === "current" && (
-        <span className="iv-branch-picker__check" aria-label="Current branch">
-          <Icon name="check" size={14} />
-        </span>
+      onHighlight={setHighlighted}
+      checkedLabel="Current branch"
+      disabled={isRunning(session.status) || session.status === "preparing_worktree"}
+      trigger={
+        <button
+          type="button"
+          className="iv-branch-picker__trigger"
+          data-testid="branch-picker"
+          aria-label={`Branch ${branch}. Switch branch`}
+        >
+          <Icon name={picking ? "loader" : "git-branch"} size={12} />
+          <span className="iv-branch-picker__name">{branch}</span>
+          <Icon name="chevron-down" size={12} />
+        </button>
+      }
+      searchStatus={
+        fetch === "fetching" &&
+        hasRemote && (
+          <span className="iv-branch-picker__fetching">
+            <Icon name="loader" size={12} />
+            Fetching
+          </span>
+        )
+      }
+      status={(query) => (
+        <>
+          {!hasRemote && query === "" && fetch === "fetching" && (
+            <ComposerMenuNote>
+              <Icon name="loader" size={12} />
+              Fetching remote branches…
+            </ComposerMenuNote>
+          )}
+          {fetch === "failed" && query === "" && (
+            <ComposerMenuNote>
+              Could not fetch origin: its branches are as last fetched.
+            </ComposerMenuNote>
+          )}
+        </>
       )}
-    </Combobox.Item>
+    >
+      {failure && (
+        <div className="iv-branch-picker__failure">
+          <ErrorMessage message={failure.text} />
+          {failure.gitMessage !== null && (
+            <pre className="iv-branch-picker__git" data-testid="branch-picker-git-message">
+              {failure.gitMessage}
+            </pre>
+          )}
+        </div>
+      )}
+      <div className="iv-branch-picker__foot">
+        <span className="iv-branch-picker__preview">
+          {highlighted
+            ? pickPreview(highlighted, branches, session)
+            : `On ${branch}. Pick a branch to switch to it.`}
+        </span>
+        <span className="iv-branch-picker__keys">↵ switch · esc</span>
+      </div>
+    </ComposerMenu>
   )
 }

@@ -1,9 +1,11 @@
 import { useAtom, useAtomRefresh, useAtomValue } from "@effect/atom-react"
-import type { Session } from "@ivin/contracts/session"
-import type { MenuItem } from "@ivin/plugin-api/ui"
+import type { Session, WorkingFolderChoice } from "@ivin/contracts/session"
 import { AsyncResult } from "effect/reactivity"
+import {
+  ComposerMenu,
+  type ComposerMenuGroup,
+} from "../../../core/components/composer-menu/composer-menu.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
-import { Menu } from "../../../core/components/menu/menu.tsx"
 import { newWorktreeBaseOf, worktreesOf } from "../../worktree/atoms/list-worktrees.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
@@ -30,37 +32,51 @@ export function WorkingFolderPicker({
 
   const usedBy = (path: string) =>
     sessions.find((other) => other.id !== session.id && other.workingFolder === path)?.title
-  const items: MenuItem[] = [
+  const groups: ComposerMenuGroup<WorkingFolderChoice>[] = [
     {
-      label: "Current checkout",
-      icon: "folder",
-      checked: choice.kind === "checkout",
-      onSelect: () => setChoice({ kind: "checkout" }),
-    },
-    {
-      label: "New worktree",
-      icon: "plus",
-      checked: choice.kind === "new_worktree",
-      onSelect: () => setChoice({ kind: "new_worktree" }),
+      items: [
+        {
+          value: { kind: "checkout" },
+          key: "checkout",
+          label: "Current checkout",
+          icon: "folder",
+          checked: choice.kind === "checkout",
+        },
+        {
+          value: { kind: "new_worktree" },
+          key: "new_worktree",
+          label: "New worktree",
+          icon: "plus",
+          checked: choice.kind === "new_worktree",
+        },
+      ],
     },
   ]
   if (worktrees.length > 0) {
-    items.push("separator", { heading: "Existing worktrees" })
-    for (const worktree of worktrees) {
-      const hint = usedBy(worktree.path)
-      items.push({
-        label: worktree.branch ?? folderName(worktree.path),
-        icon: "worktree",
-        checked: choice.kind === "existing_worktree" && choice.path === worktree.path,
-        ...(hint !== undefined && { hint }),
-        onSelect: () => setChoice({ kind: "existing_worktree", path: worktree.path }),
-      })
-    }
+    groups.push({
+      label: "Existing worktrees",
+      items: worktrees.map((worktree) => {
+        const hint = usedBy(worktree.path)
+        return {
+          value: { kind: "existing_worktree", path: worktree.path },
+          key: worktree.path,
+          label: worktree.branch ?? folderName(worktree.path),
+          icon: "worktree",
+          checked: choice.kind === "existing_worktree" && choice.path === worktree.path,
+          ...(hint !== undefined && { hint }),
+        }
+      }),
+    })
   }
 
   return (
     <span className="iv-working-folder-picker">
-      <Menu
+      <ComposerMenu
+        label="Working folder"
+        searchPlaceholder="Find a worktree…"
+        noMatch={(query) => `No worktree matches “${query}”.`}
+        groups={groups}
+        onPick={setChoice}
         onOpenChange={(open) => {
           if (!open) return
           refreshWorktrees()
@@ -72,13 +88,13 @@ export function WorkingFolderPicker({
             className="iv-working-folder-picker__trigger"
             data-kind={location.kind}
             data-testid="working-folder-picker"
+            aria-label={`Working folder: ${location.label}`}
           >
             <Icon name={location.kind === "worktree" ? "worktree" : "folder"} size={12} />
             {location.label}
             <Icon name="chevron-down" size={12} />
           </button>
         }
-        items={items}
       />
       {location.branch !== null && choice.kind === "checkout" ? (
         <BranchPicker

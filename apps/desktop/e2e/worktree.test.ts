@@ -41,7 +41,7 @@ test("a session started in a new worktree shows its branch in the composer and t
     await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
 
     await window.getByTestId("working-folder-picker").click()
-    await window.getByRole("menuitemradio", { name: "New worktree" }).click()
+    await window.getByRole("option", { name: "New worktree" }).click()
     await sendMessage(window, "hello")
 
     const branch = window.getByRole("main").getByTestId("session-location")
