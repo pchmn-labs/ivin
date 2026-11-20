@@ -13,7 +13,9 @@ export function Disclosure({
 }: DisclosureProps) {
   return (
     <details
-      className={variant === "section" ? "iv-disclosure iv-disclosure--section" : "iv-disclosure"}
+      className={
+        variant === "default" ? "iv-disclosure" : `iv-disclosure iv-disclosure--${variant}`
+      }
       open={defaultOpen}
       data-testid={testId}
     >

@@ -41,6 +41,8 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
   const host = {
     useSession: () => undefined,
     useSessions: () => [],
+    useProjects: () => ({ projects: [], selectedPath: null }),
+    useSelectedSessionId: () => null,
     useTabs: () => [],
     useOpenTab: () => () => {},
     useTranscript: () => items,

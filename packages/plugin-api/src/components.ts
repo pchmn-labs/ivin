@@ -98,6 +98,10 @@ export interface DialogProps {
 
 export interface TooltipProps {
   readonly content: string
+  // A faint line above the content.
+  readonly label?: string
+  // Monospace and wrapped, for a command or a path.
+  readonly mono?: boolean
   readonly children: ReactElement
   readonly side?: "top" | "right" | "bottom" | "left"
 }
@@ -105,7 +109,7 @@ export interface TooltipProps {
 export interface TextProps {
   readonly as?: "p" | "span" | "div" | "strong" | "label"
   readonly size?: "xs" | "sm" | "md" | "lg"
-  readonly tone?: "default" | "muted" | "faint" | "danger" | "accent"
+  readonly tone?: "default" | "muted" | "faint" | "danger" | "attention" | "accent"
   readonly weight?: "regular" | "medium" | "semibold"
   readonly mono?: boolean
   readonly italic?: boolean
@@ -140,8 +144,9 @@ export interface BlockProps {
 export interface DisclosureProps {
   readonly summary: ReactNode
   readonly defaultOpen?: boolean
-  // "section" heads a group of rows in a list, such as a sidebar section.
-  readonly variant?: "default" | "section"
+  // "section" heads a group of rows in a list, such as a sidebar section; "panel" heads a
+  // sidebar panel, and its summary stays in view while the rows scroll.
+  readonly variant?: "default" | "section" | "panel"
   readonly "data-testid"?: string
   readonly children?: ReactNode
 }
@@ -166,8 +171,22 @@ export interface ListRowProps {
   readonly attention?: boolean
   readonly onSelect?: () => void
   readonly actions?: ReactNode
+  // Controls under the row, inside its frame and its hover.
+  readonly below?: ReactNode
+  // Shown on the row's right after a hover.
+  readonly tooltip?: { readonly text: string; readonly label?: string; readonly mono?: boolean }
   readonly "aria-current"?: "page" | "true" | boolean
   readonly "data-testid"?: string
+}
+
+// A labelled list of rows; its children are `li` elements.
+export interface ListSectionProps {
+  readonly label: string
+  readonly count?: number
+  // Marks the label for sessions that wait on the user.
+  readonly attention?: boolean
+  readonly "data-testid"?: string
+  readonly children?: ReactNode
 }
 
 // The session's harness mark, with its status over it and as its accessible name.
@@ -180,12 +199,18 @@ export interface RelativeTimeProps {
   readonly at: Session["lastActivityAt"]
 }
 
+// The project's pixel creature, in its hue.
+export interface ProjectMarkProps {
+  readonly name: string
+  readonly size?: 12 | 16 | 20
+}
+
 export interface MarkdownProps {
   readonly text: string
 }
 
 export interface ActionSheetProps {
-  readonly tone?: "danger" | "neutral"
+  readonly tone?: "attention" | "neutral"
   readonly icon?: IconName
   readonly title: string
   readonly detail?: string
@@ -236,8 +261,10 @@ export interface HostComponents {
   readonly OptionList: ComponentType<OptionListProps>
   readonly ErrorMessage: ComponentType<ErrorMessageProps>
   readonly ListRow: ComponentType<ListRowProps>
+  readonly ListSection: ComponentType<ListSectionProps>
   readonly SessionMark: ComponentType<SessionMarkProps>
   readonly RelativeTime: ComponentType<RelativeTimeProps>
+  readonly ProjectMark: ComponentType<ProjectMarkProps>
 }
 
 const hostComponent =
@@ -262,5 +289,7 @@ export const ActionSheet = hostComponent((c) => c.ActionSheet)
 export const OptionList = hostComponent((c) => c.OptionList)
 export const ErrorMessage = hostComponent((c) => c.ErrorMessage)
 export const ListRow = hostComponent((c) => c.ListRow)
+export const ListSection = hostComponent((c) => c.ListSection)
 export const SessionMark = hostComponent((c) => c.SessionMark)
 export const RelativeTime = hostComponent((c) => c.RelativeTime)
+export const ProjectMark = hostComponent((c) => c.ProjectMark)

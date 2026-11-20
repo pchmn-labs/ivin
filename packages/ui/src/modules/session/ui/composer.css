@@ -63,7 +63,7 @@
   border-top-right-radius: 0;
 }
 
-.iv-composer:has(.iv-action-sheet[data-tone="danger"]) .iv-composer__surface {
+.iv-composer:has(.iv-action-sheet[data-tone="attention"]) .iv-composer__surface {
   border-top-style: dashed;
-  border-top-color: var(--iv-danger-outline);
+  border-top-color: var(--iv-attention-outline);
 }

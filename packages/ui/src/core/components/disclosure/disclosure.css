@@ -47,3 +47,21 @@
 .iv-disclosure--section > .iv-disclosure__body {
   padding-top: 0;
 }
+
+.iv-disclosure--panel > .iv-disclosure__summary {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  min-height: var(--iv-list-head-height);
+  margin: 0 calc(-1 * var(--iv-space-2));
+  padding: 0 var(--iv-space-4);
+  background: var(--iv-bg-card);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+  font-weight: var(--iv-weight-medium);
+}
+
+.iv-disclosure--panel > .iv-disclosure__body {
+  padding-top: 0;
+}

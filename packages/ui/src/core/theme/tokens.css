@@ -1,9 +1,11 @@
 :root {
   --iv-status-working: var(--iv-accent);
-  --iv-status-waiting: var(--iv-danger);
+  --iv-status-waiting: var(--iv-attention);
   --iv-status-idle: var(--iv-text-faint);
   --iv-status-failed: var(--iv-danger);
-  --iv-danger-outline: color-mix(in srgb, var(--iv-danger) 60%, transparent);
+  --iv-attention-outline: color-mix(in srgb, var(--iv-attention) 60%, transparent);
+  --iv-attention-subtle: color-mix(in srgb, var(--iv-attention) 8%, transparent);
+  --iv-attention-hover: color-mix(in srgb, var(--iv-attention) 13%, transparent);
 
   --iv-font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
@@ -87,6 +89,7 @@
   --iv-accent: #a9d9a0;
   --iv-accent-hover: #bde5b5;
   --iv-accent-contrast: #0b2318;
+  --iv-attention: #e2b04f;
   --iv-danger: #f0644a;
   --iv-danger-subtle: rgba(229, 83, 59, 0.14);
   --iv-focus-ring: #a9d9a0;
@@ -118,6 +121,7 @@
     --iv-accent: #2f6a3c;
     --iv-accent-hover: #265833;
     --iv-accent-contrast: #ffffff;
+    --iv-attention: #8f6411;
     --iv-danger: #b8432b;
     --iv-danger-subtle: rgba(184, 67, 43, 0.1);
     --iv-focus-ring: #2f6a3c;
@@ -149,6 +153,7 @@
   --iv-accent: #a9d9a0;
   --iv-accent-hover: #bde5b5;
   --iv-accent-contrast: #0b2318;
+  --iv-attention: #e2b04f;
   --iv-danger: #f0644a;
   --iv-danger-subtle: rgba(229, 83, 59, 0.14);
   --iv-focus-ring: #a9d9a0;
@@ -179,6 +184,7 @@
   --iv-accent: #2f6a3c;
   --iv-accent-hover: #265833;
   --iv-accent-contrast: #ffffff;
+  --iv-attention: #8f6411;
   --iv-danger: #b8432b;
   --iv-danger-subtle: rgba(184, 67, 43, 0.1);
   --iv-focus-ring: #2f6a3c;

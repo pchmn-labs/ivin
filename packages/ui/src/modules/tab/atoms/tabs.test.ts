@@ -1,6 +1,8 @@
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
+import { projectsAtom } from "../../project/atoms/list-projects.ts"
+import { openProjectAtom } from "../../project/atoms/open-project.ts"
 import { createSessionAtom } from "../../session/atoms/create-session.ts"
 import { closeTabAtom } from "./close-tab.ts"
 import { tabsOf } from "./list-tabs.ts"
@@ -93,6 +95,7 @@ const seeded = () => {
       title: id,
       model: "sonnet",
       status: "idle",
+      statusChangedAt: at,
       createdAt: at,
       lastActivityAt: at,
     })
@@ -126,4 +129,18 @@ test("a reorder before the tab list loads changes nothing and keeps the load", a
   await vi.waitFor(() =>
     expect(registry.get(tabs).tabs.map((t) => t.sessionId)).toEqual(["s1", "s2"]),
   )
+})
+
+test("opening the tab of another project's session selects that project", async () => {
+  const { registry, server } = await setup()
+  registry.mount(projectsAtom.value)
+  registry.mount(openProjectAtom)
+  registry.set(openProjectAtom, "/other")
+  await vi.waitFor(() => expect(registry.get(projectsAtom.value).selectedPath).toBe("/other"))
+  expect(server.sessions.get("session-1")?.projectPath).toBe(project)
+
+  registry.set(openTabAtom, { sessionId: "session-1" })
+
+  await vi.waitFor(() => expect(registry.get(projectsAtom.value).selectedPath).toBe(project))
+  expect(registry.get(tabsOf(project).value).selectedSessionId).toBe("session-1")
 })

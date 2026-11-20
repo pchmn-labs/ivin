@@ -23,6 +23,7 @@ const setup = async (titles: ReadonlyArray<string>, options: { holdTabs?: boolea
       title,
       model: "sonnet",
       status: "idle",
+      statusChangedAt: at,
       createdAt: at,
       lastActivityAt: at,
     })
@@ -68,17 +69,17 @@ test("each row shows the session status and follows the server", async () => {
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Failed")
 })
 
-test("sessions waiting on the user sit in their own group above the others", async () => {
+test("a session waiting on the user stays in tab order, outlined, with no group of its own", async () => {
   const server = await setup(["One", "Two"])
-  await expect.element(page.getByRole("region", { name: "Needs you" })).not.toBeInTheDocument()
 
-  server.setStatus("s2", "waiting")
-  const needsYou = page.getByRole("region", { name: "Needs you" })
-  await expect.element(needsYou).toBeVisible()
-  await expect.element(needsYou.getByTestId("session-status")).toHaveTextContent("Waiting for you")
+  server.setStatus("s1", "waiting")
+  const rows = page.getByRole("region", { name: "Sessions" }).getByTestId("session-item")
   await expect
-    .element(page.getByRole("region", { name: "Sessions" }).getByTestId("session-item"))
-    .toHaveLength(1)
+    .element(rows.first().getByTestId("session-status"))
+    .toHaveTextContent("Waiting for you")
+  await expect.element(rows.first()).toHaveAttribute("data-attention")
+  await expect.element(rows).toHaveLength(2)
+  expect(page.getByRole("region", { name: "Needs you" }).query()).toBeNull()
 })
 
 test("only sessions with an open tab are listed, and picking one selects its tab", async () => {

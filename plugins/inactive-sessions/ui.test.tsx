@@ -32,6 +32,8 @@ const mountSection = async (
   const host: UiHost = {
     useSession: () => undefined,
     useSessions: () => sessions,
+    useProjects: () => ({ projects: [], selectedPath: "/p" }),
+    useSelectedSessionId: () => null,
     useTabs: () => openTabIds.map((sessionId) => ({ sessionId, projectPath: "/p" })),
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
     useTranscript: () => [],
@@ -52,9 +54,14 @@ const rowTitles = () =>
     (row) => row.textContent,
   )
 
-test("the section lists exactly the sessions without a tab, folded until opened", async () => {
+test("the section lists exactly the selected project's sessions without a tab, folded until opened", async () => {
   await mountSection(
-    [session("s1", "Open one"), session("s2", "Closed one"), session("s3", "Closed two")],
+    [
+      session("s1", "Open one"),
+      session("s2", "Closed one"),
+      session("s3", "Closed two"),
+      makeTestSession({ id: "s4", title: "Another project's", projectPath: "/other" }),
+    ],
     ["s1"],
   )
   await expect.element(fold()).toBeVisible()
@@ -66,6 +73,7 @@ test("the section lists exactly the sessions without a tab, folded until opened"
   await expect.element(page.getByText("Closed one")).toBeVisible()
   expect(rowTitles().map((title) => title?.includes("Closed"))).toEqual([true, true])
   expect(page.getByText("Open one").query()).toBeNull()
+  expect(page.getByText("Another project's").query()).toBeNull()
 
   await fold().click()
   await expect.element(page.getByText("Closed one")).not.toBeVisible()

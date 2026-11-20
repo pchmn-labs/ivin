@@ -20,6 +20,7 @@ test("answering an approval stores the decision on its item and updates the sess
     title: "t",
     model: "sonnet",
     status: "waiting",
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   })

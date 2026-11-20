@@ -6,13 +6,14 @@ import {
   Stack,
   defineUi,
   useOpenTab,
+  useProjects,
   useSessions,
   useTabs,
 } from "@ivin/plugin-api/ui"
 import { inactiveSessions } from "./rules/inactive-sessions.ts"
 
 function InactiveSessions() {
-  const sessions = inactiveSessions(useSessions(), useTabs())
+  const sessions = inactiveSessions(useSessions(), useTabs(), useProjects().selectedPath)
   const openTab = useOpenTab()
   if (sessions.length === 0) return null
   return (

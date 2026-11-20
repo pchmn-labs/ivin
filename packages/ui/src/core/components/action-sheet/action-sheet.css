@@ -7,8 +7,8 @@
   animation: iv-sheet-in var(--iv-duration-base) var(--iv-ease-out) both;
 }
 
-.iv-action-sheet[data-tone="danger"] {
-  border: 1px dashed var(--iv-danger-outline);
+.iv-action-sheet[data-tone="attention"] {
+  border: 1px dashed var(--iv-attention-outline);
   border-bottom: 0;
 }
 
@@ -29,8 +29,8 @@
   flex: none;
 }
 
-.iv-action-sheet[data-tone="danger"] .iv-action-sheet__title {
-  color: var(--iv-danger);
+.iv-action-sheet[data-tone="attention"] .iv-action-sheet__title {
+  color: var(--iv-attention);
 }
 
 .iv-action-sheet__detail {

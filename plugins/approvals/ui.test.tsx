@@ -37,6 +37,8 @@ const mount = async (
   const host: UiHost = {
     useSession: () => undefined,
     useSessions: () => [],
+    useProjects: () => ({ projects: [], selectedPath: null }),
+    useSelectedSessionId: () => null,
     useTabs: () => [],
     useOpenTab: () => () => {},
     useTranscript: () => items,

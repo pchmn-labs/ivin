@@ -30,6 +30,7 @@ const setup = async (status: SessionStatus, options: { stopAgentOnClose?: boolea
     title: "Fix the login",
     model: "sonnet",
     status,
+    statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
   })

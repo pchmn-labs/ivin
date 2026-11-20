@@ -20,6 +20,7 @@ export const createSession = (projectPath: string, model: string) =>
       title: defaultTitle,
       model,
       status: "idle",
+      statusChangedAt: now,
       createdAt: now,
       lastActivityAt: now,
     }

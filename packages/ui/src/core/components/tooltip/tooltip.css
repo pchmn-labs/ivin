@@ -7,6 +7,8 @@
   font-size: var(--iv-text-sm);
   line-height: var(--iv-text-sm-lh);
   box-shadow: var(--iv-shadow-overlay);
+  max-width: 420px;
+  overflow-wrap: anywhere;
   transition:
     opacity var(--iv-duration-fast) var(--iv-ease-out),
     transform var(--iv-duration-fast) var(--iv-ease-out);
@@ -16,4 +18,21 @@
 .iv-tooltip[data-ending-style] {
   opacity: 0;
   transform: scale(0.97);
+}
+
+.iv-tooltip[data-mono] {
+  padding: var(--iv-space-2) var(--iv-space-3);
+  font-family: var(--iv-font-mono);
+  line-height: var(--iv-text-md-lh);
+  white-space: pre-wrap;
+}
+
+.iv-tooltip__label {
+  display: block;
+  margin-bottom: var(--iv-space-1);
+  color: var(--iv-text-faint);
+  font-family: var(--iv-font-sans);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+  font-weight: var(--iv-weight-medium);
 }

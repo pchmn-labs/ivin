@@ -93,7 +93,10 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
     Effect.runSync(PubSub.publish(pubsub, { type: "upsert", item }))
   }
 
-  const saveSession = (session: Session) => {
+  const saveSession = (changed: Session) => {
+    const before = sessions.get(changed.id)
+    const session =
+      before && before.status !== changed.status ? { ...changed, statusChangedAt: tick() } : changed
     sessions.set(session.id, session)
     Effect.runSync(PubSub.publish(sessionChanges, session))
     return session
@@ -231,6 +234,7 @@ export const makeFakeServer = (options: { readonly project?: Project } = {}): Fa
           model,
           title: "New session",
           status: "idle",
+          statusChangedAt: at,
           createdAt: at,
           lastActivityAt: at,
         }

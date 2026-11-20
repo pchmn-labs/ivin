@@ -59,7 +59,7 @@
   height: var(--iv-badge-size);
   padding: 0 var(--iv-space-1);
   border-radius: var(--iv-radius-pill);
-  background: var(--iv-danger);
+  background: var(--iv-attention);
   box-shadow: 0 0 0 var(--iv-line-bold) var(--iv-bg-card);
   color: var(--iv-bg-card);
   font-size: var(--iv-text-xs);

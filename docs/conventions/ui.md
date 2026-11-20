@@ -29,7 +29,7 @@ packages/ui/src/
 - A mutation atom is named for the server use case it calls: `atoms/rename-session.ts` for `usecases/rename-session.ts`.
 - A module has the server's name for the subject.
 - A file that needs a mock to reach one of its functions holds two layers: split it.
-- A component's styles live in a `.css` file beside it, with `iv-` classes and `--iv-` tokens only; no inline `style`. A screen in `modules/<subject>/ui/` does the same.
+- A component's styles live in a `.css` file beside it, with `iv-` classes and `--iv-` tokens only; no inline `style`. A screen in `modules/<subject>/ui/` does the same. The one exception is `core/components/resize-handle`, which sets the size the user dragged as a custom property on its parent, for the parent's stylesheet to read.
 
 ## Tests
 

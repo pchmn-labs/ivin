@@ -10,7 +10,8 @@ const MAIN_ARGUMENT: Readonly<Record<string, string>> = {
   Task: "description",
 }
 
-export const formatInput = (name: string, input: unknown): string => {
+// The tool argument a person reads first: the command, the path, the pattern.
+export const formatToolInput = (name: string, input: unknown): string => {
   const key = MAIN_ARGUMENT[name]
   if (key !== undefined && typeof input === "object" && input !== null) {
     const value = (input as Record<string, unknown>)[key]

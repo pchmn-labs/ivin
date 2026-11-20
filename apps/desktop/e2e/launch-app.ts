@@ -31,7 +31,10 @@ export const makeFakeClaudeBin = (): string => {
 
 export const launchPackagedApp = (
   userDataDir: string,
-  options: { readonly fakeClaudeBin?: string } = {},
+  options: {
+    readonly fakeClaudeBin?: string
+    readonly harness?: "scripted" | "scripted-approval"
+  } = {},
 ): Promise<ElectronApplication> => {
   if (!existsSync(packagedExecutable)) {
     throw new Error(`Packaged app not found at ${packagedExecutable}: run pnpm package first`)
@@ -51,7 +54,7 @@ export const launchPackagedApp = (
           ...process.env,
           IVIN_HOME: join(userDataDir, ".ivin"),
           IVIN_BACKGROUND: "1",
-          IVIN_HARNESS: "scripted",
+          IVIN_HARNESS: options.harness ?? "scripted",
         },
   })
 }

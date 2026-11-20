@@ -72,7 +72,10 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
     )
 
     const setStatus = (sessionId: string, status: SessionStatus) =>
-      sessions.setStatus(sessionId, status).pipe(Effect.andThen(sessionFeed.publish(sessionId)))
+      DateTime.now.pipe(
+        Effect.flatMap((at) => sessions.setStatus(sessionId, status, at)),
+        Effect.andThen(sessionFeed.publish(sessionId)),
+      )
 
     const makeWriter = (session: Session) =>
       Effect.gen(function* () {

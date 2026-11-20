@@ -1,0 +1,5 @@
+.test-resizable {
+  position: relative;
+  width: var(--test-width, 200px);
+  height: 40px;
+}

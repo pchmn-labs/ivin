@@ -4,10 +4,10 @@ import type { Session } from "@ivin/contracts/session"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
+import { ListSection } from "../../../core/components/list-section/list-section.tsx"
 import { Menu } from "../../../core/components/menu/menu.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { sessionsOf } from "../atoms/list-sessions.ts"
-import { groupSessions } from "../rules/group-sessions.ts"
 import { renameSessionAtom } from "../atoms/rename-session.ts"
 import { openTabAtom } from "../../tab/atoms/open-tab.ts"
 import { tabsOf } from "../../tab/atoms/list-tabs.ts"
@@ -91,39 +91,6 @@ function SessionRow({
   )
 }
 
-function Group({
-  label,
-  sessions,
-  projectPath,
-  selectedId,
-  needsYou = false,
-}: {
-  label: string
-  sessions: ReadonlyArray<Session>
-  projectPath: string
-  selectedId: string | null
-  needsYou?: boolean
-}) {
-  if (sessions.length === 0) return null
-  return (
-    <section className="iv-session-list__group" aria-label={label}>
-      <h2 className="iv-session-list__label" data-needs-you={needsYou || undefined}>
-        {label} <span className="iv-session-list__count">{sessions.length}</span>
-      </h2>
-      <ul className="iv-session-list__rows">
-        {sessions.map((session) => (
-          <SessionRow
-            key={session.id}
-            projectPath={projectPath}
-            session={session}
-            selected={session.id === selectedId}
-          />
-        ))}
-      </ul>
-    </section>
-  )
-}
-
 export function SessionList({
   projectPath,
   projectName,
@@ -139,7 +106,6 @@ export function SessionList({
   const tabsLoaded = useAtomValue(tabsState.loaded)
   const byId = new Map(sessions.map((session) => [session.id, session]))
   const open = tabs.flatMap((tab) => byId.get(tab.sessionId) ?? [])
-  const { needsYou, others } = groupSessions(open)
 
   return (
     <nav className="iv-session-list" aria-label="Sessions">
@@ -151,19 +117,18 @@ export function SessionList({
         </p>
       )}
       <div className="iv-session-list__scroll">
-        <Group
-          label="Needs you"
-          sessions={needsYou}
-          projectPath={projectPath}
-          selectedId={selectedSessionId}
-          needsYou
-        />
-        <Group
-          label="Sessions"
-          sessions={others}
-          projectPath={projectPath}
-          selectedId={selectedSessionId}
-        />
+        {open.length > 0 && (
+          <ListSection label="Sessions" count={open.length}>
+            {open.map((session) => (
+              <SessionRow
+                key={session.id}
+                projectPath={projectPath}
+                session={session}
+                selected={session.id === selectedSessionId}
+              />
+            ))}
+          </ListSection>
+        )}
         <Slot slot="sidebar.section" props={{}} />
       </div>
     </nav>
