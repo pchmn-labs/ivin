@@ -15,7 +15,7 @@ test("the transcript renders through the plugins and the status line shows the u
   const server = makeFakeServer()
   const base = { sessionId: "s1" }
   server.seedItems("s1", [
-    { ...base, id: "m0", position: 0, type: "message", role: "user", text: "hello" },
+    { ...base, id: "m0", position: 0, type: "message", role: "user", text: "hello", images: [] },
     {
       ...base,
       id: "t1",

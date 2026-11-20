@@ -26,6 +26,7 @@ export const sendMessageAtom = serverRuntime.fn<{
       type: "message",
       role: "user",
       text,
+      images: [],
     }
 
     return yield* optimistic<Session>({

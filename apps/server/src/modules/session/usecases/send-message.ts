@@ -1,9 +1,11 @@
+import type { ImageData } from "@ivin/contracts/transcript"
 import {
   SessionNotFound,
   type WorkingFolderChoice,
   WorkingFolderDeleted,
 } from "@ivin/contracts/session"
 import { Effect } from "effect"
+import { ImageStore } from "../../transcript/usecases/image-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { titleFromMessage } from "../rules/session-title.ts"
 import { checkWorkingFolder } from "./check-working-folder.ts"
@@ -15,6 +17,7 @@ export const sendMessage = (
   sessionId: string,
   messageId: string,
   text: string,
+  images: readonly ImageData[],
   workingFolder?: WorkingFolderChoice,
 ) =>
   Effect.gen(function* () {
@@ -43,6 +46,7 @@ export const sendMessage = (
     const title = titleFromMessage(text)
     if (title !== "") yield* store.setTitleIfUnset(sessionId, title)
     const session = (yield* store.findById(sessionId)) ?? found
-    yield* runs.send(session, { id: messageId, text })
+    yield* (yield* ImageStore).save(sessionId, images)
+    yield* runs.send(session, { id: messageId, text, images })
     return (yield* store.findById(sessionId)) ?? session
   })

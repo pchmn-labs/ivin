@@ -418,6 +418,7 @@ export const makeFakeServer = (
             type: "message",
             role: "user",
             text: input.text,
+            images: [],
           })
           const choice = isFirstMessage ? input.workingFolder : undefined
           const worktree =

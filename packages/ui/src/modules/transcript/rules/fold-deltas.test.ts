@@ -18,7 +18,15 @@ const delta = (
 test("deltas for an unknown item create it at the delta's position", () => {
   const items = foldDeltas(() => undefined, [delta("a", "Hel"), delta("a", "lo")])
   expect(items).toEqual([
-    { id: "a", sessionId: "s1", position: 3, type: "message", role: "assistant", text: "Hello" },
+    {
+      id: "a",
+      sessionId: "s1",
+      position: 3,
+      type: "message",
+      role: "assistant",
+      text: "Hello",
+      images: [],
+    },
   ])
 })
 

@@ -56,6 +56,7 @@ test("an upsert after deltas wins over the pending text", async () => {
     type: "message",
     role: "assistant",
     text: "Final text",
+    images: [],
   }
 
   server.pushChange(delta("a", "stale"))

@@ -1,9 +1,29 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
 
+export const ImageMediaType = Schema.Literals([
+  "image/png",
+  "image/jpeg",
+  "image/gif",
+  "image/webp",
+])
+export type ImageMediaType = typeof ImageMediaType.Type
+
+// The bytes are fetched apart with `transcript.getImage`, so a page of items stays small.
+export const ImageRef = Schema.Struct({ id: Schema.String, mediaType: ImageMediaType })
+export type ImageRef = typeof ImageRef.Type
+
+export const ImageData = Schema.Struct({
+  ...ImageRef.fields,
+  base64: Schema.String,
+})
+export type ImageData = typeof ImageData.Type
+
 const UserMessageBody = Schema.Struct({
   type: Schema.Literal("user_message"),
   text: Schema.String,
+  // Absent on messages stored before images existed.
+  images: Schema.optional(Schema.Array(ImageRef)),
 })
 const AssistantTextBody = Schema.Struct({
   type: Schema.Literal("assistant_text"),
@@ -137,6 +157,7 @@ export const MessageItem = Schema.Struct({
   type: Schema.Literal("message"),
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
+  images: Schema.Array(ImageRef),
 })
 export const ThinkingItem = Schema.Struct({
   ...itemFields,
@@ -223,6 +244,10 @@ export const TranscriptItemChange = Schema.Union([
 export type TranscriptItemChange = typeof TranscriptItemChange.Type
 export type TranscriptDelta = Extract<TranscriptItemChange, { type: "delta" }>
 
+export class ImageNotFound extends Schema.TaggedError<ImageNotFound>()("ImageNotFound", {
+  imageId: Schema.String,
+}) {}
+
 export const TranscriptRpcs = RpcGroup.make(
   // `position: null` anchors the page at the end of the transcript.
   Rpc.make("transcript.getItems", {
@@ -239,5 +264,10 @@ export const TranscriptRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String, before: Schema.Int },
     success: TranscriptItemChange,
     stream: true,
+  }),
+  Rpc.make("transcript.getImage", {
+    payload: { imageId: Schema.String },
+    success: ImageData,
+    error: ImageNotFound,
   }),
 )

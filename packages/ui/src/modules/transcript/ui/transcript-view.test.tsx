@@ -17,6 +17,7 @@ const message = (position: number): TranscriptItem => ({
   type: "message",
   role: "assistant",
   text: `message ${position}`,
+  images: [],
 })
 
 const scroller = () => document.querySelector<HTMLElement>('[data-testid="transcript"]')!

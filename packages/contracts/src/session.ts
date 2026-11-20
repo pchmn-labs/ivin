@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
+import { ImageData } from "./transcript.ts"
 
 // `waiting`: the agent waits on the user, such as an approval.
 export const SessionStatus = Schema.Literals([
@@ -160,6 +161,7 @@ export const SessionRpcs = RpcGroup.make(
       sessionId: Schema.String,
       messageId: Schema.String,
       text: Schema.String,
+      images: Schema.optional(Schema.Array(ImageData)),
       workingFolder: Schema.optional(WorkingFolderChoice),
     },
     success: Session,

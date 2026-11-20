@@ -43,6 +43,7 @@ test("an assistant message renders Markdown", async () => {
     type: "message",
     role: "assistant",
     text: "Some **bold** text\n\n- one\n- two\n\n| a | b |\n|---|---|\n| 1 | 2 |",
+    images: [],
   })
   await expect.element(page.getByText("bold", { exact: true })).toBeVisible()
   expect(document.querySelector("strong + strong, p strong")?.textContent).toBe("bold")
@@ -51,7 +52,7 @@ test("an assistant message renders Markdown", async () => {
 })
 
 test("a user message stays plain text", async () => {
-  await mount({ ...base, type: "message", role: "user", text: "**not bold**" })
+  await mount({ ...base, type: "message", role: "user", text: "**not bold**", images: [] })
   await expect.element(page.getByText("**not bold**")).toBeVisible()
 })
 

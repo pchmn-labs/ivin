@@ -1,5 +1,10 @@
 import { ApprovalNotOpen, type Session, type SessionStatus } from "@ivin/contracts/session"
-import type { HarnessDelta, HarnessEvent, HarnessOutput } from "@ivin/contracts/transcript"
+import type {
+  HarnessDelta,
+  HarnessEvent,
+  HarnessOutput,
+  ImageData,
+} from "@ivin/contracts/transcript"
 import { HarnessProvider, type ApprovalDecision, type HarnessError } from "@ivin/harness"
 import { Context, DateTime, Effect, Exit, Layer, Scope, Semaphore, Stream } from "effect"
 import { applyEvent, emptyItemState } from "../../transcript/rules/derive-items.ts"
@@ -20,7 +25,15 @@ import { SessionStore } from "./session-store.ts"
 interface UserMessage {
   readonly id: string
   readonly text: string
+  readonly images: readonly ImageData[]
 }
+
+const userMessageEvent = ({ text, images }: UserMessage): HarnessEvent => ({
+  type: "user_message",
+  text,
+  images: images.map(({ id, mediaType }) => ({ id, mediaType })),
+  raw: null,
+})
 
 export class SessionRuns extends Context.Service<
   SessionRuns,
@@ -48,7 +61,7 @@ interface ActiveRun {
   readonly busy: () => boolean
   readonly turnStarted: Effect.Effect<void>
   readonly record: (event: HarnessEvent, id?: string) => Effect.Effect<void>
-  readonly send: (text: string) => Effect.Effect<void, HarnessError>
+  readonly send: (message: UserMessage) => Effect.Effect<void, HarnessError>
   readonly decide: (decision: ApprovalDecision) => Effect.Effect<void, ApprovalNotOpen>
   readonly respond: (decision: ApprovalDecision) => Effect.Effect<void, HarnessError>
   readonly interrupt: Effect.Effect<void>
@@ -227,7 +240,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           busy: () => busy,
           turnStarted: follower.turnStarted,
           record: writer.record,
-          send: (text) => harness.send({ text }),
+          send: harness.send,
           decide: writer.decide,
           respond: harness.respond,
           interrupt: harness.interrupt,
@@ -252,7 +265,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
               startRun(session, writer).pipe(
                 Effect.catchTag("HarnessError", (error) =>
                   writer
-                    .record({ type: "user_message", text: message.text, raw: null }, message.id)
+                    .record(userMessageEvent(message), message.id)
                     .pipe(Effect.andThen(writer.fail(error)), Effect.as(null)),
                 ),
               ),
@@ -269,9 +282,9 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           if (!run) return
           // Mid-turn, a worktree the agent just made would be taken for one that was already there.
           if (!run.busy()) yield* run.turnStarted
-          yield* run.record({ type: "user_message", text: message.text, raw: null }, message.id)
+          yield* run.record(userMessageEvent(message), message.id)
           yield* run
-            .send(message.text)
+            .send(message)
             .pipe(
               Effect.catchTag("HarnessError", (error) =>
                 run.end.pipe(Effect.andThen(run.fail(error))),

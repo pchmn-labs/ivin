@@ -21,7 +21,7 @@ real(
           model: "haiku",
           providerSessionId: null,
         })
-        yield* harness.send({ text: "Reply with exactly: pong" })
+        yield* harness.send({ text: "Reply with exactly: pong", images: [] })
         return yield* Stream.runCollect(
           Stream.takeUntil(harness.events, (o) => o.type === "status" && o.status === "idle"),
         )
@@ -52,6 +52,7 @@ real.each([
         })
         yield* harness.send({
           text: "Run the shell command `touch made.txt` with the Bash tool. Do nothing else.",
+          images: [],
         })
         return yield* Stream.runCollect(
           harness.events.pipe(

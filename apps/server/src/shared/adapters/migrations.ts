@@ -108,6 +108,16 @@ export const migrations: readonly Migration[] = [
     version: 11,
     sql: `ALTER TABLE sessions ADD COLUMN archived_at INTEGER`,
   },
+  {
+    version: 12,
+    sql: `CREATE TABLE images (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL REFERENCES sessions (id),
+      media_type TEXT NOT NULL,
+      data BLOB NOT NULL
+    );
+    CREATE INDEX images_by_session ON images (session_id)`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

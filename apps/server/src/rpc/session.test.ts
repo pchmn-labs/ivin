@@ -206,7 +206,7 @@ test("sending a message stores the user message then the scripted events in orde
   ])
   expect(rows[0]!.id).toBe("msg-1")
   expect(JSON.parse(rows[1]!.payload).raw).toEqual({ from: "scripted" })
-  expect(sent).toEqual([{ sessionId, text: "go" }])
+  expect(sent).toEqual([{ sessionId, text: "go", images: [] }])
 })
 
 test("a tool call and its result come back as one item, in order after the user message", async () => {
