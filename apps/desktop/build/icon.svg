@@ -1,4 +1,5 @@
 <svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
-<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#173E2B"/><stop offset="1" stop-color="#0B2318"/></linearGradient></defs>
+<defs><linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#173E2B"/><stop offset="1" stop-color="#0B2318"/></linearGradient><linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.4"/><stop offset="1" stop-color="#fff" stop-opacity="0.14"/></linearGradient></defs>
 <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+<rect x="104" y="104" width="816" height="816" rx="181" fill="none" stroke="url(#rim)" stroke-width="8"/>
 <g fill="none" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(-44 24) rotate(35 512 512) translate(512 512) scale(0.86) translate(-512 -512)"><path d="M512 214 L512 814" stroke="#A9D9A0" stroke-width="48.6"/><path d="M328 248 L512 432 L696 248" stroke="#A9D9A0" stroke-width="48.6"/><path d="M328 394 L512 578 L696 394" stroke="#A9D9A0" stroke-width="48.6"/><path d="M328 540 L512 724 L696 540" stroke="#A9D9A0" stroke-width="48.6"/></g><rect x="674" y="727.7" width="110" height="48.6" rx="24.3" fill="#E5533B"/></g></svg>
