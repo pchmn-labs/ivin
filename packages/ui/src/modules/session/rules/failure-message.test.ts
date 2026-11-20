@@ -72,18 +72,25 @@ test("git's refusal to switch or pull carries its message, and says when local c
     message: "error: …",
     blockedByLocalChanges: true,
   }
-  expect(checkoutFailure(blocked, "pull")).toMatchObject({
+  expect(checkoutFailure(blocked, "fastForward")).toMatchObject({
     gitMessage: "error: …",
     blockedByLocalChanges: true,
     retryable: true,
   })
-  expect(checkoutFailure(blocked, "pull").text).toMatch(
+  expect(checkoutFailure(blocked, "fastForward").text).toMatch(
     /^The branch was not pulled\. Local changes/,
   )
   const diverged = { ...blocked, blockedByLocalChanges: false }
   expect(checkoutFailure(diverged, "switch").text).toBe(
-    "The checkout was not switched to the default branch. Fix what git reports, then retry.",
+    "The checkout was not switched to the default branch, or not brought up to date. Fix what git reports, then retry.",
   )
+})
+
+test("a checkout another agent works in can be retried once it is done", () => {
+  expect(checkoutFailure({ _tag: "CheckoutInUse", sessionId: "s1" }, "switch")).toMatchObject({
+    retryable: true,
+    text: expect.stringMatching(/^Another session's agent is working in the checkout/),
+  })
 })
 
 test("a switch after the first message, or for a removed session, offers no retry", () => {
@@ -93,8 +100,8 @@ test("a switch after the first message, or for a removed session, offers no retr
     retryable: false,
     gitMessage: null,
   })
-  expect(checkoutFailure(sessionNotFound, "pull").retryable).toBe(false)
-  expect(checkoutFailure(unknown, "pull")).toEqual({
+  expect(checkoutFailure(sessionNotFound, "fastForward").retryable).toBe(false)
+  expect(checkoutFailure(unknown, "fastForward")).toEqual({
     text: "The branch was not pulled.",
     retryable: true,
     gitMessage: null,

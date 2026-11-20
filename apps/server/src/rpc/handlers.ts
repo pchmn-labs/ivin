@@ -104,7 +104,13 @@ export const handlers = Rpcs.toLayer(
           Effect.orElseSucceed(() => null),
         ),
       "worktree.checkoutStatus": ({ projectPath }) =>
-        checkoutStatus(projectPath).pipe(Effect.orElseSucceed(() => null)),
+        checkoutStatus(projectPath).pipe(
+          Effect.tapError((error) =>
+            Effect.logWarning(`could not read the checkout of ${projectPath}`, error),
+          ),
+          // Git fails outside a repository, where there is nothing to switch or pull.
+          Effect.orElseSucceed(() => null),
+        ),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

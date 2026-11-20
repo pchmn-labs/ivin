@@ -54,11 +54,8 @@ export const layerGitCli = Layer.succeed(Git)({
     ),
   stash: (folder, message) =>
     git(folder, ["stash", "push", "--include-untracked", "-m", message]).pipe(Effect.asVoid),
-  commitAll: (folder, message) =>
-    git(folder, ["add", "--all"]).pipe(
-      Effect.andThen(git(folder, ["commit", "--quiet", "-m", message])),
-      Effect.asVoid,
-    ),
+  commitTracked: (folder, message) =>
+    git(folder, ["commit", "--quiet", "--all", "-m", message]).pipe(Effect.asVoid),
   checkout: (folder, branch) => git(folder, ["checkout", "--quiet", branch]).pipe(Effect.asVoid),
   fastForward: (folder, upstream) =>
     git(folder, ["merge", "--ff-only", "--quiet", upstream]).pipe(Effect.asVoid),

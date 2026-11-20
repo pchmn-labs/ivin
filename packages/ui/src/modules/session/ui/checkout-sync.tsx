@@ -20,7 +20,11 @@ import {
 } from "../rules/failure-message.ts"
 import "./checkout-sync.css"
 
-const TITLES: Record<CheckoutAction, string> = { switch: "Switch failed", pull: "Pull failed" }
+const ACTIONS: Record<CheckoutAction, { readonly failed: string; readonly stashAndRetry: string }> =
+  {
+    switch: { failed: "Switch failed", stashAndRetry: "Stash & switch" },
+    fastForward: { failed: "Pull failed", stashAndRetry: "Stash & pull" },
+  }
 
 export function CheckoutSync({ session }: { session: Session }) {
   const statusAtom = checkoutStatusOf(session.projectPath)
@@ -54,7 +58,12 @@ export function CheckoutSync({ session }: { session: Session }) {
     setAskingLocalChanges(false)
     void run("switch", () => switchToDefault({ ...ids, ...(localChanges && { localChanges }) }))
   }
-  const doPull = (stash = false) => void run("pull", () => fastForward({ ...ids, stash }))
+  const doFastForward = (stash = false) =>
+    void run("fastForward", () => fastForward({ ...ids, stash }))
+  const retry = (action: CheckoutAction, stash: boolean) => {
+    if (action === "fastForward") doFastForward(stash)
+    else doSwitch(stash ? { kind: "stash" } : undefined)
+  }
   const commit = () => {
     if (commitMessage.trim() !== "") doSwitch({ kind: "commit", message: commitMessage })
   }
@@ -72,13 +81,12 @@ export function CheckoutSync({ session }: { session: Session }) {
         <Tooltip content={pullLabel}>
           <button
             type="button"
-            className="iv-checkout-sync__button"
-            data-tone="accent"
+            className="iv-checkout-sync__button iv-checkout-sync__button--count"
             aria-label={pullLabel}
             disabled={busy !== null}
-            onClick={() => doPull()}
+            onClick={() => doFastForward()}
           >
-            <Icon name={busy === "pull" ? "loader" : "arrow-down"} size={12} />
+            <Icon name={busy === "fastForward" ? "loader" : "arrow-down"} size={12} />
             {status.behind}
           </button>
         </Tooltip>
@@ -98,7 +106,7 @@ export function CheckoutSync({ session }: { session: Session }) {
         open={askingLocalChanges}
         onOpenChange={setAskingLocalChanges}
         title="Uncommitted changes"
-        description={`${status.branch ?? "The checkout"} has changes that are not committed. Put them aside before switching to ${status.defaultBranch}.`}
+        description={`${status.branch ?? "The checkout"} has changes that are not committed. Put them aside before switching to ${status.defaultBranch}: a stash keeps them in git stash list.`}
         actions={
           <>
             <Button variant="ghost" onClick={() => setAskingLocalChanges(false)}>
@@ -131,7 +139,7 @@ export function CheckoutSync({ session }: { session: Session }) {
         onOpenChange={(open) => {
           if (!open) setFailure(null)
         }}
-        title={failure ? TITLES[failure.action] : ""}
+        title={failure ? ACTIONS[failure.action].failed : ""}
         {...(failure && { description: failure.text })}
         actions={
           failure && (
@@ -139,24 +147,13 @@ export function CheckoutSync({ session }: { session: Session }) {
               <Button variant="ghost" onClick={() => setFailure(null)}>
                 Close
               </Button>
-              {failure.blockedByLocalChanges ? (
+              {(failure.blockedByLocalChanges || failure.retryable) && (
                 <Button
                   variant="primary"
-                  onClick={() =>
-                    failure.action === "pull" ? doPull(true) : doSwitch({ kind: "stash" })
-                  }
+                  onClick={() => retry(failure.action, failure.blockedByLocalChanges)}
                 >
-                  {failure.action === "pull" ? "Stash & pull" : "Stash & switch"}
+                  {failure.blockedByLocalChanges ? ACTIONS[failure.action].stashAndRetry : "Retry"}
                 </Button>
-              ) : (
-                failure.retryable && (
-                  <Button
-                    variant="primary"
-                    onClick={() => (failure.action === "pull" ? doPull() : doSwitch())}
-                  >
-                    Retry
-                  </Button>
-                )
               )}
             </>
           )

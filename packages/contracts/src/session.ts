@@ -66,6 +66,11 @@ export class SessionAlreadyStarted extends Schema.TaggedError<SessionAlreadyStar
   { sessionId: Schema.String },
 ) {}
 
+// Another session's agent works in the checkout, which must not move under it.
+export class CheckoutInUse extends Schema.TaggedError<CheckoutInUse>()("CheckoutInUse", {
+  sessionId: Schema.String,
+}) {}
+
 export class CheckoutHasLocalChanges extends Schema.TaggedError<CheckoutHasLocalChanges>()(
   "CheckoutHasLocalChanges",
   { sessionId: Schema.String },
@@ -129,6 +134,7 @@ export const SessionRpcs = RpcGroup.make(
     error: Schema.Union([
       SessionNotFound,
       SessionAlreadyStarted,
+      CheckoutInUse,
       CheckoutHasLocalChanges,
       GitRefused,
     ]),
@@ -137,7 +143,7 @@ export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.fastForward", {
     payload: { sessionId: Schema.String, stash: Schema.optional(Schema.Boolean) },
     success: Session,
-    error: Schema.Union([SessionNotFound, SessionAlreadyStarted, GitRefused]),
+    error: Schema.Union([SessionNotFound, SessionAlreadyStarted, CheckoutInUse, GitRefused]),
   }),
   // First every session of the project, read after the server subscribed; then each change.
   Rpc.make("session.watch", {

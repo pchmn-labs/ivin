@@ -1,41 +1,18 @@
 import {
   CheckoutHasLocalChanges,
-  type Session,
   GitRefused,
   type LocalChangesChoice,
 } from "@ivin/contracts/session"
 import { Effect } from "effect"
-import { defaultBranchName, isBlockedByLocalChanges } from "../../worktree/rules/checkout-sync.ts"
-import { fetchOriginQuietly } from "../../worktree/usecases/checkout-status.ts"
-import { Git, type GitError } from "../../worktree/usecases/git.ts"
+import { defaultBranchName } from "../../worktree/rules/checkout-sync.ts"
+import { Git } from "../../worktree/usecases/git.ts"
 import { newWorktreeBase } from "../../worktree/usecases/new-worktree-base.ts"
-import { SessionFeed } from "./session-feed.ts"
-import { SessionStore } from "./session-store.ts"
-import { unstartedSession } from "./unstarted-session.ts"
-
-export const gitRefused = (sessionId: string) => (error: GitError) =>
-  new GitRefused({
-    sessionId,
-    message: error.message,
-    blockedByLocalChanges: isBlockedByLocalChanges(error.message),
-  })
-
-export const refreshCheckoutBranch = (session: Session) =>
-  Effect.gen(function* () {
-    const store = yield* SessionStore
-    const checkout = session.projectPath
-    yield* store.setWorkingFolder(session.id, checkout, yield* (yield* Git).currentBranch(checkout))
-    yield* (yield* SessionFeed).publish(session.id)
-    return (yield* store.findById(session.id)) ?? session
-  })
+import { checkoutChange, refreshCheckoutBranch } from "./checkout-change.ts"
 
 export const switchToDefaultBranch = (sessionId: string, localChanges?: LocalChangesChoice) =>
   Effect.gen(function* () {
     const git = yield* Git
-    const session = yield* unstartedSession(sessionId)
-    const checkout = session.projectPath
-    const refused = gitRefused(sessionId)
-    yield* fetchOriginQuietly(checkout)
+    const { session, checkout, refused } = yield* checkoutChange(sessionId)
     const branch = defaultBranchName(
       yield* newWorktreeBase(checkout).pipe(Effect.mapError(refused)),
     )
@@ -46,13 +23,12 @@ export const switchToDefaultBranch = (sessionId: string, localChanges?: LocalCha
         blockedByLocalChanges: false,
       })
     }
-    if (yield* git.hasLocalChanges(checkout).pipe(Effect.mapError(refused))) {
+    // Stashed whenever asked: untracked files in the way are not counted as local changes.
+    if (localChanges?.kind === "stash") {
+      yield* git.stash(checkout, `WIP before switching to ${branch}`).pipe(Effect.mapError(refused))
+    } else if (yield* git.hasLocalChanges(checkout).pipe(Effect.mapError(refused))) {
       if (!localChanges) return yield* new CheckoutHasLocalChanges({ sessionId })
-      yield* (
-        localChanges.kind === "stash"
-          ? git.stash(checkout, `WIP before switching to ${branch}`)
-          : git.commitAll(checkout, localChanges.message)
-      ).pipe(Effect.mapError(refused))
+      yield* git.commitTracked(checkout, localChanges.message).pipe(Effect.mapError(refused))
     }
     yield* git.checkout(checkout, branch).pipe(
       Effect.andThen(git.fastForward(checkout, `origin/${branch}`)),

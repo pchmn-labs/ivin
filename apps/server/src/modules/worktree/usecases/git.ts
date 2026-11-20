@@ -24,7 +24,8 @@ export class Git extends Context.Service<
     readonly hasLocalChanges: (folder: string) => Effect.Effect<boolean, GitError>
     // Untracked files included, so they no longer block a checkout or a fast-forward.
     readonly stash: (folder: string, message: string) => Effect.Effect<void, GitError>
-    readonly commitAll: (folder: string, message: string) => Effect.Effect<void, GitError>
+    // Untracked files stay out, as the user was never shown them.
+    readonly commitTracked: (folder: string, message: string) => Effect.Effect<void, GitError>
     readonly checkout: (folder: string, branch: string) => Effect.Effect<void, GitError>
     readonly fastForward: (folder: string, upstream: string) => Effect.Effect<void, GitError>
     readonly divergence: (

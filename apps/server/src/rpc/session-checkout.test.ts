@@ -67,7 +67,11 @@ afterEach(() => rmSync(root, { recursive: true, force: true }))
 const makeClient = () => RpcTest.makeClient(Rpcs)
 type Client = Effect.Success<ReturnType<typeof makeClient>>
 
-const withServer = <A, E>(starts: StartInput[], use: (client: Client) => Effect.Effect<A, E>) => {
+const withServer = <A, E>(
+  starts: StartInput[],
+  use: (client: Client) => Effect.Effect<A, E>,
+  turns: readonly (readonly HarnessOutput[])[] = [turn],
+) => {
   const db = new DatabaseSync(":memory:")
   Effect.runSync(runMigrations(db))
   return Effect.runPromise(
@@ -80,7 +84,7 @@ const withServer = <A, E>(starts: StartInput[], use: (client: Client) => Effect.
           Layer.provide(Layer.succeed(Database)(db)),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([turn], { starts })),
+          Layer.provide(layerScripted(turns, { starts })),
         ),
       ),
       Effect.scoped,
@@ -162,7 +166,7 @@ test("a checkout with local changes is refused, then stashed before the switch",
   expect(git(project, "stash", "list")).toContain("WIP before switching to main")
 })
 
-test("a checkout with local changes is committed on its branch before the switch", async () => {
+test("a checkout's tracked changes are committed on its branch before the switch, untracked files left out", async () => {
   git(project, "checkout", "--quiet", "-b", "feature")
   writeFileSync(join(project, "first.txt"), "edited")
   writeFileSync(join(project, "new.txt"), "new")
@@ -178,7 +182,8 @@ test("a checkout with local changes is committed on its branch before the switch
 
   expect(git(project, "branch", "--show-current")).toBe("main")
   expect(git(project, "log", "-1", "--format=%s", "feature")).toBe("Keep my edit")
-  expect(git(project, "show", "--name-only", "--format=", "feature")).toBe("first.txt\nnew.txt")
+  expect(git(project, "show", "--name-only", "--format=", "feature")).toBe("first.txt")
+  expect(existsSync(join(project, "new.txt"))).toBe(true)
 })
 
 test("a default branch that diverged from origin fails with git's message, and is not merged", async () => {
@@ -250,4 +255,61 @@ test("outside a git repository there is no checkout status", async () => {
   )
 
   expect(status).toBeNull()
+})
+
+test("untracked files in the way of the switch are stashed when the user asks", async () => {
+  git(project, "checkout", "--quiet", "-b", "feature")
+  writeFileSync(join(project, "ahead.txt"), "mine")
+  const refused = await withServer([], (client) =>
+    Effect.gen(function* () {
+      const created = yield* newSession(client)
+      const refused = yield* Effect.flip(
+        client["session.switchToDefaultBranch"]({ sessionId: created.id }),
+      )
+      yield* client["session.switchToDefaultBranch"]({
+        sessionId: created.id,
+        localChanges: { kind: "stash" },
+      })
+      return refused
+    }),
+  )
+
+  expect(refused).toMatchObject({ _tag: "GitRefused", blockedByLocalChanges: true })
+  expect(git(project, "rev-parse", "--abbrev-ref", "HEAD")).toBe("main")
+  expect(git(project, "rev-parse", "HEAD")).toBe(git(project, "rev-parse", "origin/main"))
+  expect(git(project, "stash", "list")).toContain("WIP before switching to main")
+})
+
+test("the switch updates the branch of every session in the checkout", async () => {
+  git(project, "checkout", "--quiet", "-b", "feature")
+  const sessions = await withServer([], (client) =>
+    Effect.gen(function* () {
+      yield* newSession(client)
+      const created = yield* newSession(client)
+      yield* client["session.switchToDefaultBranch"]({ sessionId: created.id })
+      return yield* client["session.list"]({ projectPath: project })
+    }),
+  )
+
+  expect(sessions.map((s) => s.branch)).toEqual(["main", "main"])
+})
+
+test("the checkout does not move while another session's agent works in it", async () => {
+  git(project, "checkout", "--quiet", "-b", "feature")
+  const refused = await withServer(
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const running = yield* newSession(client)
+        yield* client["session.sendMessage"]({ sessionId: running.id, messageId: "m1", text: "go" })
+        const created = yield* newSession(client)
+        return yield* Effect.flip(
+          client["session.switchToDefaultBranch"]({ sessionId: created.id }),
+        )
+      }),
+    [[{ type: "status", status: "running", raw: null }]],
+  )
+
+  expect(refused._tag).toBe("CheckoutInUse")
+  expect(git(project, "branch", "--show-current")).toBe("feature")
 })

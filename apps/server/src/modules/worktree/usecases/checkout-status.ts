@@ -3,15 +3,7 @@ import { defaultBranchName, fastForwardCount } from "../rules/checkout-sync.ts"
 import { Git } from "./git.ts"
 import { listWorktrees } from "./list-worktrees.ts"
 import { newWorktreeBase } from "./new-worktree-base.ts"
-import { OriginFetch } from "./origin-fetch.ts"
-
-// Offline, the refs as last fetched still answer.
-export const fetchOriginQuietly = (repo: string) =>
-  Effect.gen(function* () {
-    const git = yield* Git
-    if (!(yield* git.hasRemote(repo, "origin"))) return
-    yield* (yield* OriginFetch).fetch(repo)
-  }).pipe(Effect.catch((error) => Effect.logWarning(`could not fetch origin for ${repo}`, error)))
+import { fetchOriginQuietly } from "./fetch-origin-quietly.ts"
 
 export const checkoutStatus = (projectPath: string) =>
   Effect.gen(function* () {
