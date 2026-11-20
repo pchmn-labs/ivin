@@ -4,7 +4,7 @@ import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
 import { Text } from "../../../core/components/text/text.tsx"
-import type { TranscriptRow as Row } from "../rules/turns.ts"
+import type { TranscriptRow as RowData } from "../rules/turns.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
 import { TurnWork } from "./turn-work.tsx"
 import "./transcript-view.css"
@@ -18,7 +18,6 @@ const ROW_HEIGHT = 38
 export function TranscriptView({ sessionId, live = false }: { sessionId: string; live?: boolean }) {
   const { loaded, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
   const loadItemsBefore = useAtomSet(loadItemsBeforeAtom)
-  // The last turn's work row exists before its first tool call, for the line that says the agent works.
   const shown = useMemo(
     () => (live ? rows : rows.filter((row) => row.type === "item" || row.itemIds.length > 0)),
     [rows, live],
@@ -50,7 +49,7 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
   )
 }
 
-function RowContent({ sessionId, row, live }: { sessionId: string; row: Row; live: boolean }) {
+function RowContent({ sessionId, row, live }: { sessionId: string; row: RowData; live: boolean }) {
   if (row.type === "item") return <TranscriptRow sessionId={sessionId} id={row.id} />
   return (
     <div className="iv-transcript__column">

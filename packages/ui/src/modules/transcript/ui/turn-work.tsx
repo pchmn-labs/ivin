@@ -1,8 +1,8 @@
 import { useAtom, useAtomValue } from "@effect/atom-react"
 import { useEffect, useState, type ReactNode } from "react"
-import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
+import { ItemSlot } from "./transcript-row.tsx"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { foldsOf } from "../atoms/folds.ts"
 import {
@@ -34,16 +34,6 @@ function Failed({ count }: { count: number }) {
       <span className="iv-turn__failed">{count} failed</span>
     </>
   )
-}
-
-function Child({ item, sessionId }: { item: TranscriptItem; sessionId: string }) {
-  if (item.type === "tool_call") {
-    return <Slot slot="transcript.toolCall" tool={item.name} props={{ item, sessionId }} />
-  }
-  if (item.type === "approval")
-    return <Slot slot="transcript.approval" props={{ item, sessionId }} />
-  if (item.type === "usage") return null
-  return <Slot slot="transcript.message" props={{ item, sessionId }} />
 }
 
 function StepView({
@@ -95,7 +85,7 @@ function StepView({
         <div className="iv-turn__calls">
           {shown.map((item) => (
             <div key={item.id} className="iv-turn__call">
-              <Child item={item} sessionId={sessionId} />
+              <ItemSlot item={item} sessionId={sessionId} />
             </div>
           ))}
         </div>
@@ -107,11 +97,10 @@ function StepView({
 type Latest = NonNullable<Work["latest"]>
 
 function LatestLine({ latest, sessionId }: { latest: Latest; sessionId: string }) {
-  if (latest.type === "call") return <Child item={latest.item} sessionId={sessionId} />
+  if (latest.type === "call") return <ItemSlot item={latest.item} sessionId={sessionId} />
   return <span className="iv-turn__note">{latest.item.text.split("\n", 1)[0]}</span>
 }
 
-// The previous step slides out while the new one comes in.
 function LatestStep({ latest, sessionId }: { latest: Latest; sessionId: string }) {
   const [shown, setShown] = useState<{ current: Latest; leaving: Latest | null }>({
     current: latest,

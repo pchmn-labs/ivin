@@ -3,7 +3,6 @@ import type { ToolKind, TranscriptItem } from "@ivin/contracts/transcript"
 type MessageItem = Extract<TranscriptItem, { type: "message" }>
 type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 
-// `work`: a turn's work, from its first item to its last tool call or approval.
 export type TranscriptRow =
   | { readonly type: "item"; readonly id: string }
   | {
@@ -17,7 +16,7 @@ export type TranscriptRow =
 const isWork = (item: TranscriptItem) => item.type === "tool_call" || item.type === "approval"
 const isUserMessage = (item: TranscriptItem) => item.type === "message" && item.role === "user"
 
-// A turn runs from a user message to the next; items before the first one are a turn cut by paging.
+// Items before the first user message are a turn cut by paging.
 // The last turn gets a work row before its first tool call, for the line that says the agent works.
 export const transcriptRows = (items: ReadonlyArray<TranscriptItem>): TranscriptRow[] => {
   const rows: TranscriptRow[] = []
@@ -105,7 +104,7 @@ export const turnWork = (
   return {
     steps: built,
     calls: calls.length,
-    failed: calls.filter((call) => call.status === "error").length,
+    failed: built.reduce((sum, step) => sum + step.failed, 0),
     startAt: turn[0]?.at ?? 0,
     endAt: Math.max(0, ...turn.map((item) => item.at)),
     outcome,
@@ -119,12 +118,10 @@ export const turnWork = (
   }
 }
 
-// Above this many calls in a turn, its steps open folded.
 export const OPEN_STEPS_UP_TO = 8
 
 export const stepsOpenByDefault = (work: TurnWork) => work.calls <= OPEN_STEPS_UP_TO
 
-// The calls a folded step still shows.
 export const pinnedCalls = (step: Step) =>
   step.calls.filter((call) => call.status === "error" || call.kind === "agent")
 
@@ -157,7 +154,6 @@ export const turnVerb = (outcome: Outcome, live: boolean) =>
         ? "Failed after"
         : "Worked for"
 
-// A finished turn with an answer opens folded; one without stays open to show where it stopped.
 export const turnOpenByDefault = (work: TurnWork, live: boolean) =>
   !live && work.outcome !== "answered"
 

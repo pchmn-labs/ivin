@@ -85,11 +85,11 @@
 }
 
 .iv-turn__tick--in {
-  animation: iv-turn-tick-in 240ms var(--iv-ease-out) both;
+  animation: iv-turn-tick-in var(--iv-duration-base) var(--iv-ease-out) both;
 }
 
 .iv-turn__tick--out {
-  animation: iv-turn-tick-out 200ms var(--iv-ease-out) both;
+  animation: iv-turn-tick-out var(--iv-duration-base) var(--iv-ease-out) both;
   pointer-events: none;
 }
 
