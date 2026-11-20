@@ -25,6 +25,7 @@ export const sendMessageAtom = serverRuntime.fn<{
       id: messageId,
       sessionId,
       position: (last?.position ?? -1) + 1,
+      at: Date.now(),
       type: "message",
       role: "user",
       text,

@@ -2,6 +2,9 @@ import type { TranscriptEvent } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
 import { applyEvent, deriveItems, emptyItemState } from "./derive-items.ts"
 
+const kindOf = (name: string) => (name === "list_files" ? "search" : "other")
+const derive = (all: TranscriptEvent[]) => deriveItems(all, kindOf)
+
 type Body = Record<string, unknown> & { type: TranscriptEvent["type"] }
 
 const events = (...bodies: Body[]): TranscriptEvent[] =>
@@ -11,7 +14,7 @@ const events = (...bodies: Body[]): TranscriptEvent[] =>
         id: `e${index + 1}`,
         sessionId: "s1",
         sequence: index + 1,
-        at: null,
+        at: { epochMilliseconds: (index + 1) * 1000 },
         raw: null,
         ...body,
       }) as unknown as TranscriptEvent,
@@ -33,11 +36,12 @@ const result = (toolCallId: string, isError = false): Body => ({
 })
 
 test("a user message is one message item named after its event", () => {
-  expect(deriveItems(events(user("hi")))).toEqual([
+  expect(derive(events(user("hi")))).toEqual([
     {
       id: "e1",
       sessionId: "s1",
       position: 1,
+      at: 1000,
       type: "message",
       role: "user",
       text: "hi",
@@ -47,22 +51,20 @@ test("a user message is one message item named after its event", () => {
 })
 
 test("consecutive assistant texts assemble into one message at the first event's position", () => {
-  const items = deriveItems(events(user("hi"), assistant("one"), assistant("two")))
+  const items = derive(events(user("hi"), assistant("one"), assistant("two")))
 
   expect(items).toHaveLength(2)
   expect(items[1]).toMatchObject({ id: "e2", position: 2, role: "assistant", text: "one\n\ntwo" })
 })
 
 test("assistant texts split by a tool call stay two messages", () => {
-  const items = deriveItems(
-    events(assistant("before"), call("t1"), result("t1"), assistant("after")),
-  )
+  const items = derive(events(assistant("before"), call("t1"), result("t1"), assistant("after")))
 
   expect(items.map((item) => item.type)).toEqual(["message", "tool_call", "message"])
 })
 
 test("a user message or an idle status ends the open assistant message", () => {
-  const items = deriveItems(
+  const items = derive(
     events(
       assistant("a"),
       user("next"),
@@ -77,17 +79,19 @@ test("a user message or an idle status ends the open assistant message", () => {
   )
 })
 
-test("a tool call and its result are one item with the output and a done status", () => {
-  const items = deriveItems(events(call("t1"), result("t1")))
+test("a tool call and its result are one item with its kind, the output and a done status", () => {
+  const items = derive(events(call("t1"), result("t1")))
 
   expect(items).toEqual([
     {
       id: "e1",
       sessionId: "s1",
       position: 1,
+      at: 1000,
       type: "tool_call",
       toolCallId: "t1",
       name: "list_files",
+      kind: "search",
       input: { path: "." },
       status: "done",
       output: "out",
@@ -96,12 +100,12 @@ test("a tool call and its result are one item with the output and a done status"
 })
 
 test("a tool call without a result is running, and a failed result makes it an error", () => {
-  expect(deriveItems(events(call("t1")))[0]).toMatchObject({ status: "running", output: null })
-  expect(deriveItems(events(call("t1"), result("t1", true)))[0]).toMatchObject({ status: "error" })
+  expect(derive(events(call("t1")))[0]).toMatchObject({ status: "running", output: null })
+  expect(derive(events(call("t1"), result("t1", true)))[0]).toMatchObject({ status: "error" })
 })
 
 test("results of parallel tool calls match their own call", () => {
-  const items = deriveItems(events(call("a"), call("b"), result("b"), result("a", true)))
+  const items = derive(events(call("a"), call("b"), result("b"), result("a", true)))
 
   expect(items).toMatchObject([
     { toolCallId: "a", status: "error" },
@@ -110,13 +114,13 @@ test("results of parallel tool calls match their own call", () => {
 })
 
 test("a result with no call and a status event produce no item", () => {
-  expect(deriveItems(events(result("ghost"), { type: "status", status: "running" }))).toEqual([])
+  expect(derive(events(result("ghost"), { type: "status", status: "running" }))).toEqual([])
 })
 
 test("applyEvent gives the changed item for each event, so a watcher sees one upsert per event", () => {
   const [first, second] = events(call("t1"), result("t1"))
-  const a = applyEvent(emptyItemState, first!)
-  const b = applyEvent(a.state, second!)
+  const a = applyEvent(emptyItemState, first!, kindOf)
+  const b = applyEvent(a.state, second!, kindOf)
 
   expect(a.item).toMatchObject({ id: "e1", status: "running" })
   expect(b.item).toMatchObject({ id: "e1", status: "done" })
@@ -131,13 +135,14 @@ test("a usage event is a usage item at its own position and leaves the open mess
     cacheWriteTokens: 0,
     costUsd: 0.01,
   }
-  const items = deriveItems(events(assistant("one"), usage, assistant("two")))
+  const items = derive(events(assistant("one"), usage, assistant("two")))
 
   expect(items).toEqual([
     {
       id: "e1",
       sessionId: "s1",
       position: 1,
+      at: 1000,
       type: "message",
       role: "assistant",
       text: "one\n\ntwo",
@@ -147,6 +152,7 @@ test("a usage event is a usage item at its own position and leaves the open mess
       id: "e2",
       sessionId: "s1",
       position: 2,
+      at: 2000,
       type: "usage",
       inputTokens: 10,
       outputTokens: 5,
@@ -156,10 +162,11 @@ test("a usage event is a usage item at its own position and leaves the open mess
 })
 
 test("an error event is an error item", () => {
-  expect(deriveItems(events(user("hi"), { type: "error", message: "boom" }))[1]).toEqual({
+  expect(derive(events(user("hi"), { type: "error", message: "boom" }))[1]).toEqual({
     id: "e2",
     sessionId: "s1",
     position: 2,
+    at: 2000,
     type: "error",
     message: "boom",
   })
@@ -179,11 +186,12 @@ const decision = (requestId: string, allow: boolean): Body => ({
 })
 
 test("an approval request is an approval item with no decision yet", () => {
-  expect(deriveItems(events(request("r1")))).toEqual([
+  expect(derive(events(request("r1")))).toEqual([
     {
       id: "e1",
       sessionId: "s1",
       position: 1,
+      at: 1000,
       type: "approval",
       requestId: "r1",
       toolCallId: "t1",
@@ -195,7 +203,7 @@ test("an approval request is an approval item with no decision yet", () => {
 })
 
 test("a decision fills the decision of its own request, in place", () => {
-  const items = deriveItems(
+  const items = derive(
     events(request("r1"), request("r2"), decision("r2", false), decision("r1", true)),
   )
 
@@ -207,18 +215,22 @@ test("a decision fills the decision of its own request, in place", () => {
 
 test("a decision with no request, and any status, produce no item", () => {
   expect(
-    deriveItems(
-      events(decision("ghost", true), { type: "status", status: "waiting_for_approval" }),
-    ),
+    derive(events(decision("ghost", true), { type: "status", status: "waiting_for_approval" })),
   ).toEqual([])
 })
 
 test("an interruption is its own item and closes the open assistant message", () => {
-  const items = deriveItems(
+  const items = derive(
     events(user("hi"), assistant("one"), { type: "interruption" }, assistant("two")),
   )
 
   expect(items.map((i) => i.type)).toEqual(["message", "message", "interruption", "message"])
-  expect(items[2]).toEqual({ id: "e3", sessionId: "s1", position: 3, type: "interruption" })
+  expect(items[2]).toEqual({
+    id: "e3",
+    sessionId: "s1",
+    position: 3,
+    at: 3000,
+    type: "interruption",
+  })
   expect(items[3]).toMatchObject({ text: "two" })
 })

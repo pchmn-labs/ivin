@@ -9,6 +9,7 @@ import {
   type StartInput,
 } from "../../../shared/harness-provider.ts"
 import { toolActivity } from "../../claude/rules/tool-activity.ts"
+import { toolKind } from "../../claude/rules/tool-kind.ts"
 
 export interface ScriptedSend {
   readonly sessionId: string
@@ -85,6 +86,7 @@ export const layerScripted = (
       runOptions: Effect.succeed(runOptions),
       // Scripts replay recorded Claude output.
       toolActivity,
+      toolKind,
       start: (input) =>
         Effect.gen(function* () {
           const { sessionId } = input

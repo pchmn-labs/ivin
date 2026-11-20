@@ -12,6 +12,7 @@ const usage = (
     id: `u${position}`,
     sessionId: "s",
     position,
+    at: 0,
     type: "usage",
     inputTokens,
     outputTokens,
@@ -21,7 +22,16 @@ const usage = (
 test("the total sums input and output tokens and the cost of every usage item", () => {
   const total = totalUsage([
     usage(0, 1000, 200, 0.01),
-    { id: "m", sessionId: "s", position: 1, type: "message", role: "user", text: "hi", images: [] },
+    {
+      id: "m",
+      sessionId: "s",
+      position: 1,
+      at: 0,
+      type: "message",
+      role: "user",
+      text: "hi",
+      images: [],
+    },
     usage(2, 300, 40, 0.0023),
   ])
   expect(total?.tokens).toBe(1540)

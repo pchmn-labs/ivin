@@ -1,5 +1,5 @@
 import type { Harness, HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
-import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
+import type { HarnessOutput, ImageData, ToolKind } from "@ivin/contracts/transcript"
 import { Context, Data, type Effect, type Scope, type Stream } from "effect"
 
 export class HarnessError extends Data.TaggedError("HarnessError")<{
@@ -54,5 +54,6 @@ export class HarnessProvider extends Context.Service<
     readonly runOptions: Effect.Effect<HarnessRunOptions>
     readonly start: (input: StartInput) => Effect.Effect<HarnessRun, HarnessError, Scope.Scope>
     readonly toolActivity: (call: ToolUse, result: ToolOutcome) => ToolActivity
+    readonly toolKind: (name: string) => ToolKind
   }
 >()("ivin/harness/HarnessProvider") {}

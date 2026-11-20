@@ -39,15 +39,17 @@ const tool = (status: ToolCallItem["status"], output: string | null): ToolCallIt
   id: "i0",
   sessionId: "s1",
   position: 0,
+  at: 0,
   type: "tool_call",
   toolCallId: "t0",
   name: "Read",
+  kind: "read",
   input: { file_path: "/a.ts" },
   status,
   output,
 })
 
-test("a tool call shows its icon, name and input on one row, its result behind the chevron", async () => {
+test("a tool call shows its icon, name and input on one row, its result opening under it", async () => {
   await mount(tool("done", "file contents"))
   const row = page.getByTestId("tool-output").element().querySelector("summary")!
   expect(row.textContent).toBe("Read/a.ts")

@@ -6,6 +6,7 @@ const approval = (id: string, decision: "allow" | "deny" | null): TranscriptItem
   id,
   sessionId: "s",
   position: 0,
+  at: 0,
   type: "approval",
   requestId: `r-${id}`,
   toolCallId: null,

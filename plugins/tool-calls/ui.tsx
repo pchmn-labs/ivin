@@ -6,7 +6,7 @@ import { toolIcon } from "./rules/tool-icon.ts"
 function ToolHeader({ item, main }: { item: ToolCallItem; main: string | null }) {
   return (
     <Stack as="span" direction="row" gap={2} align="center" grow>
-      <Icon name={toolIcon(item.name)} size={14} />
+      <Icon name={toolIcon(item.kind)} size={14} />
       <Text weight="medium">{item.name}</Text>
       <Stack as="span" grow>
         <Text size="sm" tone="muted" mono truncate>
@@ -33,7 +33,7 @@ function ToolCall({ item }: SlotProps["transcript.toolCall"]) {
   const header = <ToolHeader item={item} main={main} />
   if (item.output === null && !showInput) return header
   return (
-    <Disclosure data-testid="tool-output" summary={header}>
+    <Disclosure variant="row" data-testid="tool-output" summary={header}>
       <Stack gap={2}>
         {showInput && <CodeBlock text={prettyInput(item.input)} />}
         {item.output !== null && <CodeBlock text={item.output} />}

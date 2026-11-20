@@ -41,7 +41,7 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
     session !== undefined &&
     !session.started &&
     status === "idle" &&
-    (!transcript.loaded || transcript.ids.length === 0)
+    (!transcript.loaded || transcript.rows.length === 0)
 
   // The title keeps its place among the children, so the composer survives the switch.
   return (
@@ -51,7 +51,7 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
       )}
       {!blank && (
         <div className="iv-session-view__transcript">
-          <TranscriptView key={sessionId} sessionId={sessionId} />
+          <TranscriptView key={sessionId} sessionId={sessionId} live={isRunning(status)} />
         </div>
       )}
       {status === "preparing_worktree" && (

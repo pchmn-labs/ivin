@@ -66,13 +66,13 @@
   border: 1px solid var(--iv-border);
   border-radius: var(--iv-radius-md);
   background: var(--iv-bg-subtle);
-  line-height: var(--iv-text-md-lh);
+  line-height: var(--iv-text-mono-lh);
 }
 
 .iv-markdown pre code {
   padding: 0;
   background: none;
-  font-size: var(--iv-text-sm);
+  font-size: var(--iv-text-mono);
 }
 
 .iv-markdown a {

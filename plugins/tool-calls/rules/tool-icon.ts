@@ -1,11 +1,13 @@
-import type { IconProps } from "@ivin/plugin-api/ui"
+import type { IconProps, ToolCallItem } from "@ivin/plugin-api/ui"
 
-const ICONS: Readonly<Record<string, IconProps["name"]>> = {
-  Bash: "terminal",
-  Read: "file",
-  Write: "pencil",
-  Edit: "pencil",
-  MultiEdit: "pencil",
+const ICONS: Readonly<Record<ToolCallItem["kind"], IconProps["name"]>> = {
+  command: "terminal",
+  read: "file",
+  edit: "pencil",
+  search: "search",
+  skill: "sparkles",
+  agent: "robot",
+  other: "wrench",
 }
 
-export const toolIcon = (name: string): IconProps["name"] => ICONS[name] ?? "wrench"
+export const toolIcon = (kind: ToolCallItem["kind"]): IconProps["name"] => ICONS[kind]
