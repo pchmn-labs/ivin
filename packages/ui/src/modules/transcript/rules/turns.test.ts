@@ -1,6 +1,13 @@
 import type { ToolKind, TranscriptItem } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
-import { callPhrases, duration, pinnedCalls, transcriptRows, turnWork } from "./turns.ts"
+import {
+  callPhrases,
+  duration,
+  pinnedCalls,
+  stepOpenByDefault,
+  transcriptRows,
+  turnWork,
+} from "./turns.ts"
 
 let position = 0
 const base = (id: string) => ({ id, sessionId: "s1", position: position++, at: position * 1000 })
@@ -109,16 +116,11 @@ test("a turn without an answer is stopped when interrupted and failed on an erro
   expect(turnWork("w", [call("c")], [user("u"), call("c"), error]).outcome).toBe("failed")
 })
 
-test("the latest step is the running call, else the current step's sentence", () => {
-  const running = call("c2", "command", "running")
-  expect(turnWork("w", [text("t1"), call("c1"), running], []).latest).toEqual({
-    type: "call",
-    item: running,
-  })
-  expect(turnWork("w", [text("t1"), call("c1")], []).latest).toMatchObject({
-    type: "sentence",
-    item: { id: "t1" },
-  })
+test("while the turn runs only its last step is open; once it ends every step is, up to 8 calls", () => {
+  const work = turnWork("w", [text("t1"), call("c1"), text("t2"), call("c2")], [])
+
+  expect(work.steps.map((_, index) => stepOpenByDefault(work, index, true))).toEqual([false, true])
+  expect(work.steps.map((_, index) => stepOpenByDefault(work, index, false))).toEqual([true, true])
 })
 
 test("a folded step keeps its failed calls and its subagent calls", () => {

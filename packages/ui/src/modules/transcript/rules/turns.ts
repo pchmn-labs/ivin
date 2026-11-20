@@ -63,10 +63,6 @@ export interface TurnWork {
   readonly startAt: number
   readonly endAt: number
   readonly outcome: Outcome
-  readonly latest:
-    | { readonly type: "call"; readonly item: ToolCallItem }
-    | { readonly type: "sentence"; readonly item: MessageItem }
-    | null
 }
 
 const isAssistantText = (item: TranscriptItem): item is MessageItem =>
@@ -99,8 +95,6 @@ export const turnWork = (
       : turn.some((item) => item.type === "error")
         ? "failed"
         : "silent"
-  const running = calls.findLast((call) => call.status === "running")
-  const current = built.at(-1)
   return {
     steps: built,
     calls: calls.length,
@@ -108,19 +102,13 @@ export const turnWork = (
     startAt: turn[0]?.at ?? 0,
     endAt: Math.max(0, ...turn.map((item) => item.at)),
     outcome,
-    latest: running
-      ? { type: "call", item: running }
-      : current?.sentence
-        ? { type: "sentence", item: current.sentence }
-        : calls.length > 0
-          ? { type: "call", item: calls.at(-1)! }
-          : null,
   }
 }
 
 export const OPEN_STEPS_UP_TO = 8
 
-export const stepsOpenByDefault = (work: TurnWork) => work.calls <= OPEN_STEPS_UP_TO
+export const stepOpenByDefault = (work: TurnWork, index: number, live: boolean) =>
+  live ? index === work.steps.length - 1 : work.calls <= OPEN_STEPS_UP_TO
 
 export const pinnedCalls = (step: Step) =>
   step.calls.filter((call) => call.status === "error" || call.kind === "agent")
@@ -155,7 +143,7 @@ export const turnVerb = (outcome: Outcome, live: boolean) =>
         : "Worked for"
 
 export const turnOpenByDefault = (work: TurnWork, live: boolean) =>
-  !live && work.outcome !== "answered"
+  live || work.outcome !== "answered"
 
 export const duration = (ms: number) => {
   const seconds = Math.max(0, Math.round(ms / 1000))

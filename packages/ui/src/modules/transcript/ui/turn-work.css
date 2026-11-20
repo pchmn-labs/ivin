@@ -20,26 +20,6 @@
   color: var(--iv-text-muted);
 }
 
-.iv-turn__hang {
-  position: absolute;
-  left: -20px;
-  display: inline-flex;
-  opacity: 0;
-  transition:
-    opacity var(--iv-duration-fast) ease-out,
-    rotate var(--iv-duration-fast) var(--iv-ease-out);
-}
-
-.iv-turn__line--toggle:hover .iv-turn__hang,
-.iv-turn__line--toggle:focus-visible .iv-turn__hang,
-.iv-turn__line[aria-expanded="true"] .iv-turn__hang {
-  opacity: 1;
-}
-
-.iv-turn__line[aria-expanded="true"] .iv-turn__hang {
-  rotate: 90deg;
-}
-
 .iv-turn__label {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -53,74 +33,30 @@
   color: var(--iv-danger);
 }
 
-.iv-turn__spinner {
-  display: inline-flex;
-  color: var(--iv-text-muted);
-}
-
 .iv-turn__rule {
   flex: 1;
   height: 1px;
   background: var(--iv-border);
 }
 
-.iv-turn__latest {
-  position: relative;
-  height: 24px;
-  overflow: hidden;
-  padding-left: 18px;
-}
-
-.iv-turn__tick {
-  position: absolute;
-  inset: 0 0 0 18px;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-.iv-turn__tick > * {
-  flex: 1;
-  min-width: 0;
-}
-
-.iv-turn__tick--in {
-  animation: iv-turn-tick-in var(--iv-duration-base) var(--iv-ease-out) both;
-}
-
-.iv-turn__tick--out {
-  animation: iv-turn-tick-out var(--iv-duration-base) var(--iv-ease-out) both;
-  pointer-events: none;
-}
-
-@keyframes iv-turn-tick-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-}
-
-@keyframes iv-turn-tick-out {
-  to {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-}
-
-.iv-turn__note {
-  overflow: hidden;
-  color: var(--iv-text-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .iv-turn__timeline {
+  position: relative;
   margin: var(--iv-space-1) 0 var(--iv-space-2);
+}
+
+.iv-turn__timeline::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 6.5px;
+  width: 1px;
+  height: 7px;
+  background: var(--iv-border-strong);
 }
 
 .iv-turn__step {
   position: relative;
-  padding-left: 20px;
+  padding-left: 22px;
 }
 
 .iv-turn__step + .iv-turn__step {
@@ -131,7 +67,7 @@
   content: "";
   position: absolute;
   top: 8px;
-  left: 1px;
+  left: 3.5px;
   width: 7px;
   height: 7px;
   border: 1.5px solid var(--iv-text-faint);
@@ -143,12 +79,30 @@
   border-color: var(--iv-danger);
 }
 
+.iv-turn__step[data-current]::before {
+  border-color: var(--iv-accent);
+  background: color-mix(in srgb, var(--iv-accent) 30%, var(--iv-bg));
+  animation: iv-turn-ring-pulse var(--iv-duration-pulse) ease-in-out infinite;
+}
+
+@keyframes iv-turn-ring-pulse {
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--iv-accent) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-turn__step[data-current]::before {
+    animation: none;
+  }
+}
+
 .iv-turn__step:not(:last-child)::after {
   content: "";
   position: absolute;
   top: 20px;
   bottom: -8px;
-  left: 4.5px;
+  left: 6.5px;
   width: 1px;
   background: var(--iv-border-strong);
 }
@@ -185,6 +139,16 @@
   place-items: center;
   width: 14px;
   height: 14px;
+  /* The icons would otherwise sit on a text line box and drop below the label's centre. */
+  line-height: 0;
+}
+
+.iv-turn__line .iv-turn__lead {
+  color: var(--iv-text-muted);
+}
+
+.iv-turn__mark[data-outcome="failed"] {
+  color: var(--iv-danger);
 }
 
 .iv-turn__lead > * {
@@ -199,18 +163,25 @@
   opacity: 0;
 }
 
-.iv-turn__summary:hover .iv-turn__stack,
-.iv-turn__summary:focus-visible .iv-turn__stack,
-.iv-turn__summary[aria-expanded="true"] .iv-turn__stack {
+.iv-turn__line--toggle:hover .iv-turn__mark,
+.iv-turn__line--toggle:focus-visible .iv-turn__mark,
+.iv-turn__line[aria-expanded="true"] .iv-turn__mark,
+.iv-turn__summary:hover .iv-turn__mark,
+.iv-turn__summary:focus-visible .iv-turn__mark,
+.iv-turn__summary[aria-expanded="true"] .iv-turn__mark {
   opacity: 0;
 }
 
+.iv-turn__line--toggle:hover .iv-turn__chevron,
+.iv-turn__line--toggle:focus-visible .iv-turn__chevron,
+.iv-turn__line[aria-expanded="true"] .iv-turn__chevron,
 .iv-turn__summary:hover .iv-turn__chevron,
 .iv-turn__summary:focus-visible .iv-turn__chevron,
 .iv-turn__summary[aria-expanded="true"] .iv-turn__chevron {
   opacity: 1;
 }
 
+.iv-turn__line[aria-expanded="true"] .iv-turn__chevron,
 .iv-turn__summary[aria-expanded="true"] .iv-turn__chevron {
   rotate: 90deg;
 }
@@ -222,8 +193,20 @@
 }
 
 .iv-turn__calls {
+  position: relative;
   margin-bottom: var(--iv-space-1);
   padding-left: 18px;
+}
+
+/* Under the summary's icon, joining the calls to it. */
+.iv-turn__calls::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 6px;
+  left: 6.5px;
+  width: 1px;
+  background: var(--iv-border);
 }
 
 .iv-turn__call {

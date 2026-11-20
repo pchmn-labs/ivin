@@ -68,22 +68,29 @@ const mount = async (seeded: TranscriptItem[], live = false, height = 600) => {
 const toolRows = () => document.querySelectorAll('[data-testid="turn"] [data-testid="tool-output"]')
 const turnLine = () => page.getByTestId("turn-line")
 
-test("a running turn shows the time it has worked and its latest step", async () => {
+test("a running turn stays unfolded, with its last step open and the steps before folded", async () => {
   const { user, text, call } = items(Date.now() - 20_000)
   await mount(
     [
       user("u1", "fix it"),
       text("t1", "Looking at the code"),
-      call("c1", "read", "error"),
-      call("c2", "command", "running"),
+      call("c1", "read"),
+      text("t2", "Running the tests"),
+      call("c2", "command", "error"),
+      call("c3", "command", "running"),
     ],
     true,
   )
 
-  await expect.element(turnLine()).toBeVisible()
+  await expect.element(turnLine()).toHaveAttribute("aria-expanded", "true")
   expect(turnLine().element().textContent).toMatch(/^Working for [12]\ds · 1 failed$/)
-  expect(page.getByTestId("turn-latest").element().textContent).toContain("tool-c2")
-  expect(page.getByText("Looking at the code").query()).toBeNull()
+  await expect.element(page.getByText("Looking at the code")).toBeVisible()
+  await expect.element(page.getByText("Running the tests")).toBeVisible()
+  await expect.element(page.getByText("tool-c3")).toBeVisible()
+  expect(toolRows()).toHaveLength(2)
+  await expect
+    .element(page.getByTestId("step-summary").nth(0))
+    .toHaveAttribute("aria-expanded", "false")
 })
 
 test("a finished turn folds its work behind one line, and shows the user's message and the answer", async () => {

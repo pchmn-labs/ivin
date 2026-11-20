@@ -1,7 +1,7 @@
 import { useAtom, useAtomValue } from "@effect/atom-react"
 import { useEffect, useState, type ReactNode } from "react"
 import { Slot } from "../../../app/slot-renderer.tsx"
-import { Icon } from "../../../core/components/icon/icon.tsx"
+import { Icon, type IconName } from "../../../core/components/icon/icon.tsx"
 import { ItemSlot } from "./transcript-row.tsx"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { foldsOf } from "../atoms/folds.ts"
@@ -9,9 +9,10 @@ import {
   callPhrases,
   duration,
   pinnedCalls,
-  stepsOpenByDefault,
+  stepOpenByDefault,
   turnOpenByDefault,
   turnVerb,
+  type Outcome,
   type Step,
   type TurnWork as Work,
 } from "../rules/turns.ts"
@@ -40,19 +41,23 @@ function StepView({
   step,
   sessionId,
   open,
+  current,
   onToggle,
 }: {
   step: Step
   sessionId: string
   open: boolean
+  current: boolean
   onToggle: () => void
 }) {
   const shown = step.calls.length === 0 || open ? step.children : pinnedCalls(step)
+  const running = current && step.calls.some((call) => call.status === "running")
   return (
     <div
       className="iv-turn__step"
       data-testid="turn-step"
       data-failed={step.failed > 0 || undefined}
+      data-current={current || undefined}
     >
       {step.sentence && (
         <div className="iv-turn__sentence">
@@ -68,8 +73,8 @@ function StepView({
           onClick={onToggle}
         >
           <span className="iv-turn__lead">
-            <span className="iv-turn__stack">
-              <Icon name="stack" size={14} />
+            <span className="iv-turn__mark">
+              {running ? <Icon name="loader" size={12} /> : <Icon name="stack" size={14} />}
             </span>
             <span className="iv-turn__chevron">
               <Icon name="chevron-right" size={12} />
@@ -94,54 +99,25 @@ function StepView({
   )
 }
 
-type Latest = NonNullable<Work["latest"]>
-
-function LatestLine({ latest, sessionId }: { latest: Latest; sessionId: string }) {
-  if (latest.type === "call") return <ItemSlot item={latest.item} sessionId={sessionId} />
-  return <span className="iv-turn__note">{latest.item.text.split("\n", 1)[0]}</span>
-}
-
-function LatestStep({ latest, sessionId }: { latest: Latest; sessionId: string }) {
-  const [shown, setShown] = useState<{ current: Latest; leaving: Latest | null }>({
-    current: latest,
-    leaving: null,
-  })
-  if (shown.current.item.id !== latest.item.id) {
-    setShown({ current: latest, leaving: shown.current })
-  } else if (shown.current !== latest) {
-    setShown({ ...shown, current: latest })
-  }
-  return (
-    <div className="iv-turn__latest" data-testid="turn-latest">
-      {shown.leaving && (
-        <div
-          key={shown.leaving.item.id}
-          className="iv-turn__tick iv-turn__tick--out"
-          aria-hidden
-          onAnimationEnd={() => setShown((s) => ({ ...s, leaving: null }))}
-        >
-          <LatestLine latest={shown.leaving} sessionId={sessionId} />
-        </div>
-      )}
-      <div
-        key={shown.current.item.id}
-        className={shown.leaving ? "iv-turn__tick iv-turn__tick--in" : "iv-turn__tick"}
-      >
-        <LatestLine latest={shown.current} sessionId={sessionId} />
-      </div>
-    </div>
-  )
+const MARKS: Record<Outcome, IconName> = {
+  answered: "check",
+  silent: "check",
+  stopped: "square",
+  failed: "circle-alert",
 }
 
 function TurnLine({ work, live }: { work: Work; live: boolean }): ReactNode {
   const verb = turnVerb(work.outcome, live)
   return (
     <>
-      {live && (
-        <span className="iv-turn__spinner">
-          <Icon name="loader" size={12} />
+      <span className="iv-turn__lead">
+        <span className="iv-turn__mark" data-outcome={live ? undefined : work.outcome}>
+          {live ? <Icon name="loader" size={12} /> : <Icon name={MARKS[work.outcome]} size={14} />}
         </span>
-      )}
+        <span className="iv-turn__chevron">
+          <Icon name="chevron-right" size={12} />
+        </span>
+      </span>
       <span className="iv-turn__label">
         {verb} {live ? <ElapsedClock since={work.startAt} /> : duration(work.endAt - work.startAt)}
         {!live && (
@@ -171,7 +147,6 @@ export function TurnWork({
   if (work === null) return null
   const toggle = (key: string, open: boolean) => setFolds(new Map(folds).set(key, !open))
   const open = folds.get(rowId) ?? turnOpenByDefault(work, live)
-  const stepsOpen = stepsOpenByDefault(work)
 
   return (
     <div className="iv-turn" data-testid="turn" data-live={live || undefined}>
@@ -187,29 +162,25 @@ export function TurnWork({
           data-testid="turn-line"
           onClick={() => toggle(rowId, open)}
         >
-          <span className="iv-turn__hang">
-            <Icon name="chevron-right" size={12} />
-          </span>
           <TurnLine work={work} live={live} />
         </button>
       )}
-      {open ? (
+      {open && (
         <div className="iv-turn__timeline">
-          {work.steps.map((step) => {
-            const stepOpen = folds.get(step.id) ?? stepsOpen
+          {work.steps.map((step, index) => {
+            const stepOpen = folds.get(step.id) ?? stepOpenByDefault(work, index, live)
             return (
               <StepView
                 key={step.id}
                 step={step}
                 sessionId={sessionId}
                 open={stepOpen}
+                current={live && index === work.steps.length - 1}
                 onToggle={() => toggle(step.id, stepOpen)}
               />
             )
           })}
         </div>
-      ) : (
-        live && work.latest && <LatestStep latest={work.latest} sessionId={sessionId} />
       )}
     </div>
   )
