@@ -2,6 +2,7 @@ import { ProjectNotOpen } from "@ivin/contracts/project"
 import { SessionNotFound } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { ProjectStore } from "../../project/usecases/project-store.ts"
+import { checkWorkingFolder } from "../../session/usecases/check-working-folder.ts"
 import { SessionStore } from "../../session/usecases/session-store.ts"
 import { listTabs } from "./list-tabs.ts"
 import { TabStore } from "./tab-store.ts"
@@ -18,6 +19,7 @@ export const openTab = (sessionId: string) =>
     if (!open.projects.some((project) => project.path === projectPath)) {
       return yield* new ProjectNotOpen({ path: projectPath })
     }
+    yield* checkWorkingFolder(session)
     if (!(yield* store.find(sessionId))) yield* store.append({ sessionId, projectPath })
     yield* store.select(projectPath, sessionId)
     return yield* listTabs(projectPath)

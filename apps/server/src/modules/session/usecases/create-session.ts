@@ -17,6 +17,7 @@ export const createSession = (projectPath: string, model: string) =>
       inWorktree: false,
       branch: yield* git.currentBranch(projectPath),
       started: false,
+      workingFolderDeleted: false,
       title: defaultTitle,
       model,
       status: "idle",

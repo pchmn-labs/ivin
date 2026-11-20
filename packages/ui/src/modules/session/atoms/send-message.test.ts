@@ -17,6 +17,7 @@ const setup = async () => {
     inWorktree: false,
     branch: "main",
     started: false,
+    workingFolderDeleted: false,
     title: "New session",
     model: "sonnet",
     status: "idle",

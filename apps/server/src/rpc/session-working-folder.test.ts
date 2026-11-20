@@ -468,3 +468,163 @@ test("a git worktree add that failed moves nothing", async () => {
   expect(items.map((i) => i.type)).not.toContain("working_folder")
   expect(starts.map((s) => s.cwd)).toEqual([project])
 })
+
+const startInWorktree = (client: Client, path: string) =>
+  Effect.gen(function* () {
+    yield* client["project.open"]({ path: project })
+    const created = yield* client["session.create"]({ projectPath: project, model: "sonnet" })
+    yield* sendFirst(client, created.id, { kind: "existing_worktree", path })
+    return created.id
+  })
+
+const addWorktree = (name: string) => {
+  const path = join(project, ".worktrees", name)
+  git(project, "worktree", "add", "--quiet", "-b", name, path)
+  return path
+}
+
+test("a worktree removed from outside marks its session when its tab opens", async () => {
+  const path = addWorktree("gone")
+  const session = await withServer([], (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* startInWorktree(client, path)
+      expect((yield* sessionOf(client, sessionId))?.workingFolderDeleted).toBe(false)
+      git(project, "worktree", "remove", "--force", path)
+      yield* client["tab.open"]({ sessionId })
+      return yield* sessionOf(client, sessionId)
+    }),
+  )
+
+  expect(session).toMatchObject({ workingFolderDeleted: true, workingFolder: path })
+})
+
+test("a session whose worktree folder was deleted refuses messages, and keeps its transcript", async () => {
+  const path = addWorktree("gone")
+  const starts: StartInput[] = []
+  const { error, session, items } = await withServer(starts, (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* startInWorktree(client, path)
+      rmSync(path, { recursive: true, force: true })
+      const error = yield* Effect.flip(
+        client["session.sendMessage"]({ sessionId, messageId: "m2", text: "again" }),
+      )
+      return {
+        error,
+        session: yield* sessionOf(client, sessionId),
+        items: yield* itemsOf(client, sessionId),
+      }
+    }),
+  )
+
+  expect(error).toMatchObject({ _tag: "WorkingFolderDeleted" })
+  expect(session?.workingFolderDeleted).toBe(true)
+  expect(starts).toHaveLength(1)
+  expect(items.map((i) => i.type)).toEqual(["working_folder", "message", "message"])
+})
+
+const pickAfterDeletion = (choice: (sessionId: string) => WorkingFolderChoice) => {
+  const path = addWorktree("gone")
+  const starts: StartInput[] = []
+  const closed: string[] = []
+  return withServer(
+    starts,
+    (client) =>
+      Effect.gen(function* () {
+        const sessionId = yield* startInWorktree(client, path)
+        git(project, "worktree", "remove", "--force", path)
+        yield* client["tab.open"]({ sessionId })
+        const picked = yield* client["session.pickWorkingFolder"]({
+          sessionId,
+          workingFolder: choice(sessionId),
+        })
+        yield* client["session.sendMessage"]({ sessionId, messageId: "m2", text: "again" })
+        const items = yield* itemsOf(client, sessionId)
+        return { sessionId, picked, starts, closed, items }
+      }),
+    [turn, turn],
+    closed,
+  )
+}
+
+test("picking the checkout moves the session there, and the next message resumes Claude in it", async () => {
+  const { sessionId, picked, starts, closed, items } = await pickAfterDeletion(() => ({
+    kind: "checkout",
+  }))
+
+  expect(picked).toMatchObject({
+    workingFolder: project,
+    inWorktree: false,
+    branch: "main",
+    workingFolderDeleted: false,
+  })
+  expect(closed).toContain(sessionId)
+  expect(starts.map((s) => s.cwd)).toEqual([join(project, ".worktrees", "gone"), project])
+  expect(starts[1]?.providerSessionId).toBe(`scripted-${sessionId}`)
+  expect(items.filter((i) => i.type === "working_folder").at(-1)).toMatchObject({
+    path: project,
+    inWorktree: false,
+    branch: "main",
+    cause: "pick",
+  })
+})
+
+test("picking an existing worktree moves the session there", async () => {
+  const other = addWorktree("other")
+  const { picked, starts, items } = await pickAfterDeletion(() => ({
+    kind: "existing_worktree",
+    path: other,
+  }))
+
+  expect(picked).toMatchObject({
+    workingFolder: other,
+    inWorktree: true,
+    branch: "other",
+    workingFolderDeleted: false,
+  })
+  expect(starts.at(-1)?.cwd).toBe(other)
+  expect(items.filter((i) => i.type === "working_folder").at(-1)).toMatchObject({
+    path: other,
+    cause: "pick",
+  })
+})
+
+test("picking a new worktree creates it from origin's default branch and moves the session there", async () => {
+  const { sessionId, picked, starts, items } = await pickAfterDeletion(() => ({
+    kind: "new_worktree",
+  }))
+
+  const path = join(project, ".worktrees", `ivin-${sessionId.slice(0, 8)}`)
+  expect(picked).toMatchObject({
+    workingFolder: path,
+    inWorktree: true,
+    branch: `ivin/${sessionId.slice(0, 8)}`,
+    workingFolderDeleted: false,
+  })
+  expect(existsSync(join(path, "ahead.txt"))).toBe(true)
+  expect(starts.at(-1)?.cwd).toBe(path)
+  expect(items.filter((i) => i.type === "working_folder").at(-1)).toMatchObject({
+    path,
+    cause: "pick",
+  })
+})
+
+test("picking a folder that is not one of the project's worktrees keeps the session marked", async () => {
+  const path = addWorktree("gone")
+  const { error, session } = await withServer([], (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* startInWorktree(client, path)
+      git(project, "worktree", "remove", "--force", path)
+      yield* client["tab.open"]({ sessionId })
+      const error = yield* Effect.flip(
+        client["session.pickWorkingFolder"]({
+          sessionId,
+          workingFolder: { kind: "existing_worktree", path },
+        }),
+      )
+      return { error, session: yield* sessionOf(client, sessionId) }
+    }),
+  )
+
+  expect(error).toMatchObject({ _tag: "WorktreeNotCreated", reason: "not_a_worktree" })
+  expect(session?.workingFolderDeleted).toBe(true)
+})

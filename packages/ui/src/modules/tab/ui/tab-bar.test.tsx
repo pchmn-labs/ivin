@@ -27,6 +27,7 @@ const setup = async (status: SessionStatus, options: { stopAgentOnClose?: boolea
     inWorktree: false,
     branch: "main",
     started: true,
+    workingFolderDeleted: false,
     title: "Fix the login",
     model: "sonnet",
     status,

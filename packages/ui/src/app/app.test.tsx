@@ -29,6 +29,7 @@ const mountApp = async (
       inWorktree: false,
       branch: "main",
       started: true,
+      workingFolderDeleted: false,
       title,
       model: "sonnet",
       status: "idle",

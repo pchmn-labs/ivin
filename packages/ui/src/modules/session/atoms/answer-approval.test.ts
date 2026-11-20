@@ -17,6 +17,7 @@ test("answering an approval stores the decision on its item and updates the sess
     inWorktree: false,
     branch: "main",
     started: true,
+    workingFolderDeleted: false,
     title: "t",
     model: "sonnet",
     status: "waiting",
