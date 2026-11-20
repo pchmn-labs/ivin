@@ -7,7 +7,7 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 ## Principles
 
 1. **Everything is a plugin, including our own features.** Built-in features use the public plugin API. If one can't, the API is missing something; fix the API, not the feature. The API stays free to break until the fork is replaced (see [API stability](#api-stability)): it is shaped by porting real features, not designed ahead of them.
-2. **Files and a CLI before tools.** Settings, themes, keybindings and session annotations live in watched files and are reachable through the `ivin` CLI. Agents already master files and shells, on every harness, with no injection. MCP comes later, only as an optimisation.
+2. **Files and a CLI before tools.** Settings, themes and keybindings live in watched files, and they and session annotations are reachable through the `ivin` CLI. Agents already master files and shells, on every harness, with no injection. MCP comes later, only as an optimisation.
 3. **A broken plugin must not take the app down, and the app always recovers.** Agents write most plugins. Server halves run in their own process, which can be killed without touching running sessions; UI errors are contained to the plugin's slot where React allows it, and safe mode covers the rest. Errors are reported where the agent can read them.
 4. **Don't reinvent the harness layer.** Provider protocols come from T3 Code and MonoCode (both MIT, attribution kept in `NOTICE`).
 5. **Light and leak-free by default.** Every feature is measured against a memory and startup budget (see [Performance and memory](#performance-and-memory)).
@@ -144,6 +144,7 @@ The terms are defined in [`GLOSSARY.md`](../GLOSSARY.md). What the design adds t
 - Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
 - Plugins render transcript items; they don't re-derive them from events.
 - An annotation looks like `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
+- Annotations are stored in SQLite on a session or a project, and reached through `annotation.add`, `annotation.remove`, `annotation.list` (by target and kind) and `annotation.watch` (by target). A kind defined in `contracts` (`annotationKinds`) has its `data` checked against its shape, and names the field that is its key: writing the same `ns`, `kind` and key on the same target again updates that annotation. Any other kind has no key, so each write adds one. Deleting a session deletes its annotations.
 - The open projects, their order, the selected project, the tabs, their order and each project's selected tab are stored in SQLite and restored at launch.
 - A tab stores its project and its position, so a single bar for all projects can later be a view over the same rows.
 - Closing a tab, or the project it belongs to, ends its session's agent process when `tabs.stopAgentOnClose` is on; the next message starts a new process that resumes the conversation. The tab bar asks first when the agent is working or waiting; closing a project does not ask.
@@ -409,7 +410,10 @@ ivin --safe                                             # start with user and pr
 
 Commands default to `$IVIN_SESSION_ID`, so an agent annotates its own session without knowing its id.
 
-Shipped so far: `ivin doctor`, one line per check (the app's version, the socket, `settings.json`, `keybindings.json`, the program the harness runs, found on the server's `PATH`), exit 1 when one fails.
+Shipped so far:
+
+- `ivin doctor`, one line per check (the app's version, the socket, `settings.json`, `keybindings.json`, the program the harness runs, found on the server's `PATH`), exit 1 when one fails.
+- `ivin session annotate --kind <kind> --data <json> [--ns <ns>] [--session <id>]`: `ns` defaults to `cli`, the session to `$IVIN_SESSION_ID`; with neither, or with invalid JSON or data that does not fit a defined kind, it exits 2. `--json` prints the stored annotation.
 
 - **Running it.** `apps/cli` is bundled by tsdown into one file, shipped as `Resources/cli/ivin.js`. At each launch main writes `<userData>/bin/ivin`, a shell script that runs that file with the app's own Electron as Node (`ELECTRON_RUN_AS_NODE=1`), so `ivin` needs no Node and follows the app when it moves.
 - **Every command** takes `--help` and `--json` (stdout gets `{ "ok": …, … }`, or `{ "ok": false, "error": { "reason", "message" } }`), and exits 0 (ok), 1 (failed), 2 (invalid usage) or 3 (ivin is not running). It reaches `$IVIN_SOCKET`, else `~/.ivin/run/ivin.sock`. The CLI writes its own messages; the raw error stays in the server's log ([ADR-0004](adr/0004-the-ui-writes-error-messages-and-the-server-logs-raw-errors.md)).

@@ -136,6 +136,23 @@ export const migrations: readonly Migration[] = [
     version: 14,
     sql: `ALTER TABLE images ADD COLUMN compressed_media_type TEXT`,
   },
+  {
+    version: 15,
+    sql: `CREATE TABLE annotations (
+      id TEXT PRIMARY KEY,
+      target_type TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      ns TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      key TEXT,
+      data TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX annotations_by_target ON annotations (target_type, target_id, kind);
+    CREATE UNIQUE INDEX annotations_by_key ON annotations (target_type, target_id, ns, kind, key)
+      WHERE key IS NOT NULL`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

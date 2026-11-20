@@ -42,6 +42,7 @@ const mount = async (
     useTabs: () => [],
     useOpenTab: () => () => {},
     useTranscript: () => items,
+    useAnnotations: () => [],
     useAnswerApproval: () => answer,
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,

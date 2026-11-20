@@ -1,10 +1,18 @@
 import { Cause, Effect, Exit, Option } from "effect"
 import { parseArgs } from "node:util"
-import { type Command, commandHelp, exitCode, mainHelp, sharedOptions } from "./command.ts"
+import {
+  type Command,
+  commandHelp,
+  type Input,
+  exitCode,
+  mainHelp,
+  sharedOptions,
+} from "./command.ts"
 import { socketPathOf, withServer } from "./connection.ts"
 import { doctor } from "./doctor.ts"
+import { sessionAnnotate } from "./session-annotate.ts"
 
-const commands: readonly Command[] = [doctor]
+const commands: readonly Command[] = [doctor, sessionAnnotate]
 
 interface Outcome {
   readonly code: number
@@ -52,17 +60,19 @@ const parse = (command: Command, args: readonly string[]) => {
 
 // `asJson` is unset when the arguments could not be parsed.
 const run = async (args: readonly string[]): Promise<Outcome & { readonly asJson?: boolean }> => {
-  const [name, ...rest] = args
+  const [name] = args
   if (name === undefined) return usageError("ivin needs a command.", mainHelp(commands))
   if (name === "--help" || name === "-h") return helpOf(mainHelp(commands))
-  const command = commands.find((candidate) => candidate.name === name)
+  const command = commands.find((candidate) =>
+    candidate.name.split(" ").every((word, index) => args[index] === word),
+  )
   if (command === undefined) {
     return usageError(
       name.startsWith("-") ? `Unknown option ${name}.` : `Unknown command "${name}".`,
       mainHelp(commands),
     )
   }
-  const parsed = parse(command, rest)
+  const parsed = parse(command, args.slice(command.name.split(" ").length))
   if ("code" in parsed) return parsed
   const { values, positionals } = parsed
   const asJson = values["json"] === true
@@ -71,7 +81,7 @@ const run = async (args: readonly string[]): Promise<Outcome & { readonly asJson
 
 const runCommand = async (
   command: Command,
-  values: Parameters<Command["run"]>[0]["values"],
+  values: Input["values"],
   positionals: readonly string[],
 ): Promise<Outcome> => {
   if (values["help"] === true) return helpOf(commandHelp(command))
@@ -82,6 +92,10 @@ const runCommand = async (
     )
   }
 
+  const input = { values, positionals, env: process.env }
+  const invalid = command.check?.(input) ?? null
+  if (invalid !== null) return usageError(invalid.message, commandHelp(command))
+
   const socketPath = socketPathOf(process.env)
   if (socketPath === null) {
     return failure(
@@ -90,9 +104,7 @@ const runCommand = async (
       "The ivin that started this agent serves no socket, because another ivin already does. Quit both, then open one.",
     )
   }
-  const exit = await Effect.runPromiseExit(
-    withServer(socketPath, command.run({ values, positionals })),
-  )
+  const exit = await Effect.runPromiseExit(withServer(socketPath, command.run(input)))
   if (Exit.isSuccess(exit)) {
     const { ok, text, json } = exit.value
     return { code: ok ? exitCode.ok : exitCode.failed, text, json: { ok, ...json } }
@@ -105,6 +117,8 @@ const runCommand = async (
       `ivin is not running: nothing answers on ${socketPath}. Open the ivin app, then run the command again.`,
     )
   }
+  if (error?._tag === "UsageError") return usageError(error.message, commandHelp(command))
+  if (error?._tag === "CommandFailed") return failure(exitCode.failed, error.reason, error.message)
   if (error?._tag === "ConnectionFailed") {
     return failure(exitCode.failed, "failed", `Could not connect to ivin on ${socketPath}.`)
   }

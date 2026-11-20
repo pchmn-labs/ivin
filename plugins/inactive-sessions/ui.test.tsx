@@ -38,6 +38,7 @@ const mountSection = async (
     useTabs: () => openTabIds.map((sessionId) => ({ sessionId, projectPath: "/p" })),
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
     useTranscript: () => [],
+    useAnnotations: () => [],
     useAnswerApproval: () => async () => undefined,
     useSessionActions: (session) => ({
       items: [{ label: "Archive", onSelect: () => void archived.push(session.id) }],
