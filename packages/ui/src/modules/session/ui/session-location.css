@@ -29,3 +29,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.iv-session-location__gone {
+  text-decoration: line-through;
+}

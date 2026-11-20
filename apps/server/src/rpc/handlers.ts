@@ -15,6 +15,7 @@ import { interruptSession } from "../modules/session/usecases/interrupt-session.
 import { createSession } from "../modules/session/usecases/create-session.ts"
 import { listSessions } from "../modules/session/usecases/list-sessions.ts"
 import { pickBranch } from "../modules/session/usecases/pick-branch.ts"
+import { pickWorkingFolder } from "../modules/session/usecases/pick-working-folder.ts"
 import { renameSession } from "../modules/session/usecases/rename-session.ts"
 import { fastForward } from "../modules/session/usecases/fast-forward.ts"
 import { switchToDefaultBranch } from "../modules/session/usecases/switch-to-default-branch.ts"
@@ -92,6 +93,8 @@ export const handlers = Rpcs.toLayer(
       "session.rename": ({ sessionId, title }) => renameSession(sessionId, title),
       "session.sendMessage": ({ sessionId, messageId, text, workingFolder }) =>
         sendMessage(sessionId, messageId, text, workingFolder),
+      "session.pickWorkingFolder": ({ sessionId, workingFolder }) =>
+        pickWorkingFolder(sessionId, workingFolder),
       "session.answerApproval": ({ sessionId, requestId, allow }) =>
         answerApproval(sessionId, requestId, allow),
       "session.pickBranch": ({ sessionId, name, remote }) => pickBranch(sessionId, name, remote),

@@ -1,0 +1,67 @@
+.iv-pick-working-folder {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-4);
+  padding: var(--iv-space-4);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+}
+
+.iv-pick-working-folder__options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-half);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.iv-pick-working-folder__options > .iv-text {
+  padding: var(--iv-space-2) var(--iv-space-2) var(--iv-space-1);
+}
+
+.iv-pick-working-folder__option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--iv-space-3);
+  min-width: 0;
+  padding: var(--iv-space-2);
+  border: 1px solid transparent;
+  border-radius: var(--iv-radius-md);
+  color: var(--iv-text-muted);
+  cursor: pointer;
+  transition: background-color var(--iv-duration-fast) ease-out;
+}
+
+.iv-pick-working-folder__option > .iv-icon {
+  flex: none;
+  margin-top: var(--iv-space-half);
+}
+
+.iv-pick-working-folder__option > .iv-stack {
+  min-width: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-pick-working-folder__option:hover {
+    background: var(--iv-bg-hover);
+  }
+}
+
+.iv-pick-working-folder__option[data-checked] {
+  border-color: var(--iv-border-strong);
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+
+.iv-pick-working-folder__option:has(:focus-visible) {
+  outline: var(--iv-line-bold) solid var(--iv-focus-ring);
+  outline-offset: var(--iv-line-bold);
+}
+
+.iv-pick-working-folder__option:has(:disabled) {
+  cursor: default;
+  opacity: var(--iv-opacity-disabled);
+}

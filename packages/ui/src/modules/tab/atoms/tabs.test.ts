@@ -92,6 +92,7 @@ const seeded = () => {
       inWorktree: false,
       branch: "main",
       started: true,
+      workingFolderDeleted: false,
       title: id,
       model: "sonnet",
       status: "idle",

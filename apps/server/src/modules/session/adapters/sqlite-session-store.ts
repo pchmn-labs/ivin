@@ -9,6 +9,7 @@ interface SessionRow {
   working_folder: string
   branch: string | null
   started: number
+  working_folder_deleted: number
   title: string
   model: string
   status: SessionStatus
@@ -24,6 +25,7 @@ const toSession = (row: SessionRow): Session => ({
   inWorktree: row.working_folder !== row.project_path,
   branch: row.branch,
   started: row.started === 1,
+  workingFolderDeleted: row.working_folder_deleted === 1,
   title: row.title,
   model: row.model,
   status: row.status,
@@ -32,7 +34,7 @@ const toSession = (row: SessionRow): Session => ({
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
 })
 
-const columns = `id, project_path, working_folder, branch, title, model, status, status_changed_at,
+const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, model, status, status_changed_at,
   created_at, last_activity_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
   ) AS started`
@@ -104,11 +106,14 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         }),
       setWorkingFolder: (id, workingFolder, branch) =>
         Effect.sync(() => {
-          db.prepare("UPDATE sessions SET working_folder = ?, branch = ? WHERE id = ?").run(
-            workingFolder,
-            branch,
-            id,
-          )
+          db.prepare(
+            `UPDATE sessions SET working_folder = ?, branch = ?, working_folder_deleted = 0
+             WHERE id = ?`,
+          ).run(workingFolder, branch, id)
+        }),
+      markWorkingFolderDeleted: (id) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET working_folder_deleted = 1 WHERE id = ?").run(id)
         }),
       setStatus: (id, status, at) =>
         Effect.sync(() => {

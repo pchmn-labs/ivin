@@ -12,6 +12,7 @@ export const makeTestSession = (
   inWorktree: false,
   branch: "main",
   started: true,
+  workingFolderDeleted: false,
   model: "sonnet",
   status: "idle",
   statusChangedAt: DateTime.makeUnsafe(0),

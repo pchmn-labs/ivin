@@ -8,6 +8,7 @@ const workingFolderLabel = (item: WorkingFolderItem) => {
   if (item.cause === "creation") return "Started in a new worktree on"
   if (item.cause === "choice") return "Started in the worktree on"
   if (item.cause === "branch_picker") return "Switched to"
+  if (item.cause === "pick" && !item.inWorktree) return "Moved to the checkout on"
   return item.inWorktree ? "Moved to the worktree on" : "Back in the checkout on"
 }
 

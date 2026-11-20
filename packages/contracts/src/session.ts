@@ -20,6 +20,7 @@ export const Session = Schema.Struct({
   branch: Schema.NullOr(Schema.String),
   // The first user message is stored.
   started: Schema.Boolean,
+  workingFolderDeleted: Schema.Boolean,
   title: Schema.String,
   model: Schema.String,
   status: SessionStatus,
@@ -37,6 +38,11 @@ export class ApprovalNotOpen extends Schema.TaggedError<ApprovalNotOpen>()("Appr
   sessionId: Schema.String,
   requestId: Schema.String,
 }) {}
+
+export class WorkingFolderDeleted extends Schema.TaggedError<WorkingFolderDeleted>()(
+  "WorkingFolderDeleted",
+  { sessionId: Schema.String },
+) {}
 
 export const WorkingFolderChoice = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("checkout") }),
@@ -123,6 +129,11 @@ export const SessionRpcs = RpcGroup.make(
       text: Schema.String,
       workingFolder: Schema.optional(WorkingFolderChoice),
     },
+    success: Session,
+    error: Schema.Union([SessionNotFound, WorktreeNotCreated, WorkingFolderDeleted]),
+  }),
+  Rpc.make("session.pickWorkingFolder", {
+    payload: { sessionId: Schema.String, workingFolder: WorkingFolderChoice },
     success: Session,
     error: Schema.Union([SessionNotFound, WorktreeNotCreated]),
   }),

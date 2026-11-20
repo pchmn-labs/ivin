@@ -17,6 +17,8 @@ export class SessionStore extends Context.Service<
       workingFolder: string,
       branch: string | null,
     ) => Effect.Effect<void>
+    // Cleared by the next `setWorkingFolder`.
+    readonly markWorkingFolderDeleted: (id: string) => Effect.Effect<void>
     // Keeps `statusChangedAt` when the status is already `status`.
     readonly setStatus: (
       id: string,

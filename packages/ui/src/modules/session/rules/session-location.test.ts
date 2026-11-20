@@ -42,6 +42,22 @@ test("once started, the session's own folder wins over the choice", () => {
   })
 })
 
+test("a session whose worktree was deleted says so, with the branch it was on", () => {
+  const deleted = {
+    workingFolder: "/p/.worktrees/x",
+    inWorktree: true,
+    branch: "ivin/x",
+    started: true,
+    workingFolderDeleted: true,
+  }
+  expect(sessionLocation(deleted, { kind: "checkout" }, [])).toEqual({
+    kind: "worktree",
+    label: "Worktree deleted",
+    branch: "ivin/x",
+    deleted: true,
+  })
+})
+
 test("outside a git repository, the location is the folder", () => {
   const plain = { workingFolder: "/notes", inWorktree: false, branch: null, started: true }
   expect(sessionLocation(plain, { kind: "checkout" }, [])).toEqual({

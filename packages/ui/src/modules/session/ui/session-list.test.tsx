@@ -20,6 +20,7 @@ const setup = async (titles: ReadonlyArray<string>, options: { holdTabs?: boolea
       inWorktree: false,
       branch: "main",
       started: true,
+      workingFolderDeleted: false,
       title,
       model: "sonnet",
       status: "idle",

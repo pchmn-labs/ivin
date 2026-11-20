@@ -6,6 +6,7 @@ export interface WorkingFolderLabel {
   readonly label: string
   // Null when there is none yet, or outside a git repository.
   readonly branch: string | null
+  readonly deleted?: true
 }
 
 export const folderName = (path: string) => path.split("/").filter(Boolean).at(-1) ?? path
@@ -17,10 +18,14 @@ export const newBranchLabel = (base: string | null, checkoutBranch: string | nul
 }
 
 export const sessionLocation = (
-  session: Pick<Session, "started" | "inWorktree" | "branch" | "workingFolder">,
+  session: Pick<Session, "started" | "inWorktree" | "branch" | "workingFolder"> &
+    Partial<Pick<Session, "workingFolderDeleted">>,
   choice: WorkingFolderChoice,
   worktrees: ReadonlyArray<Worktree>,
 ): WorkingFolderLabel => {
+  if (session.workingFolderDeleted === true) {
+    return { kind: "worktree", label: "Worktree deleted", branch: session.branch, deleted: true }
+  }
   if (!session.started && choice.kind === "new_worktree") {
     return { kind: "worktree", label: "New worktree", branch: null }
   }
