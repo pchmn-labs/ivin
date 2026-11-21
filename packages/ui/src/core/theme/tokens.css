@@ -90,6 +90,7 @@
   --iv-border: rgba(214, 235, 220, 0.08);
   --iv-border-strong: rgba(214, 235, 220, 0.15);
   --iv-text: #e4ebe6;
+  --iv-text-prose: #cbd2ce;
   --iv-text-muted: #9daba2;
   --iv-text-faint: #788a7e;
   --iv-accent: #a9d9a0;
@@ -122,6 +123,7 @@
     --iv-border: rgba(42, 56, 28, 0.12);
     --iv-border-strong: rgba(42, 56, 28, 0.2);
     --iv-text: #1c2a1f;
+    --iv-text-prose: var(--iv-text);
     --iv-text-muted: #4f5a49;
     --iv-text-faint: #5b6555;
     --iv-accent: #2f6a3c;
@@ -154,6 +156,7 @@
   --iv-border: rgba(214, 235, 220, 0.08);
   --iv-border-strong: rgba(214, 235, 220, 0.15);
   --iv-text: #e4ebe6;
+  --iv-text-prose: #cbd2ce;
   --iv-text-muted: #9daba2;
   --iv-text-faint: #788a7e;
   --iv-accent: #a9d9a0;
@@ -185,6 +188,7 @@
   --iv-border: rgba(42, 56, 28, 0.12);
   --iv-border-strong: rgba(42, 56, 28, 0.2);
   --iv-text: #1c2a1f;
+  --iv-text-prose: var(--iv-text);
   --iv-text-muted: #4f5a49;
   --iv-text-faint: #5b6555;
   --iv-accent: #2f6a3c;

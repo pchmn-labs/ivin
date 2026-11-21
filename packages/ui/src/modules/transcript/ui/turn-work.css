@@ -108,7 +108,7 @@
 }
 
 .iv-turn__sentence {
-  color: var(--iv-text);
+  color: var(--iv-text-prose);
 }
 
 .iv-turn__summary {
