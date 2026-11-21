@@ -8,6 +8,7 @@ import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { PAGE_SIZE } from "../atoms/get-items.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
 const message = (position: number): TranscriptItem => ({
@@ -186,3 +187,61 @@ test("loading the older items of a long turn does not scroll to its message", as
   const room = document.querySelector<HTMLElement>(".iv-transcript")!.style
   expect(room.getPropertyValue("--iv-transcript-room")).toBe("")
 })
+
+const toolCall = (position: number): TranscriptItem => ({
+  id: `m${position}`,
+  sessionId: "s1",
+  position,
+  at: 0,
+  type: "tool_call",
+  toolCallId: `t${position}`,
+  name: "Bash",
+  kind: "command",
+  input: { command: `ls ${position}` },
+  status: "done",
+  output: "ok",
+})
+
+const thinking = (position: number): TranscriptItem => ({
+  id: `m${position}`,
+  sessionId: "s1",
+  position,
+  at: 0,
+  type: "thinking",
+  text: "thinking",
+})
+
+// Its steps fold into fewer rows than fill the view.
+const longTurn = (): TranscriptItem[] => [
+  userMessage(0),
+  message(1),
+  userMessage(2),
+  ...Array.from({ length: 3 * PAGE_SIZE + 30 }, (_, i) =>
+    [message, thinking, toolCall, toolCall, toolCall][i % 5]!(i + 3),
+  ),
+]
+
+test.each([true, false])(
+  "scrolling up a turn of several pages reaches its message and the turn before (live: %s)",
+  async (live) => {
+    const server = makeFakeServer()
+    server.seedItems("s1", longTurn())
+
+    await render(
+      <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+        <div style={{ position: "relative", height: 900 }}>
+          <PluginsProvider plugins={builtinPlugins}>
+            <TranscriptView sessionId="s1" live={live} />
+          </PluginsProvider>
+        </div>
+      </RegistryProvider>,
+    )
+    await expect.element(page.getByTestId("transcript-work")).toBeInTheDocument()
+
+    await vi.waitFor(() => {
+      scroller().scrollTop = 0
+      expect(page.getByText("question 2", { exact: true }).query()).not.toBeNull()
+      expect(page.getByText("question 0", { exact: true }).query()).not.toBeNull()
+    })
+  },
+)

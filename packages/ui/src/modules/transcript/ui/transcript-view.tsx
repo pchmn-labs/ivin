@@ -5,6 +5,7 @@ import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
 import { Text } from "../../../core/components/text/text.tsx"
 import type { TranscriptRow as RowData } from "../rules/turns.ts"
+import { useLoadBefore } from "../hooks/use-load-before.ts"
 import { useSentMessageScroll } from "../hooks/use-sent-message-scroll.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
 import { TurnWork } from "./turn-work.tsx"
@@ -24,6 +25,13 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
   )
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
   const { root, scrollerRef, followOutput, fitRoom } = useSentMessageScroll({ loaded, rows })
+  const firstIndex = FIRST_ITEM_INDEX - prepended
+  const { rangeChanged, startReached } = useLoadBefore({
+    rows,
+    firstIndex,
+    hasBefore,
+    load: () => loadItemsBefore(sessionId),
+  })
 
   if (!loaded) return <TranscriptEmpty>Loading the transcript…</TranscriptEmpty>
   if (shown.length === 0) return <TranscriptEmpty>No messages yet</TranscriptEmpty>
@@ -36,15 +44,14 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
         className="iv-transcript__list"
         data={shown}
         defaultItemHeight={ROW_HEIGHT}
-        firstItemIndex={FIRST_ITEM_INDEX - prepended}
+        firstItemIndex={firstIndex}
         initialTopMostItemIndex={{ index: "LAST", align: "end" }}
         computeItemKey={(_, row) => row.id}
         followOutput={followOutput}
         totalListHeightChanged={fitRoom}
         components={{ Footer: TranscriptFooter }}
-        startReached={() => {
-          if (hasBefore) loadItemsBefore(sessionId)
-        }}
+        rangeChanged={rangeChanged}
+        startReached={startReached}
         itemContent={(_, row) => (
           <RowContent sessionId={sessionId} row={row} live={row.id === liveId} />
         )}
