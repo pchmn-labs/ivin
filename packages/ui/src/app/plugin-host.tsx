@@ -1,7 +1,8 @@
 import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Cause, Exit } from "effect"
-import { useContext, useEffect, useState, type ReactNode } from "react"
+import { useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
+import { sessionAnnotationsOf } from "../modules/annotation/atoms/list-annotations.ts"
 import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
@@ -31,6 +32,10 @@ const host: UiHost = {
     return (sessionId) => openTab({ sessionId })
   },
   useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).list.items),
+  useAnnotations: (sessionId, kind) => {
+    const annotations = useAtomValue(sessionAnnotationsOf(sessionId).items)
+    return useMemo(() => annotations.filter((a) => a.kind === kind), [annotations, kind])
+  },
   useAnswerApproval: (sessionId) => {
     // The session may belong to another project than the one on screen, from the Working panel.
     const projectPath =

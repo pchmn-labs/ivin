@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./annotation": "./src/annotation.ts",
     "./keybinding": "./src/keybinding.ts",
     "./log": "./src/log.ts",
     "./project": "./src/project.ts",

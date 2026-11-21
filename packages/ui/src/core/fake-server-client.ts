@@ -1,4 +1,11 @@
 import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
+import {
+  type Annotation,
+  type AnnotationChange,
+  AnnotationNotFound,
+  annotationKinds,
+  type AnnotationTarget,
+} from "@ivin/contracts/annotation"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
@@ -149,6 +156,8 @@ export const makeFakeServer = (
   const transcripts = new Map<string, Array<TranscriptItem>>()
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
   const sessionChanges = Effect.runSync(PubSub.unbounded<SessionChange>())
+  const annotations = new Map<string, Annotation>()
+  const annotationChanges = Effect.runSync(PubSub.unbounded<AnnotationChange>())
   let userKeybindings: UserKeybindings = { keybindings: [], problem: null }
   const keybindingChanges = Effect.runSync(PubSub.unbounded<UserKeybindings>())
   let userSettings: UserSettings = { settings: defaultSettings, problem: null }
@@ -227,6 +236,24 @@ export const makeFakeServer = (
       selectedTab.set(session.projectPath, (rest[index] ?? rest[index - 1])?.sessionId ?? null)
     }
     return index >= 0
+  }
+  const sameTarget = (a: AnnotationTarget, b: AnnotationTarget) =>
+    JSON.stringify(a) === JSON.stringify(b)
+  const annotationsOf = (target: AnnotationTarget) =>
+    [...annotations.values()].filter((annotation) => sameTarget(annotation.target, target))
+  const keyOf = (kind: string, data: unknown) =>
+    Object.hasOwn(annotationKinds, kind)
+      ? (data as Record<string, unknown>)[annotationKinds[kind as keyof typeof annotationKinds].key]
+      : undefined
+  const removeAnnotation = (annotation: Annotation) => {
+    annotations.delete(annotation.id)
+    Effect.runSync(
+      PubSub.publish(annotationChanges, {
+        _tag: "removed",
+        id: annotation.id,
+        target: annotation.target,
+      }),
+    )
   }
   const existing = (sessionId: string) =>
     Effect.suspend(() => {
@@ -440,6 +467,7 @@ export const makeFakeServer = (
         removeTab(session)
         sessions.delete(sessionId)
         transcripts.delete(sessionId)
+        annotationsOf({ _tag: "session", sessionId }).forEach(removeAnnotation)
         Effect.runSync(
           PubSub.publish(sessionChanges, {
             _tag: "removed",
@@ -682,6 +710,61 @@ export const makeFakeServer = (
           item.type === "message" && item.role === "user"
             ? item.images.map((image) => ({ ...image, messageId: item.id, messageText: item.text }))
             : [],
+        ),
+      ),
+    "annotation.add": ({
+      target,
+      ns,
+      kind,
+      data,
+    }: {
+      target: AnnotationTarget
+      ns: string
+      kind: string
+      data: Annotation["data"]
+    }) =>
+      Effect.sync(() => {
+        const at = tick()
+        const key = keyOf(kind, data)
+        const same = annotationsOf(target).find(
+          (a) => key !== undefined && a.ns === ns && a.kind === kind && keyOf(kind, a.data) === key,
+        )
+        const annotation: Annotation = same
+          ? { ...same, data, updatedAt: at }
+          : { id: `annotation-${nextId++}`, target, ns, kind, data, createdAt: at, updatedAt: at }
+        annotations.set(annotation.id, annotation)
+        Effect.runSync(PubSub.publish(annotationChanges, { _tag: "changed", annotation }))
+        return annotation
+      }),
+    "annotation.remove": ({ id }: { id: string }) =>
+      Effect.suspend(() => {
+        const annotation = annotations.get(id)
+        if (!annotation) return Effect.fail(new AnnotationNotFound({ id }))
+        removeAnnotation(annotation)
+        return Effect.void
+      }),
+    "annotation.list": ({ target, kind }: { target: AnnotationTarget; kind: string | null }) =>
+      Effect.sync(() => annotationsOf(target).filter((a) => kind === null || a.kind === kind)),
+    "annotation.watch": ({ target }: { target: AnnotationTarget }) =>
+      Stream.unwrap(
+        Effect.map(PubSub.subscribe(annotationChanges), (subscription) =>
+          Stream.fromIterable(
+            annotationsOf(target).map((annotation): AnnotationChange => ({
+              _tag: "changed",
+              annotation,
+            })),
+          ).pipe(
+            Stream.concat(
+              Stream.fromSubscription(subscription).pipe(
+                Stream.filter((change) =>
+                  sameTarget(
+                    change._tag === "changed" ? change.annotation.target : change.target,
+                    target,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     "transcript.watchItems": ({ sessionId, before }: { sessionId: string; before: number }) =>

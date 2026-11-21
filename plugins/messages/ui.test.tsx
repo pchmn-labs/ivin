@@ -24,6 +24,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     useTabs: () => [],
     useOpenTab: () => () => {},
     useTranscript: () => [],
+    useAnnotations: () => [],
     useAnswerApproval: () => async () => undefined,
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,

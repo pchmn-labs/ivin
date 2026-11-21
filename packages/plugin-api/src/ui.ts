@@ -1,5 +1,12 @@
 import { createElement } from "react"
 import type { ComponentType, ReactNode } from "react"
+import type {
+  Annotation,
+  AnnotationDataOf,
+  AnnotationTarget,
+  IssueAnnotationData,
+  PrAnnotationData,
+} from "@ivin/contracts/annotation"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Tab } from "@ivin/contracts/tab"
@@ -7,7 +14,21 @@ import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
 import type { ActionFailure, UiHost } from "./host-context.ts"
 
-export type { OpenProjects, Project, Session, Tab, TranscriptItem }
+export type {
+  Annotation,
+  AnnotationTarget,
+  IssueAnnotationData,
+  OpenProjects,
+  PrAnnotationData,
+  Project,
+  Session,
+  Tab,
+  TranscriptItem,
+}
+// The data of a kind defined in contracts has that kind's shape; any other kind's is JSON.
+export type AnnotationOf<K extends string> = Omit<Annotation, "data"> & {
+  readonly data: AnnotationDataOf<K>
+}
 export type MessageItem = Extract<TranscriptItem, { type: "message" }>
 export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
@@ -95,6 +116,8 @@ export const useSelectedSessionId = () => useHost().useSelectedSessionId()
 export const useTabs = () => useHost().useTabs()
 export const useOpenTab = () => useHost().useOpenTab()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
+export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
+  useHost().useAnnotations(sessionId, kind) as ReadonlyArray<AnnotationOf<K>>
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
 export const useSessionActions = (session: Session) => useHost().useSessionActions(session)
 export { formatToolInput } from "./format-tool-input.ts"
