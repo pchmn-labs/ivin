@@ -62,6 +62,7 @@ const mountPanel = async (
     useTabs: () => [],
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
     useTranscript: (sessionId) => transcripts[sessionId] ?? [],
+    useAnnotations: () => [],
     useAnswerApproval: (sessionId) => async (answer) => {
       answers.push({ sessionId, ...answer })
       return answerFails ? { text: "The session has stopped.", retryable: true } : undefined

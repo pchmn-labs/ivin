@@ -1,4 +1,5 @@
 import { createContext, useContext } from "react"
+import type { Annotation } from "@ivin/contracts/annotation"
 import type { FolderEntry } from "@ivin/contracts/file"
 import type { OpenProjects } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
@@ -29,6 +30,8 @@ export interface UiHost {
   // Selects the session's project and its tab, opening one if it has none.
   readonly useOpenTab: () => (sessionId: string) => void
   readonly useTranscript: (sessionId: string) => ReadonlyArray<TranscriptItem>
+  // The session's annotations of this kind, oldest first.
+  readonly useAnnotations: (sessionId: string, kind: string) => ReadonlyArray<Annotation>
   readonly useAnswerApproval: (
     sessionId: string,
   ) => (answer: {

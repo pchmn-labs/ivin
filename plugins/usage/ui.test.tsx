@@ -48,6 +48,7 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
     useTabs: () => [],
     useOpenTab: () => () => {},
     useTranscript: () => items,
+    useAnnotations: () => [],
     useAnswerApproval: () => async () => undefined,
     useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useSessionActions: () => ({ items: [], failure: null }),

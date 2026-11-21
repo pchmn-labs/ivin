@@ -20,6 +20,11 @@
   padding: 0 var(--iv-space-6);
 }
 
+.iv-transcript__footer {
+  height: var(--iv-transcript-room, 0px);
+  min-height: var(--iv-space-8);
+}
+
 .iv-transcript__item {
   padding: var(--iv-space-2) 0;
 }

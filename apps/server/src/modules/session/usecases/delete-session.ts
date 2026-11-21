@@ -1,5 +1,6 @@
 import { SessionNotFound } from "@ivin/contracts/session"
 import { Effect } from "effect"
+import { removeTargetAnnotations } from "../../annotation/usecases/remove-target-annotations.ts"
 import { selectionAfterRemoval } from "../../../shared/rules/selection-after-removal.ts"
 import { TabStore } from "../../tab/usecases/tab-store.ts"
 import { ImageStore } from "../../transcript/usecases/image-store.ts"
@@ -20,6 +21,7 @@ export const deleteSession = (sessionId: string) =>
     const selected = yield* tabs.selectedOf(projectPath)
     yield* store.delete(sessionId)
     yield* (yield* ImageStore).removeSession(sessionId)
+    yield* removeTargetAnnotations({ _tag: "session", sessionId })
     if (selected === sessionId) {
       yield* tabs.select(projectPath, selectionAfterRemoval(order, sessionId))
     }

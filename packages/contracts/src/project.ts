@@ -18,6 +18,11 @@ export class ProjectNotOpen extends Schema.TaggedError<ProjectNotOpen>()("Projec
   path: Schema.String,
 }) {}
 
+// No project was ever opened at this path.
+export class ProjectNotFound extends Schema.TaggedError<ProjectNotFound>()("ProjectNotFound", {
+  path: Schema.String,
+}) {}
+
 export const ProjectRpcs = RpcGroup.make(
   // Opens the folder at the end of the list, or keeps its place if already open, and selects it.
   Rpc.make("project.open", { payload: { path: Schema.String }, success: OpenProjects }),

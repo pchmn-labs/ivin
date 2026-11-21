@@ -1,7 +1,16 @@
-import type { Effect } from "effect"
+import { Data, type Effect } from "effect"
 import type { Server } from "./connection.ts"
 
 export const exitCode = { ok: 0, failed: 1, usage: 2, notRunning: 3 } as const
+
+// Exits 2, with the command's help.
+export class UsageError extends Data.TaggedError("UsageError")<{ readonly message: string }> {}
+
+// Exits 1, with `message` as the error.
+export class CommandFailed extends Data.TaggedError("CommandFailed")<{
+  readonly reason: string
+  readonly message: string
+}> {}
 
 export interface Option {
   readonly type: "string" | "boolean"
@@ -16,6 +25,12 @@ export interface Result {
   readonly json: Record<string, unknown>
 }
 
+export interface Input {
+  readonly values: Readonly<Record<string, string | boolean | (string | boolean)[] | undefined>>
+  readonly positionals: readonly string[]
+  readonly env: NodeJS.ProcessEnv
+}
+
 export interface Command {
   readonly name: string
   readonly summary: string
@@ -23,10 +38,9 @@ export interface Command {
   readonly description: string
   readonly options: Readonly<Record<string, Option>>
   readonly maxArguments: number
-  readonly run: (input: {
-    readonly values: Readonly<Record<string, string | boolean | (string | boolean)[] | undefined>>
-    readonly positionals: readonly string[]
-  }) => Effect.Effect<Result, never, Server>
+  // Runs before connecting, so that invalid usage exits 2 even when ivin is not running.
+  readonly check?: (input: Input) => UsageError | null
+  readonly run: (input: Input) => Effect.Effect<Result, UsageError | CommandFailed, Server>
 }
 
 export const sharedOptions: Readonly<Record<string, Option>> = {

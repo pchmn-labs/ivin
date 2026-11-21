@@ -19,6 +19,10 @@ export const layerSqliteProjectStore = Layer.effect(ProjectStore)(
              ON CONFLICT (path) DO UPDATE SET name = excluded.name, last_opened_at = excluded.last_opened_at`,
           ).run(project.path, project.name, DateTime.toEpochMillis(project.lastOpenedAt))
         }),
+      isKnown: (path) =>
+        Effect.sync(
+          () => db.prepare("SELECT 1 FROM projects WHERE path = ?").get(path) !== undefined,
+        ),
       listOpen: Effect.sync(() => {
         const rows = db
           .prepare(

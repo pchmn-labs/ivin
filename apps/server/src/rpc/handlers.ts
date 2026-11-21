@@ -1,5 +1,11 @@
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { Effect, Layer, Stream } from "effect"
+import { layerSqliteAnnotationStore } from "../modules/annotation/adapters/sqlite-annotation-store.ts"
+import { addAnnotation } from "../modules/annotation/usecases/add-annotation.ts"
+import { layerAnnotationFeed } from "../modules/annotation/usecases/annotation-feed.ts"
+import { listAnnotations } from "../modules/annotation/usecases/list-annotations.ts"
+import { removeAnnotation } from "../modules/annotation/usecases/remove-annotation.ts"
+import { watchAnnotations } from "../modules/annotation/usecases/watch-annotations.ts"
 import { layerFsFolderReader } from "../modules/file/adapters/fs-folder-reader.ts"
 import { listFolder } from "../modules/file/usecases/list-folder.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
@@ -68,6 +74,8 @@ export const layerServices = Layer.mergeAll(layerWorktreeCleanup, layerImageComp
       layerSqliteTranscriptStore,
       layerFsImageStore,
       layerItemFeed,
+      layerSqliteAnnotationStore,
+      layerAnnotationFeed,
     ),
   ),
 )
@@ -95,6 +103,10 @@ export const handlers = Rpcs.toLayer(
       "server.getVersion": () => getVersion,
       "server.getHarness": () => getHarness,
       "server.doctor": () => doctor,
+      "annotation.add": ({ target, ns, kind, data }) => addAnnotation(target, ns, kind, data),
+      "annotation.remove": ({ id }) => removeAnnotation(id),
+      "annotation.list": ({ target, kind }) => listAnnotations(target, kind),
+      "annotation.watch": ({ target }) => watchAnnotations(target),
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
       "setting.watch": () => watchSettings,

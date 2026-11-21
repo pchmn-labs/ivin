@@ -44,30 +44,33 @@ export interface CliServerOptions {
   readonly version?: string
 }
 
+const layerCliServer = ({ settings = null, keybindings = null }: CliServerOptions) =>
+  layerServices.pipe(
+    Layer.provideMerge(
+      Layer.mergeAll(
+        layerDatabase(":memory:"),
+        Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+        layerScripted([]),
+        layerSettingsFileOf([settings]),
+        layerKeybindingsFileOf([keybindings]),
+      ),
+    ),
+  )
+type CliServerServices = Layer.Success<ReturnType<typeof layerCliServer>>
+
+// Runs a use case against the server's database, to set up a test or read what a command stored.
+export type RunOnServer = <A, E>(effect: Effect.Effect<A, E, CliServerServices>) => Promise<A>
+
 // Runs `use` while a server with an in-memory database answers on `socketPath`.
 export const withCliServer = <A>(
-  use: (socketPath: string) => Promise<A>,
-  { settings = null, keybindings = null, version = "1.2.3" }: CliServerOptions = {},
+  use: (socketPath: string, run: RunOnServer) => Promise<A>,
+  { version = "1.2.3", ...options }: CliServerOptions = {},
 ) => {
   const socketPath = tempSocketPath()
   return Effect.gen(function* () {
     yield* serveOverSocket(socketPath, { version })
-    return yield* Effect.promise(() => use(socketPath))
-  }).pipe(
-    Effect.provide(
-      layerServices.pipe(
-        Layer.provideMerge(
-          Layer.mergeAll(
-            layerDatabase(":memory:"),
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-            layerScripted([]),
-            layerSettingsFileOf([settings]),
-            layerKeybindingsFileOf([keybindings]),
-          ),
-        ),
-      ),
-    ),
-    Effect.scoped,
-    Effect.runPromise,
-  )
+    const services = yield* Effect.context<CliServerServices>()
+    const run: RunOnServer = (effect) => Effect.runPromise(Effect.provide(effect, services))
+    return yield* Effect.promise(() => use(socketPath, run))
+  }).pipe(Effect.provide(layerCliServer(options)), Effect.scoped, Effect.runPromise)
 }

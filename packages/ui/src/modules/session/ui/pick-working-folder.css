@@ -2,6 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--iv-space-4);
+  min-height: 0;
   padding: var(--iv-space-4);
   border: 1px solid var(--iv-border-strong);
   border-radius: var(--iv-radius-lg);
@@ -13,8 +14,12 @@
   flex-direction: column;
   gap: var(--iv-space-half);
   min-width: 0;
-  margin: 0;
-  padding: 0;
+  min-height: 0;
+  max-height: 360px;
+  /* Room for the focus ring, which the scroller would otherwise clip. */
+  margin: calc(-1 * var(--iv-space-1));
+  padding: var(--iv-space-1);
+  overflow-y: auto;
   border: 0;
 }
 
@@ -23,6 +28,8 @@
 }
 
 .iv-pick-working-folder__option {
+  /* Keeps the hidden radio inside the list's scroller; outside it, it makes the whole window scrollable. */
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--iv-space-3);

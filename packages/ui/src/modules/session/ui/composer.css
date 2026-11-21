@@ -5,6 +5,13 @@
   padding: 0 var(--iv-space-6) var(--iv-space-1);
 }
 
+/* Lets the picker shrink to the room the transcript leaves, so its button stays on screen. */
+.iv-composer:has(.iv-pick-working-folder) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
 .iv-composer__surface {
   display: flex;
   flex-direction: column;

@@ -25,6 +25,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     useTabs: () => [],
     useOpenTab: () => () => {},
     useTranscript: () => [],
+    useAnnotations: () => [],
     useAnswerApproval: () => async () => undefined,
     useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useSessionActions: () => ({ items: [], failure: null }),
