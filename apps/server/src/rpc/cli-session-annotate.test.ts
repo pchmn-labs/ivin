@@ -74,6 +74,17 @@ test("invalid JSON in --data, or a missing --kind, says what is wrong and exits 
   expect([...badJson.session, ...noKind.session]).toEqual([])
 }, 10_000)
 
+test("an empty --session or --ns exits 2 rather than falling back to the default", async () => {
+  const env = { IVIN_SESSION_ID: "$SESSION" }
+  const noSession = await annotate(["--kind", "note", "--data", "1", "--session", ""], env)
+  const noNs = await annotate(["--kind", "note", "--data", "1", "--ns", ""], env)
+
+  expect(noSession.code).toBe(2)
+  expect(noSession.stderr).toContain("--session needs a session id")
+  expect(noNs.code).toBe(2)
+  expect([...noSession.session, ...noNs.session]).toEqual([])
+}, 10_000)
+
 test("data that does not match a defined kind exits 2", async () => {
   const run = await annotate(["--kind", "pr", "--data", '{"text":"hi"}'], {
     IVIN_SESSION_ID: "$SESSION",

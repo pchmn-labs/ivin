@@ -5,7 +5,6 @@ export class AnnotationStore extends Context.Service<
   AnnotationStore,
   {
     readonly find: (id: string) => Effect.Effect<Annotation | null>
-    // Oldest first; every kind when `kind` is null.
     readonly list: (
       target: AnnotationTarget,
       kind: string | null,

@@ -63,8 +63,9 @@ const run = async (args: readonly string[]): Promise<Outcome & { readonly asJson
   const [name] = args
   if (name === undefined) return usageError("ivin needs a command.", mainHelp(commands))
   if (name === "--help" || name === "-h") return helpOf(mainHelp(commands))
+  const words = (candidate: Command) => candidate.name.split(" ")
   const command = commands.find((candidate) =>
-    candidate.name.split(" ").every((word, index) => args[index] === word),
+    words(candidate).every((word, index) => args[index] === word),
   )
   if (command === undefined) {
     return usageError(
@@ -72,7 +73,7 @@ const run = async (args: readonly string[]): Promise<Outcome & { readonly asJson
       mainHelp(commands),
     )
   }
-  const parsed = parse(command, args.slice(command.name.split(" ").length))
+  const parsed = parse(command, args.slice(words(command).length))
   if ("code" in parsed) return parsed
   const { values, positionals } = parsed
   const asJson = values["json"] === true

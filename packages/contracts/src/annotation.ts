@@ -15,7 +15,7 @@ export const PrAnnotationData = Schema.Struct({
 })
 export type PrAnnotationData = typeof PrAnnotationData.Type
 
-// A kind shared by several plugins. Writing a keyed kind again with the same key updates it.
+// The kinds shared by several plugins, each with the data field that is its key.
 export const annotationKinds = {
   pr: { data: PrAnnotationData, key: "url" },
 } as const
@@ -46,7 +46,6 @@ export class AnnotationNotFound extends Schema.TaggedError<AnnotationNotFound>()
   { id: Schema.String },
 ) {}
 
-// The data does not have the shape `annotationKinds` defines for its kind.
 export class AnnotationDataInvalid extends Schema.TaggedError<AnnotationDataInvalid>()(
   "AnnotationDataInvalid",
   { kind: Schema.String },

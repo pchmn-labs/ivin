@@ -17,12 +17,16 @@ const argumentsOf = ({ values, env }: Input) => {
     const reason = error instanceof Error ? error.message : String(error)
     return new UsageError({ message: `--data is not valid JSON: ${reason}` })
   }
+  const ns = stringOf(values["ns"]) ?? "cli"
+  if (ns === "") return new UsageError({ message: "--ns needs a namespace." })
+  const session = stringOf(values["session"])
+  if (session === "") return new UsageError({ message: "--session needs a session id." })
   // An empty IVIN_SESSION_ID counts as unset.
-  const sessionId = stringOf(values["session"]) || env["IVIN_SESSION_ID"] || null
+  const sessionId = session ?? (env["IVIN_SESSION_ID"] || null)
   if (sessionId === null) {
     return new UsageError({ message: "--session <id> is required outside an ivin session." })
   }
-  return { kind, data, ns: stringOf(values["ns"]) ?? "cli", sessionId }
+  return { kind, data, ns, sessionId }
 }
 
 export const sessionAnnotate: Command = {

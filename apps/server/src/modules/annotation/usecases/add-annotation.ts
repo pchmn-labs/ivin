@@ -32,8 +32,8 @@ const ensureTarget = (target: AnnotationTarget) =>
 export const addAnnotation = (target: AnnotationTarget, ns: string, kind: string, data: Json) =>
   Effect.gen(function* () {
     yield* ensureTarget(target)
-    const key = annotationKey(definitionOf(kind), data)
-    if (key === "invalid") return yield* new AnnotationDataInvalid({ kind })
+    const keyed = annotationKey(definitionOf(kind), data)
+    if (keyed === "invalid") return yield* new AnnotationDataInvalid({ kind })
     const now = yield* DateTime.now
     const annotation: Annotation = {
       id: crypto.randomUUID(),
@@ -44,7 +44,7 @@ export const addAnnotation = (target: AnnotationTarget, ns: string, kind: string
       createdAt: now,
       updatedAt: now,
     }
-    const saved = yield* (yield* AnnotationStore).save(annotation, key.key)
+    const saved = yield* (yield* AnnotationStore).save(annotation, keyed.key)
     yield* (yield* AnnotationFeed).publish({ _tag: "changed", annotation: saved })
     return saved
   })

@@ -6,7 +6,6 @@ export interface KindDefinition {
   readonly key: string
 }
 
-// `invalid` when the data does not match its kind's definition; a kind with none has no key.
 export const annotationKey = (
   definition: KindDefinition | undefined,
   data: Json,
