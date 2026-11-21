@@ -104,6 +104,8 @@
 
 .iv-list-row:hover .iv-list-row__actions,
 .iv-list-row:focus-within .iv-list-row__actions,
-.iv-list-row[data-selected] .iv-list-row__actions {
+.iv-list-row[data-selected] .iv-list-row__actions,
+/* A hidden trigger leaves its open menu anchored to the window's top-left corner. */
+.iv-list-row__actions:has([data-popup-open]) {
   display: flex;
 }
