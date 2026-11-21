@@ -35,6 +35,18 @@ const makeRepo = (dir: string) => {
     mkdirSync(join(dir, dirname(file)), { recursive: true })
     writeFileSync(join(dir, file), "")
   }
+  writeFileSync(
+    join(dir, "src/orders/total.ts"),
+    `import type { Order } from "./order.ts"
+
+// Cents, so a sum of prices never drifts.
+export const total = (orders: ReadonlyArray<Order>): number =>
+  orders.reduce((sum, order) => sum + order.priceCents * order.quantity, 0)
+
+export const formatTotal = (cents: number, currency = "EUR") =>
+  new Intl.NumberFormat("en", { style: "currency", currency }).format(cents / 100)
+`,
+  )
   git("add", ".")
   git("commit", "--quiet", "-m", "first")
   git("worktree", "add", "--quiet", "-b", "docs/adr", join(dir, ".worktrees", "docs-adr"))
@@ -193,6 +205,11 @@ try {
   await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).waitFor()
   await window.waitForTimeout(300)
   await shoot("files-tab")
+  await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).click()
+  await sidebar.getByRole("treeitem", { name: "total.ts", exact: true }).click()
+  await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("open-file")
 } finally {
   await app.close()
 }

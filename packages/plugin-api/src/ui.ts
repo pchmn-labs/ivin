@@ -131,5 +131,6 @@ export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
 export const useSessionActions = (session: Session) => useHost().useSessionActions(session)
 export const useListFolder = () => useHost().useListFolder()
+export const useOpenFile = () => useHost().useOpenFile()
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"

@@ -1,7 +1,9 @@
 import { playwright } from "@vitest/browser-playwright"
 import { configDefaults, defineConfig } from "vitest/config"
+import { lazyDeps } from "./lazy-deps.ts"
 
 export default defineConfig({
+  optimizeDeps: { include: lazyDeps },
   test: {
     name: "ui-browser",
     testTimeout: 5000,

@@ -284,6 +284,8 @@ export interface TreeProps {
   readonly label: string
   readonly rows: ReadonlyArray<TreeRow>
   readonly onToggle: (id: string) => void
+  // A click, Enter or Space on a row that holds nothing.
+  readonly onOpen?: (id: string) => void
   readonly "data-testid"?: string
 }
 

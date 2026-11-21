@@ -7,10 +7,12 @@ import {
   Tree,
   defineUi,
   useListFolder,
+  useOpenFile,
   useProjects,
   useSelectedSessionId,
   useSession,
   type FolderEntry,
+  type ActionFailure,
   type FolderListing,
   type Session,
 } from "@ivin/plugin-api/ui"
@@ -47,6 +49,13 @@ function FolderTreeView({
   remembered: Map<string, FolderTree>
 }) {
   const listFolder = useListFolder()
+  const openFile = useOpenFile()
+  const [openFailure, setOpenFailure] = useState<({ path: string } & ActionFailure) | null>(null)
+  const open = async (path: string) => {
+    setOpenFailure(null)
+    const failure = await openFile(session.id, path)
+    if (failure !== undefined) setOpenFailure({ path, ...failure })
+  }
   const key = treeKey(session)
   const [tree, setTree] = useState(() => remembered.get(key) ?? NOTHING_OPEN)
   useEffect(() => {
@@ -107,7 +116,18 @@ function FolderTreeView({
       {failedFolders.map(({ path, text, retryable }) => (
         <ErrorMessage key={path} message={text} {...(retryable && { onRetry: () => load(path) })} />
       ))}
-      <Tree label="Files" rows={treeRows(listed, tree.open)} onToggle={toggle} />
+      {openFailure !== null && (
+        <ErrorMessage
+          message={openFailure.text}
+          {...(openFailure.retryable && { onRetry: () => void open(openFailure.path) })}
+        />
+      )}
+      <Tree
+        label="Files"
+        rows={treeRows(listed, tree.open)}
+        onToggle={toggle}
+        onOpen={(path) => void open(path)}
+      />
     </Stack>
   )
 }

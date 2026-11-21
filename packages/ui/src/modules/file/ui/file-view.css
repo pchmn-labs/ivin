@@ -1,0 +1,13 @@
+.iv-file-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.iv-file-view--message {
+  align-items: center;
+  justify-content: center;
+  padding: var(--iv-space-6);
+  text-align: center;
+}

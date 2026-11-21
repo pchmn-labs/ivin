@@ -46,6 +46,7 @@ const mount = async (
     useAnnotations: () => [],
     useAnswerApproval: () => answer,
     useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
+    useOpenFile: () => async () => undefined,
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }

@@ -21,6 +21,23 @@ export class FolderNotListed extends Schema.TaggedError<FolderNotListed>()("Fold
   reason: Schema.Literals(["missing", "unreadable"]),
 }) {}
 
+export const FILE_SIZE_LIMIT = 2 * 1024 * 1024
+
+// `binary`: a zero byte among its first bytes.
+export const FileContent = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("text"), text: Schema.String }),
+  Schema.Struct({ kind: Schema.Literal("too_large"), size: Schema.Number }),
+  Schema.Struct({ kind: Schema.Literal("binary") }),
+])
+export type FileContent = typeof FileContent.Type
+
+// `missing`: no file at that path, or a folder, while the working folder exists.
+export class FileNotRead extends Schema.TaggedError<FileNotRead>()("FileNotRead", {
+  sessionId: Schema.String,
+  path: Schema.String,
+  reason: Schema.Literals(["missing", "unreadable"]),
+}) {}
+
 export const FileRpcs = RpcGroup.make(
   // One level of a folder of the session's working folder, folders first; `path` is relative to
   // it, with `/` between names, and "" for the working folder itself. What git ignores is left out.
@@ -32,6 +49,17 @@ export const FileRpcs = RpcGroup.make(
       WorkingFolderDeleted,
       PathOutsideWorkingFolder,
       FolderNotListed,
+    ]),
+  }),
+  // `path` as in `file.listFolder`.
+  Rpc.make("file.readFile", {
+    payload: { sessionId: Schema.String, path: Schema.String },
+    success: FileContent,
+    error: Schema.Union([
+      SessionNotFound,
+      WorkingFolderDeleted,
+      PathOutsideWorkingFolder,
+      FileNotRead,
     ]),
   }),
 )

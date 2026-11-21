@@ -1,9 +1,19 @@
+import { FILE_SIZE_LIMIT } from "@ivin/contracts/file"
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { layerScripted } from "@ivin/harness"
 import { Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  rmSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
@@ -164,6 +174,112 @@ test("an unknown session fails", async () => {
   expect(
     await withServer((client) =>
       client["file.listFolder"]({ sessionId: "nope", path: "" }).pipe(
+        Effect.catch((error) => Effect.succeed(error._tag)),
+      ),
+    ),
+  ).toBe("SessionNotFound")
+})
+
+// Reads `path` in a new session of `projectPath`, and the error's tag when it fails.
+const readIn = (projectPath: string, ...paths: string[]) =>
+  withServer((client) =>
+    Effect.gen(function* () {
+      const { id } = yield* client["session.create"]({ projectPath })
+      return yield* Effect.forEach(paths, (path) =>
+        client["file.readFile"]({ sessionId: id, path }).pipe(
+          Effect.catch((error) =>
+            Effect.succeed(
+              error._tag === "FileNotRead" ? `FileNotRead:${error.reason}` : error._tag,
+            ),
+          ),
+        ),
+      )
+    }),
+  )
+
+test("reads a text file, as UTF-8", async () => {
+  write(join(project, "src/main.ts"), "const café = 1\n")
+  write(join(project, "empty.txt"))
+
+  expect(await readIn(project, "src/main.ts", "empty.txt")).toEqual([
+    { kind: "text", text: "const café = 1\n" },
+    { kind: "text", text: "" },
+  ])
+})
+
+test("a file above the size limit is reported with its size, and one at the limit is read", async () => {
+  writeFileSync(join(project, "limit.txt"), "")
+  truncateSync(join(project, "limit.txt"), FILE_SIZE_LIMIT)
+  writeFileSync(join(project, "big.txt"), "")
+  truncateSync(join(project, "big.txt"), FILE_SIZE_LIMIT + 1)
+
+  const [atLimit, big] = await readIn(project, "limit.txt", "big.txt")
+  expect(atLimit).toMatchObject({ kind: "binary" })
+  expect(big).toEqual({ kind: "too_large", size: FILE_SIZE_LIMIT + 1 })
+})
+
+test("a file with a zero byte at its start is binary", async () => {
+  writeFileSync(join(project, "image.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2]))
+
+  expect(await readIn(project, "image.png")).toEqual([{ kind: "binary" }])
+})
+
+test("a missing file and a folder are not read", async () => {
+  write(join(project, "src/main.ts"))
+
+  expect(await readIn(project, "nowhere.ts", "src/nowhere.ts", "src")).toEqual([
+    "FileNotRead:missing",
+    "FileNotRead:missing",
+    "FileNotRead:missing",
+  ])
+})
+
+test("a file that cannot be read is reported as unreadable", async () => {
+  write(join(project, "locked.txt"), "secret")
+  chmodSync(join(project, "locked.txt"), 0o000)
+
+  const result = await readIn(project, "locked.txt")
+  chmodSync(join(project, "locked.txt"), 0o644)
+  expect(result).toEqual(
+    process.getuid?.() === 0 ? [{ kind: "text", text: "secret" }] : ["FileNotRead:unreadable"],
+  )
+})
+
+test("refuses to read outside the working folder, through .., an absolute path or a symlink", async () => {
+  write(join(root, "secret/key.pem"), "key")
+  symlinkSync(join(root, "secret"), join(project, "escape"))
+  symlinkSync(join(root, "secret/key.pem"), join(project, "link.pem"))
+
+  expect(
+    await readIn(
+      project,
+      "../secret/key.pem",
+      join(root, "secret/key.pem"),
+      "escape/key.pem",
+      "link.pem",
+    ),
+  ).toEqual(Array(4).fill("PathOutsideWorkingFolder"))
+})
+
+test("reading in a deleted working folder, and for an unknown session, fails", async () => {
+  const gone = join(root, "gone")
+  mkdirSync(gone)
+  write(join(gone, "a.txt"))
+
+  expect(
+    await withServer((client) =>
+      Effect.gen(function* () {
+        const { id } = yield* client["session.create"]({ projectPath: gone })
+        rmSync(gone, { recursive: true })
+        return yield* client["file.readFile"]({ sessionId: id, path: "a.txt" }).pipe(
+          Effect.catch((error) => Effect.succeed(error._tag)),
+        )
+      }),
+    ),
+  ).toBe("WorkingFolderDeleted")
+  expect(
+    await withServer((client) =>
+      client["file.readFile"]({ sessionId: "nope", path: "a.txt" }).pipe(
         Effect.catch((error) => Effect.succeed(error._tag)),
       ),
     ),

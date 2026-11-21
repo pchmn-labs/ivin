@@ -6,8 +6,10 @@ import { layerAnnotationFeed } from "../modules/annotation/usecases/annotation-f
 import { listAnnotations } from "../modules/annotation/usecases/list-annotations.ts"
 import { removeAnnotation } from "../modules/annotation/usecases/remove-annotation.ts"
 import { watchAnnotations } from "../modules/annotation/usecases/watch-annotations.ts"
+import { layerFsFileReader } from "../modules/file/adapters/fs-file-reader.ts"
 import { layerFsFolderReader } from "../modules/file/adapters/fs-folder-reader.ts"
 import { listFolder } from "../modules/file/usecases/list-folder.ts"
+import { readFile } from "../modules/file/usecases/read-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
@@ -41,8 +43,11 @@ import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
 import { layerCurrentSettings } from "../modules/setting/usecases/current-settings.ts"
 import { watchSettings } from "../modules/setting/usecases/watch-settings.ts"
 import { layerSqliteTabStore } from "../modules/tab/adapters/sqlite-tab-store.ts"
+import { closeSubView } from "../modules/tab/usecases/close-sub-view.ts"
 import { closeTab } from "../modules/tab/usecases/close-tab.ts"
+import { listSubViews } from "../modules/tab/usecases/list-sub-views.ts"
 import { listTabs } from "../modules/tab/usecases/list-tabs.ts"
+import { openSubView } from "../modules/tab/usecases/open-sub-view.ts"
 import { openTab } from "../modules/tab/usecases/open-tab.ts"
 import { reorderTabs } from "../modules/tab/usecases/reorder-tabs.ts"
 import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlite-transcript-store.ts"
@@ -68,6 +73,7 @@ export const layerServices = Layer.mergeAll(layerWorktreeCleanup, layerImageComp
     Layer.mergeAll(
       layerGitCli,
       layerFsFolderReader,
+      layerFsFileReader,
       layerSqliteProjectStore,
       layerSqliteSessionStore,
       layerSqliteTabStore,
@@ -118,6 +124,9 @@ export const handlers = Rpcs.toLayer(
       "tab.close": ({ sessionId }) => closeTab(sessionId),
       "tab.reorder": ({ projectPath, sessionIds }) => reorderTabs(projectPath, sessionIds),
       "tab.list": ({ projectPath }) => listTabs(projectPath),
+      "tab.listSubViews": ({ sessionId }) => listSubViews(sessionId),
+      "tab.openSubView": ({ sessionId, subView }) => openSubView(sessionId, subView),
+      "tab.closeSubView": ({ sessionId, subView }) => closeSubView(sessionId, subView),
       "session.create": ({ projectPath }) => createSession(projectPath),
       "session.setRunOptions": ({ sessionId, options }) => setRunOptions(sessionId, options),
       "session.list": ({ projectPath }) => listSessions(projectPath),
@@ -154,6 +163,7 @@ export const handlers = Rpcs.toLayer(
         ),
       "worktree.listBranches": ({ projectPath }) => listBranches(projectPath),
       "file.listFolder": ({ sessionId, path }) => listFolder(sessionId, path),
+      "file.readFile": ({ sessionId, path }) => readFile(sessionId, path),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

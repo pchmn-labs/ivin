@@ -224,6 +224,7 @@ const tsxAllowed: Case[] = [
     "session/ui/pick-working-folder.tsx",
     "session/ui/run-options-menu.tsx",
     "session/ui/working-folder-picker.tsx",
+    "tab/ui/sub-view-card.tsx",
     "tab/ui/tab-bar.tsx",
     "transcript/ui/image-marker.tsx",
     "transcript/ui/image-thumbnail.tsx",

@@ -1,0 +1,120 @@
+.iv-code-view {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.iv-code-view .cm-editor {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: transparent;
+  color: var(--iv-text-prose);
+  font-size: var(--iv-text-mono);
+}
+
+.iv-code-view .cm-editor.cm-focused {
+  outline: none;
+}
+
+.iv-code-view .cm-scroller {
+  font-family: var(--iv-font-mono);
+  line-height: var(--iv-text-mono-lh);
+  scrollbar-width: thin;
+}
+
+.iv-code-view .cm-content {
+  padding: var(--iv-space-2) 0 var(--iv-space-10);
+  caret-color: var(--iv-accent);
+}
+
+.iv-code-view .cm-line {
+  padding: 0 var(--iv-space-6) 0 var(--iv-space-1);
+}
+
+.iv-code-view .cm-gutters {
+  border: 0;
+  /* Opaque: the gutter sticks while the lines scroll sideways under it. */
+  background: var(--iv-bg-card);
+  color: var(--iv-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-code-view .cm-lineNumbers .cm-gutterElement {
+  min-width: 3ch;
+  padding: 0 var(--iv-space-3) 0 var(--iv-space-4);
+}
+
+.iv-code-view .cm-activeLine,
+.iv-code-view .cm-activeLineGutter {
+  background: transparent;
+}
+
+.iv-code-view .cm-focused .cm-activeLine,
+.iv-code-view .cm-focused .cm-activeLineGutter {
+  background: var(--iv-bg-hover);
+}
+
+.iv-code-view .cm-focused .cm-activeLineGutter {
+  color: var(--iv-text-muted);
+}
+
+.iv-code-view .cm-selectionBackground,
+.iv-code-view .cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground {
+  background: color-mix(in srgb, var(--iv-accent) 22%, transparent);
+}
+
+.iv-code-view .cm-cursor {
+  border-left-color: var(--iv-accent);
+}
+
+.iv-code-view .iv-syntax-keyword {
+  color: var(--iv-syntax-keyword);
+}
+
+.iv-code-view .iv-syntax-string {
+  color: var(--iv-syntax-string);
+}
+
+.iv-code-view .iv-syntax-comment {
+  color: var(--iv-syntax-comment);
+  font-style: italic;
+}
+
+.iv-code-view .iv-syntax-number {
+  color: var(--iv-syntax-number);
+}
+
+.iv-code-view .iv-syntax-type {
+  color: var(--iv-syntax-type);
+}
+
+.iv-code-view .iv-syntax-function {
+  color: var(--iv-syntax-function);
+}
+
+.iv-code-view .iv-syntax-tag {
+  color: var(--iv-syntax-tag);
+}
+
+.iv-code-view .iv-syntax-property {
+  color: var(--iv-syntax-property);
+}
+
+.iv-code-view .iv-syntax-strong {
+  color: var(--iv-text);
+  font-weight: var(--iv-weight-semibold);
+}
+
+.iv-code-view .iv-syntax-emphasis {
+  font-style: italic;
+}
+
+.iv-code-view .iv-syntax-link {
+  color: var(--iv-accent);
+  text-decoration: underline;
+}
+
+.iv-code-view .iv-syntax-invalid {
+  color: var(--iv-danger);
+}
