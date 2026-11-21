@@ -45,6 +45,15 @@ export const transcriptRows = (items: ReadonlyArray<TranscriptItem>): Transcript
   return rows
 }
 
+// A turn cut by paging starts with an item folded into its work row, so it has no message row.
+export const lastTurnMessageId = (rows: ReadonlyArray<TranscriptRow>): string | undefined => {
+  const work = rows.findLast((row) => row.type === "work")
+  const first = work?.type === "work" ? work.turnIds[0] : undefined
+  return first !== undefined && rows.some((row) => row.type === "item" && row.id === first)
+    ? first
+    : undefined
+}
+
 export interface Step {
   readonly id: string
   // Null for the calls made before the agent wrote anything.

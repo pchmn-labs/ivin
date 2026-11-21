@@ -103,6 +103,14 @@ test("a running turn stays unfolded, with its last step open and the steps befor
   expect(steps.nth(1).element().hasAttribute("data-current")).toBe(true)
 })
 
+test("a turn that has just started shows its line with no timeline under it", async () => {
+  const { user } = items(Date.now())
+  await mount([user("u1", "fix it")], true)
+
+  await expect.element(page.getByText(/^Working for/)).toBeVisible()
+  expect(document.querySelector(".iv-turn__timeline")).toBeNull()
+})
+
 test("a finished turn folds its work behind one line, and shows the user's message and the answer", async () => {
   const { user, text, call } = items()
   await mount([

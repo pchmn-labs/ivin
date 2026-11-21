@@ -21,6 +21,17 @@ const message = (position: number): TranscriptItem => ({
   images: [],
 })
 
+const userMessage = (position: number): TranscriptItem => ({
+  id: `m${position}`,
+  sessionId: "s1",
+  position,
+  at: 0,
+  type: "message",
+  role: "user",
+  text: `question ${position}`,
+  images: [],
+})
+
 const scroller = () => document.querySelector<HTMLElement>('[data-testid="transcript"]')!
 // The image files the transcript asks the window to load: one per <img> it has drawn.
 const loadedImages = () =>
@@ -123,4 +134,55 @@ test("a transcript of 200 images loads only the images of the rows on screen", a
   }
   await vi.waitFor(() => expect(loadedImages().some((src) => !onScreen.has(src))).toBe(true))
   expect(new Set(loadedImages()).size).toBeLessThan(200)
+})
+
+test("a sent message scrolls up to the top of the view, and stays there while the answer is short", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" live />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+
+  const topInView = (text: string) =>
+    page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
+    scroller().getBoundingClientRect().top
+
+  server.pushItem(userMessage(40))
+  await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
+  server.pushItem(message(41))
+  await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
+  await frames()
+  expect(topInView("question 40")).toBeLessThan(30)
+})
+
+test("loading the older items of a long turn does not scroll to its message", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 80 }, (_, i) => message(i + 1))])
+
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+  await expect.element(page.getByText("message 80", { exact: true })).toBeVisible()
+
+  await vi.waitFor(() => {
+    scroller().scrollTop = 0
+    expect(page.getByText("question 0", { exact: true }).query()).not.toBeNull()
+  })
+  await frames()
+  const room = document.querySelector<HTMLElement>(".iv-transcript")!.style
+  expect(room.getPropertyValue("--iv-transcript-room")).toBe("")
 })

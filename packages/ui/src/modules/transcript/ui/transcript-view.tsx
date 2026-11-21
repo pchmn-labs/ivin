@@ -5,6 +5,7 @@ import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
 import { Text } from "../../../core/components/text/text.tsx"
 import type { TranscriptRow as RowData } from "../rules/turns.ts"
+import { useSentMessageScroll } from "../hooks/use-sent-message-scroll.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
 import { TurnWork } from "./turn-work.tsx"
 import "./transcript-view.css"
@@ -13,7 +14,6 @@ import "./transcript-view.css"
 const FIRST_ITEM_INDEX = 1_000_000
 // One 22px transcript line and the item's 8px padding above and below; keep in step with transcript-view.css.
 const ROW_HEIGHT = 38
-
 // `live`: the session's agent is working, so its last turn is under way.
 export function TranscriptView({ sessionId, live = false }: { sessionId: string; live?: boolean }) {
   const { loaded, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
@@ -23,13 +23,15 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
     [rows, live],
   )
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
+  const { root, scrollerRef, followOutput, fitRoom } = useSentMessageScroll({ loaded, rows })
 
   if (!loaded) return <TranscriptEmpty>Loading the transcript…</TranscriptEmpty>
   if (shown.length === 0) return <TranscriptEmpty>No messages yet</TranscriptEmpty>
 
   return (
-    <div className="iv-transcript">
+    <div className="iv-transcript" ref={root}>
       <Virtuoso
+        scrollerRef={scrollerRef}
         data-testid="transcript"
         className="iv-transcript__list"
         data={shown}
@@ -37,7 +39,9 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
         firstItemIndex={FIRST_ITEM_INDEX - prepended}
         initialTopMostItemIndex={{ index: "LAST", align: "end" }}
         computeItemKey={(_, row) => row.id}
-        followOutput={(atBottom) => (atBottom ? "auto" : false)}
+        followOutput={followOutput}
+        totalListHeightChanged={fitRoom}
+        components={{ Footer: TranscriptFooter }}
         startReached={() => {
           if (hasBefore) loadItemsBefore(sessionId)
         }}
@@ -58,6 +62,10 @@ function RowContent({ sessionId, row, live }: { sessionId: string; row: RowData;
       </div>
     </div>
   )
+}
+
+function TranscriptFooter() {
+  return <div className="iv-transcript__footer" />
 }
 
 function TranscriptEmpty({ children }: { children: string }) {

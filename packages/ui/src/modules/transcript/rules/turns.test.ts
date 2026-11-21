@@ -3,6 +3,7 @@ import { expect, test } from "vitest"
 import {
   callPhrases,
   duration,
+  lastTurnMessageId,
   pinnedCalls,
   stepOpenByDefault,
   transcriptRows,
@@ -160,4 +161,14 @@ test("a step's calls read as one phrase per kind, in the order they first appear
 
 test("a duration reads in seconds, then minutes and seconds", () => {
   expect([duration(12_400), duration(102_000)]).toEqual(["12s", "1m 42s"])
+})
+
+test("the last turn's message is the user message that opens it", () => {
+  expect(lastTurnMessageId(transcriptRows([user("u1"), text("a1"), user("u2")]))).toBe("u2")
+  expect(lastTurnMessageId(transcriptRows([user("u1"), call("c1"), text("a1")]))).toBe("u1")
+})
+
+test("a last turn cut by paging has no message", () => {
+  expect(lastTurnMessageId(transcriptRows([text("t1"), call("c1"), text("a1")]))).toBeUndefined()
+  expect(lastTurnMessageId(transcriptRows([text("a1")]))).toBeUndefined()
 })
