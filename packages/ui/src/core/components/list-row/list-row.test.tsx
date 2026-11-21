@@ -1,6 +1,8 @@
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
+import { IconButton } from "../button/button.tsx"
+import { Menu } from "../menu/menu.tsx"
 import { ListRow } from "./list-row.tsx"
 
 test("a row's subtitle sits on its own line under the title, and both are one button", async () => {
@@ -52,4 +54,25 @@ test("a row's tooltip shows its whole text, under its label, after a hover", asy
   const tooltip = page.getByText("kubectl apply -f certs/staging.yaml")
   await expect.element(tooltip).toBeVisible()
   await expect.element(page.getByText("Approval needed")).toBeVisible()
+})
+
+test("a row keeps its actions button shown while the pointer is on the menu it opened", async () => {
+  await render(
+    <ListRow
+      data-testid="row"
+      title="Fix the cart"
+      actions={
+        <Menu
+          trigger={<IconButton icon="ellipsis" label="Session actions" size="sm" />}
+          items={[{ label: "Archive", onSelect: () => {} }]}
+        />
+      }
+    />,
+  )
+
+  await page.getByTestId("row").hover()
+  await page.getByRole("button", { name: "Session actions" }).click()
+  await page.getByRole("menuitem", { name: "Archive" }).hover()
+
+  await expect.element(page.getByRole("button", { name: "Session actions" })).toBeVisible()
 })

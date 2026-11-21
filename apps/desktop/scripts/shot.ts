@@ -177,7 +177,7 @@ try {
   await inactive.hover()
   await inactive.getByRole("button", { name: /^Actions for/ }).click()
   await window.getByRole("menuitem", { name: "Archive" }).waitFor()
-  await window.mouse.move(900, 900)
+  await window.getByRole("menuitem", { name: "Archive" }).hover()
   await window.waitForTimeout(300)
   await shoot("session-menu")
   await window.getByRole("menuitem", { name: "Archive" }).click()
