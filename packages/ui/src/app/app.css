@@ -28,6 +28,8 @@
   flex: none;
   align-items: center;
   height: var(--iv-space-10);
+  /* Over the card's top border, so this row's centre matches the main top bar's. */
+  margin-top: -1px;
   padding: 0 var(--iv-space-2) 0 0;
   -webkit-app-region: drag;
 }
