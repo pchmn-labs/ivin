@@ -17,6 +17,7 @@ export default defineConfig({
         },
       },
       "packages/ui/vitest.browser.config.ts",
+      "packages/ui/vitest.perf.config.ts",
     ],
   },
 })

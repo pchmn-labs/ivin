@@ -1,5 +1,5 @@
 import { playwright } from "@vitest/browser-playwright"
-import { defineConfig } from "vitest/config"
+import { configDefaults, defineConfig } from "vitest/config"
 
 export default defineConfig({
   test: {
@@ -7,6 +7,7 @@ export default defineConfig({
     testTimeout: 5000,
     setupFiles: ["./src/core/theme/tokens.css", "./src/core/theme/base.css"],
     include: ["src/**/*.test.tsx", "../../plugins/**/*.test.tsx"],
+    exclude: [...configDefaults.exclude, "src/**/*.perf.test.tsx"],
     browser: {
       enabled: true,
       headless: true,
