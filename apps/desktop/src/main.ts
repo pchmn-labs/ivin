@@ -6,6 +6,7 @@ import {
   MessageChannelMain,
   net,
   protocol,
+  shell,
   utilityProcess,
   type UtilityProcess,
 } from "electron"
@@ -14,9 +15,11 @@ import { delimiter, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
 import { writeCliCommand } from "./cli-command.ts"
+import { linkTarget } from "./external-link.ts"
 import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
 
 const devUrl = process.env["IVIN_DEV_URL"]
+const appOrigin = devUrl ? new URL(devUrl).origin : undefined
 const openInBackground = process.env["IVIN_BACKGROUND"] === "1"
 // Set before ready: after it, macOS has already activated the app and shown its Dock icon.
 if (openInBackground && process.platform === "darwin") app.setActivationPolicy("accessory")
@@ -60,6 +63,16 @@ const createWindow = async () => {
       nodeIntegration: false,
       sandbox: true,
     },
+  })
+  window.webContents.setWindowOpenHandler(({ url }) => {
+    if (linkTarget(url, appOrigin) === "browser") void shell.openExternal(url)
+    return { action: "deny" }
+  })
+  window.webContents.on("will-navigate", (event) => {
+    const target = linkTarget(event.url, appOrigin)
+    if (target === "app") return
+    event.preventDefault()
+    if (target === "browser") void shell.openExternal(event.url)
   })
   window.once("ready-to-show", () => (openInBackground ? window.showInactive() : window.show()))
   if (devUrl) {
