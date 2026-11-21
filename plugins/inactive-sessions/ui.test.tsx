@@ -42,6 +42,7 @@ const mountSection = async (
     useAnnotations: () => [],
     useAnswerApproval: () => async () => undefined,
     useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
+    useOpenFile: () => async () => undefined,
     useSessionActions: (session) => ({
       items: [{ label: "Archive", onSelect: () => void archived.push(session.id) }],
       failure: session.title === "Failed" ? "The session was not archived." : null,

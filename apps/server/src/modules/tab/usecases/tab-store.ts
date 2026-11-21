@@ -1,5 +1,11 @@
-import type { Tab } from "@ivin/contracts/tab"
+import type { SubView, Tab } from "@ivin/contracts/tab"
 import { Context, type Effect } from "effect"
+
+export interface StoredSubView {
+  readonly subView: SubView
+  readonly workingFolder: string
+  readonly selected: boolean
+}
 
 export class TabStore extends Context.Service<
   TabStore,
@@ -12,5 +18,19 @@ export class TabStore extends Context.Service<
     readonly removeByProject: (projectPath: string) => Effect.Effect<void>
     readonly setOrder: (projectPath: string, sessionIds: readonly string[]) => Effect.Effect<void>
     readonly select: (projectPath: string, sessionId: string | null) => Effect.Effect<void>
+    readonly subViewsOf: (sessionId: string) => Effect.Effect<readonly StoredSubView[]>
+    readonly appendSubView: (
+      sessionId: string,
+      subView: SubView,
+      workingFolder: string,
+    ) => Effect.Effect<void>
+    readonly removeSubView: (sessionId: string, subView: SubView) => Effect.Effect<void>
+    // Null leaves none selected.
+    readonly selectSubView: (sessionId: string, subView: SubView | null) => Effect.Effect<void>
+    // Removes those opened in another working folder than `workingFolder`.
+    readonly removeSubViewsOutside: (
+      sessionId: string,
+      workingFolder: string,
+    ) => Effect.Effect<void>
   }
 >()("ivin/server/TabStore") {}

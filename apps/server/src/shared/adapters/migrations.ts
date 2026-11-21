@@ -153,6 +153,19 @@ export const migrations: readonly Migration[] = [
     CREATE UNIQUE INDEX annotations_by_key ON annotations (target_type, target_id, ns, kind, key)
       WHERE key IS NOT NULL`,
   },
+  {
+    version: 16,
+    sql: `CREATE TABLE sub_views (
+      session_id TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      kind TEXT NOT NULL,
+      path TEXT NOT NULL,
+      working_folder TEXT NOT NULL,
+      selected INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (session_id, kind, path)
+    );
+    CREATE INDEX sub_views_by_session ON sub_views (session_id, position)`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

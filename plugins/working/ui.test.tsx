@@ -68,6 +68,7 @@ const mountPanel = async (
       return answerFails ? { text: "The session has stopped.", retryable: true } : undefined
     },
     useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
+    useOpenFile: () => async () => undefined,
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }

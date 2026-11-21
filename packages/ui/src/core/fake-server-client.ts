@@ -6,7 +6,12 @@ import {
   annotationKinds,
   type AnnotationTarget,
 } from "@ivin/contracts/annotation"
-import { FolderNotListed, type FolderEntry } from "@ivin/contracts/file"
+import {
+  FileNotRead,
+  FolderNotListed,
+  type FileContent,
+  type FolderEntry,
+} from "@ivin/contracts/file"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
@@ -21,7 +26,7 @@ import type {
   WorkingFolderChoice,
 } from "@ivin/contracts/session"
 import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
-import type { ProjectTabs } from "@ivin/contracts/tab"
+import type { ProjectTabs, SubView, TabSubViews } from "@ivin/contracts/tab"
 import type {
   ImageData,
   TranscriptItem,
@@ -91,6 +96,12 @@ export interface FakeServer {
   // missing here has had it deleted.
   readonly folders: Map<string, ReadonlyArray<FolderEntry>>
   readonly listedFolders: ReadonlyArray<string>
+  // What `file.readFile` reads, by absolute path; a path missing here has no file.
+  readonly files: Map<string, FileContent | "unreadable">
+  // Makes the next file.readFile wait until `release` is called.
+  readonly holdNextRead: () => { readonly release: () => void }
+  // Each session's sub-views, as `tab.listSubViews` returns them.
+  readonly subViews: Map<string, TabSubViews>
   // Streams the user's settings to `setting.watch`, as after a change to the file.
   readonly setUserSettings: (state: UserSettings) => void
 }
@@ -176,6 +187,18 @@ export const makeFakeServer = (
   const errorReports: Array<ErrorReport> = []
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
   const listedFolders: Array<string> = []
+  const files = new Map<string, FileContent | "unreadable">()
+  let holdRead: Promise<void> | null = null
+  const subViews = new Map<string, TabSubViews>()
+  const subViewsOf = (sessionId: string): TabSubViews =>
+    subViews.get(sessionId) ?? { sessionId, subViews: [], selected: null }
+  const sameSubView = (a: SubView) => (b: SubView) => a.kind === b.kind && a.path === b.path
+  const withSession = <A>(sessionId: string, run: () => A) =>
+    Effect.suspend(() =>
+      sessions.has(sessionId)
+        ? Effect.succeed(run())
+        : Effect.fail(new SessionNotFound({ sessionId })),
+    )
   const failing = new Set<string>()
   const sentMessages: Array<FakeServer["sentMessages"][number]> = []
   const pickedFolders: Array<WorkingFolderChoice> = []
@@ -639,6 +662,51 @@ export const makeFakeServer = (
             : Effect.succeed(entries)
         },
       ),
+    "file.readFile": ({ sessionId, path }: { sessionId: string; path: string }) =>
+      Effect.promise(() => holdRead ?? Promise.resolve()).pipe(
+        Effect.andThen(
+          (): Effect.Effect<FileContent, SessionNotFound | WorkingFolderDeleted | FileNotRead> => {
+            holdRead = null
+            const session = sessions.get(sessionId)
+            if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
+            const file = files.get(`${session.workingFolder}/${path}`)
+            if (file === undefined)
+              return Effect.fail(new FileNotRead({ sessionId, path, reason: "missing" }))
+            if (file === "unreadable")
+              return Effect.fail(new FileNotRead({ sessionId, path, reason: "unreadable" }))
+            return Effect.succeed(file)
+          },
+        ),
+      ),
+    "tab.listSubViews": ({ sessionId }: { sessionId: string }) =>
+      withSession(sessionId, () => subViewsOf(sessionId)),
+    "tab.openSubView": ({ sessionId, subView }: { sessionId: string; subView: SubView }) =>
+      withSession(sessionId, () => {
+        const current = subViewsOf(sessionId)
+        const open = current.subViews.some(sameSubView(subView))
+        const next = {
+          sessionId,
+          subViews: open ? current.subViews : [...current.subViews, subView],
+          selected: subView,
+        }
+        subViews.set(sessionId, next)
+        return next
+      }),
+    "tab.closeSubView": ({ sessionId, subView }: { sessionId: string; subView: SubView }) =>
+      withSession(sessionId, () => {
+        const current = subViewsOf(sessionId)
+        const index = current.subViews.findIndex(sameSubView(subView))
+        if (index === -1) return current
+        const rest = current.subViews.filter((_, i) => i !== index)
+        const wasSelected = current.selected !== null && sameSubView(subView)(current.selected)
+        const next = {
+          sessionId,
+          subViews: rest,
+          selected: wasSelected ? (rest[index] ?? rest[index - 1] ?? null) : current.selected,
+        }
+        subViews.set(sessionId, next)
+        return next
+      }),
     "worktree.list": () => Effect.sync(() => [...worktrees]),
     "worktree.newBase": () => Effect.succeed("origin/main"),
     "worktree.checkoutStatus": () => Effect.sync(checkoutStatus),
@@ -878,5 +946,12 @@ export const makeFakeServer = (
     failNextCall: (rpc) => void failing.add(rpc),
     folders,
     listedFolders,
+    files,
+    holdNextRead: () => {
+      let release!: () => void
+      holdRead = new Promise<void>((resolve) => (release = resolve))
+      return { release }
+    },
+    subViews,
   }
 }

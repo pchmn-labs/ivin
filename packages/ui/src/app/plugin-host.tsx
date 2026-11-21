@@ -15,6 +15,8 @@ import { openTabAtom } from "../modules/tab/atoms/open-tab.ts"
 import { selectedSessionIdAtom } from "../modules/tab/atoms/selected-session-id.ts"
 import { folderKey, listFolderOf } from "../modules/file/atoms/list-folder.ts"
 import { folderListingFailure } from "../modules/file/rules/folder-listing.ts"
+import { openSubViewAtom } from "../modules/tab/atoms/open-sub-view.ts"
+import { openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
@@ -66,6 +68,20 @@ const host: UiHost = {
       },
       [registry],
     )
+  },
+  useOpenFile: () => {
+    const sessions = useAtomValue(openSessionsAtom)
+    const open = useAtomSet(openSubViewAtom, { mode: "promiseExit" })
+    return async (sessionId, path) => {
+      const session = sessions.find((s) => s.id === sessionId)
+      if (session === undefined) return openFileFailure({ _tag: "SessionNotFound" }, path)
+      const exit = await open({
+        sessionId,
+        workingFolder: session.workingFolder,
+        subView: { kind: "file", path },
+      })
+      return Exit.isFailure(exit) ? openFileFailure(Cause.squash(exit.cause), path) : undefined
+    }
   },
   components: hostComponents,
 }

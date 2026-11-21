@@ -17,7 +17,7 @@ const parentIndex = (rows: ReadonlyArray<TreeRow>, index: number) => {
 
 // The rows stay out of the tab order: the tree takes the focus and names its active row, so the
 // focus survives a row scrolled out of the virtualised list.
-export function Tree({ label, rows, onToggle, "data-testid": testId }: TreeProps) {
+export function Tree({ label, rows, onToggle, onOpen, "data-testid": testId }: TreeProps) {
   const domId = useId()
   const list = useRef<VirtuosoHandle>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -33,6 +33,8 @@ export function Tree({ label, rows, onToggle, "data-testid": testId }: TreeProps
     setActiveId(row.id)
     list.current?.scrollIntoView({ index: rows.indexOf(row) })
   }
+
+  const activate = (row: TreeRow) => (row.expanded === null ? onOpen?.(row.id) : onToggle(row.id))
 
   const onKeyDown = (event: KeyboardEvent) => {
     if (active === undefined) {
@@ -54,8 +56,8 @@ export function Tree({ label, rows, onToggle, "data-testid": testId }: TreeProps
         if (active.expanded === true) onToggle(active.id)
         else moveTo(parentIndex(rows, activeIndex))
       },
-      Enter: () => active.expanded !== null && onToggle(active.id),
-      " ": () => active.expanded !== null && onToggle(active.id),
+      Enter: () => activate(active),
+      " ": () => activate(active),
     }
     const run = keys[event.key]
     if (run === undefined || event.metaKey || event.ctrlKey || event.altKey) return
@@ -90,7 +92,7 @@ export function Tree({ label, rows, onToggle, "data-testid": testId }: TreeProps
             data-active={index === activeIndex || undefined}
             onClick={() => {
               setActiveId(row.id)
-              if (row.expanded !== null) onToggle(row.id)
+              activate(row)
             }}
           >
             {Array.from({ length: row.depth }, (_, level) => (

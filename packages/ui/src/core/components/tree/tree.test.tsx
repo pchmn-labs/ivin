@@ -33,13 +33,14 @@ const visible = (list: ReadonlyArray<Node>, open: ReadonlySet<string>, base = ""
       : [row]
   })
 
-function Harness() {
+function Harness({ onOpen }: { onOpen?: (id: string) => void }) {
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
   return (
     <div style={{ display: "flex", height: 300 }}>
       <Tree
         label="Files"
         rows={visible(nodes, open)}
+        {...(onOpen && { onOpen })}
         onToggle={(id) =>
           setOpen((current) => {
             const next = new Set(current)
@@ -130,4 +131,13 @@ test("no row looks active until the tree takes the focus or a row is clicked", a
   expect(document.querySelector("[data-active]")).toBeNull()
   await userEvent.tab()
   await expect.element(item("src")).toHaveAttribute("data-active")
+})
+
+test("a click, Enter or Space on a file opens it; on a folder it does not", async () => {
+  const opened: string[] = []
+  await render(<Harness onOpen={(id) => opened.push(id)} />)
+  await page.getByRole("treeitem", { name: "README.md" }).click()
+  await page.getByRole("treeitem", { name: "docs" }).click()
+  await userEvent.keyboard("{ArrowDown}{Enter}{ }")
+  expect(opened).toEqual(["README.md", "docs/guide.md", "docs/guide.md"])
 })

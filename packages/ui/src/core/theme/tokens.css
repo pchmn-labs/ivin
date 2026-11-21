@@ -7,6 +7,15 @@
   --iv-attention-subtle: color-mix(in srgb, var(--iv-attention) 8%, transparent);
   --iv-attention-hover: color-mix(in srgb, var(--iv-attention) 13%, transparent);
 
+  --iv-syntax-keyword: var(--iv-project-hue-3);
+  --iv-syntax-string: var(--iv-project-hue-0);
+  --iv-syntax-comment: var(--iv-text-faint);
+  --iv-syntax-number: var(--iv-project-hue-4);
+  --iv-syntax-type: var(--iv-project-hue-5);
+  --iv-syntax-function: var(--iv-project-hue-1);
+  --iv-syntax-tag: var(--iv-project-hue-2);
+  --iv-syntax-property: var(--iv-text);
+
   --iv-font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
   --iv-font-mono: ui-monospace, "SF Mono", Menlo, monospace;
@@ -56,6 +65,9 @@
   --iv-control-md: 28px;
   --iv-row-height: 30px;
   --iv-tree-row-height: 24px;
+  --iv-sub-view-tab-height: 26px;
+  --iv-sub-view-close-size: 18px;
+  --iv-sub-view-name-max-width: 200px;
   --iv-tree-indent: 12px;
   --iv-tab-height: 30px;
   --iv-tab-width: 240px;
