@@ -13,6 +13,7 @@ test.each([
   ["Agent", { description: "Build the server", prompt: "long" }, "Build the server"],
   ["Skill", { skill: "implement" }, "/implement"],
   ["Skill", { skill: "implement", args: "#122" }, "/implement #122"],
+  ["Skill", { skill: "/implement" }, "/implement"],
 ])("%s shows its main argument", (name, input, expected) => {
   expect(mainArgument(name, input)).toBe(expected)
 })
@@ -21,6 +22,7 @@ test("an unknown tool or a missing argument has no main argument", () => {
   expect(mainArgument("Custom", { a: 1 })).toBeNull()
   expect(mainArgument("Bash", {})).toBeNull()
   expect(mainArgument("Bash", undefined)).toBeNull()
+  expect(mainArgument("Skill", { args: "#122" })).toBeNull()
 })
 
 test("the full input is indented JSON", () => {
