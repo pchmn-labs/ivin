@@ -1,11 +1,12 @@
 .iv-transcript {
   --iv-text-md: 14px;
-  --iv-text-md-lh: 22px;
+  --iv-text-md-lh: 24px;
   --iv-text-sm: 13px;
   --iv-text-sm-lh: 20px;
   --iv-text-mono: 13px;
   position: absolute;
   inset: 0;
+  color: var(--iv-text-prose);
   font-size: var(--iv-text-md);
   line-height: var(--iv-text-md-lh);
 }
