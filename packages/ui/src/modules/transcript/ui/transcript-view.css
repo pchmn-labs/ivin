@@ -13,6 +13,12 @@
 
 .iv-transcript__list {
   height: 100%;
+  /* Only alpha counts in a mask; the fade fits in the first item's top padding, so text at rest stays whole. */
+  mask-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--iv-bg) 50%, transparent),
+    var(--iv-bg) var(--iv-space-2)
+  );
 }
 
 .iv-transcript__column {
