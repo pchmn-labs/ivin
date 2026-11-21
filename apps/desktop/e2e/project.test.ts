@@ -53,7 +53,9 @@ test("two projects each with a session are back with their tabs after a relaunch
       await window.getByRole("button", { name: "Open folder…" }).click()
       await expect(window.getByRole("button", { name })).toHaveAttribute("aria-current", "true")
       await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
-      await expect(window.getByRole("tab")).toHaveCount(1)
+      await expect(
+        window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
+      ).toHaveCount(1)
     }
   } finally {
     await first.close()
@@ -67,10 +69,14 @@ test("two projects each with a session are back with their tabs after a relaunch
       "true",
     )
     await expect(window.getByTestId("project-name")).toHaveText(names[1]!)
-    await expect(window.getByRole("tab")).toHaveCount(1)
+    await expect(
+      window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
+    ).toHaveCount(1)
     await window.getByRole("button", { name: names[0]! }).click()
     await expect(window.getByTestId("project-name")).toHaveText(names[0]!)
-    await expect(window.getByRole("tab")).toHaveCount(1)
+    await expect(
+      window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
+    ).toHaveCount(1)
     await expect(window.getByTestId("session-item")).toHaveCount(1)
   } finally {
     await second.close()
