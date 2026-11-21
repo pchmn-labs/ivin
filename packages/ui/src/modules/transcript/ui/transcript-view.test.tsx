@@ -10,14 +10,14 @@ import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
-const message = (position: number): TranscriptItem => ({
+const message = (position: number, text = `message ${position}`): TranscriptItem => ({
   id: `m${position}`,
   sessionId: "s1",
   position,
   at: 0,
   type: "message",
   role: "assistant",
-  text: `message ${position}`,
+  text,
   images: [],
 })
 
@@ -205,6 +205,31 @@ test("a sent message stays at the top of the view when its tool calls fold as th
   await frames()
   await frames()
   expect(topInView("question 40")).toBeLessThan(30)
+})
+
+test("once the answer is taller than the view, the transcript follows its end", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" live />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+  const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
+
+  server.pushItem(userMessage(40))
+  await frames()
+  server.pushItem(message(41, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n")))
+  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
+  server.pushItem(message(42))
+  await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
+  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
 })
 
 test("loading the older items of a long turn does not scroll to its message", async () => {

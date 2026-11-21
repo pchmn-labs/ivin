@@ -24,8 +24,7 @@ export function useSentMessageScroll({
   const room = useRef(0)
   const frame = useRef(0)
   const userScrolled = useRef(false)
-  // Unless followOutput is false, Virtuoso still scrolls to the end when the list grows.
-  const [holding, setHolding] = useState(false)
+  const [roomLeft, setRoomLeft] = useState(false)
   // Null until loaded, so the turns already there when the transcript opens are not scrolled to.
   const seen = useRef<{ turn: string | undefined; lastRow: string | undefined } | null>(null)
 
@@ -33,14 +32,14 @@ export function useSentMessageScroll({
 
   const footer = () => root.current?.querySelector<HTMLElement>(".iv-transcript__footer")
 
-  const holdsMessage = () => {
+  const hasRoomLeft = () => {
     const end = footer()
     return room.current > (end ? Number.parseFloat(getComputedStyle(end).minHeight) : 0)
   }
 
   const setRoom = useCallback((height: number) => {
     room.current = Math.max(0, height)
-    setHolding(holdsMessage())
+    setRoomLeft(hasRoomLeft())
     // Set on the transcript for its stylesheet to read, as resize-handle does.
     root.current?.style.setProperty("--iv-transcript-room", `${room.current}px`)
   }, [])
@@ -55,11 +54,15 @@ export function useSentMessageScroll({
     const row = sentRow()
     const end = footer()
     if (scrolling.current || !view || !row || !end) return
+    const held = hasRoomLeft()
     setRoom(view.clientHeight - (end.getBoundingClientRect().top - row.getBoundingClientRect().top))
+    if (userScrolled.current) return
     // The turn's rows can shrink before the room grows back, and the browser then scrolls up to fit.
-    if (holdsMessage() && !userScrolled.current) {
+    if (hasRoomLeft())
       view.scrollTop += row.getBoundingClientRect().top - view.getBoundingClientRect().top
-    }
+    // Virtuoso follows only from the end, and a row taller than the room leaves the view short of it.
+    // The next frame lets it measure the shrunk room first, or it misses that the view reached the end.
+    else if (held) requestAnimationFrame(() => (view.scrollTop = view.scrollHeight))
   }, [setRoom])
 
   useLayoutEffect(() => {
@@ -132,11 +135,13 @@ export function useSentMessageScroll({
     [onUserScroll],
   )
 
-  // Virtuoso reads followOutput for the render that adds the sent message, before the effect above holds it.
+  // Virtuoso reads followOutput for the render that adds the sent message, before the effect above leaves room.
   const sending =
     seen.current !== null && turnMessageId !== undefined && turnMessageId !== seen.current.turn
-  // While the room under the sent message's turn is not used up, following the end would skip it.
-  const followOutput = holding || sending ? false : ("auto" as const)
+  // Any value but false lets Virtuoso scroll to the end, past the room left under the sent message.
+  // A new function each render re-arms its scroll to the end for a row that grows once measured.
+  const followOutput =
+    roomLeft || sending ? false : (atBottom: boolean) => atBottom && ("auto" as const)
 
   return { root, scrollerRef, followOutput, fitRoom }
 }
