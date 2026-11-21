@@ -12,8 +12,8 @@ import "./transcript-view.css"
 
 // Virtuoso counts down from here when rows are prepended, so it keeps the scroll anchor.
 const FIRST_ITEM_INDEX = 1_000_000
-// One 22px transcript line and the item's 8px padding above and below; keep in step with transcript-view.css.
-const ROW_HEIGHT = 38
+// One 24px transcript line and the item's 8px padding above and below; keep in step with transcript-view.css.
+const ROW_HEIGHT = 40
 // `live`: the session's agent is working, so its last turn is under way.
 export function TranscriptView({ sessionId, live = false }: { sessionId: string; live?: boolean }) {
   const { loaded, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
