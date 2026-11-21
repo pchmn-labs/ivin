@@ -665,9 +665,7 @@ const mountDeletedFolderSession = async ({ extraWorktrees = 0 } = {}) => {
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <div
-          style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden" }}
-        >
+        <div style={{ display: "flex", flexDirection: "column", height: 600, overflow: "hidden" }}>
           <SessionView projectPath="/p" sessionId="s1" />
         </div>
       </PluginsProvider>
@@ -712,15 +710,27 @@ test("the working folder picker is answered from the keyboard", async () => {
   expect(server.pickedFolders).toEqual([{ kind: "new_worktree" }])
 })
 
-test("a working folder picker with many worktrees scrolls its list and leaves the window still", async () => {
+test("a working folder picker with many worktrees scrolls its list in a short window and leaves the window still", async () => {
   await mountDeletedFolderSession({ extraWorktrees: 30 })
 
   await expect.element(page.getByRole("radio", { name: /feat\/29/ })).toBeInTheDocument()
-  await expect.element(continueHere()).toBeInViewport()
+  expect(continueHere().element().getBoundingClientRect().bottom).toBeLessThanOrEqual(600)
   const root = document.scrollingElement!
   expect(root.scrollHeight).toBe(root.clientHeight)
   const list = page.getByRole("group", { name: "Working folder" }).element()
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight)
+
+  await page
+    .getByRole("radio", { name: /Current checkout/ })
+    .element()
+    .focus()
+  for (let n = 0; n < 6; n++) await userEvent.keyboard("{ArrowDown}")
+  await expect.element(page.getByRole("radio", { name: /feat\/3\b/ })).toBeChecked()
+  const chosen = page.getByTestId("pick-working-folder").getByText("feat/3", { exact: true })
+  const row = chosen.element().closest("label")!.getBoundingClientRect()
+  const view = list.getBoundingClientRect()
+  expect(row.top).toBeGreaterThanOrEqual(view.top)
+  expect(row.bottom).toBeLessThanOrEqual(view.bottom)
 })
 
 test("a pick that fails says so beside the picker, keeps the choice and offers a retry", async () => {
