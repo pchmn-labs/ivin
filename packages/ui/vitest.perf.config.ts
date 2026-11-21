@@ -12,5 +12,13 @@ export default defineConfig({
   define: { "process.env.NODE_ENV": JSON.stringify("production") },
   optimizeDeps: { include: lazyDeps },
   oxc: { jsx: { runtime: "automatic", development: false } },
-  test: { name: "ui-perf", setupFiles, browser, include: ["src/**/*.perf.test.tsx"] },
+  test: {
+    name: "ui-perf",
+    setupFiles,
+    browser,
+    include: ["src/**/*.perf.test.tsx"],
+    // A test running beside a frame-rate test slows its frames, and is slowed by it.
+    sequence: { groupOrder: 1 },
+    fileParallelism: false,
+  },
 })
