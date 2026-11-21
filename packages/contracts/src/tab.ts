@@ -22,10 +22,13 @@ export const SubView = Schema.Struct({ kind: Schema.Literal("file"), path: Schem
 export type SubView = typeof SubView.Type
 
 // In the order they were opened; `selected` is null only when there are none.
+// `sessionTabSelected` is only true in full width.
 export const TabSubViews = Schema.Struct({
   sessionId: Schema.String,
   subViews: Schema.Array(SubView),
   selected: Schema.NullOr(SubView),
+  fullWidth: Schema.Boolean,
+  sessionTabSelected: Schema.Boolean,
 })
 export type TabSubViews = typeof TabSubViews.Type
 
@@ -62,6 +65,16 @@ export const TabRpcs = RpcGroup.make(
   // Closing the selected sub-view selects its neighbour, as closing a tab does.
   Rpc.make("tab.closeSubView", {
     payload: { sessionId: Schema.String, subView: SubView },
+    success: TabSubViews,
+    error: SessionNotFound,
+  }),
+  Rpc.make("tab.setFullWidth", {
+    payload: { sessionId: Schema.String, fullWidth: Schema.Boolean },
+    success: TabSubViews,
+    error: SessionNotFound,
+  }),
+  Rpc.make("tab.selectSessionTab", {
+    payload: { sessionId: Schema.String },
     success: TabSubViews,
     error: SessionNotFound,
   }),

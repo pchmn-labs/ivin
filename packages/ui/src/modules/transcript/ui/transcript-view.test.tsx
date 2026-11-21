@@ -257,20 +257,6 @@ test("loading the older items of a long turn does not scroll to its message", as
   expect(room.getPropertyValue("--iv-transcript-room")).toBe("")
 })
 
-const toolCall = (position: number): TranscriptItem => ({
-  id: `m${position}`,
-  sessionId: "s1",
-  position,
-  at: 0,
-  type: "tool_call",
-  toolCallId: `t${position}`,
-  name: "Bash",
-  kind: "command",
-  input: { command: `ls ${position}` },
-  status: "done",
-  output: "ok",
-})
-
 const thinking = (position: number): TranscriptItem => ({
   id: `m${position}`,
   sessionId: "s1",

@@ -166,6 +166,12 @@ export const migrations: readonly Migration[] = [
     );
     CREATE INDEX sub_views_by_session ON sub_views (session_id, position)`,
   },
+  {
+    version: 17,
+    sql: `
+    ALTER TABLE tabs ADD COLUMN full_width INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE tabs ADD COLUMN session_tab_selected INTEGER NOT NULL DEFAULT 0`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

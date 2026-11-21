@@ -210,6 +210,15 @@ try {
   await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").waitFor()
   await window.waitForTimeout(300)
   await shoot("open-file")
+  const card = window.getByRole("region", { name: "Open files" })
+  await card.getByRole("button", { name: "Full width" }).click()
+  await card.getByRole("button", { name: "Beside chat" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("full-width-file")
+  await card.getByRole("tab", { name: "Session", exact: true }).click()
+  await window.getByRole("textbox", { name: "Message" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("full-width-session")
 } finally {
   await app.close()
 }
