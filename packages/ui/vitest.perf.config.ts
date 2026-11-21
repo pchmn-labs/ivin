@@ -15,7 +15,8 @@ export default defineConfig({
     setupFiles,
     browser,
     include: ["src/**/*.perf.test.tsx"],
-    // After every other project: tests running beside it slow its frames, and it slows theirs.
+    // A test running beside a frame-rate test slows its frames, and is slowed by it.
     sequence: { groupOrder: 1 },
+    fileParallelism: false,
   },
 })
