@@ -32,6 +32,20 @@ const userMessage = (position: number): TranscriptItem => ({
   images: [],
 })
 
+const toolCall = (position: number): TranscriptItem => ({
+  id: `m${position}`,
+  sessionId: "s1",
+  position,
+  at: 0,
+  type: "tool_call",
+  toolCallId: `t${position}`,
+  name: "Bash",
+  kind: "command",
+  input: { command: `command ${position}` },
+  status: "done",
+  output: `output ${position}`,
+})
+
 const scroller = () => document.querySelector<HTMLElement>('[data-testid="transcript"]')!
 // The image files the transcript asks the window to load: one per <img> it has drawn.
 const loadedImages = () =>
@@ -159,6 +173,36 @@ test("a sent message scrolls up to the top of the view, and stays there while th
   await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
   server.pushItem(message(41))
   await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
+  await frames()
+  expect(topInView("question 40")).toBeLessThan(30)
+})
+
+test("a sent message stays at the top of the view when its tool calls fold as the turn ends", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+  const view = (live: boolean) => (
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" live={live} />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>
+  )
+
+  const screen = await render(view(true))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+
+  const topInView = (text: string) =>
+    page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
+    scroller().getBoundingClientRect().top
+
+  server.pushItem(userMessage(40))
+  for (let i = 41; i < 45; i++) server.pushItem(toolCall(i))
+  server.pushItem(message(45))
+  await expect.element(page.getByText("message 45", { exact: true })).toBeVisible()
+  await screen.rerender(view(false))
+  await frames()
   await frames()
   expect(topInView("question 40")).toBeLessThan(30)
 })
