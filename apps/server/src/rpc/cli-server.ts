@@ -5,6 +5,7 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { layerFsSettingsFile } from "../modules/setting/adapters/fs-settings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
@@ -46,18 +47,20 @@ export const tempSocketPath = () => join(mkdtempSync(join(tmpdir(), "ivin-")), "
 
 export interface CliServerOptions {
   readonly settings?: string | null
+  // A real folder for settings.json, watched as the app does; `settings` is then ignored.
+  readonly ivinHome?: string
   readonly keybindings?: string | null
   readonly version?: string
 }
 
-const layerCliServer = ({ settings = null, keybindings = null }: CliServerOptions) =>
+const layerCliServer = ({ settings = null, keybindings = null, ivinHome }: CliServerOptions) =>
   layerServices.pipe(
     Layer.provideMerge(
       Layer.mergeAll(
         layerDatabase(":memory:"),
         Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
         layerScripted([]),
-        layerSettingsFileOf([settings]),
+        ivinHome === undefined ? layerSettingsFileOf([settings]) : layerFsSettingsFile(ivinHome),
         layerKeybindingsFileOf([keybindings]),
       ),
     ),

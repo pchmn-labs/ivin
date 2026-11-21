@@ -41,6 +41,8 @@ import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
 import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
 import { layerCurrentSettings } from "../modules/setting/usecases/current-settings.ts"
+import { getSetting } from "../modules/setting/usecases/get-setting.ts"
+import { setSetting } from "../modules/setting/usecases/set-setting.ts"
 import { watchSettings } from "../modules/setting/usecases/watch-settings.ts"
 import { layerSqliteTabStore } from "../modules/tab/adapters/sqlite-tab-store.ts"
 import { closeSubView } from "../modules/tab/usecases/close-sub-view.ts"
@@ -116,6 +118,8 @@ export const handlers = Rpcs.toLayer(
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
       "setting.watch": () => watchSettings,
+      "setting.get": ({ path }) => getSetting(path),
+      "setting.set": ({ path, value }) => setSetting(path, value),
       "project.open": ({ path }) => openProject(path),
       "project.close": ({ path }) => closeProject(path),
       "project.select": ({ path }) => selectProject(path),
