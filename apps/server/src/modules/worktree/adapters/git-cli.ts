@@ -30,6 +30,8 @@ const git = (cwd: string, args: readonly string[], input?: string) =>
         resume(Effect.fail(new GitError({ message })))
       },
     )
+    // git may exit before reading its input, such as outside a repository; its exit code reports that.
+    child.stdin?.on("error", () => {})
     if (input !== undefined) child.stdin?.end(input)
     // Not execFile's `signal`: aborting a spawn that failed, such as on a missing cwd, kills our process group.
     signal.addEventListener("abort", () => child.pid !== undefined && child.kill(), { once: true })
