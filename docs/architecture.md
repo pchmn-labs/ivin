@@ -74,6 +74,7 @@ Effect v4 is recent, so agents will often write v3 idioms in the core. That cost
 - **server** runs in an Electron `utilityProcess`, so a slow git call never freezes the window, and the same server can later run headless (remote machine, web client, mobile) like T3 Code's. Agent processes are its children, so nothing a plugin does may run inside it.
 - **plugin host** is a second `utilityProcess` that runs every plugin's server half. A plugin that loops or crashes takes the host down, not the server: sessions keep running, and the server restarts the host without the faulty plugin (see [Error isolation](#error-isolation)).
 - **main** stays thin: windows, OS integration, and the crash bookkeeping behind safe mode.
+  The window never leaves the page it loaded: a web or mail link, clicked or opened in a new window, opens in the default browser through `shell.openExternal`, and any other navigation is dropped.
 - **One RPC contract, several transports.** `packages/contracts` defines every request and stream once with Effect `Schema`. The renderer reaches it over a `MessagePort`, the plugin host over another, the CLI over a unix socket (`~/.ivin/run/ivin.sock`, mode 0600, one JSON message per line), and a headless client later over a WebSocket. Every CLI command is an RPC the UI can call.
 
 ## Repository layout
