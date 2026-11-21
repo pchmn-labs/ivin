@@ -13,6 +13,8 @@
 
 .iv-transcript__list {
   height: 100%;
+  overflow-y: auto;
+  overflow-anchor: none;
   /* Only alpha counts in a mask; the fade fits in the first item's top padding, so text at rest stays whole. */
   mask-image: linear-gradient(
     to bottom,
@@ -36,7 +38,7 @@
   padding: var(--iv-space-2) 0;
 }
 
-/* A plugin may render nothing for an item; Virtuoso breaks on zero-height rows. */
+/* A plugin may render nothing for an item; a virtual list breaks on zero-height rows. */
 .iv-transcript__item:empty {
   height: 1px;
   padding: 0;
