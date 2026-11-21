@@ -21,7 +21,8 @@
 }
 
 .iv-transcript__footer {
-  height: max(var(--iv-space-8), var(--iv-transcript-spacer, 0px));
+  height: var(--iv-transcript-room, 0px);
+  min-height: var(--iv-space-8);
 }
 
 .iv-transcript__item {

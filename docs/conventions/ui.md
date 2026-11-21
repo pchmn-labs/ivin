@@ -32,7 +32,7 @@ packages/ui/src/
 
 ## Styles
 
-- A component's styles live in a `.css` file beside it, with `iv-` classes and `--iv-` tokens only; no inline `style`. A screen in `modules/<subject>/ui/` does the same. The one exception is `core/components/resize-handle`, which sets the size the user dragged as a custom property on its parent, for the parent's stylesheet to read.
+- A component's styles live in a `.css` file beside it, with `iv-` classes and `--iv-` tokens only; no inline `style`. A screen in `modules/<subject>/ui/` does the same. The exceptions set a measured size as a custom property for a stylesheet to read: `core/components/resize-handle` (the size the user dragged, on its parent) and the transcript's `hooks/use-sent-message-scroll.ts` (the room under a sent message).
 - A `var()` reads a `--iv-` token, or a variable the component library sets on its popups: `--available-height`, `--available-width`, `--transform-origin`.
 - `modules/` and `app/` use the `core/components` controls, not a native `<button>`, `<input>`, `<select>` or `<textarea>`. The exceptions are the files whose controls no core component draws yet (the tabs, the project rail, the composer's triggers, the image thumbnails…), listed in the `.oxlintrc.json` override that turns `react/forbid-elements` off.
 

@@ -162,3 +162,27 @@ test("a sent message scrolls up to the top of the view, and stays there while th
   await frames()
   expect(topInView("question 40")).toBeLessThan(30)
 })
+
+test("loading the older items of a long turn does not scroll to its message", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 80 }, (_, i) => message(i + 1))])
+
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+  await expect.element(page.getByText("message 80", { exact: true })).toBeVisible()
+
+  await vi.waitFor(() => {
+    scroller().scrollTop = 0
+    expect(page.getByText("question 0", { exact: true }).query()).not.toBeNull()
+  })
+  await frames()
+  const room = document.querySelector<HTMLElement>(".iv-transcript")!.style
+  expect(room.getPropertyValue("--iv-transcript-room")).toBe("")
+})
