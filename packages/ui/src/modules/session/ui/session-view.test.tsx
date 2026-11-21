@@ -632,12 +632,15 @@ test("the switch and pull buttons are gone once the first message is sent, and a
   await expect.element(page.getByRole("button", { name: /^Pull/ })).not.toBeInTheDocument()
 })
 
-const mountDeletedFolderSession = async () => {
+const mountDeletedFolderSession = async ({ extraWorktrees = 0 } = {}) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
   const at = DateTime.makeUnsafe(0)
   server.worktrees.push({ path: "/p/.worktrees/docs-adr", branch: "docs/adr" })
+  for (let n = 0; n < extraWorktrees; n++) {
+    server.worktrees.push({ path: `/p/.worktrees/feat-${n}`, branch: `feat/${n}` })
+  }
   server.sessions.set("s1", {
     id: "s1",
     projectPath: "/p",
@@ -662,7 +665,9 @@ const mountDeletedFolderSession = async () => {
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionView projectPath="/p" sessionId="s1" />
+        <div style={{ display: "flex", flexDirection: "column", height: 600, overflow: "hidden" }}>
+          <SessionView projectPath="/p" sessionId="s1" />
+        </div>
       </PluginsProvider>
     </RegistryProvider>,
   )
@@ -703,6 +708,29 @@ test("the working folder picker is answered from the keyboard", async () => {
 
   await expect.element(page.getByRole("textbox", { name: "Message" })).toBeVisible()
   expect(server.pickedFolders).toEqual([{ kind: "new_worktree" }])
+})
+
+test("a working folder picker with many worktrees scrolls its list in a short window and leaves the window still", async () => {
+  await mountDeletedFolderSession({ extraWorktrees: 30 })
+
+  await expect.element(page.getByRole("radio", { name: /feat\/29/ })).toBeInTheDocument()
+  expect(continueHere().element().getBoundingClientRect().bottom).toBeLessThanOrEqual(600)
+  const root = document.scrollingElement!
+  expect(root.scrollHeight).toBe(root.clientHeight)
+  const list = page.getByRole("group", { name: "Working folder" }).element()
+  expect(list.scrollHeight).toBeGreaterThan(list.clientHeight)
+
+  await page
+    .getByRole("radio", { name: /Current checkout/ })
+    .element()
+    .focus()
+  for (let n = 0; n < 6; n++) await userEvent.keyboard("{ArrowDown}")
+  await expect.element(page.getByRole("radio", { name: /feat\/3\b/ })).toBeChecked()
+  const chosen = page.getByTestId("pick-working-folder").getByText("feat/3", { exact: true })
+  const row = chosen.element().closest("label")!.getBoundingClientRect()
+  const view = list.getBoundingClientRect()
+  expect(row.top).toBeGreaterThanOrEqual(view.top)
+  expect(row.bottom).toBeLessThanOrEqual(view.bottom)
 })
 
 test("a pick that fails says so beside the picker, keeps the choice and offers a retry", async () => {

@@ -104,7 +104,11 @@ export function PickWorkingFolder({ session }: { session: Session }) {
         className="iv-visually-hidden"
         checked={option.id === selected.id}
         disabled={pending}
-        onChange={() => setChosen(option.id)}
+        onChange={(event) => {
+          setChosen(option.id)
+          // Focus only reveals the 1px hidden radio, not the whole row.
+          event.currentTarget.closest("label")?.scrollIntoView({ block: "nearest" })
+        }}
       />
       <Icon name={option.icon} size={16} />
       <Stack gap={0}>
