@@ -9,17 +9,20 @@ export const AnnotationTarget = Schema.Union([
 ])
 export type AnnotationTarget = typeof AnnotationTarget.Type
 
-const pullRequestPath =
-  /^(\/[^/]+\/[^/]+\/pull|(?:\/[^/]+){2,}\/-\/merge_requests)\/([1-9]\d*)(?:\/|$)/
+// A path segment other than GitLab's "-" separator.
+const segment = String.raw`[^/]*[^/-][^/]*`
+const pullRequestPath = new RegExp(
+  String.raw`^(/${segment}/${segment}/pull|(?:/${segment}){2,}/-/merge_requests)/([1-9]\d*)(?:/|$)`,
+)
 
-// The URL of a GitHub pull request or a GitLab merge request, on any host, without what follows its number.
 export const pullRequestUrlOf = (text: string): string | null => {
   if (!URL.canParse(text)) return null
   const url = new URL(text)
   if (url.protocol !== "https:" && url.protocol !== "http:") return null
   const match = pullRequestPath.exec(url.pathname)
   if (match === null) return null
-  return `${url.origin}${match[1]}/${match[2]}`
+  // Forges match owner and repository names case-insensitively.
+  return `${url.origin}${match[1]!.toLowerCase()}/${match[2]}`
 }
 
 export const prRelations = ["created", "referenced", "reviewed"] as const

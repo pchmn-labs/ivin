@@ -19,7 +19,7 @@ let cliPath: string | null = null
 // Each file builds into its own folder: the build empties its output folder first.
 export const buildCli = () => {
   const outDir = mkdtempSync(join(tmpdir(), "ivin-cli-"))
-  execFileSync("pnpm", ["vp", "pack", "--out-dir", outDir], { cwd: cliFolder, stdio: "ignore" })
+  execFileSync("pnpm", ["run", "build", "--out-dir", outDir], { cwd: cliFolder, stdio: "ignore" })
   cliPath = join(outDir, "ivin.js")
 }
 

@@ -1,7 +1,7 @@
 import { Annotation } from "@ivin/contracts/annotation"
 import { Effect, Schema } from "effect"
 import { type Command, type Input, UsageError } from "./command.ts"
-import { annotateSession, sessionIdOf, sessionOption, stringOf } from "./session-target.ts"
+import { annotateSession, sessionIdOf, sessionOption, stringOf } from "./session-annotation.ts"
 
 const argumentsOf = (input: Input) => {
   const { values } = input

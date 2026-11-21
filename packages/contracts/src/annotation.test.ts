@@ -23,8 +23,10 @@ test("a GitLab merge request URL is accepted, on gitlab.com or a self-hosted dom
   )
 })
 
-test("the host is lowercased", () => {
-  expect(pullRequestUrlOf("https://GitHub.com/o/r/pull/1")).toBe("https://github.com/o/r/pull/1")
+test("the host and the path are lowercased", () => {
+  expect(pullRequestUrlOf("https://GitHub.com/O/Repo/pull/1")).toBe(
+    "https://github.com/o/repo/pull/1",
+  )
 })
 
 test("URLs that are not a pull request are rejected", () => {
@@ -44,6 +46,8 @@ test("URLs that are not a pull request are rejected", () => {
     "https://gitlab.com/g/p/merge_requests/3",
     "https://gitlab.com/-/merge_requests/3",
     "https://gitlab.com/g/p/-/issues/3",
+    "https://gitlab.com/g/-/-/merge_requests/3",
+    "https://github.com/-/r/pull/1",
   ]) {
     expect(pullRequestUrlOf(url), url).toBeNull()
   }

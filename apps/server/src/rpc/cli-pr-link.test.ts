@@ -7,6 +7,7 @@ beforeAll(buildCli, 60_000)
 
 const url = "https://github.com/o/r/pull/1"
 
+// The tests may themselves run in an ivin session's agent, hence the empty IVIN_SESSION_ID.
 // Each element of `runs` is one call of ivin; "$SESSION" and "$OTHER" stand for the sessions' ids.
 const link = (runs: readonly (readonly string[])[], env: Record<string, string> = {}) =>
   withCliServer(async (socketPath, run) => {

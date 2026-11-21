@@ -9,7 +9,7 @@ export const stringOf = (value: Input["values"][string]) =>
 export const sessionOption: Option = {
   type: "string",
   value: "id",
-  description: "The session to annotate (default: $IVIN_SESSION_ID)",
+  description: "The session (default: $IVIN_SESSION_ID)",
 }
 
 export const sessionIdOf = ({ values, env }: Input) => {
@@ -42,7 +42,9 @@ export const annotateSession = (sessionId: string, ns: string, kind: string, dat
           ),
         AnnotationDataInvalid: () =>
           Effect.fail(
-            new UsageError({ message: `--data does not have the shape of a ${kind} annotation.` }),
+            new UsageError({
+              message: `The data does not have the shape of a ${kind} annotation.`,
+            }),
           ),
         ProjectNotFound: Effect.die,
       }),

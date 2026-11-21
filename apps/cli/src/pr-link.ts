@@ -1,7 +1,7 @@
 import { Annotation, prRelations, pullRequestUrlOf } from "@ivin/contracts/annotation"
 import { Effect, Schema } from "effect"
 import { type Command, type Input, UsageError } from "./command.ts"
-import { annotateSession, sessionIdOf, sessionOption, stringOf } from "./session-target.ts"
+import { annotateSession, sessionIdOf, sessionOption, stringOf } from "./session-annotation.ts"
 
 const isRelation = (value: string | null): value is (typeof prRelations)[number] =>
   prRelations.some((relation) => relation === value)
