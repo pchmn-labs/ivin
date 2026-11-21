@@ -10,6 +10,9 @@ test.each([
   ["Glob", { pattern: "**/*.ts" }, "**/*.ts"],
   ["WebFetch", { url: "https://a.dev" }, "https://a.dev"],
   ["Task", { description: "Find it", prompt: "long" }, "Find it"],
+  ["Agent", { description: "Build the server", prompt: "long" }, "Build the server"],
+  ["Skill", { skill: "implement" }, "/implement"],
+  ["Skill", { skill: "implement", args: "#122" }, "/implement #122"],
 ])("%s shows its main argument", (name, input, expected) => {
   expect(mainArgument(name, input)).toBe(expected)
 })

@@ -79,3 +79,23 @@ test("a tool without a main argument shows its full input in the folded details"
   await page.getByText("Custom").click()
   await expect.element(page.getByText(/"a": 1/)).toBeVisible()
 })
+
+test("a skill call names its skill on a row that does not open, unless it failed", async () => {
+  const skill = {
+    ...tool("done", "Launching skill: implement"),
+    name: "Skill",
+    kind: "skill" as const,
+  }
+  await mount({ ...skill, input: { skill: "implement", args: "#122" } })
+  await expect.element(page.getByText("/implement #122")).toBeVisible()
+  expect(page.getByText("/implement #122").element().closest("details")).toBeNull()
+  await mount({
+    ...skill,
+    id: "i1",
+    status: "error",
+    output: "Unknown skill",
+    input: { skill: "nope" },
+  })
+  await page.getByText("/nope").click()
+  await expect.element(page.getByText("Unknown skill")).toBeVisible()
+})
