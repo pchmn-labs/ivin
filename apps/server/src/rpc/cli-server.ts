@@ -13,9 +13,14 @@ import { serveOverSocket } from "./serve.ts"
 
 const cliFolder = join(import.meta.dirname, "../../../cli")
 
+let cliPath: string | null = null
+
 // Built once per test file, as the app ships it; a test calls it before running `ivin`.
+// Each file builds into its own folder: the build empties its output folder first.
 export const buildCli = () => {
-  execFileSync("pnpm", ["run", "build"], { cwd: cliFolder, stdio: "ignore" })
+  const outDir = mkdtempSync(join(tmpdir(), "ivin-cli-"))
+  execFileSync("pnpm", ["run", "build", "--out-dir", outDir], { cwd: cliFolder, stdio: "ignore" })
+  cliPath = join(outDir, "ivin.js")
 }
 
 export interface CliRun {
@@ -26,9 +31,10 @@ export interface CliRun {
 
 export const runCli = (args: readonly string[], env: Record<string, string> = {}) =>
   new Promise<CliRun>((resolve) => {
+    if (cliPath === null) throw new Error("Call buildCli before runCli.")
     execFile(
       process.execPath,
-      [join(cliFolder, "dist/ivin.js"), ...args],
+      [cliPath, ...args],
       { env: { ...process.env, ...env } },
       (error, stdout, stderr) =>
         resolve({ code: error ? Number(error.code ?? 1) : 0, stdout, stderr }),
