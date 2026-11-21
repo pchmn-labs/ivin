@@ -9,7 +9,7 @@ export function TranscriptRow({ sessionId, id }: { sessionId: string; id: string
   if (!item || item.type === "usage") return null
 
   return (
-    <div className="iv-transcript__column">
+    <div className="iv-transcript__column" data-row-id={id}>
       <div className="iv-transcript__item" data-testid="transcript-item" data-type={item.type}>
         <ItemSlot item={item} sessionId={sessionId} />
       </div>

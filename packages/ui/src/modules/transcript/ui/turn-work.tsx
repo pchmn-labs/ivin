@@ -172,7 +172,7 @@ export function TurnWork({
           <TurnLine work={work} live={live} />
         </button>
       )}
-      {open && (
+      {open && work.steps.length > 0 && (
         <div className="iv-turn__timeline">
           {work.steps.map((step, index) => {
             const stepOpen = folds.get(step.id) ?? stepOpenByDefault(work, index, live)
