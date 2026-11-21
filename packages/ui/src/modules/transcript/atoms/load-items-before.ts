@@ -17,13 +17,7 @@ export const loadItemsBeforeAtom = serverRuntime.fn<string>()(
       before: PAGE_SIZE,
       after: 0,
     })
-    const known = new Set(get.registry.get(list.ids))
-    const added = page.items.filter((item) => !known.has(item.id)).length
     yield* list.upsert(page.items, { keepExisting: true })
-    yield* Atom.update(paging, (w) => ({
-      ...w,
-      hasBefore: page.hasBefore,
-      prepended: w.prepended + added,
-    }))
+    yield* Atom.update(paging, (w) => ({ ...w, hasBefore: page.hasBefore }))
   }),
 )

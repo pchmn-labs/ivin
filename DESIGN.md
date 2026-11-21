@@ -89,6 +89,16 @@ typography:
     fontSize: "12px"
     fontWeight: 400
     lineHeight: "20px"
+  transcript-body:
+    fontFamily: "-apple-system, BlinkMacSystemFont, SF Pro Text, system-ui, Segoe UI, sans-serif"
+    fontSize: "14px"
+    fontWeight: 400
+    lineHeight: "22px"
+  transcript-mono:
+    fontFamily: "ui-monospace, SF Mono, Menlo, monospace"
+    fontSize: "13px"
+    fontWeight: 400
+    lineHeight: "20px"
 rounded:
   sm: "4px"
   md: "6px"
@@ -294,15 +304,17 @@ The palette is green-tinted neutrals, one yew-green accent, an amber and a curso
 - **Headline** (600, 20px/28px): level-1 headings inside Markdown answers.
 - **Title Large** (600, 16px/24px): dialog titles and level-2 Markdown headings.
 - **Title** (600, 14px/20px): the project name at the head of the session list and level-3/4 Markdown headings.
-- **Body** (400, 13px/20px): the default for the whole app: transcript text, row titles, options, controls.
+- **Body** (400, 13px/20px): the default for the whole app: row titles, options, controls, the composer.
+- **Transcript Body** (400, 14px/22px): the user's message, the agent's text and the Markdown answer in the transcript.
 - **Label** (500, 12px/16px): small buttons, field labels, tooltips, status labels, the session title in the main title bar, the composer's run options button, tool arguments and a failed tool's status.
 - **Caption** (500, 11px/16px): the session group labels with their counts, the project badge (600), and key hints in the action sheet and option list.
 - **Mono** (400, 12px/20px): code blocks, tool arguments, file paths and the approval detail (clamped to three lines). Inline code is 0.92em.
+- **Transcript Mono** (400, 13px/20px): tool arguments, file paths, code blocks and other mono text in the transcript. Inline code stays 0.92em of its line.
 
 Weights are 400, 500 and 600 only. Times, counts and costs use tabular figures.
 
 ### Named Rules
-**The Native Type Rule.** Body copy is 13px system UI. Hierarchy comes from weight and muted tones, not size jumps. 20px is the largest size and appears only inside Markdown.
+**The Native Type Rule.** Body copy is 13px system UI. Hierarchy comes from weight and muted tones, not size jumps. 20px is the largest size and appears only inside Markdown. The transcript is the one place set larger, for long answers: 14px text and 13px mono, and its 12px labels (the turn line, step summaries, "failed", "Denied:") move to 13px while 11px labels stay. The tokens are scoped to the transcript, so the same `Markdown` and `CodeBlock` keep 13px and 12px elsewhere.
 
 ## Layout
 
@@ -408,7 +420,7 @@ An image pasted (⌘V) or dropped into the composer takes the next number of the
 
 A sent message shows its images as 72px thumbnails above its text, each with its `#N` in a dark label on the bottom-left corner, and its markers in the text. Thumbnails crop to the image's top-left corner, where a screenshot starts, and load when their row scrolls into view.
 
-A thumbnail or a marker opens the full-screen view over the whole window, on the deep ground: a 48px head with "Image #N · i of n" and the message it came from in faint text (or "<file> · Not sent yet" for the draft's images), the image fitted in the middle with ghost ← and → buttons on its sides, and a strip of 64×44 thumbnails along the bottom, the current one ringed in accent, with a hairline between the images of different messages. ← and → move through the session's images in transcript order, or the draft's; Escape closes it and puts the focus back where it was.
+A thumbnail or a marker opens the full-screen view over the whole window, on the deep ground: a 48px head that drags the window, its row lined up with the sidebar card's top row and starting after the traffic-light space, with "Image #N · i of n" and the message it came from in faint text (or "<file> · Not sent yet" for the draft's images), the image fitted in the middle with ghost ← and → buttons on its sides, and a strip of 64×44 thumbnails along the bottom, the current one ringed in accent, with a hairline between the images of different messages. ← and → move through the session's images in transcript order, or the draft's; Escape closes it and puts the focus back where it was.
 
 ### Branch Picker
 The branch on the composer's status line is a ghost trigger (muted mono text, a branch icon and a chevron) that opens a composer menu. Rows are mono: local branches at full colour, then `origin/<name>` rows in muted text with a faint `origin/` prefix, an icon and no mark. A local branch held by another worktree, or by the checkout, takes a yew icon and a faint pill ("in worktree", "in checkout"); the current branch takes a yew check. While `origin` is first fetched, a faint "Fetching remote branches…" row with a spinner holds the remote rows' place; a later fetch shows a "Fetching" spinner in the search field, or in a faint row under the list when the menu has no search field. A footer says what picking the highlighted branch does ("Moves this session to the worktree .worktrees/feat-login.") beside the key hints. A checkout git refuses shows the UI's message and git's output in mono inside a danger block, and the menu stays open. The trigger is disabled while the agent runs a turn.
@@ -425,7 +437,13 @@ A keyboard-first single choice inside a sheet: 36px options with 6px corners, 2p
 Menus have 10px corners, 4px padding and 28px items with 4px corners; the highlighted item takes the active wash and destructive items are red. A composer menu (the working folder and branch menus, and every menu added there) is 360px wide and opens above its button, on the button's left edge, at most 360px high; with too little room above, its list shrinks and scrolls rather than open below. A list longer than ten rows (what that height holds beside a footer) gets a search field at the top, focused on open, that filters it; groups are split by a hairline and headed by a faint caption. A label too long for the row is cut with an ellipsis and shown in full on hover. A column menu is 560px wide and opens the same way: its columns sit side by side, split by hairlines, each under a sticky faint caption and scrolling on its own past 236px; a wide column takes half as much room again. Up and Down move inside a column, Left and Right to the same row in the next column, skipping greyed-out items; picking keeps it open. A footer describes the highlighted item, or says what a pick does, beside the key hints. Tooltips are 12px text with 4px corners, at most 420px wide; a mono tooltip (a command, a path) wraps its text, with a faint caption label above it. Dialogs are at most 420px wide, with 20px padding, a 16px semibold title, a muted description and right-aligned actions. All three fade and scale from 0.97 (120ms for menus and tooltips, 180ms for dialogs) on `cubic-bezier(0.22, 1, 0.36, 1)`, and reduced motion removes it.
 
 ### Disclosure and Code
-Disclosures (tool output) use a muted summary with a chevron that rotates 90 degrees when open. A tool call is one row: chevron, the tool's icon (terminal for Bash, file for Read, pencil for edits, a wrench otherwise), its name and its mono argument; a spinner while it runs, a red "failed" when it fails, nothing once it succeeds. Its input and output open under the chevron. Thinking is not shown, and an approval leaves a trace in the transcript only when denied: "Denied:" and the command on one muted line. Code blocks use the deep ground, 12px mono and 6px corners, and scroll past 240px.
+Disclosures use a muted summary with a chevron that rotates 90 degrees when open.
+
+A turn's work sits under one faint line, from the agent's first item to its last tool call. The line opens on a 14px icon at the column's edge, and the turn's text starts 22px in. While the agent works, the icon is a spinner, the line reads "Working for 12s" with a ticking clock, and "· N failed" in red once a call fails; the turn stays unfolded, so the timeline grows under it. Once the turn ends, the icon tells how (a check when it answered, a square when it was stopped, a red alert when it failed), the line reads "Worked for 1m 42s · 12 tool calls · 1 failed" and folds, so only the user's message and the answer (the agent's text after its last tool call) stay in view. A turn that ends without an answer stays unfolded and reads "Stopped after …" or "Failed after …". On hover or focus, a chevron takes the icon's place; while the turn is open it stays in place of a check, but the spinner, the square and the alert stay in view. A hairline runs to the line's right.
+
+Unfolded, the turn is a timeline: each of the agent's sentences heads one step, marked by a 7px ring centred under the turn line's icon, on a vertical line that starts just below that icon and joins the rings; the ring turns red when one of the step's calls failed, and the ring of the step that runs is yew and pulses. Calls made before any sentence form a first step with no sentence. The sentence is in full text colour and never cut. Under it, one faint summary lists the step's calls in the past tense, joined by "·": "Ran 4 commands · read 1 file · 1 failed" (ran a command, read a file, edited a file, searched, used a skill, ran an agent, used a tool). A click or Enter folds or unfolds the step's calls; over the summary its stack icon turns into a chevron, which stays while the step is open; while one of the step's calls runs, the icon is a spinner, which stays in view until hovered. The open calls are indented under the summary, each on a branch drawn from under its icon, with 3px corners, fainter than the timeline's line. While the turn runs, only its last step is open, and a step folds to its summary when the next one starts; once it ends, its steps are open when the turn has 8 tool calls or fewer, folded above that. A folded step still shows its failed calls and its subagent calls. The turn line and each summary are buttons with the focus ring, and what is folded survives a session switch. Unfolding never moves the view.
+
+A tool call is one row with no chevron: the icon of what it does (terminal for a command, file for a read, pencil for an edit, magnifier for a search, sparkle for a skill, robot for a subagent, a wrench otherwise), its name and its mono argument; a spinner while it runs, a red "failed" when it fails, nothing once it succeeds. Over it, or while open, its argument brightens to show it opens; its input and output open under it. Thinking is not shown, and an approval leaves a trace in the transcript only when denied: "Denied:" and the command on one muted line. Code blocks use the deep ground, mono and 6px corners, and scroll past 240px.
 
 ### Pending designs
 Decided but not built, because the data they need does not exist yet. Build them this way when it arrives.

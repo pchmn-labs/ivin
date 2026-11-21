@@ -19,14 +19,25 @@ test("the transcript renders through the plugins and the status line shows the u
   const server = makeFakeServer()
   const base = { sessionId: "s1" }
   server.seedItems("s1", [
-    { ...base, id: "m0", position: 0, type: "message", role: "user", text: "hello", images: [] },
+    {
+      ...base,
+      id: "m0",
+      position: 0,
+      at: 0,
+      type: "message",
+      role: "user",
+      text: "hello",
+      images: [],
+    },
     {
       ...base,
       id: "t1",
       position: 1,
+      at: 0,
       type: "tool_call",
       toolCallId: "c1",
       name: "Bash",
+      kind: "command",
       input: null,
       status: "done",
       output: "ok",
@@ -35,6 +46,7 @@ test("the transcript renders through the plugins and the status line shows the u
       ...base,
       id: "u2",
       position: 2,
+      at: 0,
       type: "usage",
       inputTokens: 1000,
       outputTokens: 200,
@@ -44,6 +56,7 @@ test("the transcript renders through the plugins and the status line shows the u
       ...base,
       id: "u3",
       position: 3,
+      at: 0,
       type: "usage",
       inputTokens: 300,
       outputTokens: 40,
@@ -83,7 +96,8 @@ test("the transcript renders through the plugins and the status line shows the u
 
   await expect.element(page.getByText("hello", { exact: true })).toBeVisible()
   await expect.element(page.getByTestId("tool-output")).toBeVisible()
-  expect(document.querySelectorAll('[data-testid="transcript-item"]')).toHaveLength(2)
+  expect(document.querySelectorAll('[data-testid="transcript-item"]')).toHaveLength(1)
+  expect(document.querySelectorAll('[data-testid="transcript-work"]')).toHaveLength(1)
   await expect
     .element(page.getByTestId("composer-status"))
     .toHaveTextContent("1,540 tokens · $0.0123")
@@ -268,6 +282,7 @@ test("a pending approval shows a sheet on the composer that Enter allows, leavin
     id: "a0",
     sessionId: "s1",
     position: 0,
+    at: 0,
     type: "approval",
     requestId: "r1",
     toolCallId: null,
@@ -279,9 +294,9 @@ test("a pending approval shows a sheet on the composer that Enter allows, leavin
   await page.getByRole("textbox", { name: "Message" }).click()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByText("Approval needed")).not.toBeInTheDocument()
-  await expect.element(page.getByTestId("transcript-item")).toHaveAttribute("data-type", "approval")
+  await expect.element(page.getByTestId("turn")).toBeInTheDocument()
   expect(page.getByTestId("approval-decision").query()).toBeNull()
-  expect(page.getByTestId("transcript-item").element().getBoundingClientRect().height).toBe(1)
+  expect(page.getByTestId("turn").getByText("git push").query()).toBeNull()
 })
 
 const pushApproval = (server: Awaited<ReturnType<typeof mountSession>>) =>
@@ -289,6 +304,7 @@ const pushApproval = (server: Awaited<ReturnType<typeof mountSession>>) =>
     id: "a0",
     sessionId: "s1",
     position: 0,
+    at: 0,
     type: "approval",
     requestId: "r1",
     toolCallId: null,

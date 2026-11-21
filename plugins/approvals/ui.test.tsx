@@ -62,6 +62,7 @@ const approval = (decision: ApprovalItem["decision"], requestId = "r1"): Approva
   id: `i-${requestId}`,
   sessionId: "s1",
   position: 0,
+  at: 0,
   type: "approval",
   requestId,
   toolCallId: "t0",

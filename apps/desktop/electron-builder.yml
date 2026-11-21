@@ -12,6 +12,9 @@ files:
   - from: ../../packages/ui/dist
     to: renderer
   - package.json
+extraResources:
+  - from: ../cli/dist
+    to: cli
 # Worker threads cannot load from the asar; `webp-encoder.ts` points them here.
 asarUnpack:
   - server/webp-worker.js

@@ -14,7 +14,7 @@ mkdirSync(outDir, { recursive: true })
 
 const app = await electron.launch({
   args: [join(desktopDir, "dist/main.js"), `--user-data-dir=${makeTempDir("user-data")}`],
-  env: { ...process.env, IVIN_BACKGROUND: "1", IVIN_HARNESS: "scripted-approval" },
+  env: { ...process.env, IVIN_BACKGROUND: "1", IVIN_HARNESS: "scripted-shot" },
 })
 
 // A repository with a linked worktree, a second branch and an origin, so the working folder menu
@@ -128,11 +128,20 @@ try {
   await shoot("run-options-menu")
   await window.keyboard.press("Escape")
   await window.getByRole("listbox", { name: "Permissions" }).waitFor({ state: "detached" })
-  await sendMessage(window, "Run the tests")
+  await sendMessage(window, "The order list crashes on an empty page, can you fix it?")
+  await window.getByText("pnpm test src/orders", { exact: false }).last().waitFor()
   await window
-    .getByTestId("transcript-item")
-    .and(window.locator('[data-type="approval"]'))
+    .getByText(/^Worked for/)
+    .last()
     .waitFor()
+  await window.waitForTimeout(300)
+  await shoot("turn-folded")
+  await window.getByTestId("turn-line").last().click()
+  await window.getByTestId("turn-step").first().waitFor()
+  await window.waitForTimeout(300)
+  await shoot("turn-unfolded")
+  await sendMessage(window, "Run the tests")
+  await window.getByText("Approval needed").waitFor()
   await shoot("approval")
   const sidebar = window.getByRole("complementary")
   await sidebar.getByRole("button", { name: "New session" }).first().click()

@@ -1,0 +1,73 @@
+import { layerScripted } from "@ivin/harness"
+import { Effect, Layer } from "effect"
+import { execFile, execFileSync } from "node:child_process"
+import { mkdtempSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
+import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
+import { layerDatabase } from "../shared/adapters/database.ts"
+import { layerServices } from "./handlers.ts"
+import { serveOverSocket } from "./serve.ts"
+
+const cliFolder = join(import.meta.dirname, "../../../cli")
+
+// Built once per test file, as the app ships it; a test calls it before running `ivin`.
+export const buildCli = () => {
+  execFileSync("pnpm", ["run", "build"], { cwd: cliFolder, stdio: "ignore" })
+}
+
+export interface CliRun {
+  readonly code: number
+  readonly stdout: string
+  readonly stderr: string
+}
+
+export const runCli = (args: readonly string[], env: Record<string, string> = {}) =>
+  new Promise<CliRun>((resolve) => {
+    execFile(
+      process.execPath,
+      [join(cliFolder, "dist/ivin.js"), ...args],
+      { env: { ...process.env, ...env } },
+      (error, stdout, stderr) =>
+        resolve({ code: error ? Number(error.code ?? 1) : 0, stdout, stderr }),
+    )
+  })
+
+// Unix socket paths stop at about 104 bytes on macOS.
+export const tempSocketPath = () => join(mkdtempSync(join(tmpdir(), "ivin-")), "s.sock")
+
+export interface CliServerOptions {
+  readonly settings?: string | null
+  readonly keybindings?: string | null
+  readonly version?: string
+}
+
+// Runs `use` while a server with an in-memory database answers on `socketPath`.
+export const withCliServer = <A>(
+  use: (socketPath: string) => Promise<A>,
+  { settings = null, keybindings = null, version = "1.2.3" }: CliServerOptions = {},
+) => {
+  const socketPath = tempSocketPath()
+  return Effect.gen(function* () {
+    yield* serveOverSocket(socketPath, { version })
+    return yield* Effect.promise(() => use(socketPath))
+  }).pipe(
+    Effect.provide(
+      layerServices.pipe(
+        Layer.provideMerge(
+          Layer.mergeAll(
+            layerDatabase(":memory:"),
+            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+            layerScripted([]),
+            layerSettingsFileOf([settings]),
+            layerKeybindingsFileOf([keybindings]),
+          ),
+        ),
+      ),
+    ),
+    Effect.scoped,
+    Effect.runPromise,
+  )
+}

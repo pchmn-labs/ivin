@@ -1,3 +1,4 @@
+import { HarnessProvider } from "@ivin/harness"
 import { Effect } from "effect"
 import { deriveItems } from "../rules/derive-items.ts"
 import { pageAround } from "../rules/page-around.ts"
@@ -11,5 +12,11 @@ export const getItems = (
 ) =>
   Effect.gen(function* () {
     const store = yield* TranscriptStore
-    return pageAround(deriveItems(yield* store.events(sessionId)), position, before, after)
+    const { toolKind } = yield* HarnessProvider
+    return pageAround(
+      deriveItems(yield* store.events(sessionId), toolKind),
+      position,
+      before,
+      after,
+    )
   })

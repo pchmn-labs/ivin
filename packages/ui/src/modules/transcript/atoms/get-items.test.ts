@@ -53,6 +53,7 @@ test("an upsert after deltas wins over the pending text", async () => {
     id: "a",
     sessionId: "s1",
     position: 0,
+    at: 0,
     type: "message",
     role: "assistant",
     text: "Final text",

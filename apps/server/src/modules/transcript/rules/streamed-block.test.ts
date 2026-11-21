@@ -29,6 +29,7 @@ const openMessage: ItemState = {
     id: "m",
     sessionId: "s",
     position: 3,
+    at: 0,
     type: "message",
     role: "assistant",
     text: "a",

@@ -6,6 +6,7 @@ const items: TranscriptItem[] = Array.from({ length: 10 }, (_, i) => ({
   id: `i${i}`,
   sessionId: "s1",
   position: (i + 1) * 2,
+  at: 0,
   type: "thinking",
   text: "",
 }))

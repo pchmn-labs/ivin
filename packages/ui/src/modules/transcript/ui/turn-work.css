@@ -1,0 +1,240 @@
+.iv-turn__line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  width: 100%;
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--iv-text-faint);
+  font: inherit;
+  font-size: var(--iv-text-sm);
+  text-align: left;
+  cursor: default;
+  user-select: none;
+}
+
+.iv-turn__line--toggle:hover {
+  color: var(--iv-text-muted);
+}
+
+.iv-turn__label {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-turn__dot {
+  color: var(--iv-text-faint);
+}
+
+.iv-turn__failed {
+  color: var(--iv-danger);
+}
+
+.iv-turn__rule {
+  flex: 1;
+  height: 1px;
+  background: var(--iv-border);
+}
+
+.iv-turn__timeline {
+  position: relative;
+  margin: var(--iv-space-1) 0 var(--iv-space-2);
+}
+
+.iv-turn__timeline::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 6.5px;
+  width: 1px;
+  height: 7px;
+  background: var(--iv-border-strong);
+}
+
+.iv-turn__step {
+  position: relative;
+  padding-left: 22px;
+}
+
+.iv-turn__step + .iv-turn__step {
+  margin-top: 10px;
+}
+
+.iv-turn__step::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 3.5px;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid var(--iv-text-faint);
+  border-radius: 50%;
+  background: var(--iv-bg);
+}
+
+.iv-turn__step[data-failed]::before {
+  border-color: var(--iv-danger);
+}
+
+.iv-turn__step[data-current]::before {
+  border-color: var(--iv-accent);
+  background: color-mix(in srgb, var(--iv-accent) 30%, var(--iv-bg));
+  animation: iv-turn-ring-pulse var(--iv-duration-pulse) ease-in-out infinite;
+}
+
+@keyframes iv-turn-ring-pulse {
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--iv-accent) 18%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-turn__step[data-current]::before {
+    animation: none;
+  }
+}
+
+.iv-turn__step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 20px;
+  bottom: -8px;
+  left: 6.5px;
+  width: 1px;
+  background: var(--iv-border-strong);
+}
+
+.iv-turn__sentence {
+  color: var(--iv-text);
+}
+
+.iv-turn__summary {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  width: 100%;
+  min-height: 22px;
+  margin-bottom: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--iv-text-faint);
+  font: inherit;
+  font-size: var(--iv-text-sm);
+  text-align: left;
+  cursor: default;
+  user-select: none;
+}
+
+.iv-turn__summary:hover {
+  color: var(--iv-text-muted);
+}
+
+.iv-turn__lead {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 14px;
+  height: 14px;
+  /* The icons would otherwise sit on a text line box and drop below the label's centre. */
+  line-height: 0;
+}
+
+.iv-turn__line .iv-turn__lead {
+  color: var(--iv-text-muted);
+}
+
+.iv-turn__mark[data-outcome="failed"] {
+  color: var(--iv-danger);
+}
+
+.iv-turn__lead > * {
+  display: inline-flex;
+  grid-area: 1 / 1;
+  transition:
+    opacity var(--iv-duration-fast) ease-out,
+    rotate var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-turn__chevron {
+  opacity: 0;
+}
+
+.iv-turn__line--toggle:hover .iv-turn__mark,
+.iv-turn__line--toggle:focus-visible .iv-turn__mark,
+.iv-turn__line[aria-expanded="true"] .iv-turn__mark:not([data-state]),
+.iv-turn__summary:hover .iv-turn__mark,
+.iv-turn__summary:focus-visible .iv-turn__mark,
+.iv-turn__summary[aria-expanded="true"] .iv-turn__mark:not([data-state]) {
+  opacity: 0;
+}
+
+.iv-turn__line--toggle:hover .iv-turn__chevron,
+.iv-turn__line--toggle:focus-visible .iv-turn__chevron,
+.iv-turn__line[aria-expanded="true"] .iv-turn__mark:not([data-state]) + .iv-turn__chevron,
+.iv-turn__summary:hover .iv-turn__chevron,
+.iv-turn__summary:focus-visible .iv-turn__chevron,
+.iv-turn__summary[aria-expanded="true"] .iv-turn__mark:not([data-state]) + .iv-turn__chevron {
+  opacity: 1;
+}
+
+.iv-turn__line[aria-expanded="true"] .iv-turn__chevron,
+.iv-turn__summary[aria-expanded="true"] .iv-turn__chevron {
+  rotate: 90deg;
+}
+
+.iv-turn__phrases {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv-turn__calls {
+  margin-bottom: var(--iv-space-1);
+  padding-left: 18px;
+}
+
+.iv-turn__call {
+  position: relative;
+  padding: 2px 0;
+}
+
+.iv-turn__call::before,
+.iv-turn__call::after {
+  content: "";
+  position: absolute;
+  left: -11.5px;
+  /* Opaque, so where a branch meets the line the stroke does not darken. */
+  border: 0 solid color-mix(in srgb, var(--iv-text) 9%, var(--iv-bg));
+}
+
+.iv-turn__call::before {
+  top: 0;
+  bottom: 0;
+  border-left-width: 1px;
+}
+
+.iv-turn__call:first-child::before {
+  top: -6px;
+}
+
+.iv-turn__call:last-child::before {
+  bottom: auto;
+  height: 5px;
+}
+
+.iv-turn__call:first-child:last-child::before {
+  height: 11px;
+}
+
+.iv-turn__call::after {
+  top: 5px;
+  width: 8px;
+  height: 8px;
+  border-bottom-width: 1px;
+  border-left-width: 1px;
+  border-bottom-left-radius: 3px;
+}

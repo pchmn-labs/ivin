@@ -1,4 +1,4 @@
-import type { TranscriptEvent, TranscriptItem } from "@ivin/contracts/transcript"
+import type { ToolKind, TranscriptEvent, TranscriptItem } from "@ivin/contracts/transcript"
 
 type MessageItem = Extract<TranscriptItem, { type: "message" }>
 type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
@@ -19,8 +19,14 @@ export const emptyItemState: ItemState = {
 export const applyEvent = (
   state: ItemState,
   event: TranscriptEvent,
+  toolKind: (name: string) => ToolKind,
 ): { readonly state: ItemState; readonly item: TranscriptItem | null } => {
-  const base = { id: event.id, sessionId: event.sessionId, position: event.sequence }
+  const base = {
+    id: event.id,
+    sessionId: event.sessionId,
+    position: event.sequence,
+    at: event.at.epochMilliseconds,
+  }
   switch (event.type) {
     case "user_message": {
       const item: MessageItem = {
@@ -48,6 +54,7 @@ export const applyEvent = (
         type: "tool_call",
         toolCallId: event.toolCallId,
         name: event.name,
+        kind: toolKind(event.name),
         input: event.input,
         status: "running",
         output: null,
@@ -120,11 +127,14 @@ export const applyEvent = (
   }
 }
 
-export const deriveItems = (events: readonly TranscriptEvent[]): TranscriptItem[] => {
+export const deriveItems = (
+  events: readonly TranscriptEvent[],
+  toolKind: (name: string) => ToolKind,
+): TranscriptItem[] => {
   const byId = new Map<string, TranscriptItem>()
   let state = emptyItemState
   for (const event of events) {
-    const next = applyEvent(state, event)
+    const next = applyEvent(state, event, toolKind)
     state = next.state
     if (next.item) byId.set(next.item.id, next.item)
   }

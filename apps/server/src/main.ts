@@ -1,4 +1,10 @@
-import { demoApprovalScript, demoScript, layerClaude, layerScripted } from "@ivin/harness"
+import {
+  demoApprovalScript,
+  demoScript,
+  demoShotScript,
+  layerClaude,
+  layerScripted,
+} from "@ivin/harness"
 import { Cause, Effect, Fiber, Layer } from "effect"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
@@ -6,7 +12,7 @@ import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
 import { layerServices } from "./rpc/handlers.ts"
-import { serveOverPort } from "./rpc/serve.ts"
+import { serveOverPort, serveOverSocket } from "./rpc/serve.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
 import { ImageFolder } from "./modules/transcript/usecases/image-folder.ts"
 
@@ -47,12 +53,15 @@ if (typeof homePath !== "string") fail("Missing --home <path>, the folder of the
 const ivinHome = homePath as string
 if (typeof imagesPath !== "string") fail("Missing --images <path>, the folder of the sent images")
 const imageFolder = imagesPath as string
+const socketPath = process.env["IVIN_SOCKET"]
+if (socketPath === undefined) fail("Missing IVIN_SOCKET, the path of the CLI socket")
 
 const harnessId = process.env["IVIN_HARNESS"] ?? "claude"
 const layerHarnesses = {
   claude: layerClaude,
   scripted: layerScripted(demoScript, { cycle: true }),
   "scripted-approval": layerScripted(demoApprovalScript),
+  "scripted-shot": layerScripted(demoShotScript),
 } as const
 if (!(harnessId in layerHarnesses)) {
   fail(
@@ -104,6 +113,16 @@ const startup = Effect.gen(function* () {
     port.start()
   }
   waiting.splice(0).forEach(serve)
+  // Without the socket the window still works; only `ivin` commands fail.
+  yield* serveOverSocket(socketPath as string, { version: pkg.version }).pipe(
+    Effect.provide(context),
+    Effect.catch((error) =>
+      Effect.logError("could not serve the CLI socket", error).pipe(
+        // Empty tells this app's agents it serves no socket, rather than sending them to another app.
+        Effect.andThen(Effect.sync(() => (process.env["IVIN_SOCKET"] = ""))),
+      ),
+    ),
+  )
   return yield* Effect.never
 }).pipe(Effect.scoped)
 

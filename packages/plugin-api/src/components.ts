@@ -37,6 +37,8 @@ export type IconName =
   | "panel-left"
   | "new-session"
   | "search"
+  | "stack"
+  | "robot"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"
@@ -153,7 +155,8 @@ export interface DisclosureProps {
   readonly defaultOpen?: boolean
   // "section" heads a group of rows in a list, such as a sidebar section; "panel" heads a
   // sidebar panel, and its summary stays in view while the rows scroll.
-  readonly variant?: "default" | "section" | "panel"
+  // "row" has no chevron: its summary brightens on hover and while open.
+  readonly variant?: "default" | "section" | "panel" | "row"
   readonly "data-testid"?: string
   readonly children?: ReactNode
 }

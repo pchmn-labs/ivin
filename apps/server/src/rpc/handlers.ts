@@ -8,6 +8,7 @@ import { closeProject } from "../modules/project/usecases/close-project.ts"
 import { listProjects } from "../modules/project/usecases/list-projects.ts"
 import { openProject } from "../modules/project/usecases/open-project.ts"
 import { selectProject } from "../modules/project/usecases/select-project.ts"
+import { doctor } from "../modules/server/usecases/doctor.ts"
 import { getHarness } from "../modules/server/usecases/get-harness.ts"
 import { getVersion } from "../modules/server/usecases/get-version.ts"
 import { layerSqliteSessionStore } from "../modules/session/adapters/sqlite-session-store.ts"
@@ -90,6 +91,7 @@ export const handlers = Rpcs.toLayer(
     Rpcs.of({
       "server.getVersion": () => getVersion,
       "server.getHarness": () => getHarness,
+      "server.doctor": () => doctor,
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
       "setting.watch": () => watchSettings,
