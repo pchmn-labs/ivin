@@ -95,29 +95,29 @@ test("writing a keyed kind again with the same key updates it, and another key a
         target,
         ns: "github",
         kind: "pr",
-        data: pr("https://x/pull/1", "referenced"),
+        data: pr("https://github.com/o/r/pull/1", "referenced"),
       })
       const again = yield* client["annotation.add"]({
         target,
         ns: "github",
         kind: "pr",
-        data: pr("https://x/pull/1", "created"),
+        data: pr("https://github.com/o/r/pull/1", "created"),
       })
       yield* client["annotation.add"]({
         target,
         ns: "github",
         kind: "pr",
-        data: pr("https://x/pull/2", "created"),
+        data: pr("https://github.com/o/r/pull/2", "created"),
       })
       return { first, again, prs: yield* client["annotation.list"]({ target, kind: "pr" }) }
     }),
   )
 
   expect(again.id).toBe(first.id)
-  expect(again.data).toEqual(pr("https://x/pull/1", "created"))
+  expect(again.data).toEqual(pr("https://github.com/o/r/pull/1", "created"))
   expect(prs.map((a) => a.data)).toEqual([
-    pr("https://x/pull/1", "created"),
-    pr("https://x/pull/2", "created"),
+    pr("https://github.com/o/r/pull/1", "created"),
+    pr("https://github.com/o/r/pull/2", "created"),
   ])
 })
 
@@ -134,7 +134,11 @@ test("writing an issue again with the same url updates it, apart from a pr with 
       })
       const first = yield* client["annotation.add"](issue("referenced"))
       const again = yield* client["annotation.add"](issue("resolved"))
-      yield* client["annotation.add"]({ ...issue("referenced"), kind: "pr" })
+      yield* client["annotation.add"]({
+        ...issue("referenced"),
+        kind: "pr",
+        data: { url: "https://github.com/o/r/pull/1", relation: "referenced" },
+      })
       return { first, again, all: yield* client["annotation.list"]({ target, kind: null }) }
     }),
   )
@@ -256,9 +260,12 @@ test("watching a session starts with its annotations, then streams additions, up
       const prData = { target, ns: "github", kind: "pr" }
       const added = yield* client["annotation.add"]({
         ...prData,
-        data: pr("https://x/pull/1", "referenced"),
+        data: pr("https://github.com/o/r/pull/1", "referenced"),
       })
-      yield* client["annotation.add"]({ ...prData, data: pr("https://x/pull/1", "created") })
+      yield* client["annotation.add"]({
+        ...prData,
+        data: pr("https://github.com/o/r/pull/1", "created"),
+      })
       yield* client["annotation.remove"]({ id: added.id })
       return yield* Fiber.join(watching)
     }),
@@ -270,8 +277,8 @@ test("watching a session starts with its annotations, then streams additions, up
     ),
   ).toEqual([
     ["changed", "before"],
-    ["changed", pr("https://x/pull/1", "referenced")],
-    ["changed", pr("https://x/pull/1", "created")],
+    ["changed", pr("https://github.com/o/r/pull/1", "referenced")],
+    ["changed", pr("https://github.com/o/r/pull/1", "created")],
     ["removed"],
   ])
 })

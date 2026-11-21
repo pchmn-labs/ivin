@@ -1,11 +1,10 @@
 import { Annotation } from "@ivin/contracts/annotation"
 import { Effect, Schema } from "effect"
-import { CommandFailed, type Command, type Input, UsageError } from "./command.ts"
-import { Server } from "./connection.ts"
+import { type Command, type Input, UsageError } from "./command.ts"
+import { annotateSession, sessionIdOf, sessionOption, stringOf } from "./session-target.ts"
 
-const stringOf = (value: Input["values"][string]) => (typeof value === "string" ? value : null)
-
-const argumentsOf = ({ values, env }: Input) => {
+const argumentsOf = (input: Input) => {
+  const { values } = input
   const kind = stringOf(values["kind"])
   if (kind === null || kind === "") return new UsageError({ message: "--kind <kind> is required." })
   const text = stringOf(values["data"])
@@ -19,13 +18,8 @@ const argumentsOf = ({ values, env }: Input) => {
   }
   const ns = stringOf(values["ns"]) ?? "cli"
   if (ns === "") return new UsageError({ message: "--ns needs a namespace." })
-  const session = stringOf(values["session"])
-  if (session === "") return new UsageError({ message: "--session needs a session id." })
-  // An empty IVIN_SESSION_ID counts as unset.
-  const sessionId = session ?? (env["IVIN_SESSION_ID"] || null)
-  if (sessionId === null) {
-    return new UsageError({ message: "--session <id> is required outside an ivin session." })
-  }
+  const sessionId = sessionIdOf(input)
+  if (sessionId instanceof UsageError) return sessionId
   return { kind, data, ns, sessionId }
 }
 
@@ -39,11 +33,7 @@ export const sessionAnnotate: Command = {
     kind: { type: "string", value: "kind", description: "The annotation's kind, such as note" },
     data: { type: "string", value: "json", description: "The annotation's data, as JSON" },
     ns: { type: "string", value: "ns", description: "The annotation's namespace (default: cli)" },
-    session: {
-      type: "string",
-      value: "id",
-      description: "The session to annotate (default: $IVIN_SESSION_ID)",
-    },
+    session: sessionOption,
   },
   maxArguments: 0,
   check: (input) => {
@@ -55,30 +45,7 @@ export const sessionAnnotate: Command = {
       const parsed = argumentsOf(input)
       if (parsed instanceof UsageError) return yield* parsed
       const { kind, data, ns, sessionId } = parsed
-      const { client } = yield* Server
-      const annotation = yield* client["annotation.add"]({
-        target: { _tag: "session", sessionId },
-        ns,
-        kind,
-        data,
-      }).pipe(
-        Effect.catchTags({
-          SessionNotFound: () =>
-            Effect.fail(
-              new CommandFailed({
-                reason: "sessionNotFound",
-                message: `No session has the id "${sessionId}".`,
-              }),
-            ),
-          AnnotationDataInvalid: () =>
-            Effect.fail(
-              new UsageError({
-                message: `--data does not have the shape of a ${kind} annotation.`,
-              }),
-            ),
-          ProjectNotFound: Effect.die,
-        }),
-      )
+      const annotation = yield* annotateSession(sessionId, ns, kind, data)
       return {
         ok: true,
         text: `Added ${ns}/${kind} annotation ${annotation.id} to session ${sessionId}.`,

@@ -9,14 +9,14 @@ test("a kind with no definition has no key", () => {
 })
 
 test("a defined kind's key is the data's key field", () => {
-  expect(annotationKey(pr, { url: "https://x/pull/1", relation: "created" })).toEqual({
-    key: "https://x/pull/1",
+  expect(annotationKey(pr, { url: "https://github.com/o/r/pull/1", relation: "created" })).toEqual({
+    key: "https://github.com/o/r/pull/1",
   })
 })
 
 test("data that does not match its kind's definition is invalid", () => {
-  expect(annotationKey(pr, { url: "https://x/pull/1" })).toBe("invalid")
-  expect(annotationKey(pr, "https://x/pull/1")).toBe("invalid")
+  expect(annotationKey(pr, { url: "https://github.com/o/r/pull/1" })).toBe("invalid")
+  expect(annotationKey(pr, "https://github.com/o/r/pull/1")).toBe("invalid")
 })
 
 test("an issue is keyed on its url, and a pr accepts the reviewed relation", () => {
@@ -25,7 +25,9 @@ test("an issue is keyed on its url, and a pr accepts the reviewed relation", () 
     key: "https://x/issues/1",
   })
   expect(annotationKey(issue, { url: "https://x/issues/1", relation: "reviewed" })).toBe("invalid")
-  expect(annotationKey(pr, { url: "https://x/pull/1", relation: "reviewed" })).toEqual({
-    key: "https://x/pull/1",
-  })
+  expect(annotationKey(pr, { url: "https://github.com/o/r/pull/1", relation: "reviewed" })).toEqual(
+    {
+      key: "https://github.com/o/r/pull/1",
+    },
+  )
 })

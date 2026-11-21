@@ -94,6 +94,17 @@ test("data that does not match a defined kind exits 2", async () => {
   expect(run.stderr).toContain("does not have the shape of a pr annotation")
 }, 10_000)
 
+test("a pr annotation whose URL is not a pull request exits 2", async () => {
+  const run = await annotate(
+    ["--kind", "pr", "--data", '{"url":"https://github.com/o/r/issues/1","relation":"created"}'],
+    { IVIN_SESSION_ID: "$SESSION" },
+  )
+
+  expect(run.code).toBe(2)
+  expect(run.stderr).toContain("does not have the shape of a pr annotation")
+  expect(run.session).toEqual([])
+}, 10_000)
+
 test("an unknown session exits 1 and names it", async () => {
   const run = await annotate(["--kind", "note", "--data", "1", "--session", "nope"])
 

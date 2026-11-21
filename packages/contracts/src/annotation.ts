@@ -9,9 +9,28 @@ export const AnnotationTarget = Schema.Union([
 ])
 export type AnnotationTarget = typeof AnnotationTarget.Type
 
+const pullRequestPath =
+  /^(\/[^/]+\/[^/]+\/pull|(?:\/[^/]+){2,}\/-\/merge_requests)\/([1-9]\d*)(?:\/|$)/
+
+// The URL of a GitHub pull request or a GitLab merge request, on any host, without what follows its number.
+export const pullRequestUrlOf = (text: string): string | null => {
+  if (!URL.canParse(text)) return null
+  const url = new URL(text)
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null
+  const match = pullRequestPath.exec(url.pathname)
+  if (match === null) return null
+  return `${url.origin}${match[1]}/${match[2]}`
+}
+
+export const prRelations = ["created", "referenced", "reviewed"] as const
+
 export const PrAnnotationData = Schema.Struct({
-  url: Schema.String,
-  relation: Schema.Literals(["created", "referenced", "reviewed"]),
+  // Normalised, so that the same pull request always has the same key.
+  url: Schema.String.check(Schema.makeFilter((url) => pullRequestUrlOf(url) === url)),
+  relation: Schema.Literals(prRelations),
+  title: Schema.optionalKey(Schema.String),
+  state: Schema.optionalKey(Schema.Literals(["open", "draft", "merged", "closed"])),
+  checks: Schema.optionalKey(Schema.Literals(["pending", "passing", "failing"])),
 })
 export type PrAnnotationData = typeof PrAnnotationData.Type
 
