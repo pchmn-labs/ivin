@@ -36,7 +36,6 @@ export class SettingValueInvalid extends Schema.TaggedError<SettingValueInvalid>
   { path: Schema.String, expected: Schema.Literals(["boolean", "number", "string"]) },
 ) {}
 
-// The file is left as it is: an edit would build on text ivin cannot read.
 export class SettingsFileInvalid extends Schema.TaggedError<SettingsFileInvalid>()(
   "SettingsFileInvalid",
   {
@@ -51,7 +50,6 @@ export class SettingsFileInvalid extends Schema.TaggedError<SettingsFileInvalid>
 
 export const SettingRpcs = RpcGroup.make(
   Rpc.make("setting.watch", { success: UserSettings, stream: true }),
-  // The settings in use, or the value or section at a dotted path such as "tabs".
   Rpc.make("setting.get", {
     payload: { path: Schema.NullOr(Schema.String) },
     success: Schema.Json,

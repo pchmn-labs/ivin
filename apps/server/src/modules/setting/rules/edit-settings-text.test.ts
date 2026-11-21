@@ -72,3 +72,14 @@ test("a file that holds no object is refused", () => {
     parseError: null,
   })
 })
+
+test("a setting added to an empty object, or one holding only a comment, gets its own lines", () => {
+  expect(editSettingsText(`{}\n`, "tabs.stopAgentOnClose", false)).toEqual({
+    ok: true,
+    text: `{\n  "tabs": {\n    "stopAgentOnClose": false\n  }\n}\n`,
+  })
+  expect(editSettingsText(`{\n  // keep\n}\n`, "tabs.stopAgentOnClose", false)).toEqual({
+    ok: true,
+    text: `{\n  "tabs": {\n    "stopAgentOnClose": false\n  }\n  // keep\n}\n`,
+  })
+})

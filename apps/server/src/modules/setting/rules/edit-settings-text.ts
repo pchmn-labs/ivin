@@ -63,18 +63,25 @@ export const editSettingsText = (
   return { ok: true, text: withEdit(text, at, set) }
 }
 
-// jsonc-parser's own formatting would also reformat the line the edit starts on.
 const withEdit = (text: string, at: readonly string[], value: unknown) => {
   const [edit] = modify(text, [...at], value, {})
   if (edit === undefined) return text
   const edited = applyEdits(text, [edit])
-  const start = edit.offset
-  const end = start + edit.content.length
+  let start = edit.offset
+  let end = start + edit.content.length
+  // An insertion also takes the whitespace around it, so that it gets lines of its own.
+  if (edit.length === 0) {
+    while (start > 0 && /\s/.test(edited[start - 1]!)) start--
+    while (end < edited.length && /\s/.test(edited[end]!)) end++
+  }
   const eol = text.includes("\r\n") ? "\r\n" : "\n"
+  const from = Math.max(start - 1, 0)
   const formatting = format(
     edited,
-    { offset: start, length: end - start },
+    { offset: from, length: end + 1 - from },
     { ...indentOf(text), eol, keepLines: false },
-  ).filter(({ offset, length }) => offset >= start && offset + length <= end)
-  return applyEdits(edited, formatting)
+  )
+  // jsonc-parser formats whole lines, so it would also reformat the neighbours of the edit.
+  const own = formatting.filter(({ offset, length }) => offset >= start && offset + length <= end)
+  return applyEdits(edited, own)
 }

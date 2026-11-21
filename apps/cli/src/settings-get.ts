@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { type Command } from "./command.ts"
 import { Server } from "./connection.ts"
-import { settingFailed } from "./setting-failure.ts"
+import { settingFailed } from "./settings-failure.ts"
 
 const isSection = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)

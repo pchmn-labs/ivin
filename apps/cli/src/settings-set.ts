@@ -1,7 +1,7 @@
 import { Effect, type Schema } from "effect"
 import { type Command, type Input, UsageError } from "./command.ts"
 import { Server } from "./connection.ts"
-import { settingFailed } from "./setting-failure.ts"
+import { settingFailed } from "./settings-failure.ts"
 
 const argumentsOf = ({ positionals }: Input) => {
   const [path, text] = positionals

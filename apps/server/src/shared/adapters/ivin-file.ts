@@ -12,7 +12,6 @@ export const readText = (path: string) =>
     }),
   )
 
-// Through a temp file and a rename, so a watcher never reads a half-written file.
 export const writeText = (path: string, text: string) =>
   Effect.tryPromise(async () => {
     const temp = `${path}.${randomUUID()}.tmp`
