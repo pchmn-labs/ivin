@@ -21,10 +21,14 @@ test("data that does not match its kind's definition is invalid", () => {
 
 test("an issue is keyed on its url, and a pr accepts the reviewed relation", () => {
   const issue = { data: IssueAnnotationData, key: "url" }
-  expect(annotationKey(issue, { url: "https://x/issues/1", relation: "resolved" })).toEqual({
-    key: "https://x/issues/1",
+  expect(
+    annotationKey(issue, { url: "https://github.com/o/r/issues/1", relation: "resolved" }),
+  ).toEqual({
+    key: "https://github.com/o/r/issues/1",
   })
-  expect(annotationKey(issue, { url: "https://x/issues/1", relation: "reviewed" })).toBe("invalid")
+  expect(
+    annotationKey(issue, { url: "https://github.com/o/r/issues/1", relation: "reviewed" }),
+  ).toBe("invalid")
   expect(annotationKey(pr, { url: "https://github.com/o/r/pull/1", relation: "reviewed" })).toEqual(
     {
       key: "https://github.com/o/r/pull/1",

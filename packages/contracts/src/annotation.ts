@@ -11,36 +11,56 @@ export type AnnotationTarget = typeof AnnotationTarget.Type
 
 // A path segment other than GitLab's "-" separator.
 const segment = String.raw`[^/]*[^/-][^/]*`
-const pullRequestPath = new RegExp(
-  String.raw`^(/${segment}/${segment}/pull|(?:/${segment}){2,}/-/merge_requests)/([1-9]\d*)(?:/|$)`,
-)
+const forgePath = (github: string, gitlab: string) =>
+  new RegExp(
+    String.raw`^(/${segment}/${segment}/${github}|(?:/${segment}){2,}/-/${gitlab})/([1-9]\d*)(?:/|$)`,
+  )
+const forgePaths = {
+  pr: forgePath("pull", "merge_requests"),
+  issue: forgePath("issues", "issues"),
+}
+export type ForgeKind = keyof typeof forgePaths
 
-export const pullRequestUrlOf = (text: string): string | null => {
+export const forgeUrlOf = (kind: ForgeKind, text: string): string | null => {
   if (!URL.canParse(text)) return null
   const url = new URL(text)
   if (url.protocol !== "https:" && url.protocol !== "http:") return null
-  const match = pullRequestPath.exec(url.pathname)
+  const match = forgePaths[kind].exec(url.pathname)
   if (match === null) return null
   // Forges match owner and repository names case-insensitively.
   return `${url.origin}${match[1]!.toLowerCase()}/${match[2]}`
 }
 
-export const prRelations = ["created", "referenced", "reviewed"] as const
+export const forgeLinkOf = (text: string): { kind: ForgeKind; url: string } | null => {
+  for (const kind of ["pr", "issue"] as const) {
+    const url = forgeUrlOf(kind, text)
+    if (url !== null) return { kind, url }
+  }
+  return null
+}
+
+// Normalised, so that the same pull request or issue always has the same key.
+const forgeUrl = (kind: ForgeKind) =>
+  Schema.String.check(Schema.makeFilter((url) => forgeUrlOf(kind, url) === url))
+
+export const forgeRelations = {
+  pr: ["created", "referenced", "reviewed"],
+  // `resolved`: the session's work closes the issue.
+  issue: ["created", "referenced", "resolved"],
+} as const
 
 export const PrAnnotationData = Schema.Struct({
-  // Normalised, so that the same pull request always has the same key.
-  url: Schema.String.check(Schema.makeFilter((url) => pullRequestUrlOf(url) === url)),
-  relation: Schema.Literals(prRelations),
+  url: forgeUrl("pr"),
+  relation: Schema.Literals(forgeRelations.pr),
   title: Schema.optionalKey(Schema.String),
   state: Schema.optionalKey(Schema.Literals(["open", "draft", "merged", "closed"])),
   checks: Schema.optionalKey(Schema.Literals(["pending", "passing", "failing"])),
 })
 export type PrAnnotationData = typeof PrAnnotationData.Type
 
-// `resolved`: the session's work closes the issue.
 export const IssueAnnotationData = Schema.Struct({
-  url: Schema.String,
-  relation: Schema.Literals(["created", "referenced", "resolved"]),
+  url: forgeUrl("issue"),
+  relation: Schema.Literals(forgeRelations.issue),
 })
 export type IssueAnnotationData = typeof IssueAnnotationData.Type
 

@@ -130,7 +130,7 @@ test("writing an issue again with the same url updates it, apart from a pr with 
         target,
         ns: "github",
         kind: "issue",
-        data: { url: "https://x/1", relation },
+        data: { url: "https://github.com/o/r/issues/1", relation },
       })
       const first = yield* client["annotation.add"](issue("referenced"))
       const again = yield* client["annotation.add"](issue("resolved"))
@@ -144,7 +144,7 @@ test("writing an issue again with the same url updates it, apart from a pr with 
   )
 
   expect(again.id).toBe(first.id)
-  expect(again.data).toEqual({ url: "https://x/1", relation: "resolved" })
+  expect(again.data).toEqual({ url: "https://github.com/o/r/issues/1", relation: "resolved" })
   expect(all.map((a) => a.kind)).toEqual(["issue", "pr"])
 })
 

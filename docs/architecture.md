@@ -144,7 +144,7 @@ The terms are defined in [`GLOSSARY.md`](../GLOSSARY.md). What the design adds t
 - Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
 - Plugins render transcript items; they don't re-derive them from events.
 - An annotation looks like `{ ns: "prs", kind: "pr", data: { url, relation: "created" } }`. This is the generic answer to "link these PRs to this session".
-- Annotations are stored in SQLite on a session or a project, and reached through `annotation.add`, `annotation.remove`, `annotation.list` (by target and kind) and `annotation.watch` (by target). The kinds defined in `contracts` (`annotationKinds`) are `pr` (`relation`: `created`, `referenced` or `reviewed`; `url` a pull request URL in the form `pullRequestUrlOf` returns; `title`, `state` and `checks` optional, for the `github` plugin to fill) and `issue` (`created`, `referenced` or `resolved`, when the session's work closes it), both keyed on their `url`. A defined kind has its `data` checked against its shape, and names the field that is its key: writing the same `ns`, `kind` and key on the same target again updates that annotation. Any other kind has no key, so each write adds one. Deleting a session deletes its annotations.
+- Annotations are stored in SQLite on a session or a project, and reached through `annotation.add`, `annotation.remove`, `annotation.list` (by target and kind) and `annotation.watch` (by target). The kinds defined in `contracts` (`annotationKinds`) are `pr` (`relation`: `created`, `referenced` or `reviewed`; `title`, `state` and `checks` optional, for the `github` plugin to fill) and `issue` (`created`, `referenced` or `resolved`, when the session's work closes it), both keyed on their `url`, which must be in the form `forgeUrlOf` returns. A defined kind has its `data` checked against its shape, and names the field that is its key: writing the same `ns`, `kind` and key on the same target again updates that annotation. Any other kind has no key, so each write adds one. Deleting a session deletes its annotations.
 - The open projects, their order, the selected project, the tabs, their order and each project's selected tab are stored in SQLite and restored at launch.
 - A tab stores its project and its position, so a single bar for all projects can later be a view over the same rows.
 - Closing a tab, or the project it belongs to, ends its session's agent process when `tabs.stopAgentOnClose` is on; the next message starts a new process that resumes the conversation. The tab bar asks first when the agent is working or waiting; closing a project does not ask.
@@ -397,7 +397,7 @@ The server reads `settings.json` and streams it (`setting.watch`). Its settings 
 
 ```
 ivin session annotate --kind pr --data '{"url":"…","relation":"referenced"}'
-ivin pr link <url> --as created|referenced|reviewed     # sugar over annotate
+ivin link <url> --as <relation>                         # sugar over annotate, for a pr or an issue
 ivin theme set <id> | ivin theme list
 ivin settings get|set <path> [value]
 ivin plugin list | reload <id> | logs <id> | new <id>
@@ -415,7 +415,7 @@ Shipped so far:
 
 - `ivin doctor`, one line per check (the app's version, the socket, `settings.json`, `keybindings.json`, the program the harness runs, found on the server's `PATH`), exit 1 when one fails.
 - `ivin session annotate --kind <kind> --data <json> [--ns <ns>] [--session <id>]`: `ns` defaults to `cli`, the session to `$IVIN_SESSION_ID`; with neither, or with invalid JSON or data that does not fit a defined kind, it exits 2. `--json` prints the stored annotation.
-- `ivin pr link <url> --as created|referenced|reviewed [--session <id>]`: writes a `pr` annotation in the `cli` namespace, with the same session default. The URL must be a GitHub pull request (`…/<owner>/<repo>/pull/<n>`) or a GitLab merge request (`…/<group>/<project>/-/merge_requests/<n>`) on any host; what follows the number is dropped and the path lowercased, so `…/pull/1/files` links the same pull request as `…/pull/1`. Another URL or relation exits 2.
+- `ivin link <url> --as <relation> [--session <id>]`: writes a `pr` or an `issue` annotation in the `cli` namespace, with the same session default; the URL decides which. It must be a GitHub pull request or issue (`…/<owner>/<repo>/pull/<n>`, `…/issues/<n>`) or a GitLab merge request or issue (`…/<group>/<project>/-/merge_requests/<n>`, `…/-/issues/<n>`) on any host; what follows the number is dropped and the path lowercased, so `…/pull/1/files` links the same pull request as `…/pull/1`. Another URL, or a relation the kind does not take, exits 2.
 
 - **Running it.** `apps/cli` is bundled by tsdown into one file, shipped as `Resources/cli/ivin.js`. At each launch main writes `<userData>/bin/ivin`, a shell script that runs that file with the app's own Electron as Node (`ELECTRON_RUN_AS_NODE=1`), so `ivin` needs no Node and follows the app when it moves.
 - **Every command** takes `--help` and `--json` (stdout gets `{ "ok": …, … }`, or `{ "ok": false, "error": { "reason", "message" } }`), and exits 0 (ok), 1 (failed), 2 (invalid usage) or 3 (ivin is not running). It reaches `$IVIN_SOCKET`, else `~/.ivin/run/ivin.sock`. The CLI writes its own messages; the raw error stays in the server's log ([ADR-0004](adr/0004-the-ui-writes-error-messages-and-the-server-logs-raw-errors.md)).
@@ -435,7 +435,7 @@ Once the CLI is stable, an optional `ivin` MCP server can expose the same comman
 The feature that started this design, as two plugins: `github` knows the forge, `prs` shows pull requests whatever the forge.
 
 - `github`'s `server.ts` watches `transcript.onEvent` for a `gh pr create` or GitHub MCP `create_pull_request` result holding a PR URL, and adds a `pr` annotation with `relation: "created"`. Deterministic, free, no agent cooperation needed.
-- The agent adds what detection can't see with `ivin pr link <url> --as referenced`; the `ivin-customize` skill tells it when.
+- The agent adds what detection can't see with `ivin link <url> --as referenced`; the `ivin-customize` skill tells it when.
 - `github` polls each open PR's state, CI and mergeability with `ctx.poll` and `ctx.exec("gh", …)`, and updates the annotation.
 - `prs`'s `ui.tsx` reads the `pr` annotations and fills `session.badge` (state icon, CI chip, `+n`), `session.card` (folded PR list) and `tab.decoration`.
 

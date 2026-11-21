@@ -19,7 +19,7 @@ const link = (runs: readonly (readonly string[])[], env: Record<string, string> 
     for (const args of runs) {
       results.push(
         await runCli(
-          ["pr", "link", ...args.map(resolve)],
+          ["link", ...args.map(resolve)],
           Object.fromEntries(
             Object.entries({ IVIN_SOCKET: socketPath, IVIN_SESSION_ID: "", ...env }).map(
               ([k, v]) => [k, resolve(v)],
@@ -36,7 +36,7 @@ const link = (runs: readonly (readonly string[])[], env: Record<string, string> 
     }
   })
 
-test("from a session's agent, ivin pr link stores a pr annotation on that session", async () => {
+test("from a session's agent, ivin link stores a pr annotation on that session", async () => {
   const run = await link([[url, "--as", "referenced"]], { IVIN_SESSION_ID: "$SESSION" })
 
   expect(run.last.code).toBe(0)
@@ -66,7 +66,7 @@ test("linking the same pull request again with another relation updates its anno
   expect(run.session).toMatchObject([{ data: { url, relation: "reviewed" } }])
 }, 10_000)
 
-test("--session links the pull request to that session", async () => {
+test("--session links to that session", async () => {
   const run = await link([[url, "--as", "created", "--session", "$OTHER"]], {
     IVIN_SESSION_ID: "$SESSION",
   })
@@ -83,28 +83,28 @@ test("outside an ivin session, --session is required", async () => {
   expect(run.last.stderr).toContain("--session <id> is required outside an ivin session")
 }, 10_000)
 
-test("a URL that is not a pull request says what is expected and exits 2", async () => {
+test("a URL that is neither a pull request nor an issue says what is expected and exits 2", async () => {
   const env = { IVIN_SESSION_ID: "$SESSION" }
-  const issue = await link([["https://github.com/o/r/issues/1", "--as", "created"]], env)
+  const repo = await link([["https://github.com/o/r", "--as", "created"]], env)
   const none = await link([["--as", "created"]], env)
 
-  expect(issue.last.code).toBe(2)
-  expect(issue.last.stderr).toContain(
-    "is not the URL of a GitHub pull request or a GitLab merge request",
-  )
-  expect(issue.last.stderr).toContain("/-/merge_requests/<number>")
+  expect(repo.last.code).toBe(2)
+  expect(repo.last.stderr).toContain("is not the URL of a pull request or an issue")
+  expect(repo.last.stderr).toContain("/-/merge_requests/<number>")
   expect(none.last.code).toBe(2)
-  expect(none.last.stderr).toContain("ivin pr link needs a pull request URL")
-  expect([...issue.session, ...none.session]).toEqual([])
+  expect(none.last.stderr).toContain("ivin link needs the URL of a pull request or an issue")
+  expect([...repo.session, ...none.session]).toEqual([])
 }, 10_000)
 
-test("a relation outside created, referenced and reviewed says what is expected and exits 2", async () => {
+test("a pull request relation outside created, referenced and reviewed says what is expected and exits 2", async () => {
   const env = { IVIN_SESSION_ID: "$SESSION" }
   const wrong = await link([[url, "--as", "resolved"]], env)
   const missing = await link([[url]], env)
 
   expect(wrong.last.code).toBe(2)
-  expect(wrong.last.stderr).toContain("--as must be created, referenced or reviewed")
+  expect(wrong.last.stderr).toContain(
+    "--as must be created, referenced or reviewed for a pull request",
+  )
   expect(missing.last.code).toBe(2)
   expect(missing.last.stderr).toContain("--as must be created, referenced or reviewed")
   expect([...wrong.session, ...missing.session]).toEqual([])
@@ -126,4 +126,29 @@ test("--json prints the stored annotation", async () => {
     ok: true,
     annotation: { id: run.session[0]!.id, kind: "pr", data: { url, relation: "created" } },
   })
+}, 10_000)
+
+const issue = "https://github.com/o/r/issues/4"
+
+test("an issue URL stores an issue annotation, and linking it again updates it", async () => {
+  const run = await link(
+    [
+      [`${issue}#issuecomment-1`, "--as", "referenced"],
+      [issue, "--as", "resolved"],
+    ],
+    { IVIN_SESSION_ID: "$SESSION" },
+  )
+
+  expect(run.results.map((result) => result.code)).toEqual([0, 0])
+  expect(run.session).toMatchObject([
+    { ns: "cli", kind: "issue", data: { url: issue, relation: "resolved" } },
+  ])
+}, 10_000)
+
+test("an issue takes resolved but not reviewed", async () => {
+  const run = await link([[issue, "--as", "reviewed"]], { IVIN_SESSION_ID: "$SESSION" })
+
+  expect(run.last.code).toBe(2)
+  expect(run.last.stderr).toContain("--as must be created, referenced or resolved for an issue")
+  expect(run.session).toEqual([])
 }, 10_000)
