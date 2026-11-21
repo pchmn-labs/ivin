@@ -1,0 +1,153 @@
+import { useEffect, useState } from "react"
+import {
+  ErrorMessage,
+  Icon,
+  Stack,
+  Text,
+  Tree,
+  defineUi,
+  useListFolder,
+  useProjects,
+  useSelectedSessionId,
+  useSession,
+  type FolderEntry,
+  type FolderListing,
+  type Session,
+} from "@ivin/plugin-api/ui"
+import { folderLabel } from "./rules/folder-label.ts"
+import { treeRows } from "./rules/tree-rows.ts"
+
+type FolderState = { readonly kind: "loading" } | FolderListing
+
+interface FolderTree {
+  readonly open: ReadonlySet<string>
+  // By path relative to the working folder, "" for the working folder itself.
+  readonly folders: ReadonlyMap<string, FolderState>
+}
+
+const NOTHING_OPEN: FolderTree = { open: new Set(), folders: new Map() }
+
+function Message({ children }: { children: string }) {
+  return (
+    <Text size="sm" tone="faint">
+      {children}
+    </Text>
+  )
+}
+
+function FolderTreeView({
+  session,
+  remembered,
+}: {
+  session: Session
+  remembered: Map<string, FolderTree>
+}) {
+  const listFolder = useListFolder()
+  const key = `${session.id}\n${session.workingFolder}`
+  const [tree, setTree] = useState(() => remembered.get(key) ?? NOTHING_OPEN)
+  useEffect(() => {
+    remembered.set(key, tree)
+  }, [remembered, key, tree])
+
+  const load = (path: string) => {
+    setTree((current) =>
+      // A folder listed before keeps its rows while it is listed again.
+      current.folders.get(path)?.kind === "listed"
+        ? current
+        : { ...current, folders: new Map(current.folders).set(path, { kind: "loading" }) },
+    )
+    void listFolder(session.id, path).then((listing) =>
+      setTree((current) => ({ ...current, folders: new Map(current.folders).set(path, listing) })),
+    )
+  }
+
+  // What was open in this session is listed again, as the agent may have changed it meanwhile.
+  const [openOnMount] = useState(tree.open)
+  useEffect(() => {
+    for (const path of ["", ...openOnMount]) load(path)
+  }, [])
+
+  const toggle = (path: string) => {
+    const open = new Set(tree.open)
+    if (open.delete(path)) return setTree({ ...tree, open })
+    open.add(path)
+    setTree({ ...tree, open })
+    load(path)
+  }
+
+  const root = tree.folders.get("")
+  if (root?.kind === "deleted") {
+    return <Message>This session's working folder was deleted, so it has no files to show.</Message>
+  }
+  if (root?.kind === "failed") {
+    return (
+      <ErrorMessage
+        message={root.failure.text}
+        {...(root.failure.retryable && { onRetry: () => load("") })}
+      />
+    )
+  }
+  if (root?.kind === "listed" && root.entries.length === 0) {
+    return <Message>This folder is empty.</Message>
+  }
+
+  const listed = new Map<string, ReadonlyArray<FolderEntry>>()
+  const failedFolders: Array<{ path: string; text: string; retryable: boolean }> = []
+  for (const [path, state] of tree.folders) {
+    if (state.kind === "listed") listed.set(path, state.entries)
+    if (state.kind === "failed" && tree.open.has(path))
+      failedFolders.push({ path, ...state.failure })
+  }
+  return (
+    <Stack direction="column" gap={2} grow>
+      {failedFolders.map(({ path, text, retryable }) => (
+        <ErrorMessage key={path} message={text} {...(retryable && { onRetry: () => load(path) })} />
+      ))}
+      <Tree label="Files" rows={treeRows(listed, tree.open)} onToggle={toggle} />
+    </Stack>
+  )
+}
+
+function FilesPanel({ remembered }: { remembered: Map<string, FolderTree> }) {
+  const sessionId = useSelectedSessionId()
+  const session = useSession(sessionId ?? "")
+  const { projects } = useProjects()
+  if (sessionId === null) {
+    return <Message>No session on screen. Open one to see the files of its working folder.</Message>
+  }
+  if (session === undefined) return null
+  const project = projects.find((p) => p.path === session.projectPath)
+  return (
+    <Stack direction="column" gap={2} grow>
+      <Stack direction="row" gap={1} align="center">
+        <Icon name={session.inWorktree ? "worktree" : "folder"} size={12} />
+        <Text size="xs" tone="faint" mono truncate title={session.workingFolder}>
+          {folderLabel(session.workingFolder, session.projectPath, project?.name ?? "")}
+        </Text>
+      </Stack>
+      {session.workingFolderDeleted ? (
+        <Message>This session's working folder was deleted, so it has no files to show.</Message>
+      ) : (
+        <FolderTreeView
+          key={`${session.id}\n${session.workingFolder}`}
+          session={session}
+          remembered={remembered}
+        />
+      )}
+    </Stack>
+  )
+}
+
+export const activate = defineUi((ctx) => {
+  // What each session had open, for as long as the plugin is active.
+  const remembered = new Map<string, FolderTree>()
+  ctx.slots.add("sidebar.panel", () => <FilesPanel remembered={remembered} />, {
+    name: "panel",
+    title: "Files",
+  })
+  ctx.commands.register("files.show", {
+    title: "Show files",
+    run: () => ctx.sidebar.showPanel("panel"),
+  })
+  ctx.keybindings.add({ key: "mod+2", command: "files.show" })
+})

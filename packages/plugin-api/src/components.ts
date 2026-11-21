@@ -270,6 +270,24 @@ export interface MessageTextProps {
   readonly images: ReadonlyArray<ImageRef>
 }
 
+export interface TreeRow {
+  readonly id: string
+  readonly name: string
+  readonly depth: number
+  // Null for a row that holds nothing, such as a file.
+  readonly expanded: boolean | null
+  readonly icon?: IconName
+}
+
+// A virtualised tree, driven by the arrow keys; it shows the rows given, so opening a row is the
+// caller's: `onToggle` asks for it, and the rows given next include its children.
+export interface TreeProps {
+  readonly label: string
+  readonly rows: ReadonlyArray<TreeRow>
+  readonly onToggle: (id: string) => void
+  readonly "data-testid"?: string
+}
+
 export interface HostComponents {
   readonly Button: ComponentType<ButtonProps>
   readonly IconButton: ComponentType<IconButtonProps>
@@ -294,6 +312,7 @@ export interface HostComponents {
   readonly ProjectMark: ComponentType<ProjectMarkProps>
   readonly MessageImages: ComponentType<MessageImagesProps>
   readonly MessageText: ComponentType<MessageTextProps>
+  readonly Tree: ComponentType<TreeProps>
 }
 
 const hostComponent =
@@ -324,3 +343,4 @@ export const RelativeTime = hostComponent((c) => c.RelativeTime)
 export const MessageImages = hostComponent((c) => c.MessageImages)
 export const MessageText = hostComponent((c) => c.MessageText)
 export const ProjectMark = hostComponent((c) => c.ProjectMark)
+export const Tree = hostComponent((c) => c.Tree)

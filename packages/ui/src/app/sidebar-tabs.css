@@ -1,0 +1,12 @@
+.iv-sidebar-tabs__sessions,
+.iv-sidebar-tabs__panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.iv-sidebar-tabs__panel {
+  padding: var(--iv-space-2) var(--iv-space-2) var(--iv-space-3);
+}

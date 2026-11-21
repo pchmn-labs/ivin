@@ -23,6 +23,7 @@ const mountSection = async (
     },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    sidebar: { showPanel: () => undefined },
   }
   activate(ctx)
   const Section = added.find((a) => a.slot === "sidebar.section")!.component as ComponentType<
@@ -39,6 +40,7 @@ const mountSection = async (
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
     useTranscript: () => [],
     useAnswerApproval: () => async () => undefined,
+    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useSessionActions: (session) => ({
       items: [{ label: "Archive", onSelect: () => void archived.push(session.id) }],
       failure: session.title === "Failed" ? "The session was not archived." : null,

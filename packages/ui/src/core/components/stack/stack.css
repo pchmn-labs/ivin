@@ -17,6 +17,7 @@
 
 .iv-stack--grow {
   flex: 1;
+  min-height: 0;
 }
 
 .iv-stack--gap-0 {

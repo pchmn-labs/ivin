@@ -1,6 +1,7 @@
 import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Cause, Exit } from "effect"
-import { useContext, useEffect, useState, type ReactNode } from "react"
+import { Cause, Effect, Exit } from "effect"
+import { AtomRegistry } from "effect/reactivity"
+import { useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
 import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
@@ -11,6 +12,8 @@ import { answerApprovalFailure } from "../modules/session/rules/failure-message.
 import { tabsOf } from "../modules/tab/atoms/list-tabs.ts"
 import { openTabAtom } from "../modules/tab/atoms/open-tab.ts"
 import { selectedSessionIdAtom } from "../modules/tab/atoms/selected-session-id.ts"
+import { folderKey, listFolderOf } from "../modules/file/atoms/list-folder.ts"
+import { folderListingFailure } from "../modules/file/rules/folder-listing.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
 import { hostComponents } from "./host-components.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
@@ -42,6 +45,22 @@ const host: UiHost = {
     }
   },
   useSessionActions,
+  useListFolder: () => {
+    const registry = useContext(RegistryContext)
+    return useCallback(
+      async (sessionId, path) => {
+        const atom = listFolderOf(folderKey(sessionId, path))
+        registry.set(atom, { sessionId, path })
+        const exit = await Effect.runPromiseExit(
+          AtomRegistry.getResult(registry, atom, { suspendOnWaiting: true }),
+        )
+        return Exit.isSuccess(exit)
+          ? { kind: "listed", entries: exit.value }
+          : folderListingFailure(Cause.squash(exit.cause), path)
+      },
+      [registry],
+    )
+  },
   components: hostComponents,
 }
 

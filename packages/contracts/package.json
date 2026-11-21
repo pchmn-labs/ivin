@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    "./file": "./src/file.ts",
     "./keybinding": "./src/keybinding.ts",
     "./log": "./src/log.ts",
     "./project": "./src/project.ts",

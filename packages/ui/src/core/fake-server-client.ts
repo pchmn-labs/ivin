@@ -1,4 +1,5 @@
 import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
+import { FolderNotListed, type FolderEntry } from "@ivin/contracts/file"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
@@ -28,6 +29,7 @@ import {
   GitRefused,
   type LocalChangesChoice,
   SessionNotFound,
+  WorkingFolderDeleted,
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
 import { ServerClient } from "./server-client.ts"
@@ -78,6 +80,10 @@ export interface FakeServer {
   readonly setUserKeybindings: (state: UserKeybindings) => void
   // Makes the next call of this RPC die, as a lost connection would.
   readonly failNextCall: (rpc: string) => void
+  // What `file.listFolder` lists, by absolute folder path; a session whose working folder is
+  // missing here has had it deleted.
+  readonly folders: Map<string, ReadonlyArray<FolderEntry>>
+  readonly listedFolders: ReadonlyArray<string>
   // Streams the user's settings to `setting.watch`, as after a change to the file.
   readonly setUserSettings: (state: UserSettings) => void
 }
@@ -159,6 +165,8 @@ export const makeFakeServer = (
   let holdReorder: { readonly wait: Promise<boolean> } | null = null
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
+  const folders = new Map<string, ReadonlyArray<FolderEntry>>()
+  const listedFolders: Array<string> = []
   const failing = new Set<string>()
   const sentMessages: Array<FakeServer["sentMessages"][number]> = []
   const pickedFolders: Array<WorkingFolderChoice> = []
@@ -585,6 +593,24 @@ export const makeFakeServer = (
           }),
         )
       }),
+    "file.listFolder": ({ sessionId, path }: { sessionId: string; path: string }) =>
+      Effect.suspend(
+        (): Effect.Effect<
+          ReadonlyArray<FolderEntry>,
+          SessionNotFound | WorkingFolderDeleted | FolderNotListed
+        > => {
+          const session = sessions.get(sessionId)
+          if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
+          if (!folders.has(session.workingFolder))
+            return Effect.fail(new WorkingFolderDeleted({ sessionId }))
+          const folder = path === "" ? session.workingFolder : `${session.workingFolder}/${path}`
+          listedFolders.push(folder)
+          const entries = folders.get(folder)
+          return entries === undefined
+            ? Effect.fail(new FolderNotListed({ sessionId, path, reason: "missing" }))
+            : Effect.succeed(entries)
+        },
+      ),
     "worktree.list": () => Effect.sync(() => [...worktrees]),
     "worktree.newBase": () => Effect.succeed("origin/main"),
     "worktree.checkoutStatus": () => Effect.sync(checkoutStatus),
@@ -767,5 +793,7 @@ export const makeFakeServer = (
       Effect.runSync(PubSub.publish(keybindingChanges, state))
     },
     failNextCall: (rpc) => void failing.add(rpc),
+    folders,
+    listedFolders,
   }
 }

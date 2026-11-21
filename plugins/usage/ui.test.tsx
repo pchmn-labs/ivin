@@ -34,6 +34,7 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
     },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    sidebar: { showPanel: () => undefined },
   }
   activate(ctx)
   const Status = added.find((a) => a.slot === "composer.status")!.component as ComponentType<
@@ -48,6 +49,7 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
     useOpenTab: () => () => {},
     useTranscript: () => items,
     useAnswerApproval: () => async () => undefined,
+    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }

@@ -1,11 +1,14 @@
 .iv-tabs {
   display: flex;
+  flex: 1;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
 }
 
 .iv-tabs__list {
   display: flex;
+  flex: none;
   gap: var(--iv-space-1);
   padding: 0 var(--iv-space-2);
   border-bottom: 1px solid var(--iv-border);
@@ -36,6 +39,9 @@
 }
 
 .iv-tabs__panel {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  min-width: 0;
   min-height: 0;
 }

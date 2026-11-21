@@ -120,4 +120,12 @@ export const layerGitCli = Layer.succeed(Git)({
       Effect.as(true),
       Effect.orElseSucceed(() => false),
     ),
+  ignoredNames: (folder, names) =>
+    names.length === 0
+      ? Effect.succeed(new Set())
+      : git(folder, ["check-ignore", "-z", "--stdin"], names.join("\0")).pipe(
+          Effect.map((out) => new Set(out.split("\0").filter((name) => name !== ""))),
+          // check-ignore exits 1 when nothing is ignored, and 128 outside a repository.
+          Effect.orElseSucceed(() => new Set<string>()),
+        ),
 })

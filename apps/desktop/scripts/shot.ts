@@ -30,7 +30,12 @@ const makeRepo = (dir: string) => {
   const git = (...args: string[]) => execFileSync("git", args, { cwd: dir, env })
   git("init", "--quiet", "-b", "main")
   writeFileSync(join(dir, "README.md"), "hello")
-  git("add", "README.md")
+  writeFileSync(join(dir, ".gitignore"), "dist/\n")
+  for (const file of ["src/orders/list.tsx", "src/orders/total.ts", "src/main.ts", "dist/out.js"]) {
+    mkdirSync(join(dir, dirname(file)), { recursive: true })
+    writeFileSync(join(dir, file), "")
+  }
+  git("add", ".")
   git("commit", "--quiet", "-m", "first")
   git("worktree", "add", "--quiet", "-b", "docs/adr", join(dir, ".worktrees", "docs-adr"))
   git("branch", "fix/typo")
@@ -180,6 +185,13 @@ try {
   await sidebar.getByTestId("archived-session").first().waitFor()
   await window.waitForTimeout(300)
   await shoot("archived-sessions")
+  await window.keyboard.press("Escape")
+  await sidebar.getByRole("tab", { name: "Files" }).click()
+  await sidebar.getByRole("treeitem", { name: "src", exact: true }).click()
+  await sidebar.getByRole("treeitem", { name: "orders", exact: true }).click()
+  await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("files-tab")
 } finally {
   await app.close()
 }

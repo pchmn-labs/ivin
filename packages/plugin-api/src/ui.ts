@@ -1,13 +1,14 @@
 import { createElement } from "react"
 import type { ComponentType, ReactNode } from "react"
+import type { FolderEntry } from "@ivin/contracts/file"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Tab } from "@ivin/contracts/tab"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
-import type { ActionFailure, UiHost } from "./host-context.ts"
+import type { ActionFailure, FolderListing, UiHost } from "./host-context.ts"
 
-export type { OpenProjects, Project, Session, Tab, TranscriptItem }
+export type { FolderEntry, OpenProjects, Project, Session, Tab, TranscriptItem }
 export type MessageItem = Extract<TranscriptItem, { type: "message" }>
 export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
@@ -37,6 +38,8 @@ export interface SlotProps {
   "sidebar.section": Record<string, never>
   // A panel across the bottom of the sidebar card, under the projects and the sessions.
   "sidebar.bottom": Record<string, never>
+  // A tab of the sidebar's list column, beside Sessions, named by the contribution's `title`.
+  "sidebar.panel": Record<string, never>
 }
 export type SlotName = keyof SlotProps
 
@@ -45,6 +48,8 @@ export interface SlotOptions {
   readonly name?: string
   readonly replaces?: string
   readonly tool?: string
+  // The tab's name, for a `sidebar.panel` contribution.
+  readonly title?: string
 }
 
 export interface CommandOptions {
@@ -76,13 +81,17 @@ export interface UiContext {
   readonly keybindings: {
     add: (keybinding: KeybindingOptions) => void
   }
+  readonly sidebar: {
+    // Opens the sidebar on this plugin's `sidebar.panel` contribution of that name.
+    showPanel: (name?: string) => void
+  }
 }
 
 export type UiPlugin = (ctx: UiContext) => void
 
 export const defineUi = (activate: UiPlugin): UiPlugin => activate
 
-export type { ActionFailure, UiHost }
+export type { ActionFailure, FolderListing, UiHost }
 export * from "./components.ts"
 
 export const UiHostProvider = ({ host, children }: { host: UiHost; children?: ReactNode }) =>
@@ -97,5 +106,6 @@ export const useOpenTab = () => useHost().useOpenTab()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
 export const useSessionActions = (session: Session) => useHost().useSessionActions(session)
+export const useListFolder = () => useHost().useListFolder()
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"

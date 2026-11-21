@@ -49,5 +49,10 @@ export class Git extends Context.Service<
       upstream: string,
     ) => Effect.Effect<Divergence, GitError>
     readonly isIgnored: (repo: string, path: string) => Effect.Effect<boolean>
+    // Of the names in `folder`, those git ignores; none outside a repository.
+    readonly ignoredNames: (
+      folder: string,
+      names: ReadonlyArray<string>,
+    ) => Effect.Effect<ReadonlySet<string>>
   }
 >()("ivin/server/Git") {}

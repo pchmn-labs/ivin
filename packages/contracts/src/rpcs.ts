@@ -1,3 +1,4 @@
+import { FileRpcs } from "./file.ts"
 import { KeybindingRpcs } from "./keybinding.ts"
 import { LogRpcs } from "./log.ts"
 import { ProjectRpcs } from "./project.ts"
@@ -9,6 +10,7 @@ import { TranscriptRpcs } from "./transcript.ts"
 import { WorktreeRpcs } from "./worktree.ts"
 
 export const Rpcs = ServerRpcs.merge(
+  FileRpcs,
   KeybindingRpcs,
   LogRpcs,
   ProjectRpcs,

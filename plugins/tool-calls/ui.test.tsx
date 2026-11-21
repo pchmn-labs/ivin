@@ -14,6 +14,7 @@ const mount = async (item: ToolCallItem) => {
     slots: { add: (_slot, component) => void (ToolCall = component as typeof ToolCall) },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    sidebar: { showPanel: () => undefined },
   }
   activate(ctx)
   const host = {
@@ -25,6 +26,7 @@ const mount = async (item: ToolCallItem) => {
     useOpenTab: () => () => {},
     useTranscript: () => [],
     useAnswerApproval: () => async () => undefined,
+    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }

@@ -1,5 +1,7 @@
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { Effect, Layer, Stream } from "effect"
+import { layerFsFolderReader } from "../modules/file/adapters/fs-folder-reader.ts"
+import { listFolder } from "../modules/file/usecases/list-folder.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
@@ -59,6 +61,7 @@ export const layerServices = Layer.mergeAll(layerWorktreeCleanup, layerImageComp
   Layer.provideMerge(
     Layer.mergeAll(
       layerGitCli,
+      layerFsFolderReader,
       layerSqliteProjectStore,
       layerSqliteSessionStore,
       layerSqliteTabStore,
@@ -138,6 +141,7 @@ export const handlers = Rpcs.toLayer(
           Effect.orElseSucceed(() => null),
         ),
       "worktree.listBranches": ({ projectPath }) => listBranches(projectPath),
+      "file.listFolder": ({ sessionId, path }) => listFolder(sessionId, path),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

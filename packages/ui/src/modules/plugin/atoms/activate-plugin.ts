@@ -1,5 +1,6 @@
 import type { Atom, AtomRegistry } from "effect/reactivity"
 import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
+import { showSidebarTab } from "../../../app/sidebar.ts"
 import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
 import { addCommandHandler } from "../../command/atoms/run-command.ts"
 import { defaultKeybindingsAtom } from "../../keybinding/atoms/keybindings.ts"
@@ -46,6 +47,7 @@ export const activatePlugin = (
             order: options?.order ?? 0,
             replaces: options?.replaces,
             tool: options?.tool,
+            title: options?.title,
           },
         ])
       },
@@ -64,6 +66,10 @@ export const activatePlugin = (
           ...registry.get(defaultKeybindingsAtom),
           { key, command, when: when ?? null, pluginId },
         ]),
+    },
+    sidebar: {
+      showPanel: (name = "sidebar.panel") =>
+        showSidebarTab(registry, `${pluginId}/${name}`, { focus: true }),
     },
   }
 
