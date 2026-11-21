@@ -31,7 +31,9 @@ function ToolCall({ item }: SlotProps["transcript.toolCall"]) {
   const main = mainArgument(item.name, item.input)
   const showInput = main === null && item.input !== undefined
   const header = <ToolHeader item={item} main={main} />
-  if (item.output === null && !showInput) return header
+  // A successful skill call outputs only "Launching skill: <name>", already on the row.
+  const quietSkill = item.kind === "skill" && item.status !== "error"
+  if ((item.output === null || quietSkill) && !showInput) return header
   return (
     <Disclosure variant="row" data-testid="tool-output" summary={header}>
       <Stack gap={2}>
