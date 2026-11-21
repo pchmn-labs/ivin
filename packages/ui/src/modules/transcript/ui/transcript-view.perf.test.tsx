@@ -1,5 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
-import { expect, test, vi } from "vitest"
+import { expect, test, vi, type TestContext } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ImageData, ToolKind, TranscriptItem } from "@ivin/contracts/transcript"
@@ -14,12 +14,14 @@ import { TranscriptView } from "./transcript-view.tsx"
 // Below 30 frames a second, the transcript visibly stutters; headless Chromium caps rAF at 60.
 const MIN_FPS = 30
 const SCROLL_FRAMES = 120
+const TURNS = 250
 const STREAMED_TOKENS = 10_000
 const TOKENS_PER_FRAME = 25
-const KINDS: ReadonlyArray<ToolKind> = ["read", "search", "edit", "command"]
+const SESSION = "s1"
+const TOOL_KINDS: ReadonlyArray<ToolKind> = ["read", "search", "edit", "command"]
 
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
-const settle = () => new Promise((resolve) => setTimeout(resolve, 150))
+const wait150ms = () => new Promise((resolve) => setTimeout(resolve, 150))
 const scroller = () => document.querySelector<HTMLElement>('[data-testid="transcript"]')!
 
 const answer = (turn: number) =>
@@ -37,16 +39,11 @@ const answer = (turn: number) =>
     "Run the tests with `pnpm test`, then open a long session and scroll it from top to bottom.",
   ].join("\n\n")
 
-// 2,000 items: 250 turns of a user message, four tool calls in two steps, and a Markdown answer.
+// Eight items a turn: a user message, four tool calls in two steps, and a Markdown answer.
 const transcript = (turns: number) => {
   const items: TranscriptItem[] = []
   const images: ImageData[] = []
-  const base = (id: string) => ({
-    id,
-    sessionId: "s1",
-    position: items.length,
-    at: items.length * 1000,
-  })
+  const base = (id: string) => itemFields(id, items.length)
   for (let turn = 0; turn < turns; turn++) {
     const image =
       turn % 6 === 0
@@ -77,7 +74,7 @@ const transcript = (turns: number) => {
         type: "tool_call",
         toolCallId: `c${turn}-${call}`,
         name: "Bash",
-        kind: KINDS[call % KINDS.length]!,
+        kind: TOOL_KINDS[call % TOOL_KINDS.length]!,
         input: {
           command: `rg "transcript" packages/ui/src --glob '*.tsx' -n | head -${call + 10}`,
         },
@@ -95,6 +92,13 @@ const transcript = (turns: number) => {
   }
   return { items, images }
 }
+
+const itemFields = (id: string, position: number) => ({
+  id,
+  sessionId: SESSION,
+  position,
+  at: position * 1000,
+})
 
 const pngBase64 = (number: number) => {
   const canvas = document.createElement("canvas")
@@ -118,17 +122,17 @@ const mount = async (
 ) => {
   await page.viewport(1280, 800)
   const server = makeFakeServer()
-  server.seedItems("s1", items)
+  server.seedItems(SESSION, items)
   await render(
     <RegistryProvider
       initialValues={[
         [serverClientLayerAtom, server.layer],
-        [foldsOf("s1"), options.folds ?? new Map()],
+        [foldsOf(SESSION), options.folds ?? new Map()],
       ]}
     >
       <div style={{ position: "relative", height: 800 }}>
         <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" live={options.live ?? false} />
+          <TranscriptView sessionId={SESSION} live={options.live ?? false} />
         </PluginsProvider>
       </div>
     </RegistryProvider>,
@@ -136,26 +140,41 @@ const mount = async (
   return server
 }
 
-const fpsOver = (frames: number, start: number, end: number) => (frames * 1000) / (end - start)
+const measureFps = async (frames: number, onFrame: (frame: number) => void) => {
+  const start = await nextFrame()
+  let last = start
+  for (let frame = 1; frame <= frames; frame++) {
+    onFrame(frame)
+    last = await nextFrame()
+  }
+  return (frames * 1000) / (last - start)
+}
+
+// An annotation, not a log: Vitest hides the logs of passing tests, and CI turns it into a notice.
+const expectFps = async (annotate: TestContext["annotate"], what: string, fps: number) => {
+  await annotate(`${what}: ${fps.toFixed(1)} fps`)
+  expect(fps, `${what} ran at ${fps.toFixed(1)} fps`).toBeGreaterThanOrEqual(MIN_FPS)
+}
 
 test(
   "scrolling a 2,000-item transcript from top to bottom keeps the frame rate",
   { timeout: 120_000 },
-  async () => {
-    const { items, images } = transcript(250)
+  async ({ annotate }) => {
+    const { items, images } = transcript(TURNS)
     expect(items).toHaveLength(2_000)
     // The app shows a message's images from these until the server has written their files.
     rememberSentImages(images)
-    const unfolded = new Map(
-      Array.from({ length: 250 }, (_, turn) => [`work:u${turn}`, turn % 3 === 0] as const),
+    const everyThirdTurnUnfolded = new Map(
+      Array.from({ length: TURNS }, (_, turn) => [`work:u${turn}`, turn % 3 === 0] as const),
     )
-    await mount(items, { folds: unfolded })
-    await expect.element(page.getByText("Step 249: what changed")).toBeVisible()
+    await mount(items, { folds: everyThirdTurnUnfolded })
+    const lastAnswer = page.getByText(`Step ${TURNS - 1}: what changed`)
+    await expect.element(lastAnswer).toBeVisible()
 
     await vi.waitFor(
       async () => {
         scroller().scrollTop = 0
-        await settle()
+        await wait150ms()
         expect(document.querySelector('[data-row-id="u0"]')).not.toBeNull()
       },
       { timeout: 60_000, interval: 0 },
@@ -166,18 +185,13 @@ test(
       )
     await vi.waitFor(() => expect(decoded().length).toBeGreaterThan(0))
 
-    const start = await nextFrame()
-    let last = start
-    for (let frame = 1; frame <= SCROLL_FRAMES; frame++) {
+    const fps = await measureFps(SCROLL_FRAMES, (frame) => {
       const list = scroller()
       list.scrollTop = ((list.scrollHeight - list.clientHeight) * frame) / SCROLL_FRAMES
-      last = await nextFrame()
-    }
-    const fps = fpsOver(SCROLL_FRAMES, start, last)
-    console.info(`transcript scroll: ${fps.toFixed(1)} fps`)
+    })
 
-    expect(page.getByText("Step 249: what changed").query()).not.toBeNull()
-    expect(fps, `scrolling ran at ${fps.toFixed(1)} fps`).toBeGreaterThan(MIN_FPS)
+    expect(lastAnswer.query()).not.toBeNull()
+    await expectFps(annotate, "scrolling", fps)
   },
 )
 
@@ -194,13 +208,10 @@ const streamedTokens = () => {
 test(
   "streaming a 10,000-token answer while the view follows it keeps the frame rate",
   { timeout: 120_000 },
-  async () => {
+  async ({ annotate }) => {
     const { items } = transcript(25)
     const lastTurn: TranscriptItem = {
-      id: "u-live",
-      sessionId: "s1",
-      position: items.length,
-      at: items.length * 1000,
+      ...itemFields("u-live", items.length),
       type: "message",
       role: "user",
       text: "Explain the whole change, with code",
@@ -208,29 +219,33 @@ test(
     }
     const server = await mount([...items, lastTurn], { live: true })
     await expect.element(page.getByText("Explain the whole change, with code")).toBeVisible()
-    await settle()
+    await wait150ms()
 
     const tokens = streamedTokens()
     const frames = Math.ceil(tokens.length / TOKENS_PER_FRAME)
-    const start = await nextFrame()
-    let last = start
-    for (let frame = 0; frame < frames; frame++) {
-      for (const text of tokens.slice(frame * TOKENS_PER_FRAME, (frame + 1) * TOKENS_PER_FRAME)) {
+    const fps = await measureFps(frames, (frame) => {
+      for (const text of tokens.slice((frame - 1) * TOKENS_PER_FRAME, frame * TOKENS_PER_FRAME)) {
         server.pushChange({
           type: "delta",
-          sessionId: "s1",
+          sessionId: SESSION,
           itemId: "a-live",
           position: lastTurn.position + 1,
           kind: "message",
           text,
         })
       }
-      last = await nextFrame()
-    }
-    const fps = fpsOver(frames, start, last)
-    console.info(`transcript stream: ${fps.toFixed(1)} fps`)
+    })
 
+    // A few frames at most: a backlog drawn after the measure would hide a slow stream.
+    await vi.waitFor(
+      () => {
+        expect(page.getByText("The end of the streamed answer.").query()).not.toBeNull()
+        const list = scroller()
+        expect(list.scrollHeight - list.scrollTop - list.clientHeight).toBeLessThan(2)
+      },
+      { timeout: 100, interval: 16 },
+    )
     await expect.element(page.getByText("The end of the streamed answer.")).toBeInViewport()
-    expect(fps, `streaming ran at ${fps.toFixed(1)} fps`).toBeGreaterThan(MIN_FPS)
+    await expectFps(annotate, "streaming", fps)
   },
 )
