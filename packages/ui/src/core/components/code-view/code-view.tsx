@@ -14,6 +14,10 @@ import { languageNameOf } from "./language-name.ts"
 import { loadLanguage } from "./languages.ts"
 import "./code-view.css"
 
+// Prose keeps a paragraph on one line, so only Markdown wraps; code keeps its layout.
+const wrappingOf = (fileName: string) =>
+  languageNameOf(fileName) === "markdown" ? EditorView.lineWrapping : []
+
 export interface CodeViewProps {
   readonly text: string
   // Picks the language, and names the view for assistive technology.
@@ -34,6 +38,7 @@ export function CodeView({
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   const language = useRef(new Compartment())
+  const wrapping = useRef(new Compartment())
   const latestOnScroll = useRef(onScroll)
   useEffect(() => {
     latestOnScroll.current = onScroll
@@ -54,6 +59,7 @@ export function CodeView({
           EditorState.readOnly.of(true),
           EditorView.contentAttributes.of({ "aria-label": fileName }),
           language.current.of([]),
+          wrapping.current.of(wrappingOf(fileName)),
         ],
       }),
     })
@@ -83,6 +89,7 @@ export function CodeView({
   }, [text])
 
   useEffect(() => {
+    view.current!.dispatch({ effects: wrapping.current.reconfigure(wrappingOf(fileName)) })
     const name = languageNameOf(fileName)
     if (name === null) return
     let cancelled = false

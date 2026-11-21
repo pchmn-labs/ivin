@@ -17,3 +17,17 @@ test("a new text replaces the shown one", async () => {
   await rerender(<CodeView text="second" fileName="notes" />)
   await expect.element(page.getByRole("textbox", { name: "notes" })).toHaveTextContent("second")
 })
+
+test("wraps the long lines of a Markdown file", async () => {
+  await render(<CodeView text={"word ".repeat(400)} fileName="notes.md" />)
+  await expect
+    .element(page.getByRole("textbox", { name: "notes.md" }))
+    .toHaveClass("cm-lineWrapping")
+})
+
+test("keeps the long lines of code whole", async () => {
+  await render(<CodeView text={"word ".repeat(400)} fileName="main.ts" />)
+  await expect
+    .element(page.getByRole("textbox", { name: "main.ts" }))
+    .not.toHaveClass("cm-lineWrapping")
+})

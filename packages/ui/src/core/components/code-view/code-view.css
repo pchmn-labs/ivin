@@ -34,7 +34,8 @@
 
 .iv-code-view .cm-gutters {
   border: 0;
-  background: transparent;
+  /* Opaque: the gutter sticks while the lines scroll sideways under it. */
+  background: var(--iv-bg-card);
   color: var(--iv-text-faint);
   font-variant-numeric: tabular-nums;
 }
