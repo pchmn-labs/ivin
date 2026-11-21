@@ -210,9 +210,71 @@ test("the sub-view RPCs fail for an unknown session", async () => {
         yield* Effect.flip(client["tab.listSubViews"]({ sessionId })),
         yield* Effect.flip(client["tab.openSubView"]({ sessionId, subView: file("a") })),
         yield* Effect.flip(client["tab.closeSubView"]({ sessionId, subView: file("a") })),
+        yield* Effect.flip(client["tab.setFullWidth"]({ sessionId, fullWidth: true })),
+        yield* Effect.flip(client["tab.selectSessionTab"]({ sessionId })),
       ].map((error) => error._tag)
     }),
   )
 
-  expect(errors).toEqual(Array(3).fill("SessionNotFound"))
+  expect(errors).toEqual(Array(5).fill("SessionNotFound"))
+})
+
+test("a tab starts beside the chat, and full width with the Session tab selected is back after a restart", async () => {
+  const db = newDatabase()
+  const { fresh, sessionId } = await withServer(db, (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* newTab(client)
+      const fresh = yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
+      yield* client["tab.openSubView"]({ sessionId, subView: file("b") })
+      yield* client["tab.setFullWidth"]({ sessionId, fullWidth: true })
+      yield* client["tab.selectSessionTab"]({ sessionId })
+      return { fresh, sessionId }
+    }),
+  )
+
+  const listed = await withServer(db, (client) => client["tab.listSubViews"]({ sessionId }))
+
+  expect(fresh).toMatchObject({ fullWidth: false, sessionTabSelected: false })
+  expect(listed).toMatchObject({
+    subViews: [file("a"), file("b")],
+    selected: file("b"),
+    fullWidth: true,
+    sessionTabSelected: true,
+  })
+})
+
+test("opening a sub-view or going back beside the chat leaves the Session tab", async () => {
+  const { reopened, beside } = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* newTab(client)
+      yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
+      yield* client["tab.setFullWidth"]({ sessionId, fullWidth: true })
+      yield* client["tab.selectSessionTab"]({ sessionId })
+      const reopened = yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
+      yield* client["tab.selectSessionTab"]({ sessionId })
+      const beside = yield* client["tab.setFullWidth"]({ sessionId, fullWidth: false })
+      return { reopened, beside }
+    }),
+  )
+
+  expect(reopened).toMatchObject({
+    selected: file("a"),
+    fullWidth: true,
+    sessionTabSelected: false,
+  })
+  expect(beside).toMatchObject({ selected: file("a"), fullWidth: false, sessionTabSelected: false })
+})
+
+test("closing the tab forgets its full width", async () => {
+  const listed = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* newTab(client)
+      yield* client["tab.setFullWidth"]({ sessionId, fullWidth: true })
+      yield* client["tab.close"]({ sessionId })
+      yield* client["tab.open"]({ sessionId })
+      return yield* client["tab.listSubViews"]({ sessionId })
+    }),
+  )
+
+  expect(listed.fullWidth).toBe(false)
 })

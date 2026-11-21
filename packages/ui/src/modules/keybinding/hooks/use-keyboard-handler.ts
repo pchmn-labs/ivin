@@ -15,7 +15,8 @@ export function useKeyboardHandler() {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.isComposing) return
       // Enter and Space press the focused button.
-      if ((event.key === "Enter" || event.key === " ") && focusIsOnButton()) return
+      const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey
+      if ((event.key === "Enter" || event.key === " ") && plain && focusIsOnButton()) return
       const commands = findCommands(keybindings, eventKeys(event), focusAreas())
       // A command no component handles right now leaves the key to the next keybinding.
       if (commands.some((command) => runCommand(registry, command))) event.preventDefault()

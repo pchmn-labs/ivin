@@ -23,3 +23,26 @@
   min-width: var(--iv-chat-min-width);
   min-height: 0;
 }
+
+.iv-tab-view__split[data-full-width] {
+  position: relative;
+}
+
+/* The chat sits over the card's body, under its row of tabs and inside its hairline. */
+.iv-tab-view__split[data-full-width] .iv-tab-view__session {
+  position: absolute;
+  z-index: 1;
+  inset: calc(var(--iv-space-9) + 2px) calc(var(--iv-space-2) + 1px) calc(var(--iv-space-2) + 1px);
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 0 0 var(--iv-radius-card) var(--iv-radius-card);
+  visibility: hidden;
+}
+
+.iv-tab-view__split[data-on-session] .iv-tab-view__session {
+  visibility: visible;
+}
+
+.iv-tab-view__split[data-full-width] .iv-sub-view-card {
+  margin-left: var(--iv-space-2);
+}

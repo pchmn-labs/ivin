@@ -13,7 +13,13 @@ export const openSubViewAtom = serverRuntime.fn<{
   Effect.fnUntraced(function* ({ sessionId, workingFolder, subView }) {
     const client = yield* ServerClient
     const state = subViewsOf(sessionId, workingFolder)
-    const before = (yield* state.get) ?? { sessionId, subViews: [], selected: null }
+    const before = (yield* state.get) ?? {
+      sessionId,
+      subViews: [],
+      selected: null,
+      fullWidth: false,
+      sessionTabSelected: false,
+    }
     return yield* optimistic<TabSubViews>({
       apply: state.set(withSubViewOpen(before, subView)),
       rollback: state.set(before),

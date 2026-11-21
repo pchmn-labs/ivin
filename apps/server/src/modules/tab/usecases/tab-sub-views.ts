@@ -15,10 +15,14 @@ export const closeSubViewsOfOtherFolders = (sessionId: string) =>
 
 export const tabSubViews = (sessionId: string) =>
   Effect.gen(function* () {
-    const stored = yield* (yield* TabStore).subViewsOf(sessionId)
+    const store = yield* TabStore
+    const stored = yield* store.subViewsOf(sessionId)
+    const { fullWidth, sessionTabSelected } = yield* store.layoutOf(sessionId)
     return {
       sessionId,
       subViews: stored.map((entry) => entry.subView),
       selected: stored.find((entry) => entry.selected)?.subView ?? null,
+      fullWidth,
+      sessionTabSelected: fullWidth && sessionTabSelected,
     } satisfies TabSubViews
   })

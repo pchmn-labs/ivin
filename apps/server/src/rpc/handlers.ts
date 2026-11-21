@@ -50,6 +50,8 @@ import { listTabs } from "../modules/tab/usecases/list-tabs.ts"
 import { openSubView } from "../modules/tab/usecases/open-sub-view.ts"
 import { openTab } from "../modules/tab/usecases/open-tab.ts"
 import { reorderTabs } from "../modules/tab/usecases/reorder-tabs.ts"
+import { selectSessionTab } from "../modules/tab/usecases/select-session-tab.ts"
+import { setFullWidth } from "../modules/tab/usecases/set-full-width.ts"
 import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlite-transcript-store.ts"
 import { layerFsImageStore } from "../modules/transcript/adapters/fs-image-store.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
@@ -127,6 +129,8 @@ export const handlers = Rpcs.toLayer(
       "tab.listSubViews": ({ sessionId }) => listSubViews(sessionId),
       "tab.openSubView": ({ sessionId, subView }) => openSubView(sessionId, subView),
       "tab.closeSubView": ({ sessionId, subView }) => closeSubView(sessionId, subView),
+      "tab.setFullWidth": ({ sessionId, fullWidth }) => setFullWidth(sessionId, fullWidth),
+      "tab.selectSessionTab": ({ sessionId }) => selectSessionTab(sessionId),
       "session.create": ({ projectPath }) => createSession(projectPath),
       "session.setRunOptions": ({ sessionId, options }) => setRunOptions(sessionId, options),
       "session.list": ({ projectPath }) => listSessions(projectPath),

@@ -6,7 +6,13 @@ import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 const family = strongFamily((key: string) => {
   const sessionId = key.slice(0, key.indexOf("\n"))
   return makeFedState({
-    initial: { sessionId, subViews: [], selected: null },
+    initial: {
+      sessionId,
+      subViews: [],
+      selected: null,
+      fullWidth: false,
+      sessionTabSelected: false,
+    },
     runtime: serverRuntime,
     load: Effect.gen(function* () {
       const client = yield* ServerClient

@@ -229,7 +229,7 @@ export function MessageEditor({
         aria-placeholder={placeholder}
         onInput={emit}
         onKeyDown={(event) => {
-          if (event.key === "Enter" && event.shiftKey) {
+          if (event.key === "Enter" && event.shiftKey && !event.metaKey && !event.ctrlKey) {
             event.preventDefault()
             document.execCommand("insertLineBreak")
           }

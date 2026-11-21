@@ -12,5 +12,7 @@ export const openSubView = (sessionId: string, subView: SubView) =>
     )
     if (!open) yield* store.appendSubView(sessionId, subView, session.workingFolder)
     yield* store.selectSubView(sessionId, subView)
+    const { fullWidth } = yield* store.layoutOf(sessionId)
+    yield* store.setLayout(sessionId, { fullWidth, sessionTabSelected: false })
     return yield* tabSubViews(sessionId)
   })

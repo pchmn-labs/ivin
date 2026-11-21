@@ -11,16 +11,41 @@
   background: var(--iv-bg-card);
 }
 
-.iv-sub-view-card__tabs {
+.iv-sub-view-card[data-on-session] {
+  background: var(--iv-bg);
+}
+
+.iv-sub-view-card__row {
   display: flex;
   flex: none;
   align-items: center;
-  gap: var(--iv-space-half);
+  gap: var(--iv-space-1);
   height: var(--iv-space-9);
   padding: 0 var(--iv-space-2) 0 var(--iv-space-1);
-  overflow-x: auto;
   border-bottom: 1px solid var(--iv-border);
+}
+
+.iv-sub-view-card__tabs {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--iv-space-half);
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
   scrollbar-width: none;
+}
+
+.iv-sub-view-card__tab--session {
+  padding-right: var(--iv-space-3);
+}
+
+.iv-sub-view-card__separator {
+  flex: none;
+  width: 1px;
+  height: var(--iv-space-4);
+  margin: 0 var(--iv-space-1);
+  background: var(--iv-border);
 }
 
 .iv-sub-view-card__item {
@@ -109,6 +134,10 @@
 }
 
 .iv-sub-view-card__failure {
+  position: relative;
+  /* Above the chat, which covers the card's body while the Session tab is selected. */
+  z-index: 2;
   flex: none;
   padding: var(--iv-space-2) var(--iv-space-3) 0;
+  background: inherit;
 }

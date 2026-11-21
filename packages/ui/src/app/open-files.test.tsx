@@ -200,6 +200,8 @@ test("the open files are back at launch, from the server", async () => {
       { kind: "file", path: "src/main.ts" },
     ],
     selected: { kind: "file", path: "src/main.ts" },
+    fullWidth: false,
+    sessionTabSelected: false,
   })
   await mount(server)
   await expect.element(fileTab("main.ts")).toHaveAttribute("aria-selected", "true")

@@ -44,7 +44,12 @@ import {
   WorkingFolderDeleted,
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
-import { withSubViewClosed, withSubViewOpen } from "../modules/tab/rules/sub-views.ts"
+import {
+  withFullWidth,
+  withSessionTabSelected,
+  withSubViewClosed,
+  withSubViewOpen,
+} from "../modules/tab/rules/sub-views.ts"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -192,7 +197,13 @@ export const makeFakeServer = (
   let holdRead: Promise<void> | null = null
   const subViews = new Map<string, TabSubViews>()
   const subViewsOf = (sessionId: string): TabSubViews =>
-    subViews.get(sessionId) ?? { sessionId, subViews: [], selected: null }
+    subViews.get(sessionId) ?? {
+      sessionId,
+      subViews: [],
+      selected: null,
+      fullWidth: false,
+      sessionTabSelected: false,
+    }
   const withSession = <A>(sessionId: string, run: () => A) =>
     Effect.suspend(() =>
       sessions.has(sessionId)
@@ -689,6 +700,18 @@ export const makeFakeServer = (
     "tab.closeSubView": ({ sessionId, subView }: { sessionId: string; subView: SubView }) =>
       withSession(sessionId, () => {
         const next = withSubViewClosed(subViewsOf(sessionId), subView)
+        subViews.set(sessionId, next)
+        return next
+      }),
+    "tab.setFullWidth": ({ sessionId, fullWidth }: { sessionId: string; fullWidth: boolean }) =>
+      withSession(sessionId, () => {
+        const next = withFullWidth(subViewsOf(sessionId), fullWidth)
+        subViews.set(sessionId, next)
+        return next
+      }),
+    "tab.selectSessionTab": ({ sessionId }: { sessionId: string }) =>
+      withSession(sessionId, () => {
+        const next = withSessionTabSelected(subViewsOf(sessionId))
         subViews.set(sessionId, next)
         return next
       }),

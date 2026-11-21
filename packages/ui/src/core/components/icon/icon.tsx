@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowsLeftRight,
+  ArrowsOut,
   ArrowUp,
   Brain,
   CaretDown,
@@ -24,6 +25,7 @@ import {
   Robot,
   Plus,
   SidebarSimple,
+  SquareSplitHorizontal,
   Sparkle,
   Stack,
   Stop,
@@ -76,6 +78,8 @@ const icons = {
   search: MagnifyingGlass,
   stack: Stack,
   robot: Robot,
+  "arrows-out": ArrowsOut,
+  split: SquareSplitHorizontal,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {
