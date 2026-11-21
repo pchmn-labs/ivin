@@ -112,6 +112,18 @@ test("outside a git repository, lists every file", async () => {
   expect(await listIn(plain, "")).toEqual([["dist/", "notes.log"]])
 })
 
+test("outside a git repository, a folder with more names than the pipe to git holds is still listed", async () => {
+  const plain = join(root, "plain")
+  // Over the 64 KiB pipe buffer, so git exits before it has read every name.
+  const names = Array.from(
+    { length: 800 },
+    (_, index) => `${String(index).padStart(4, "0")}${"x".repeat(100)}`,
+  )
+  for (const name of names) write(join(plain, name))
+
+  expect(await listIn(plain, "")).toEqual([names])
+})
+
 test("refuses a path outside the working folder, through .., an absolute path or a symlink", async () => {
   write(join(root, "secret/key.pem"))
   write(join(project, "src/main.ts"))
