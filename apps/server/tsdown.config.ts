@@ -8,7 +8,7 @@ export default {
   outDir: "dist",
   clean: true,
   fixedExtension: false,
-  deps: { alwaysBundle: [/^effect/, /^@ivin\//, /^@jsquash\//], onlyBundle: false },
+  deps: { alwaysBundle: [/^effect/, /^@ivin\//, /^@jsquash\//, /^jsonc-parser/], onlyBundle: false },
   // `webp-codec.ts` reads these from `dist/wasm`.
   copy: [
     {
