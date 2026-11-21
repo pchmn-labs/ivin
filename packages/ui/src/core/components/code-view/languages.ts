@@ -4,7 +4,6 @@ import type { LanguageName } from "./language-name.ts"
 
 const legacy = async (mode: Promise<StreamParser<unknown>>) => StreamLanguage.define(await mode)
 
-// Each package is imported only when a file of its language opens, so the others are never parsed.
 export const loadLanguage: Record<LanguageName, () => Promise<Extension>> = {
   typescript: () =>
     import("@codemirror/lang-javascript").then((m) => m.javascript({ typescript: true })),

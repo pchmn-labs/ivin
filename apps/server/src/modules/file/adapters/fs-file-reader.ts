@@ -13,13 +13,12 @@ const unreadable = (error: unknown) =>
 
 export const layerFsFileReader = Layer.succeed(FileReader)({
   size: (path) =>
-    Effect.tryPromise({
-      try: async () => {
-        const info = await stat(path)
-        if (!info.isFile()) throw Object.assign(new Error("not a file"), { code: "ENOENT" })
-        return info.size
-      },
-      catch: unreadable,
-    }),
+    Effect.tryPromise({ try: () => stat(path), catch: unreadable }).pipe(
+      Effect.flatMap((info) =>
+        info.isFile()
+          ? Effect.succeed(info.size)
+          : Effect.fail(new FileUnreadable({ reason: "missing" })),
+      ),
+    ),
   read: (path) => Effect.tryPromise({ try: () => readFile(path), catch: unreadable }),
 })

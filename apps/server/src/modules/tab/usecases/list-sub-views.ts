@@ -1,8 +1,8 @@
 import { Effect } from "effect"
-import { pruneSubViews, readSubViews } from "./sub-views-of.ts"
+import { closeSubViewsOfOtherFolders, tabSubViews } from "./tab-sub-views.ts"
 
 export const listSubViews = (sessionId: string) =>
   Effect.gen(function* () {
-    yield* pruneSubViews(sessionId)
-    return yield* readSubViews(sessionId)
+    yield* closeSubViewsOfOtherFolders(sessionId)
+    return yield* tabSubViews(sessionId)
   })

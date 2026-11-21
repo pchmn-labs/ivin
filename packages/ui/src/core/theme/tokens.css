@@ -66,6 +66,8 @@
   --iv-row-height: 30px;
   --iv-tree-row-height: 24px;
   --iv-sub-view-tab-height: 26px;
+  --iv-sub-view-card-min-width: 280px;
+  --iv-chat-min-width: 320px;
   --iv-sub-view-close-size: 18px;
   --iv-sub-view-name-max-width: 200px;
   --iv-tree-indent: 12px;

@@ -44,6 +44,7 @@ import {
   WorkingFolderDeleted,
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
+import { withSubViewClosed, withSubViewOpen } from "../modules/tab/rules/sub-views.ts"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -192,7 +193,6 @@ export const makeFakeServer = (
   const subViews = new Map<string, TabSubViews>()
   const subViewsOf = (sessionId: string): TabSubViews =>
     subViews.get(sessionId) ?? { sessionId, subViews: [], selected: null }
-  const sameSubView = (a: SubView) => (b: SubView) => a.kind === b.kind && a.path === b.path
   const withSession = <A>(sessionId: string, run: () => A) =>
     Effect.suspend(() =>
       sessions.has(sessionId)
@@ -682,28 +682,13 @@ export const makeFakeServer = (
       withSession(sessionId, () => subViewsOf(sessionId)),
     "tab.openSubView": ({ sessionId, subView }: { sessionId: string; subView: SubView }) =>
       withSession(sessionId, () => {
-        const current = subViewsOf(sessionId)
-        const open = current.subViews.some(sameSubView(subView))
-        const next = {
-          sessionId,
-          subViews: open ? current.subViews : [...current.subViews, subView],
-          selected: subView,
-        }
+        const next = withSubViewOpen(subViewsOf(sessionId), subView)
         subViews.set(sessionId, next)
         return next
       }),
     "tab.closeSubView": ({ sessionId, subView }: { sessionId: string; subView: SubView }) =>
       withSession(sessionId, () => {
-        const current = subViewsOf(sessionId)
-        const index = current.subViews.findIndex(sameSubView(subView))
-        if (index === -1) return current
-        const rest = current.subViews.filter((_, i) => i !== index)
-        const wasSelected = current.selected !== null && sameSubView(subView)(current.selected)
-        const next = {
-          sessionId,
-          subViews: rest,
-          selected: wasSelected ? (rest[index] ?? rest[index - 1] ?? null) : current.selected,
-        }
+        const next = withSubViewClosed(subViewsOf(sessionId), subView)
         subViews.set(sessionId, next)
         return next
       }),

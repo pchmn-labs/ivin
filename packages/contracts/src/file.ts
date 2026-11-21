@@ -21,7 +21,6 @@ export class FolderNotListed extends Schema.TaggedError<FolderNotListed>()("Fold
   reason: Schema.Literals(["missing", "unreadable"]),
 }) {}
 
-// Above this size a file is not sent, so the window never receives one that would freeze it.
 export const FILE_SIZE_LIMIT = 2 * 1024 * 1024
 
 // `binary`: a zero byte among its first bytes.

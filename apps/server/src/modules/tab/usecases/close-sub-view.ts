@@ -1,13 +1,15 @@
 import type { SubView } from "@ivin/contracts/tab"
 import { Effect } from "effect"
 import { selectionAfterRemoval } from "../../../shared/rules/selection-after-removal.ts"
-import { pruneSubViews, readSubViews } from "./sub-views-of.ts"
+import { TabStore } from "./tab-store.ts"
+import { closeSubViewsOfOtherFolders, tabSubViews } from "./tab-sub-views.ts"
 
 const keyOf = (subView: SubView) => `${subView.kind}:${subView.path}`
 
 export const closeSubView = (sessionId: string, subView: SubView) =>
   Effect.gen(function* () {
-    const { store } = yield* pruneSubViews(sessionId)
+    yield* closeSubViewsOfOtherFolders(sessionId)
+    const store = yield* TabStore
     const stored = yield* store.subViewsOf(sessionId)
     const removed = keyOf(subView)
     const order = stored.map((entry) => keyOf(entry.subView))
@@ -22,5 +24,5 @@ export const closeSubView = (sessionId: string, subView: SubView) =>
         )
       }
     }
-    return yield* readSubViews(sessionId)
+    return yield* tabSubViews(sessionId)
   })

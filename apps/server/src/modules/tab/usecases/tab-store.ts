@@ -25,9 +25,7 @@ export class TabStore extends Context.Service<
       workingFolder: string,
     ) => Effect.Effect<void>
     readonly removeSubView: (sessionId: string, subView: SubView) => Effect.Effect<void>
-    // Null leaves none selected.
     readonly selectSubView: (sessionId: string, subView: SubView | null) => Effect.Effect<void>
-    // Removes those opened in another working folder than `workingFolder`.
     readonly removeSubViewsOutside: (
       sessionId: string,
       workingFolder: string,

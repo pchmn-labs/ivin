@@ -4,17 +4,16 @@ import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
 import { TabStore } from "./tab-store.ts"
 
-// Closes the sub-views opened in another working folder than the session's, then reads the rest.
-export const pruneSubViews = (sessionId: string) =>
+// Returns the session, whose working folder the remaining sub-views were opened in.
+export const closeSubViewsOfOtherFolders = (sessionId: string) =>
   Effect.gen(function* () {
     const session = yield* (yield* SessionStore).findById(sessionId)
     if (session === null) return yield* new SessionNotFound({ sessionId })
-    const store = yield* TabStore
-    yield* store.removeSubViewsOutside(sessionId, session.workingFolder)
-    return { session, store }
+    yield* (yield* TabStore).removeSubViewsOutside(sessionId, session.workingFolder)
+    return session
   })
 
-export const readSubViews = (sessionId: string) =>
+export const tabSubViews = (sessionId: string) =>
   Effect.gen(function* () {
     const stored = yield* (yield* TabStore).subViewsOf(sessionId)
     return {

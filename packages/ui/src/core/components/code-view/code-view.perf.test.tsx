@@ -7,7 +7,7 @@ import { CodeView } from "./code-view.tsx"
 // Below 30 frames a second, scrolling visibly stutters.
 const MIN_FPS = 30
 const FRAMES = 120
-// The longest frame while the file opens and highlights; past this the window looks frozen.
+// Past this, one frame makes the window look frozen.
 const MAX_FRAME_MS = 250
 
 const line = (n: number) =>
@@ -20,7 +20,7 @@ const text = (() => {
 
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
 
-test("a TypeScript file at the size limit opens without freezing, and scrolls at the frame rate", async () => {
+const longestFrameWhile = async (run: () => Promise<unknown>) => {
   let longest = 0
   let watching = true
   let previous = performance.now()
@@ -30,15 +30,24 @@ test("a TypeScript file at the size limit opens without freezing, and scrolls at
     if (watching) requestAnimationFrame(watch)
   }
   requestAnimationFrame(watch)
+  await run()
+  watching = false
+  return longest
+}
+
+const openAndHighlight = (code: string, fileName: string, keyword: string) => async () => {
   await render(
     <div style={{ display: "flex", height: 600 }}>
-      <CodeView text={text} fileName="big.ts" />
+      <CodeView text={code} fileName={fileName} />
     </div>,
   )
-  await expect.element(page.getByText("value0", { exact: false })).toBeVisible()
-  await expect.element(page.getByText("const").first()).toHaveClass("iv-syntax-keyword")
-  watching = false
-  expect(longest).toBeLessThan(MAX_FRAME_MS)
+  await expect.element(page.getByText(keyword).first()).toHaveClass("iv-syntax-keyword")
+}
+
+test("a TypeScript file at the size limit opens without freezing, and scrolls at the frame rate", async () => {
+  expect(await longestFrameWhile(openAndHighlight(text, "big.ts", "const"))).toBeLessThan(
+    MAX_FRAME_MS,
+  )
 
   const scroller = document.querySelector<HTMLElement>(".cm-scroller")!
   const step = (scroller.scrollHeight - scroller.clientHeight) / FRAMES
@@ -52,4 +61,11 @@ test("a TypeScript file at the size limit opens without freezing, and scrolls at
   expect(scroller.scrollTop).toBeGreaterThan(100_000)
   const fps = (FRAMES * 1000) / (last - start)
   expect(fps).toBeGreaterThan(MIN_FPS)
+})
+
+test("a minified file of one line at the size limit opens without freezing", async () => {
+  const minified = "var a=1;".repeat(Math.floor((FILE_SIZE_LIMIT - 200) / 8))
+  expect(await longestFrameWhile(openAndHighlight(minified, "bundle.min.js", "var"))).toBeLessThan(
+    MAX_FRAME_MS,
+  )
 })

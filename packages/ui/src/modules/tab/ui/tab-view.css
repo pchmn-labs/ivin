@@ -20,6 +20,6 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-width: 0;
+  min-width: var(--iv-chat-min-width);
   min-height: 0;
 }

@@ -3,8 +3,6 @@ import { makeFedState } from "@ivin/state/fed-state"
 import { strongFamily } from "@ivin/state/strong-family"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 
-// Keyed by the working folder too: a session moved to another one loads again, and the server
-// has closed the sub-views of the old one.
 const family = strongFamily((key: string) => {
   const sessionId = key.slice(0, key.indexOf("\n"))
   return makeFedState({

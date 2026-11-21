@@ -1,5 +1,6 @@
 import { FILE_SIZE_LIMIT, type FileContent, type FileNotRead } from "@ivin/contracts/file"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
+import { fileName } from "./file-name.ts"
 
 export type FileReading =
   | { readonly kind: "text"; readonly text: string }
@@ -10,8 +11,6 @@ const message = (text: string, retryable = false): FileReading => ({
   text,
   retryable,
 })
-
-const fileName = (path: string) => path.slice(path.lastIndexOf("/") + 1)
 
 const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, "")} MB`
 

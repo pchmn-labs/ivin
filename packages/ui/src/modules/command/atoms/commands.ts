@@ -20,6 +20,7 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "session.archive", title: "Archive session", pluginId: null },
   { id: "session.showArchived", title: "Show archived sessions", pluginId: null },
   { id: "session.delete", title: "Delete session", pluginId: null },
+  { id: "tab.closeFile", title: "Close file", pluginId: null },
   { id: "composer.chooseModel", title: "Choose the model", pluginId: null },
   { id: "composer.chooseEffort", title: "Choose the effort", pluginId: null },
   { id: "composer.choosePermissionMode", title: "Choose the permission mode", pluginId: null },

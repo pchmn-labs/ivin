@@ -18,14 +18,26 @@ export interface CodeViewProps {
   readonly text: string
   // Picks the language, and names the view for assistive technology.
   readonly fileName: string
+  // Where the view opens scrolled to, in pixels.
+  readonly scrollTop?: number
+  readonly onScroll?: (scrollTop: number) => void
   readonly "data-testid"?: string
 }
 
-// Read only for now: the user can select, copy and move through the text, not change it.
-export function CodeView({ text, fileName, "data-testid": testId }: CodeViewProps) {
+export function CodeView({
+  text,
+  fileName,
+  scrollTop = 0,
+  onScroll,
+  "data-testid": testId,
+}: CodeViewProps) {
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   const language = useRef(new Compartment())
+  const latestOnScroll = useRef(onScroll)
+  useEffect(() => {
+    latestOnScroll.current = onScroll
+  })
 
   useEffect(() => {
     const editor = new EditorView({
@@ -46,7 +58,16 @@ export function CodeView({ text, fileName, "data-testid": testId }: CodeViewProp
       }),
     })
     view.current = editor
+    const scrolled = () => latestOnScroll.current?.(editor.scrollDOM.scrollTop)
+    editor.scrollDOM.addEventListener("scroll", scrolled, { passive: true })
+    editor.requestMeasure({
+      read: () => null,
+      write: () => {
+        editor.scrollDOM.scrollTop = scrollTop
+      },
+    })
     return () => {
+      editor.scrollDOM.removeEventListener("scroll", scrolled)
       editor.destroy()
       view.current = null
     }

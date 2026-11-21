@@ -62,7 +62,9 @@ const makeServer = () => {
 const mount = (server: FakeServer) =>
   render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
+      <div style={{ height: 800 }}>
+        <App />
+      </div>
     </RegistryProvider>,
   )
 
@@ -76,7 +78,10 @@ const fileTab = (name: string) =>
 const code = (name: string) => page.getByRole("textbox", { name })
 const sessionTab = (title: string) => page.getByTestId("tab").filter({ hasText: title })
 
-beforeEach(() => localStorage.clear())
+beforeEach(async () => {
+  localStorage.clear()
+  await page.viewport(1400, 800)
+})
 afterEach(() => localStorage.clear())
 
 test("a file opened from the tree shows beside the chat, read only, in a tab of its own", async () => {
@@ -209,4 +214,54 @@ test("a file opened with Enter in the tree keeps the focus in the tree", async (
   await userEvent.keyboard("{End}{Enter}")
   await expect.element(code("README.md")).toHaveTextContent("# Shop")
   await expect.element(page.getByRole("tree", { name: "Files" })).toHaveFocus()
+})
+
+const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
+
+test("the Close file keybinding closes the selected file", async () => {
+  await mount(makeServer())
+  await showFiles()
+  await item("README.md").click()
+  await item("logo.png").click()
+
+  await userEvent.keyboard(`{${mod}>}{Shift>}w{/Shift}{/${mod}}`)
+  await expect.element(fileTab("logo.png")).not.toBeInTheDocument()
+  await expect.element(fileTab("README.md")).toHaveAttribute("aria-selected", "true")
+})
+
+test("a close that fails keeps the file and says so, and Retry closes it", async () => {
+  const server = makeServer()
+  await mount(server)
+  await showFiles()
+  await item("README.md").click()
+  server.failNextCall("tab.closeSubView")
+
+  await page.getByRole("button", { name: "Close README.md" }).click()
+  await expect.element(card().getByText("README.md could not be closed. Retry.")).toBeVisible()
+  await expect.element(fileTab("README.md")).toBeVisible()
+  await card().getByRole("button", { name: "Retry" }).click()
+  await expect.element(card()).not.toBeInTheDocument()
+})
+
+test("a file keeps its scroll position when another file or session comes and goes", async () => {
+  const server = makeServer()
+  const long = Array.from({ length: 2000 }, (_, n) => `line ${n}`).join("\n")
+  server.files.set(`${project}/src/main.ts`, { kind: "text", text: long })
+  await mount(server)
+  await showFiles()
+  await item("README.md").click()
+  await item("src").click()
+  await item("main.ts").click()
+  await expect.element(code("main.ts").getByText("line 0", { exact: true })).toBeVisible()
+
+  const scroller = () => document.querySelector<HTMLElement>(".iv-sub-view-card .cm-scroller")!
+  scroller().scrollTop = 6000
+  scroller().dispatchEvent(new Event("scroll"))
+  await fileTab("README.md").click()
+  await expect.element(code("README.md")).toBeVisible()
+  await sessionTab("Fix the cart").getByRole("tab").click()
+  await sessionTab("Checkout flow").getByRole("tab").click()
+  await fileTab("main.ts").click()
+  await expect.element(code("main.ts")).toBeVisible()
+  await expect.poll(() => scroller().scrollTop).toBe(6000)
 })
