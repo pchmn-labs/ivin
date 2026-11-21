@@ -7,6 +7,7 @@ import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { App } from "./app.tsx"
 
+const openSessions = () => page.getByRole("tablist", { name: "Open sessions" })
 const mac = navigator.platform.includes("Mac")
 const mod = mac ? "Meta" : "Control"
 
@@ -139,16 +140,16 @@ test("back and forward walk the sessions opened in this window", async () => {
     .first()
     .click()
   await expect
-    .element(page.getByRole("tab", { name: /Second/ }))
+    .element(openSessions().getByRole("tab", { name: /Second/ }))
     .toHaveAttribute("aria-selected", "true")
   await back.click()
   await expect
-    .element(page.getByRole("tab", { name: /First/ }))
+    .element(openSessions().getByRole("tab", { name: /First/ }))
     .toHaveAttribute("aria-selected", "true")
   await expect.element(forward).toBeEnabled()
   await forward.click()
   await expect
-    .element(page.getByRole("tab", { name: /Second/ }))
+    .element(openSessions().getByRole("tab", { name: /Second/ }))
     .toHaveAttribute("aria-selected", "true")
 })
 
@@ -162,10 +163,10 @@ test("the project button badge counts the sessions waiting on the user", async (
 
 test("each tab shows its session, closes on its button, and the bar reorders by drag", async () => {
   const server = await mountApp()
-  const tabs = page.getByRole("tab")
+  const tabs = openSessions().getByRole("tab")
   await expect.element(tabs).toHaveLength(2)
   await expect
-    .element(page.getByRole("tab", { name: /Second/ }))
+    .element(openSessions().getByRole("tab", { name: /Second/ }))
     .toHaveAttribute("aria-selected", "true")
 
   const items = document.querySelectorAll<HTMLElement>('[data-testid="tab"]')
@@ -182,10 +183,12 @@ test("each tab shows its session, closes on its button, and the bar reorders by 
   fire(items[0]!, "drop")
   await vi.waitFor(() => expect(server.tabOrder("/dev/ivin")).toEqual(["s2", "s1"]))
 
-  await page.getByRole("tab", { name: /Second/ }).hover()
+  await openSessions()
+    .getByRole("tab", { name: /Second/ })
+    .hover()
   await page.getByRole("button", { name: "Close Second" }).click()
   await expect.element(tabs).toHaveLength(1)
-  await page.getByRole("tab", { name: /First/ }).hover()
+  await openSessions().getByRole("tab", { name: /First/ }).hover()
   await page.getByRole("button", { name: "Close First" }).click()
   await expect.element(page.getByRole("main").getByText(/No session open/)).toBeVisible()
 })
@@ -197,7 +200,7 @@ test("picking another project shows its own tabs, and closing a project drops it
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
   await expect.element(page.getByRole("main").getByText(/No session open/)).toBeVisible()
   await page.getByRole("button", { name: "ivin" }).click()
-  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 
   await expect
     .element(page.getByRole("button", { name: "ivin" }))
@@ -213,21 +216,25 @@ test("the plus after the tabs starts a session, and arrow keys walk the tabs", a
   await page.getByRole("button", { name: "New session" }).first().click()
   await vi.waitFor(() => expect(server.sessions.size).toBe(3))
 
-  await page.getByRole("tablist").getByRole("tab").first().click()
+  await openSessions().getByRole("tab").first().click()
   await userEvent.keyboard("{ArrowRight}")
-  await expect.element(page.getByRole("tab").nth(1)).toHaveAttribute("aria-selected", "true")
+  await expect
+    .element(openSessions().getByRole("tab").nth(1))
+    .toHaveAttribute("aria-selected", "true")
   await userEvent.keyboard("{ArrowLeft}")
-  await expect.element(page.getByRole("tab").first()).toHaveAttribute("aria-selected", "true")
+  await expect
+    .element(openSessions().getByRole("tab").first())
+    .toHaveAttribute("aria-selected", "true")
 
   await page.getByRole("main").getByRole("button", { name: "New session" }).click()
   await vi.waitFor(() => expect(server.sessions.size).toBe(4))
-  await expect.element(page.getByRole("tab")).toHaveLength(4)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(4)
 })
 
 test("every tab has the same width, which hovering a tab does not change", async () => {
   await page.viewport(1400, 800)
   await mountApp(["Crée un fichier", "Lance la commande echo bonjour avec Bash"])
-  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
   const widths = () =>
     [...document.querySelectorAll<HTMLElement>('[data-testid="tab"]')].map(
       (tab) => tab.getBoundingClientRect().width,
@@ -235,7 +242,7 @@ test("every tab has the same width, which hovering a tab does not change", async
   const before = widths()
   expect(before[0]).toBe(before[1])
 
-  await page.getByRole("tab", { name: /Crée/ }).hover()
+  await openSessions().getByRole("tab", { name: /Crée/ }).hover()
   await expect.element(page.getByRole("button", { name: "Close Crée un fichier" })).toBeVisible()
 
   expect(widths()).toEqual(before)
@@ -244,7 +251,7 @@ test("every tab has the same width, which hovering a tab does not change", async
 test("tabs shrink together when the bar runs out of room, down to a minimum", async () => {
   await page.viewport(1400, 800)
   await mountApp(["Crée un fichier", "Lance la commande echo bonjour avec Bash"])
-  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
   const width = () =>
     document.querySelector<HTMLElement>('[data-testid="tab"]')!.getBoundingClientRect().width
   const roomy = width()
@@ -261,14 +268,14 @@ test("tabs shrink together when the bar runs out of room, down to a minimum", as
 test("a middle click on a tab closes it without selecting it", async () => {
   await page.viewport(1400, 800)
   const server = await mountApp()
-  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 
-  await page.getByRole("tab", { name: /First/ }).click({ button: "middle" })
+  await openSessions().getByRole("tab", { name: /First/ }).click({ button: "middle" })
 
-  await expect.element(page.getByRole("tab")).toHaveLength(1)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(1)
   await vi.waitFor(() => expect(server.tabOrder("/dev/ivin")).toEqual(["s2"]))
   await expect
-    .element(page.getByRole("tab", { name: /Second/ }))
+    .element(openSessions().getByRole("tab", { name: /Second/ }))
     .toHaveAttribute("aria-selected", "true")
 })
 
@@ -296,7 +303,7 @@ test("a session that was not created shows why, and Retry creates it", async () 
   await alert.getByRole("button", { name: "Retry" }).click()
   await vi.waitFor(() => expect(server.sessions.size).toBe(3))
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
-  await expect.element(page.getByRole("tab")).toHaveLength(3)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(3)
 })
 
 test("a folder that was not opened shows why, and Retry opens the same folder", async () => {
@@ -334,13 +341,13 @@ test("a server that does not answer is reported in the window, without a raw err
 
 test("the keyboard alone archives the session on screen, opens the archived list and restores it", async () => {
   const server = await mountApp()
-  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
   await expect
-    .element(page.getByRole("tab", { name: /Second/ }))
+    .element(openSessions().getByRole("tab", { name: /Second/ }))
     .toHaveAttribute("aria-selected", "true")
 
   await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
-  await expect.element(page.getByRole("tab")).toHaveLength(1)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(1)
   await vi.waitFor(() => expect(server.sessions.get("s2")?.archivedAt).not.toBeNull())
 
   await userEvent.keyboard(`{Shift>}{${mod}>}a{/${mod}}{/Shift}`)
@@ -358,23 +365,23 @@ test("the keyboard alone archives the session on screen, opens the archived list
 test("archiving a working session from its tab asks first, then stops it and closes the tab", async () => {
   const server = await mountApp()
   server.setStatus("s1", "working")
-  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 
-  await page.getByRole("tab", { name: /First/ }).click({ button: "right" })
+  await openSessions().getByRole("tab", { name: /First/ }).click({ button: "right" })
   await page.getByRole("menuitem", { name: "Archive" }).click()
   const dialog = page.getByRole("dialog")
   await expect.element(dialog.getByText("Archive the session and stop its agent?")).toBeVisible()
   expect(server.sessions.get("s1")?.archivedAt).toBeNull()
 
   await dialog.getByRole("button", { name: "Stop and archive" }).click()
-  await expect.element(page.getByRole("tab")).toHaveLength(1)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(1)
   expect(server.sessions.get("s1")?.archivedAt).not.toBeNull()
 })
 
 test("a failed archive from a session's menu says so under its row and keeps its tab", async () => {
   const server = await mountApp()
   server.failNextCall("session.archive")
-  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 
   const row = page.getByTestId("session-item").filter({ hasText: "First" })
   await row.hover()
@@ -382,7 +389,7 @@ test("a failed archive from a session's menu says so under its row and keeps its
   await page.getByRole("menuitem", { name: "Archive" }).click()
 
   await expect.element(row.getByRole("alert")).toHaveTextContent("The session was not archived.")
-  await expect.element(page.getByRole("tab")).toHaveLength(2)
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 })
 
 test("mod+shift+m in the composer opens the run options menu", async () => {

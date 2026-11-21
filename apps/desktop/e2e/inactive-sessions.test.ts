@@ -13,13 +13,17 @@ test("a session whose tab is closed is listed under Inactive sessions, and click
 
     await tab.hover()
     await window.getByRole("button", { name: "Close Fix the login" }).click()
-    await expect(window.getByRole("tab")).toHaveCount(0)
+    await expect(
+      window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
+    ).toHaveCount(0)
 
     const sidebar = window.getByRole("complementary")
     await sidebar.getByText(/^Inactive sessions/).click()
     await sidebar.getByTestId("inactive-session").getByText("Fix the login").click()
 
-    await expect(window.getByRole("tab")).toHaveCount(1)
+    await expect(
+      window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
+    ).toHaveCount(1)
     await expect(sidebar.getByText(/^Inactive sessions/)).toHaveCount(0)
   } finally {
     await app.close()

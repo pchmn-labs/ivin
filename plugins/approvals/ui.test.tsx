@@ -30,6 +30,7 @@ const mount = async (
     slots: { add: (slot, component) => void (slots[slot] = component as ComponentType<never>) },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    sidebar: { showPanel: () => undefined },
   }
   activate(ctx)
   const Record = slots["transcript.approval"] as ComponentType<SlotProps["transcript.approval"]>
@@ -44,6 +45,7 @@ const mount = async (
     useTranscript: () => items,
     useAnnotations: () => [],
     useAnswerApproval: () => answer,
+    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }

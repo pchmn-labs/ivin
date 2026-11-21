@@ -1,0 +1,71 @@
+.iv-tree {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  outline: none;
+}
+
+.iv-tree__list {
+  flex: 1;
+  min-height: 0;
+}
+
+.iv-tree__row {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  height: var(--iv-tree-row-height);
+  padding: 0 var(--iv-space-2) 0 var(--iv-space-1);
+  border-radius: var(--iv-radius-sm);
+  color: var(--iv-text);
+  font-size: var(--iv-text-md);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.iv-tree__row:hover {
+  background: var(--iv-bg-hover);
+}
+
+.iv-tree__row[data-active] {
+  background: var(--iv-bg-active);
+}
+
+.iv-tree:focus-visible .iv-tree__row[data-active] {
+  outline: 2px solid var(--iv-focus-ring);
+  outline-offset: -2px;
+}
+
+.iv-tree__indent {
+  flex: none;
+  width: var(--iv-tree-indent);
+}
+
+.iv-tree__chevron {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--iv-tree-indent);
+  color: var(--iv-text-faint);
+  transition: transform var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-tree__row[aria-expanded="true"] .iv-tree__chevron {
+  transform: rotate(90deg);
+}
+
+.iv-tree__icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  color: var(--iv-text-faint);
+}
+
+.iv-tree__name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

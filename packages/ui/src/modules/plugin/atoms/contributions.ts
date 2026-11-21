@@ -9,6 +9,7 @@ export interface Contribution {
   readonly order: number
   readonly replaces: string | undefined
   readonly tool: string | undefined
+  readonly title: string | undefined
 }
 
 export const contributionsAtom = Atom.make<ReadonlyArray<Contribution>>([]).pipe(Atom.keepAlive)

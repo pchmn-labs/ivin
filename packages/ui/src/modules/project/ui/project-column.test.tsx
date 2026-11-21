@@ -12,7 +12,7 @@ const setup = async () => {
   const server = makeFakeServer({ project })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <ProjectColumn project={project} />
+      <ProjectColumn project={project}>{null}</ProjectColumn>
     </RegistryProvider>,
   )
   return server

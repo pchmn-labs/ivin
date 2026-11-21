@@ -1,6 +1,6 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
-import { useCallback, useState } from "react"
+import { useCallback, useContext } from "react"
 import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
@@ -17,6 +17,8 @@ import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
 import { MainTopBar } from "./main-top-bar.tsx"
 import { ShellControls } from "./shell-controls.tsx"
+import { SidebarTabs } from "./sidebar-tabs.tsx"
+import { SESSIONS_TAB, showSidebarTab, sidebarOpenAtom } from "./sidebar.ts"
 import { Slot } from "./slot-renderer.tsx"
 import { ResizeHandle } from "../core/components/resize-handle/resize-handle.tsx"
 import { getVersionAtom } from "../modules/server/atoms/get-version.ts"
@@ -32,10 +34,11 @@ const BOTTOM_MAX_SHARE = 0.7
 export function App() {
   const result = useAtomValue(getVersionAtom)
   const current = useAtomValue(selectedProjectAtom)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom)
+  const registry = useContext(RegistryContext)
   const projectPath = current?.path ?? null
 
-  const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [])
+  const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [setSidebarOpen])
   useRecordSessionVisits()
   useReportUncaughtErrors()
   useCommandHandler("sidebar.toggle", toggleSidebar, projectPath !== null)
@@ -46,6 +49,11 @@ export function App() {
       setSidebarOpen(true)
       setArchivedOpen(true)
     },
+    projectPath !== null,
+  )
+  useCommandHandler(
+    "sidebar.showSessions",
+    () => showSidebarTab(registry, SESSIONS_TAB, { focus: true }),
     projectPath !== null,
   )
 
@@ -97,7 +105,9 @@ export function App() {
               </div>
               <div className="iv-app__card-body">
                 <ProjectRail>{version}</ProjectRail>
-                <ProjectColumn project={current} />
+                <ProjectColumn project={current}>
+                  <SidebarTabs project={current} />
+                </ProjectColumn>
               </div>
               <div className="iv-app__bottom">
                 <ResizeHandle

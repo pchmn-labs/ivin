@@ -1,7 +1,7 @@
 import { useAtomValue } from "@effect/atom-react"
 import { Component, type ComponentType, type ReactNode } from "react"
 import type { SlotName, SlotProps } from "@ivin/plugin-api/ui"
-import { contributionsAtom } from "../modules/plugin/atoms/contributions.ts"
+import { contributionsAtom, type Contribution } from "../modules/plugin/atoms/contributions.ts"
 import { visibleContributions } from "../modules/plugin/rules/visible-contributions.ts"
 
 class ContributionBoundary extends Component<
@@ -29,6 +29,21 @@ class ContributionBoundary extends Component<
   }
 }
 
+export function SlotContribution<S extends SlotName>({
+  contribution,
+  props,
+}: {
+  contribution: Contribution
+  props: SlotProps[S]
+}) {
+  const Component = contribution.component as ComponentType<SlotProps[S]>
+  return (
+    <ContributionBoundary pluginId={contribution.pluginId}>
+      <Component {...props} />
+    </ContributionBoundary>
+  )
+}
+
 export function Slot<S extends SlotName>({
   slot,
   props,
@@ -39,12 +54,7 @@ export function Slot<S extends SlotName>({
   tool?: string
 }) {
   const contributions = useAtomValue(contributionsAtom)
-  return visibleContributions(contributions, slot, tool).map((c) => {
-    const Contribution = c.component as ComponentType<SlotProps[S]>
-    return (
-      <ContributionBoundary key={c.id} pluginId={c.pluginId}>
-        <Contribution {...props} />
-      </ContributionBoundary>
-    )
-  })
+  return visibleContributions(contributions, slot, tool).map((c) => (
+    <SlotContribution key={c.id} contribution={c} props={props} />
+  ))
 }

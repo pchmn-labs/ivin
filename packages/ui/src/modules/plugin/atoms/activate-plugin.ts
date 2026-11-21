@@ -13,6 +13,7 @@ export interface UiPluginEntry {
 export const activatePlugin = (
   registry: AtomRegistry.AtomRegistry,
   { manifest, activate }: UiPluginEntry,
+  showSidebarPanel: (contributionId: string) => void,
 ): (() => void) => {
   const pluginId = manifest.id
   const removeFrom = <T extends { readonly pluginId: string | null }>(
@@ -46,6 +47,7 @@ export const activatePlugin = (
             order: options?.order ?? 0,
             replaces: options?.replaces,
             tool: options?.tool,
+            title: options?.title,
           },
         ])
       },
@@ -64,6 +66,9 @@ export const activatePlugin = (
           ...registry.get(defaultKeybindingsAtom),
           { key, command, when: when ?? null, pluginId },
         ]),
+    },
+    sidebar: {
+      showPanel: (name = "sidebar.panel") => showSidebarPanel(`${pluginId}/${name}`),
     },
   }
 

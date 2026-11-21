@@ -46,6 +46,7 @@ const mountPanel = async (
     },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    sidebar: { showPanel: () => undefined },
   }
   activate(ctx)
   const Panel = added.find((a) => a.slot === "sidebar.bottom")!.component as ComponentType<
@@ -66,6 +67,7 @@ const mountPanel = async (
       answers.push({ sessionId, ...answer })
       return answerFails ? { text: "The session has stopped.", retryable: true } : undefined
     },
+    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }

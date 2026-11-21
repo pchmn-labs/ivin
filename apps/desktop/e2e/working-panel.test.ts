@@ -38,7 +38,9 @@ test("a session waiting for an approval in another project shows in the Working 
     await row.getByRole("button", { name: /^Waiting for you Run the tests/ }).click()
 
     await expect(window.getByTestId("project-name")).toHaveText("shop")
-    await expect(window.getByRole("tab", { selected: true })).toContainText("Run the tests")
+    await expect(
+      window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab", { selected: true }),
+    ).toContainText("Run the tests")
     await expect(panel).toHaveCount(0)
     await expect(window.getByRole("radio", { name: "Allow" })).toBeFocused()
     await window.keyboard.press("Enter")

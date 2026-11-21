@@ -55,6 +55,8 @@
   --iv-control-sm: 24px;
   --iv-control-md: 28px;
   --iv-row-height: 30px;
+  --iv-tree-row-height: 24px;
+  --iv-tree-indent: 12px;
   --iv-tab-height: 30px;
   --iv-tab-width: 240px;
   --iv-tab-min-width: 180px;

@@ -14,6 +14,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     slots: { add: (_slot, component) => void (Message = component as typeof Message) },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    sidebar: { showPanel: () => undefined },
   }
   activate(ctx)
   const host = {
@@ -26,6 +27,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     useTranscript: () => [],
     useAnnotations: () => [],
     useAnswerApproval: () => async () => undefined,
+    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }
