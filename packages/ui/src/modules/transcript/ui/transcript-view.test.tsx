@@ -8,6 +8,7 @@ import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { PAGE_SIZE } from "../atoms/get-items.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
 const message = (position: number): TranscriptItem => ({
@@ -210,16 +211,18 @@ const thinking = (position: number): TranscriptItem => ({
   text: "thinking",
 })
 
-// 180 items in one turn, its steps folded: fewer rows than fill the view, more items than 3 pages.
+// Its steps fold into fewer rows than fill the view.
 const longTurn = (): TranscriptItem[] => [
   userMessage(0),
-  ...Array.from({ length: 180 }, (_, i) =>
-    [message, thinking, toolCall, toolCall, toolCall][i % 5]!(i + 1),
+  message(1),
+  userMessage(2),
+  ...Array.from({ length: 3 * PAGE_SIZE + 30 }, (_, i) =>
+    [message, thinking, toolCall, toolCall, toolCall][i % 5]!(i + 3),
   ),
 ]
 
 test.each([true, false])(
-  "scrolling up a turn of several pages reaches its message (live: %s)",
+  "scrolling up a turn of several pages reaches its message and the turn before (live: %s)",
   async (live) => {
     const server = makeFakeServer()
     server.seedItems("s1", longTurn())
@@ -237,6 +240,7 @@ test.each([true, false])(
 
     await vi.waitFor(() => {
       scroller().scrollTop = 0
+      expect(page.getByText("question 2", { exact: true }).query()).not.toBeNull()
       expect(page.getByText("question 0", { exact: true }).query()).not.toBeNull()
     })
   },

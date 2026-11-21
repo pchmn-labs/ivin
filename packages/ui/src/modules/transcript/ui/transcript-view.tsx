@@ -1,10 +1,11 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useEffect, useMemo, useRef } from "react"
+import { useMemo } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
 import { Text } from "../../../core/components/text/text.tsx"
 import type { TranscriptRow as RowData } from "../rules/turns.ts"
+import { useLoadBefore } from "../hooks/use-load-before.ts"
 import { useSentMessageScroll } from "../hooks/use-sent-message-scroll.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
 import { TurnWork } from "./turn-work.tsx"
@@ -25,14 +26,12 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
   const { root, scrollerRef, followOutput, fitRoom } = useSentMessageScroll({ loaded, rows })
   const firstIndex = FIRST_ITEM_INDEX - prepended
-  const loadingBefore = useRef(false)
-  const shownFrom = useRef<number | null>(null)
-  // A page that only lengthens the first row keeps it in view, and startReached fires once per first row.
-  useEffect(() => {
-    if (!loadingBefore.current) return
-    if (hasBefore && shownFrom.current === firstIndex) loadItemsBefore(sessionId)
-    else loadingBefore.current = false
-  }, [rows, hasBefore, firstIndex, sessionId, loadItemsBefore])
+  const { rangeChanged, startReached } = useLoadBefore({
+    rows,
+    firstIndex,
+    hasBefore,
+    load: () => loadItemsBefore(sessionId),
+  })
 
   if (!loaded) return <TranscriptEmpty>Loading the transcript…</TranscriptEmpty>
   if (shown.length === 0) return <TranscriptEmpty>No messages yet</TranscriptEmpty>
@@ -51,14 +50,8 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
         followOutput={followOutput}
         totalListHeightChanged={fitRoom}
         components={{ Footer: TranscriptFooter }}
-        rangeChanged={(range) => {
-          shownFrom.current = range.startIndex
-        }}
-        startReached={() => {
-          if (!hasBefore) return
-          loadingBefore.current = true
-          loadItemsBefore(sessionId)
-        }}
+        rangeChanged={rangeChanged}
+        startReached={startReached}
         itemContent={(_, row) => (
           <RowContent sessionId={sessionId} row={row} live={row.id === liveId} />
         )}
