@@ -387,7 +387,7 @@ Plugins declare no dependency on each other: that would bring load order, cascad
 
 Writes go through a temp file and a rename, so the app never reads a half-written file. An invalid file keeps the last valid version and reports the parse error (`ivin doctor`).
 
-The server reads `settings.json` and streams it (`setting.watch`). Its settings so far, both on by default:
+The server reads `settings.json` and streams it (`setting.watch`). `setting.get` reads a setting at a dotted path, and `setting.set` checks the path and the value's type against the `Settings` schema, then edits that one value in place (through `jsonc-parser`), keeping the file's comments and layout; it refuses a file it cannot parse rather than rewrite it. Its settings so far, both on by default:
 
 ```jsonc
 {
@@ -419,6 +419,8 @@ Shipped so far:
 - `ivin doctor`, one line per check (the app's version, the socket, `settings.json`, `keybindings.json`, the program the harness runs, found on the server's `PATH`), exit 1 when one fails.
 - `ivin session annotate --kind <kind> --data <json> [--ns <ns>] [--session <id>]`: `ns` defaults to `cli`, the session to `$IVIN_SESSION_ID`; with neither, or with invalid JSON or data that does not fit a defined kind, it exits 2. `--json` prints the stored annotation.
 - `ivin link <url> --as <relation> [--session <id>]`: writes a `pr` or an `issue` annotation in the `cli` namespace, with the same session default; the URL decides which. It must be a GitHub pull request or issue (`…/<owner>/<repo>/pull/<n>`, `…/issues/<n>`) or a GitLab merge request or issue (`…/<group>/<project>/-/merge_requests/<n>`, `…/-/issues/<n>`) on any host; what follows the number is dropped and the path lowercased, so `…/pull/1/files` links the same pull request as `…/pull/1`. Another URL, or a relation the kind does not take, exits 2.
+- `ivin settings get [path]`: the settings in use, one `path = value` line each, or the value at a dotted path; `--json` prints `{ path, value }`.
+- `ivin settings set <path> <value>`: the value is read as JSON, else as a string. An unknown path (it lists the known ones), a value of the wrong type, or a `settings.json` that does not parse exits 1 and leaves the file as it is. A missing file is created holding only that value.
 
 - **Running it.** `apps/cli` is bundled by tsdown into one file, shipped as `Resources/cli/ivin.js`. At each launch main writes `<userData>/bin/ivin`, a shell script that runs that file with the app's own Electron as Node (`ELECTRON_RUN_AS_NODE=1`), so `ivin` needs no Node and follows the app when it moves.
 - **Every command** takes `--help` and `--json` (stdout gets `{ "ok": …, … }`, or `{ "ok": false, "error": { "reason", "message" } }`), and exits 0 (ok), 1 (failed), 2 (invalid usage) or 3 (ivin is not running). It reaches `$IVIN_SOCKET`, else `~/.ivin/run/ivin.sock`. The CLI writes its own messages; the raw error stays in the server's log ([ADR-0004](adr/0004-the-ui-writes-error-messages-and-the-server-logs-raw-errors.md)).

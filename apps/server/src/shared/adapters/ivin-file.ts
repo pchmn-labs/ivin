@@ -1,15 +1,29 @@
 import { Effect, Queue, Stream } from "effect"
 import { watch } from "node:fs"
-import { mkdir, readFile } from "node:fs/promises"
-import { join } from "node:path"
+import { randomUUID } from "node:crypto"
+import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import { dirname, join } from "node:path"
 
-const readText = (path: string) =>
+export const readText = (path: string) =>
   Effect.tryPromise(() =>
     readFile(path, "utf8").catch((error: NodeJS.ErrnoException) => {
       if (error.code === "ENOENT") return null
       throw error
     }),
   )
+
+// Through a temp file and a rename, so a watcher never reads a half-written file.
+export const writeText = (path: string, text: string) =>
+  Effect.tryPromise(async () => {
+    const temp = `${path}.${randomUUID()}.tmp`
+    try {
+      await mkdir(dirname(path), { recursive: true })
+      await writeFile(temp, text)
+      await rename(temp, path)
+    } finally {
+      await rm(temp, { force: true })
+    }
+  })
 
 // The text of `~/.ivin/<fileName>` when watched, then after each change; null while it does not exist.
 export const watchIvinFile = (ivinHome: string, fileName: string): Stream.Stream<string | null> =>
