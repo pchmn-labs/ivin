@@ -16,6 +16,7 @@ import { folderKey, listFolderOf } from "../modules/file/atoms/list-folder.ts"
 import { folderListingFailure } from "../modules/file/rules/folder-listing.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
 import { hostComponents } from "./host-components.ts"
+import { showSidebarTab } from "./sidebar.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
 import { useKeyboardHandler } from "../modules/keybinding/hooks/use-keyboard-handler.ts"
 
@@ -76,7 +77,9 @@ export function PluginsProvider({
   // Children wait for activation so a virtual list never measures rows that have no contributions yet.
   const [active, setActive] = useState(false)
   useEffect(() => {
-    const deactivations = plugins.map((plugin) => activatePlugin(registry, plugin))
+    const deactivations = plugins.map((plugin) =>
+      activatePlugin(registry, plugin, (tab) => showSidebarTab(registry, tab, { focus: true })),
+    )
     setActive(true)
     return () => {
       deactivations.forEach((deactivate) => deactivate())

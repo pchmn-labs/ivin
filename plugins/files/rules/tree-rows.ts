@@ -2,7 +2,6 @@ import type { FolderEntry, TreeRow } from "@ivin/plugin-api/ui"
 
 const childPath = (folder: string, name: string) => (folder === "" ? name : `${folder}/${name}`)
 
-// The rows of the tree, from the listed folders: an open folder shows its children once listed.
 export const treeRows = (
   listed: ReadonlyMap<string, ReadonlyArray<FolderEntry>>,
   open: ReadonlySet<string>,

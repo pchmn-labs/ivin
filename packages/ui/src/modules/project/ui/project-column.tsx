@@ -11,7 +11,6 @@ import { closeProjectAtom } from "../atoms/close-project.ts"
 import { ProjectCreature } from "./project-creature.tsx"
 import "./project-column.css"
 
-// `children` fills the column under its head.
 export function ProjectColumn({ project, children }: { project: Project; children: ReactNode }) {
   const closeProject = useAtomSet(closeProjectAtom)
   const [archivedOpen, setArchivedOpen] = useAtom(archivedViewOpenAtom)

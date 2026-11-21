@@ -276,7 +276,6 @@ export interface TreeRow {
   readonly depth: number
   // Null for a row that holds nothing, such as a file.
   readonly expanded: boolean | null
-  readonly icon?: IconName
 }
 
 // A virtualised tree, driven by the arrow keys; it shows the rows given, so opening a row is the

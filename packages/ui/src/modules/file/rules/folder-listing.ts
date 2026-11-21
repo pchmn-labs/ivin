@@ -7,7 +7,6 @@ const failed = (text: string, retryable: boolean): FolderListing => ({
   failure: { text, retryable },
 })
 
-// `path` is relative to the working folder, "" for the working folder itself.
 export const folderListingFailure = (error: unknown, path: string): FolderListing => {
   const folder = path === "" ? "The working folder" : `The folder ${path}`
   switch (errorTag(error)) {

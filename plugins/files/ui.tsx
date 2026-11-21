@@ -21,11 +21,15 @@ type FolderState = { readonly kind: "loading" } | FolderListing
 
 interface FolderTree {
   readonly open: ReadonlySet<string>
-  // By path relative to the working folder, "" for the working folder itself.
   readonly folders: ReadonlyMap<string, FolderState>
 }
 
 const NOTHING_OPEN: FolderTree = { open: new Set(), folders: new Map() }
+
+// A session moved to another working folder starts a new tree.
+const treeKey = (session: Session) => `${session.id}\n${session.workingFolder}`
+
+const FOLDER_DELETED = "This session's working folder was deleted, so it has no files to show."
 
 function Message({ children }: { children: string }) {
   return (
@@ -43,7 +47,7 @@ function FolderTreeView({
   remembered: Map<string, FolderTree>
 }) {
   const listFolder = useListFolder()
-  const key = `${session.id}\n${session.workingFolder}`
+  const key = treeKey(session)
   const [tree, setTree] = useState(() => remembered.get(key) ?? NOTHING_OPEN)
   useEffect(() => {
     remembered.set(key, tree)
@@ -77,7 +81,7 @@ function FolderTreeView({
 
   const root = tree.folders.get("")
   if (root?.kind === "deleted") {
-    return <Message>This session's working folder was deleted, so it has no files to show.</Message>
+    return <Message>{FOLDER_DELETED}</Message>
   }
   if (root?.kind === "failed") {
     return (
@@ -126,13 +130,9 @@ function FilesPanel({ remembered }: { remembered: Map<string, FolderTree> }) {
         </Text>
       </Stack>
       {session.workingFolderDeleted ? (
-        <Message>This session's working folder was deleted, so it has no files to show.</Message>
+        <Message>{FOLDER_DELETED}</Message>
       ) : (
-        <FolderTreeView
-          key={`${session.id}\n${session.workingFolder}`}
-          session={session}
-          remembered={remembered}
-        />
+        <FolderTreeView key={treeKey(session)} session={session} remembered={remembered} />
       )}
     </Stack>
   )

@@ -21,8 +21,9 @@ export function Tree({ label, rows, onToggle, "data-testid": testId }: TreeProps
   const domId = useId()
   const list = useRef<VirtuosoHandle>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
+  // -1 until the tree takes the focus or a row is clicked; a row that disappears hands over to the first.
   const found = rows.findIndex((row) => row.id === activeId)
-  const activeIndex = found === -1 ? 0 : found
+  const activeIndex = activeId === null ? -1 : Math.max(found, 0)
   const active = rows[activeIndex]
   const rowDomId = (index: number) => `${domId}-${index}`
 
@@ -34,7 +35,11 @@ export function Tree({ label, rows, onToggle, "data-testid": testId }: TreeProps
   }
 
   const onKeyDown = (event: KeyboardEvent) => {
-    if (active === undefined) return
+    if (active === undefined) {
+      // The focus came before the rows did.
+      if (rows[0] !== undefined) setActiveId(rows[0].id)
+      return
+    }
     const keys: Record<string, () => void> = {
       ArrowDown: () => moveTo(activeIndex + 1),
       ArrowUp: () => moveTo(activeIndex - 1),
@@ -66,6 +71,7 @@ export function Tree({ label, rows, onToggle, "data-testid": testId }: TreeProps
       tabIndex={0}
       {...(active !== undefined && { "aria-activedescendant": rowDomId(activeIndex) })}
       onKeyDown={onKeyDown}
+      onFocus={() => activeId === null && rows[0] !== undefined && setActiveId(rows[0].id)}
       data-testid={testId}
     >
       <Virtuoso
@@ -94,7 +100,7 @@ export function Tree({ label, rows, onToggle, "data-testid": testId }: TreeProps
               {row.expanded === null ? null : <Icon name="chevron-right" size={12} />}
             </span>
             <span className="iv-tree__icon" aria-hidden>
-              <Icon name={row.icon ?? (row.expanded === null ? "file" : "folder")} size={14} />
+              <Icon name={row.expanded === null ? "file" : "folder"} size={14} />
             </span>
             <span className="iv-tree__name">{row.name}</span>
           </div>

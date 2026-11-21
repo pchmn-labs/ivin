@@ -14,8 +14,8 @@ const plugin = (id: string): UiPluginEntry => ({
 
 test("deactivating a plugin removes only its own contributions", () => {
   const registry = AtomRegistry.make()
-  const deactivateA = activatePlugin(registry, plugin("a"))
-  activatePlugin(registry, plugin("b"))
+  const deactivateA = activatePlugin(registry, plugin("a"), () => undefined)
+  activatePlugin(registry, plugin("b"), () => undefined)
   expect(registry.get(contributionsAtom).map((c) => c.id)).toEqual([
     "a/composer.status",
     "b/composer.status",
@@ -28,13 +28,20 @@ test("deactivating a plugin removes only its own contributions", () => {
 test("a plugin's commands and default keybindings run while it is active, and leave with it", () => {
   const registry = AtomRegistry.make()
   const ran: Array<string> = []
-  const deactivate = activatePlugin(registry, {
-    manifest: { id: "prs" },
-    activate: defineUi((ctx) => {
-      ctx.commands.register("prs.refresh", { title: "Refresh PRs", run: () => ran.push("refresh") })
-      ctx.keybindings.add({ key: "mod+r", command: "prs.refresh", when: "sessionList" })
-    }),
-  })
+  const deactivate = activatePlugin(
+    registry,
+    {
+      manifest: { id: "prs" },
+      activate: defineUi((ctx) => {
+        ctx.commands.register("prs.refresh", {
+          title: "Refresh PRs",
+          run: () => ran.push("refresh"),
+        })
+        ctx.keybindings.add({ key: "mod+r", command: "prs.refresh", when: "sessionList" })
+      }),
+    },
+    () => undefined,
+  )
 
   expect(registry.get(commandsAtom).find((c) => c.id === "prs.refresh")?.title).toBe("Refresh PRs")
   expect(registry.get(defaultKeybindingsAtom)).toContainEqual({

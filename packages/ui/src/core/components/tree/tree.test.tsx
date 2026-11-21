@@ -123,3 +123,11 @@ test("only the rows in view are in the page", async () => {
   await expect.element(item("file-0.ts")).toBeVisible()
   expect(names().length).toBeLessThan(100)
 })
+
+test("no row looks active until the tree takes the focus or a row is clicked", async () => {
+  await render(<Harness />)
+  await expect.element(item("src")).toBeVisible()
+  expect(document.querySelector("[data-active]")).toBeNull()
+  await userEvent.tab()
+  await expect.element(item("src")).toHaveAttribute("data-active")
+})
