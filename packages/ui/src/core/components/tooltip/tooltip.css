@@ -36,3 +36,14 @@
   line-height: var(--iv-text-xs-lh);
   font-weight: var(--iv-weight-medium);
 }
+
+.iv-tooltip__content {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+
+.iv-tooltip[data-mono] .iv-tooltip__content {
+  -webkit-line-clamp: 6;
+}
