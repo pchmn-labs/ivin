@@ -45,6 +45,7 @@ import {
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
 import {
+  noSubViews,
   withFullWidth,
   withSessionTabSelected,
   withSubViewClosed,
@@ -197,13 +198,7 @@ export const makeFakeServer = (
   let holdRead: Promise<void> | null = null
   const subViews = new Map<string, TabSubViews>()
   const subViewsOf = (sessionId: string): TabSubViews =>
-    subViews.get(sessionId) ?? {
-      sessionId,
-      subViews: [],
-      selected: null,
-      fullWidth: false,
-      sessionTabSelected: false,
-    }
+    subViews.get(sessionId) ?? noSubViews(sessionId)
   const withSession = <A>(sessionId: string, run: () => A) =>
     Effect.suspend(() =>
       sessions.has(sessionId)

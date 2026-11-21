@@ -66,7 +66,7 @@ export function SubViewCard({
   const [failure, setFailure] = useState<Failure | null>(null)
   const card = useRef<HTMLElement>(null)
   const fullWidthHint = useKeyHint("Full width", "tab.toggleFullWidth")
-  const besideHint = useKeyHint("Beside the chat", "tab.toggleFullWidth")
+  const besideHint = useKeyHint("Beside chat", "tab.toggleFullWidth")
 
   const closeFile = async (subView: SubView) => {
     const hadFocus = card.current?.contains(document.activeElement) ?? false
@@ -102,15 +102,15 @@ export function SubViewCard({
     else if (next !== null) open({ sessionId, workingFolder, subView: next })
   }
 
-  const shown = selected !== null
+  const hasFiles = selected !== null
   useCommandHandler(
     "tab.closeFile",
     () => selected && void closeFile(selected),
-    shown && !onSession,
+    hasFiles && !onSession,
   )
-  useCommandHandler("tab.toggleFullWidth", () => void switchMode(!fullWidth), shown)
-  useCommandHandler("tab.nextCardTab", () => selectAdjacent(1), shown)
-  useCommandHandler("tab.previousCardTab", () => selectAdjacent(-1), shown)
+  useCommandHandler("tab.toggleFullWidth", () => void switchMode(!fullWidth), hasFiles)
+  useCommandHandler("tab.nextCardTab", () => selectAdjacent(1), hasFiles)
+  useCommandHandler("tab.previousCardTab", () => selectAdjacent(-1), hasFiles)
 
   if (selected === null) return null
 

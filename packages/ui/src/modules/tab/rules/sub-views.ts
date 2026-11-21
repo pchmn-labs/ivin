@@ -1,5 +1,13 @@
 import type { SubView, TabSubViews } from "@ivin/contracts/tab"
 
+export const noSubViews = (sessionId: string): TabSubViews => ({
+  sessionId,
+  subViews: [],
+  selected: null,
+  fullWidth: false,
+  sessionTabSelected: false,
+})
+
 export const sameSubView = (a: SubView, b: SubView) => a.kind === b.kind && a.path === b.path
 
 export const subViewKey = (subView: SubView) => `${subView.kind}:${subView.path}`
@@ -26,7 +34,6 @@ export const withSessionTabSelected = (state: TabSubViews): TabSubViews => ({
 
 export type RowTab = SubView | "session"
 
-// Goes round the row: the Session tab first in full width, then the files in order.
 export const adjacentRowTab = (state: TabSubViews, step: 1 | -1): RowTab | null => {
   if (state.selected === null) return null
   const row: RowTab[] = state.fullWidth ? ["session", ...state.subViews] : [...state.subViews]

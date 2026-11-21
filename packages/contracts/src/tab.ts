@@ -22,7 +22,7 @@ export const SubView = Schema.Struct({ kind: Schema.Literal("file"), path: Schem
 export type SubView = typeof SubView.Type
 
 // In the order they were opened; `selected` is null only when there are none.
-// `sessionTabSelected` only holds in full width, where the Session tab shows the chat in the card.
+// `sessionTabSelected` is only true in full width.
 export const TabSubViews = Schema.Struct({
   sessionId: Schema.String,
   subViews: Schema.Array(SubView),
