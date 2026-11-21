@@ -243,7 +243,7 @@ export const makeFakeServer = (
     [...annotations.values()].filter((annotation) => sameTarget(annotation.target, target))
   const keyOf = (kind: string, data: unknown) =>
     Object.hasOwn(annotationKinds, kind)
-      ? (data as Record<string, unknown>)[annotationKinds[kind as "pr"].key]
+      ? (data as Record<string, unknown>)[annotationKinds[kind as keyof typeof annotationKinds].key]
       : undefined
   const removeAnnotation = (annotation: Annotation) => {
     annotations.delete(annotation.id)

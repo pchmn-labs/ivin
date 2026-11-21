@@ -4,6 +4,7 @@ import type {
   Annotation,
   AnnotationDataOf,
   AnnotationTarget,
+  IssueAnnotationData,
   PrAnnotationData,
 } from "@ivin/contracts/annotation"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
@@ -16,6 +17,7 @@ import type { ActionFailure, UiHost } from "./host-context.ts"
 export type {
   Annotation,
   AnnotationTarget,
+  IssueAnnotationData,
   OpenProjects,
   PrAnnotationData,
   Project,

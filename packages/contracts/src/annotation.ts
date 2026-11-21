@@ -11,13 +11,21 @@ export type AnnotationTarget = typeof AnnotationTarget.Type
 
 export const PrAnnotationData = Schema.Struct({
   url: Schema.String,
-  relation: Schema.Literals(["created", "referenced"]),
+  relation: Schema.Literals(["created", "referenced", "reviewed"]),
 })
 export type PrAnnotationData = typeof PrAnnotationData.Type
+
+// `resolved`: the session's work closes the issue.
+export const IssueAnnotationData = Schema.Struct({
+  url: Schema.String,
+  relation: Schema.Literals(["created", "referenced", "resolved"]),
+})
+export type IssueAnnotationData = typeof IssueAnnotationData.Type
 
 // The kinds shared by several plugins, each with the data field that is its key.
 export const annotationKinds = {
   pr: { data: PrAnnotationData, key: "url" },
+  issue: { data: IssueAnnotationData, key: "url" },
 } as const
 export type AnnotationKinds = typeof annotationKinds
 export type AnnotationDataOf<K extends string> = K extends keyof AnnotationKinds

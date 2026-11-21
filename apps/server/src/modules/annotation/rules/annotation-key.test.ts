@@ -1,4 +1,4 @@
-import { PrAnnotationData } from "@ivin/contracts/annotation"
+import { IssueAnnotationData, PrAnnotationData } from "@ivin/contracts/annotation"
 import { expect, test } from "vitest"
 import { annotationKey } from "./annotation-key.ts"
 
@@ -17,4 +17,15 @@ test("a defined kind's key is the data's key field", () => {
 test("data that does not match its kind's definition is invalid", () => {
   expect(annotationKey(pr, { url: "https://x/pull/1" })).toBe("invalid")
   expect(annotationKey(pr, "https://x/pull/1")).toBe("invalid")
+})
+
+test("an issue is keyed on its url, and a pr accepts the reviewed relation", () => {
+  const issue = { data: IssueAnnotationData, key: "url" }
+  expect(annotationKey(issue, { url: "https://x/issues/1", relation: "resolved" })).toEqual({
+    key: "https://x/issues/1",
+  })
+  expect(annotationKey(issue, { url: "https://x/issues/1", relation: "reviewed" })).toBe("invalid")
+  expect(annotationKey(pr, { url: "https://x/pull/1", relation: "reviewed" })).toEqual({
+    key: "https://x/pull/1",
+  })
 })

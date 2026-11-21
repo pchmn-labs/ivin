@@ -121,6 +121,29 @@ test("writing a keyed kind again with the same key updates it, and another key a
   ])
 })
 
+test("writing an issue again with the same url updates it, apart from a pr with that url", async () => {
+  const { first, again, all } = await withServer((client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p" })
+      const target = sessionTarget(session.id)
+      const issue = (relation: "referenced" | "resolved") => ({
+        target,
+        ns: "github",
+        kind: "issue",
+        data: { url: "https://x/1", relation },
+      })
+      const first = yield* client["annotation.add"](issue("referenced"))
+      const again = yield* client["annotation.add"](issue("resolved"))
+      yield* client["annotation.add"]({ ...issue("referenced"), kind: "pr" })
+      return { first, again, all: yield* client["annotation.list"]({ target, kind: null }) }
+    }),
+  )
+
+  expect(again.id).toBe(first.id)
+  expect(again.data).toEqual({ url: "https://x/1", relation: "resolved" })
+  expect(all.map((a) => a.kind)).toEqual(["issue", "pr"])
+})
+
 test("a defined kind refuses data of another shape", async () => {
   const error = await withServer((client) =>
     Effect.gen(function* () {
