@@ -1,5 +1,5 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
@@ -24,6 +24,15 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
   )
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
   const { root, scrollerRef, followOutput, fitRoom } = useSentMessageScroll({ loaded, rows })
+  const firstIndex = FIRST_ITEM_INDEX - prepended
+  const loadingBefore = useRef(false)
+  const shownFrom = useRef<number | null>(null)
+  // A page that only lengthens the first row keeps it in view, and startReached fires once per first row.
+  useEffect(() => {
+    if (!loadingBefore.current) return
+    if (hasBefore && shownFrom.current === firstIndex) loadItemsBefore(sessionId)
+    else loadingBefore.current = false
+  }, [rows, hasBefore, firstIndex, sessionId, loadItemsBefore])
 
   if (!loaded) return <TranscriptEmpty>Loading the transcript…</TranscriptEmpty>
   if (shown.length === 0) return <TranscriptEmpty>No messages yet</TranscriptEmpty>
@@ -36,14 +45,19 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
         className="iv-transcript__list"
         data={shown}
         defaultItemHeight={ROW_HEIGHT}
-        firstItemIndex={FIRST_ITEM_INDEX - prepended}
+        firstItemIndex={firstIndex}
         initialTopMostItemIndex={{ index: "LAST", align: "end" }}
         computeItemKey={(_, row) => row.id}
         followOutput={followOutput}
         totalListHeightChanged={fitRoom}
         components={{ Footer: TranscriptFooter }}
+        rangeChanged={(range) => {
+          shownFrom.current = range.startIndex
+        }}
         startReached={() => {
-          if (hasBefore) loadItemsBefore(sessionId)
+          if (!hasBefore) return
+          loadingBefore.current = true
+          loadItemsBefore(sessionId)
         }}
         itemContent={(_, row) => (
           <RowContent sessionId={sessionId} row={row} live={row.id === liveId} />
