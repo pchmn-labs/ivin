@@ -10,6 +10,8 @@ import inactiveSessionsPackage from "../../../../plugins/inactive-sessions/packa
 import * as inactiveSessions from "../../../../plugins/inactive-sessions/src/ui.tsx"
 import messagesPackage from "../../../../plugins/messages/package.json"
 import * as messages from "../../../../plugins/messages/src/ui.tsx"
+import questionsPackage from "../../../../plugins/questions/package.json"
+import * as questions from "../../../../plugins/questions/src/ui.tsx"
 import toolCallsPackage from "../../../../plugins/tool-calls/package.json"
 import * as toolCalls from "../../../../plugins/tool-calls/src/ui.tsx"
 import usagePackage from "../../../../plugins/usage/package.json"
@@ -25,6 +27,7 @@ export const builtinPlugins: ReadonlyArray<UiPluginEntry> = [
   { manifest: changesPackage.ivin, activate: changes.activate },
   { manifest: inactiveSessionsPackage.ivin, activate: inactiveSessions.activate },
   { manifest: messagesPackage.ivin, activate: messages.activate },
+  { manifest: questionsPackage.ivin, activate: questions.activate },
   { manifest: toolCallsPackage.ivin, activate: toolCalls.activate },
   { manifest: usagePackage.ivin, activate: usage.activate },
   { manifest: workingPackage.ivin, activate: working.activate },

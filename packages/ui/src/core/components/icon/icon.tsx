@@ -30,6 +30,7 @@ import {
   MagnifyingGlass,
   NotePencil,
   PencilSimple,
+  Question,
   Robot,
   Plus,
   SidebarSimple,
@@ -96,7 +97,11 @@ const icons = {
   "eye-slash": EyeSlash,
   clock: Clock,
   diff: GitDiff,
+  question: Question,
 } satisfies Record<IconName, PhosphorIcon>
+
+// Drawn filled, as the session mark's status overlay is.
+const FILLED: ReadonlySet<IconName> = new Set(["question"])
 
 export function Icon({ name, size = 16, label }: IconProps) {
   const Glyph = icons[name]
@@ -104,7 +109,7 @@ export function Icon({ name, size = 16, label }: IconProps) {
     <Glyph
       className={name === "loader" ? "iv-icon iv-icon--spin" : "iv-icon"}
       size={size}
-      weight="regular"
+      weight={FILLED.has(name) ? "fill" : "regular"}
       aria-hidden={label === undefined ? true : undefined}
       aria-label={label}
       role={label === undefined ? undefined : "img"}

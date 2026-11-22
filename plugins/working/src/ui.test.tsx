@@ -186,3 +186,27 @@ test("Deny answers no, and a failed answer shows the host's message with a retry
 
   expect(answers.map((a) => a.allow)).toEqual([false, false])
 })
+
+test("a session waiting on questions shows the first one, with no Allow or Deny", async () => {
+  const question: TranscriptItem = {
+    id: "waits-question",
+    sessionId: "waits",
+    position: 1,
+    at: 0,
+    type: "question",
+    requestId: "waits-question",
+    toolCallId: null,
+    questions: [
+      { question: "Which runner?", header: "Runner", options: [], multiSelect: false },
+      { question: "Which folders?", header: "Folders", options: [], multiSelect: true },
+    ],
+    status: "open",
+    answers: [],
+  }
+  await mountPanel([session("waits", "Write the post", "/blog", "waiting")], null, {
+    transcripts: { waits: [question] },
+  })
+
+  await expect.element(page.getByTestId("working-question")).toHaveTextContent("Which runner?")
+  expect(page.getByRole("button", { name: /^Allow/ }).query()).toBeNull()
+})

@@ -12,6 +12,7 @@ import {
   defineUi,
   formatToolInput,
   pendingApproval,
+  pendingQuestion,
   useAnswerApproval,
   useOpenTab,
   useProjects,
@@ -36,7 +37,15 @@ function useNow() {
 
 const firstLine = (text: string) => text.split("\n", 1)[0] ?? ""
 
-function Detail({ project, command }: { project: string; command?: string }) {
+function Detail({
+  project,
+  command,
+  question,
+}: {
+  project: string
+  command?: string
+  question?: string
+}) {
   return (
     <Stack as="span" direction="row" gap={1} align="center">
       <ProjectMark name={project} size={12} />
@@ -53,6 +62,16 @@ function Detail({ project, command }: { project: string; command?: string }) {
           </Text>
         </>
       )}
+      {question === undefined ? null : (
+        <>
+          <Text size="xs" tone="faint">
+            ·
+          </Text>
+          <Text size="xs" tone="muted" truncate data-testid="working-question">
+            {question}
+          </Text>
+        </>
+      )}
     </Stack>
   )
 }
@@ -60,7 +79,9 @@ function Detail({ project, command }: { project: string; command?: string }) {
 function WaitingRow({ session, project, now }: { session: Session; project: string; now: number }) {
   const openTab = useOpenTab()
   const answer = useAnswerApproval(session.id)
-  const pending = pendingApproval(useTranscript(session.id))
+  const transcript = useTranscript(session.id)
+  const pending = pendingApproval(transcript)
+  const question = pendingQuestion(transcript)?.questions[0]?.question
   const [sending, setSending] = useState(false)
   const [failure, setFailure] = useState<(ActionFailure & { allow: boolean }) | null>(null)
   const command = pending === undefined ? undefined : formatToolInput(pending.name, pending.input)
@@ -83,7 +104,13 @@ function WaitingRow({ session, project, now }: { session: Session; project: stri
         onSelect={() => openTab(session.id)}
         leading={<SessionMark status={session.status} harness={session.harness} />}
         title={session.title}
-        subtitle={<Detail project={project} {...(command !== undefined && { command })} />}
+        subtitle={
+          <Detail
+            project={project}
+            {...(command !== undefined && { command })}
+            {...(question !== undefined && { question })}
+          />
+        }
         meta={elapsed(session.statusChangedAt.epochMilliseconds, now)}
         {...(command !== undefined && {
           tooltip: { text: command, label: "Approval needed", mono: true },

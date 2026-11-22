@@ -214,5 +214,6 @@ const demoSteerTurn: readonly ScriptedElement[] = [
 export const demoShotScript: readonly (readonly ScriptedElement[])[] = [
   demoTurn,
   demoWorkTurn,
+  demoQuestionTurn,
   demoSteerTurn,
 ]

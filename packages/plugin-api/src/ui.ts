@@ -19,7 +19,7 @@ import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Settings } from "@ivin/contracts/setting"
 import type { Tab } from "@ivin/contracts/tab"
-import type { TranscriptItem } from "@ivin/contracts/transcript"
+import type { Question, QuestionAnswer, TranscriptItem } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
 import type {
   ActionFailure,
@@ -56,6 +56,7 @@ export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 export type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
 export type QuestionItem = Extract<TranscriptItem, { type: "question" }>
+export type { Question, QuestionAnswer }
 export type ErrorItem = Extract<TranscriptItem, { type: "error" }>
 export type InterruptionItem = Extract<TranscriptItem, { type: "interruption" }>
 export type WorkingFolderItem = Extract<TranscriptItem, { type: "working_folder" }>

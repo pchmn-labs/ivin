@@ -42,3 +42,25 @@ test("a click on the sheet outside its controls focuses its first control", asyn
   await page.getByText("pnpm test").click()
   await expect.element(page.getByRole("button", { name: "Answer" })).toHaveFocus()
 })
+
+test("the aside sits in the title row and the footer holds the key hints and the actions", async () => {
+  await render(
+    <ActionSheet
+      title="The agent asks"
+      aside={<span>Steps here</span>}
+      keys={[
+        { key: "↑↓", label: "Navigate" },
+        { key: "Space", label: "Select" },
+      ]}
+      actions={<button type="button">Decline</button>}
+    />,
+  )
+  const sheet = page.getByRole("group", { name: "The agent asks" })
+  expect(sheet.element().querySelector(".iv-action-sheet__head")?.textContent).toContain(
+    "Steps here",
+  )
+  const footer = sheet.element().querySelector(".iv-action-sheet__foot")
+  expect(footer?.querySelectorAll("kbd")).toHaveLength(2)
+  expect(footer?.textContent).toContain("Navigate")
+  await expect.element(sheet.getByRole("button", { name: "Decline" })).toBeVisible()
+})

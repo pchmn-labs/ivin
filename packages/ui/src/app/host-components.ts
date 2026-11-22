@@ -10,6 +10,8 @@ import { Disclosure } from "../core/components/disclosure/disclosure.tsx"
 import { Icon } from "../core/components/icon/icon.tsx"
 import { Menu } from "../core/components/menu/menu.tsx"
 import { OptionList } from "../core/components/option-list/option-list.tsx"
+import { ChoiceList } from "../core/components/choice-list/choice-list.tsx"
+import { Steps } from "../core/components/steps/steps.tsx"
 import { Stack } from "../core/components/stack/stack.tsx"
 import { StatusMark } from "../core/components/status-mark/status-mark.tsx"
 import { Text } from "../core/components/text/text.tsx"
@@ -42,6 +44,8 @@ export const hostComponents = {
   Markdown: SessionMarkdown,
   ActionSheet,
   OptionList,
+  ChoiceList,
+  Steps,
   ErrorMessage,
   ListRow,
   ListSection,
