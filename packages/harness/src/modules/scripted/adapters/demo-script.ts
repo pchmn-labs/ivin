@@ -131,7 +131,7 @@ export const demoApprovalScript: readonly (readonly HarnessOutput[])[] = [
 
 // Reads the message sent while it waits on the approval, then waits on a second one.
 const demoSteerTurn: readonly ScriptedElement[] = [
-  ...demoApprovalTurn.slice(0, 5),
+  ...demoApprovalTurn.slice(0, demoApprovalTurn.findIndex((o) => o.type === "tool_result") + 1),
   scriptedRead,
   { type: "assistant_text", text: "Understood, I'll leave the e2e tests out of it.", raw: null },
   {

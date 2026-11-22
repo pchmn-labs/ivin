@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import type { Session, UnsentMessage, WorkingFolderChoice } from "@ivin/contracts/session"
+import type { Session, PendingMessage, WorkingFolderChoice } from "@ivin/contracts/session"
 import type { ImageData, TranscriptItem } from "@ivin/contracts/transcript"
 import { optimistic } from "@ivin/state/optimistic"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
@@ -19,7 +19,7 @@ export const sendMessageAtom = serverRuntime.fn<{
     const sessions = sessionsOf(projectPath)
     const transcript = transcriptOf(sessionId)
     const messageId = crypto.randomUUID()
-    const unsent: UnsentMessage = {
+    const unsent: PendingMessage = {
       id: messageId,
       text,
       images: images.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
@@ -55,7 +55,6 @@ export const sendMessageAtom = serverRuntime.fn<{
     })
     rememberSentImages(images)
 
-    // Mid-turn, the message waits above the composer until the agent reads it.
     const update = working
       ? {
           apply: changePending((pending) => [...pending, unsent]),

@@ -4,7 +4,7 @@ import type {
   RunOptions,
   Session,
   SessionStatus,
-  UnsentMessage,
+  PendingMessage,
 } from "@ivin/contracts/session"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
@@ -51,8 +51,8 @@ const toSession = (row: SessionRow): Session => ({
       ? null
       : // Stored before the agent's error was kept.
         { error: null, ...(JSON.parse(row.relaunch_failure) as Omit<RelaunchFailure, "error">) },
-  pendingMessages: JSON.parse(row.pending_messages) as UnsentMessage[],
-  unreadMessages: JSON.parse(row.unread_messages) as UnsentMessage[],
+  pendingMessages: JSON.parse(row.pending_messages) as PendingMessage[],
+  unreadMessages: JSON.parse(row.unread_messages) as PendingMessage[],
   status: row.status,
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
   createdAt: DateTime.makeUnsafe(row.created_at),
@@ -68,7 +68,7 @@ const columns = `id, project_path, working_folder, working_folder_deleted, branc
   ) AS started,
   (SELECT COALESCE(MAX(number), 0) FROM images i WHERE i.session_id = sessions.id) AS last_image_number`
 
-const dropPending = `unread_messages = (
+const pendingToUnread = `unread_messages = (
     SELECT json_group_array(json(value)) FROM (
       SELECT 0 AS list, key, value FROM json_each(unread_messages)
       UNION ALL SELECT 1, key, value FROM json_each(pending_messages)
@@ -79,11 +79,11 @@ const dropPending = `unread_messages = (
 export const layerSqliteSessionStore = Layer.effect(SessionStore)(
   Effect.gen(function* () {
     const db = yield* Database
-    const pendingOf = (id: string): UnsentMessage[] => {
+    const pendingOf = (id: string): PendingMessage[] => {
       const row = db.prepare("SELECT pending_messages FROM sessions WHERE id = ?").get(id) as
         | { pending_messages: string }
         | undefined
-      return row ? (JSON.parse(row.pending_messages) as UnsentMessage[]) : []
+      return row ? (JSON.parse(row.pending_messages) as PendingMessage[]) : []
     }
     return {
       insert: (session) =>
@@ -219,9 +219,9 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           return taken
         }),
       pendingMessages: (id) => Effect.sync(() => pendingOf(id)),
-      dropPendingMessages: (id) =>
+      markPendingUnread: (id) =>
         Effect.sync(() => {
-          db.prepare(`UPDATE sessions SET ${dropPending} WHERE id = ?`).run(id)
+          db.prepare(`UPDATE sessions SET ${pendingToUnread} WHERE id = ?`).run(id)
         }),
       clearUnreadMessages: (id) =>
         Effect.sync(() => {
@@ -250,7 +250,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           `UPDATE sessions SET status = 'idle', status_changed_at = last_activity_at
            WHERE status NOT IN ('idle', 'failed')`,
         ).run()
-        db.prepare(`UPDATE sessions SET ${dropPending} WHERE pending_messages <> '[]'`).run()
+        db.prepare(`UPDATE sessions SET ${pendingToUnread} WHERE pending_messages <> '[]'`).run()
       }),
       touch: (id, at) =>
         Effect.sync(() => {

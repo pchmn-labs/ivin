@@ -97,7 +97,6 @@
   font-size: var(--iv-text-xs);
 }
 
-/* Under an approval sheet, the dashed edge joins that sheet to this one, not to the field. */
 .iv-composer:has(.iv-action-sheet[data-tone="attention"])
   .iv-composer__pending-sheet
   .iv-action-sheet {

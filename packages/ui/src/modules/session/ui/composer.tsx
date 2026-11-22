@@ -21,6 +21,7 @@ import { type ImageRefusal, imageRefusal, refusalMessage } from "../rules/image-
 import { DraftImages } from "./draft-images.tsx"
 import { type MessageEditorHandle, MessageEditor, carriesFiles } from "./message-editor.tsx"
 import { Slot } from "../../../app/slot-renderer.tsx"
+import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { ActionSheet } from "../../../core/components/action-sheet/action-sheet.tsx"
@@ -98,7 +99,15 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const unreadText = (session?.unreadMessages ?? []).map((message) => message.text).join("\n\n")
   useEffect(() => {
     if (unreadText === "") return
-    setDraft((current) => (current.text === "" ? { ...current, text: unreadText } : current))
+    // Runs again on each mount, so a draft that already holds the messages keeps them once.
+    setDraft((current) =>
+      current.text.includes(unreadText)
+        ? current
+        : {
+            ...current,
+            text: current.text === "" ? unreadText : `${current.text}\n\n${unreadText}`,
+          },
+    )
   }, [unreadText])
 
   const changeRunOptions = (options: Partial<RunOptions>) => {
@@ -212,7 +221,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         <ul className="iv-composer__pending">
           {pending.map((message) => (
             <li key={message.id} className="iv-composer__pending-message" title={message.text}>
-              {message.text}
+              {message.text || message.images.map((image) => `[Image #${image.number}]`).join(" ")}
             </li>
           ))}
         </ul>
@@ -221,9 +230,11 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
             Read once the agent's current tool call or turn ends. Stop puts{" "}
             {pending.length === 1 ? "it" : "them"} back here.
           </span>
-          <Button variant="ghost" size="sm" onClick={() => sendNow({ projectPath, sessionId })}>
-            Send now
-          </Button>
+          <Tooltip content="Stops this turn and sends your messages">
+            <Button variant="ghost" size="sm" onClick={() => sendNow({ projectPath, sessionId })}>
+              Send now
+            </Button>
+          </Tooltip>
         </div>
       </ActionSheet>
     </div>

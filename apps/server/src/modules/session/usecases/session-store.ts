@@ -4,7 +4,7 @@ import type {
   RunOptions,
   Session,
   SessionStatus,
-  UnsentMessage,
+  PendingMessage,
 } from "@ivin/contracts/session"
 import { Context, type Effect } from "effect"
 
@@ -35,15 +35,14 @@ export class SessionStore extends Context.Service<
       id: string,
       failure: RelaunchFailure | null,
     ) => Effect.Effect<void>
-    readonly addPendingMessage: (id: string, message: UnsentMessage) => Effect.Effect<void>
+    readonly addPendingMessage: (id: string, message: PendingMessage) => Effect.Effect<void>
     // Null when the message is not pending, such as one that started a turn.
     readonly takePendingMessage: (
       id: string,
       messageId: string,
-    ) => Effect.Effect<UnsentMessage | null>
-    readonly pendingMessages: (id: string) => Effect.Effect<readonly UnsentMessage[]>
-    // Moves every pending message to the unread ones.
-    readonly dropPendingMessages: (id: string) => Effect.Effect<void>
+    ) => Effect.Effect<PendingMessage | null>
+    readonly pendingMessages: (id: string) => Effect.Effect<readonly PendingMessage[]>
+    readonly markPendingUnread: (id: string) => Effect.Effect<void>
     readonly clearUnreadMessages: (id: string) => Effect.Effect<void>
     readonly setWorkingFolder: (
       id: string,

@@ -3,7 +3,7 @@ import {
   type RunOptions,
   type Session,
   type SessionStatus,
-  type UnsentMessage,
+  type PendingMessage,
 } from "@ivin/contracts/session"
 import type {
   HarnessDelta,
@@ -35,13 +35,13 @@ interface UserMessage {
   readonly images: readonly ImageData[]
 }
 
-const unsent = ({ id, text, images }: UserMessage | UnsentMessage): UnsentMessage => ({
+const unsent = ({ id, text, images }: UserMessage | PendingMessage): PendingMessage => ({
   id,
   text,
   images: images.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
 })
 
-const userMessageEvent = (message: UserMessage | UnsentMessage, steer = false): HarnessEvent => ({
+const userMessageEvent = (message: UserMessage | PendingMessage, steer = false): HarnessEvent => ({
   type: "user_message",
   text: message.text,
   images: unsent(message).images,
@@ -60,7 +60,7 @@ export class SessionRuns extends Context.Service<
       session: Session,
       answer: ApprovalDecision,
     ) => Effect.Effect<void, ApprovalNotOpen>
-    // Pending messages stay unread: the agent does not take them after a stop.
+    // No-op with no run.
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
     // Stops the turn so the agent takes the pending messages as the next one; no-op without any.
     readonly sendNow: (sessionId: string) => Effect.Effect<void>
@@ -233,7 +233,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
         const end = Effect.suspend(() => {
           if (runs.get(session.id) === run) runs.delete(session.id)
           return Scope.close(scope, Exit.void).pipe(
-            Effect.andThen(sessions.dropPendingMessages(session.id)),
+            Effect.andThen(sessions.markPendingUnread(session.id)),
           )
         })
 
@@ -254,7 +254,6 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             ? offerPreviousOptions(session.id, options, turn.message, turn.error)
             : sessions.setConfirmedRunOptions(session.id, options)
         })
-        // A message read between turns starts one: it is a steer only while a turn runs.
         const readMessage = (messageId: string) =>
           Effect.gen(function* () {
             const message = yield* sessions.takePendingMessage(session.id, messageId)
@@ -406,7 +405,6 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           const run = runs.get(sessionId)
           if (!run) return
           if ((yield* sessions.pendingMessages(sessionId)).length === 0) return yield* run.interrupt
-          // The agent would start its pending messages as the next turn after an interrupt.
           yield* run.record({ type: "interruption", raw: null })
           yield* run.end
           yield* setStatus(sessionId, "idle")

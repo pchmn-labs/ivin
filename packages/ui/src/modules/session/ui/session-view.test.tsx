@@ -982,3 +982,24 @@ test("the sheet names a single waiting message, and leaves once the agent reads 
   await expect.element(sheet).not.toBeInTheDocument()
   await expect.element(page.getByTestId("turn-steer")).toHaveTextContent("also check the logs")
 })
+
+test("unread messages come back after a draft the user typed in the meantime, and a message of images alone still shows in the sheet", async () => {
+  const server = await mountSession("working")
+  const pending = [
+    { id: "p1", text: "also check the logs", images: [] },
+    { id: "p2", text: "", images: [{ id: "img-1", number: 1, mediaType: "image/png" as const }] },
+  ]
+  server.sessions.set("s1", { ...server.sessions.get("s1")!, pendingMessages: pending })
+  server.setStatus("s1", "waiting")
+  await expect.element(page.getByTestId("composer-pending").getByText("[Image #1]")).toBeVisible()
+  await page.getByRole("textbox").fill("one more thing")
+
+  server.sessions.set("s1", {
+    ...server.sessions.get("s1")!,
+    pendingMessages: [],
+    unreadMessages: [pending[0]!],
+  })
+  server.setStatus("s1", "idle")
+
+  await vi.waitFor(() => expect(composerText()).toBe("one more thing\n\nalso check the logs"))
+})

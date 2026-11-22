@@ -56,12 +56,12 @@ export const RelaunchFailure = Schema.Struct({
 })
 export type RelaunchFailure = typeof RelaunchFailure.Type
 
-export const UnsentMessage = Schema.Struct({
+export const PendingMessage = Schema.Struct({
   id: Schema.String,
   text: Schema.String,
   images: Schema.Array(ImageRef),
 })
-export type UnsentMessage = typeof UnsentMessage.Type
+export type PendingMessage = typeof PendingMessage.Type
 
 export const Session = Schema.Struct({
   id: Schema.String,
@@ -79,10 +79,8 @@ export const Session = Schema.Struct({
   effort: Schema.String,
   permissionMode: Schema.String,
   relaunchFailure: Schema.NullOr(RelaunchFailure),
-  // Sent while the agent works, and not read by it yet.
-  pendingMessages: Schema.Array(UnsentMessage),
-  // Pending when the turn was stopped or the agent ended, for the composer to put back.
-  unreadMessages: Schema.Array(UnsentMessage),
+  pendingMessages: Schema.Array(PendingMessage),
+  unreadMessages: Schema.Array(PendingMessage),
   status: SessionStatus,
   statusChangedAt: Schema.DateTimeUtcFromMillis,
   createdAt: Schema.DateTimeUtcFromMillis,

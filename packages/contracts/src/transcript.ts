@@ -35,7 +35,6 @@ const UserMessageBody = Schema.Struct({
   text: Schema.String,
   // Absent on messages stored before images existed.
   images: Schema.optional(Schema.Array(ImageRef)),
-  // The agent read it while a turn was running, so it belongs to that turn.
   steer: Schema.optional(Schema.Boolean),
 })
 const AssistantTextBody = Schema.Struct({
