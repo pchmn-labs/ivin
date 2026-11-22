@@ -126,7 +126,11 @@ svg { flex: none; display: block; }
 .nav { padding: 4px 8px; }
 .nav .row svg { color: var(--iv-text-faint); }
 .nav .row[data-selected] svg { color: var(--iv-text-muted); }
-.nav-foot { margin-top: auto; padding: 8px 12px 12px; border-top: 1px solid var(--iv-border); color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+.nav-foot { margin-top: auto; padding: 8px; border-top: 1px solid var(--iv-border); color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+.nav-file { color: var(--iv-text-muted); }
+.nav-file svg { color: var(--iv-text-faint); }
+.nav-path { padding: 2px 8px 8px 30px; }
+.nav-keys { padding: 8px 8px 0; border-top: 1px solid var(--iv-border); }
 .nav-foot kbd { font: inherit; }
 .section-page { flex: 1; overflow-y: auto; }
 .section-col { max-width: 720px; margin: 0 auto; padding: 20px 32px 64px; }
@@ -295,7 +299,9 @@ const I = {
   wrench: sv('<path d="M14.7 6.3a4 4 0 0 0 5 5L22 14l-8 8-2.3-2.3a4 4 0 0 0-5-5L4 12l8-8Z"/>', 14),
 }
 
-I.gear = sv('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>', 14)
+const GEAR = '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'
+I.gear = sv(GEAR, 14)
+I.gear16 = sv(GEAR, 16)
 I.terminal = sv('<path d="m5 7 5 5-5 5M12 17h7"/>', 14)
 I.check = sv('<path d="M20 6 9 17l-5-5"/>', 14, 2)
 I.loader = sv('<path d="M12 3a9 9 0 1 0 9 9"/>', 14, 2)
@@ -382,7 +388,7 @@ function cardTop() {
   return `<div class="card-top"><button class="icon-btn" title="Toggle sidebar">${I.panel}</button><span class="spacer"></span><button class="icon-btn" title="Back">${I.left}</button><button class="icon-btn" title="Forward">${I.right}</button></div>`
 }
 function rail() {
-  return `<div class="rail"><button class="rail-btn" data-selected title="ivin">${creature(0)}</button><button class="rail-btn" title="silbo">${creature(3)}</button><span class="spacer"></span><button class="icon-btn" title="Open folder">${I.folder()}</button><span class="dot" title="Connected"></span></div>`
+  return `<div class="rail"><button class="rail-btn" data-selected title="ivin">${creature(0)}</button><button class="rail-btn" title="silbo">${creature(3)}</button><span class="spacer"></span><button class="icon-btn" id="rail-settings" data-open-settings title="Settings ⌘,">${I.gear16}</button><button class="icon-btn" title="Open folder">${I.folder()}</button><span class="dot" title="Connected"></span></div>`
 }
 function sessionsCard() {
   return `<aside class="card">${cardTop()}<div class="card-body">${rail()}<div class="column">
@@ -428,13 +434,12 @@ function vWindow() {
   const nav = `<aside class="card">${cardTop()}<div class="column">
     <div class="nav-head"><button class="icon-btn" data-close-settings title="Back to sessions Esc">${I.back}</button><b>Settings</b></div>
     <div class="nav" role="tablist" aria-orientation="vertical">${SECTIONS.map((x) => `<button class="row" role="tab" aria-selected="${x.id === S.section}" ${x.id === S.section ? "data-selected" : ""} data-section="${x.id}">${I[x.icon] ? (typeof I[x.icon] === "function" ? I[x.icon]() : I[x.icon]) : ""}<span class="title">${x.title}</span></button>`).join("")}</div>
-    <div class="nav-foot">↑↓ section · Esc back</div>
+    <div class="nav-foot"><button class="row nav-file" data-open-file title="${FILE}">${I.file()}<span class="title">Open settings.json</span></button><div class="nav-path"><span class="mono">${FILE}</span>, saved as you change a setting.</div><div class="nav-keys">↑↓ section · Esc back</div></div>
   </div></aside>`
   const body = `<div class="section-page" id="settings-root" tabindex="-1"><div class="section-col">
     ${problem()}
     <h2>${sec.title}</h2><p class="lede">${sec.lede}</p>
     <div class="flat">${sectionBody(sec, { key: true })}</div>
-    <div class="file-foot" style="display:flex;align-items:center;gap:8px;padding:0">Saved to <span class="mono">${FILE}</span> as you change them.<span class="spacer"></span><button class="btn ghost" data-open-file>${I.file()}Open settings.json</button></div>
   </div></div>`
   return `<div class="app">${nav}<main class="main"><div class="titlebar"></div>${body}</main></div>`
 }
@@ -493,6 +498,7 @@ stage.addEventListener("click", (e) => {
   const t = e.target.closest("button, [data-backdrop], [data-close-settings]")
   if (!t) return
   if (t.matches("[data-backdrop]") && e.target !== t) return
+  if (t.matches("[data-open-settings]")) { t.focus(); return openSettings() }
   if (t.matches("[data-close-settings], [data-backdrop]")) { e.stopPropagation(); return closeSettings() }
   if (t.matches(".switch")) return write(t.dataset.path, !S.values[t.dataset.path])
   if (t.dataset.retry) { S.errors[t.dataset.retry].retried = true; return write(t.dataset.retry, S.values[t.dataset.retry]) }
@@ -502,7 +508,8 @@ stage.addEventListener("click", (e) => {
     return setTimeout(() => { S.cli = "installed"; render() }, 700)
   }
   if (t.matches("[data-open-file]")) {
-    t.textContent = "Opened in your editor"
+    const label = t.querySelector(".title") || t
+    label.textContent = "Opened in your editor"
   }
 })
 document.addEventListener("keydown", (e) => {
