@@ -4,7 +4,7 @@ import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
 import { Text } from "../../../core/components/text/text.tsx"
-import { runningTurnRows, type TranscriptRow as RowData } from "../rules/turns.ts"
+import { shownRows, type TranscriptRow as RowData } from "../rules/turns.ts"
 import { useLoadBefore } from "../hooks/use-load-before.ts"
 import { useSentMessageScroll } from "../hooks/use-sent-message-scroll.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
@@ -19,13 +19,7 @@ const ROW_HEIGHT = 40
 export function TranscriptView({ sessionId, live = false }: { sessionId: string; live?: boolean }) {
   const { loaded, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
   const loadItemsBefore = useAtomSet(loadItemsBeforeAtom)
-  const shown = useMemo(
-    () =>
-      live
-        ? runningTurnRows(rows)
-        : rows.filter((row) => row.type === "item" || row.itemIds.length > 0),
-    [rows, live],
-  )
+  const shown = useMemo(() => shownRows(rows, live), [rows, live])
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
   const { root, scrollerRef, followOutput, fitRoom } = useSentMessageScroll({ loaded, rows })
   const firstIndex = FIRST_ITEM_INDEX - prepended

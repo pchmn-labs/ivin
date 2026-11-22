@@ -56,6 +56,9 @@ export const runningTurnRows = (
   return [...rows.slice(0, index), { ...work, itemIds: [...work.itemIds, ...after] }]
 }
 
+export const shownRows = (rows: ReadonlyArray<TranscriptRow>, live: boolean) =>
+  live ? runningTurnRows(rows) : rows.filter((row) => row.type === "item" || row.itemIds.length > 0)
+
 // A turn cut by paging starts with an item folded into its work row, so it has no message row.
 export const lastTurnMessageId = (rows: ReadonlyArray<TranscriptRow>): string | undefined => {
   const work = rows.findLast((row) => row.type === "work")

@@ -116,6 +116,7 @@ test("while the turn runs, a sentence streamed after the last call heads a step 
   const server = await mount([user("u1", "fix it"), text("t1", "Looking"), call("c1")], true)
   await expect.element(page.getByText("tool-c1")).toBeVisible()
   const outsideTurn: string[] = []
+  // Only the rows outside a turn's work carry `data-row-id`.
   const observer = new MutationObserver(() => {
     for (const row of document.querySelectorAll("[data-row-id]")) {
       if (row.textContent?.includes("Running")) outsideTurn.push(row.getAttribute("data-row-id")!)
@@ -137,7 +138,7 @@ test("while the turn runs, a sentence streamed after the last call heads a step 
   await expect.element(page.getByText("Running the tests")).toBeVisible()
   const steps = page.getByTestId("turn-step")
   await expect.element(steps.nth(1)).toHaveTextContent("Running the tests")
-  expect(steps.nth(1).element().hasAttribute("data-current")).toBe(true)
+  await expect.element(steps.nth(1)).toHaveAttribute("data-current")
   expect(steps.nth(1).element().querySelector('[data-testid="step-summary"]')).toBeNull()
   await expect
     .element(page.getByTestId("step-summary").nth(0))
