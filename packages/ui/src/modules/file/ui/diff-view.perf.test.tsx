@@ -98,6 +98,7 @@ test("a 10,000-line diff opens without freezing, and scrolls at the frame rate",
       <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
         <div style={{ display: "flex", height: 600 }}>
           <DiffView
+            kind="diff"
             sessionId={session.id}
             workingFolder={session.workingFolder}
             path="big.ts"

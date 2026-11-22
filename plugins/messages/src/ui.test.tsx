@@ -42,6 +42,11 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     useOpenDiff: () => async () => undefined,
     useDiffOnScreen: () => null,
     useSettings: () => defaultSettings,
+    useCommittedChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
+    useOpenCommittedDiff: () => async () => undefined,
+    useCommittedDiffOnScreen: () => null,
+    useDiscardChange: () => async () => undefined,
+    useDiscardAllChanges: () => async () => undefined,
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }

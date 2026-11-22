@@ -40,6 +40,7 @@
 
 .iv-tabs__badge {
   color: var(--iv-text-faint);
+  white-space: nowrap;
   font-size: var(--iv-text-xs);
   font-variant-numeric: tabular-nums;
 }

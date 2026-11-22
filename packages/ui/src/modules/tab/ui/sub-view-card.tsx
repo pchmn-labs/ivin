@@ -29,6 +29,8 @@ import {
 import { adjacentRowTab, sameSubView, subViewKey } from "../rules/sub-views.ts"
 import "./sub-view-card.css"
 
+const DIFF_LABELS = { diff: "diff", committed_diff: "committed" } as const
+
 const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
   if (event.altKey || event.metaKey || event.ctrlKey) return
   const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
@@ -185,7 +187,7 @@ export function SubViewCard({
             const isSelected = !onSession && sameSubView(subView, selected)
             const unsavedEdits = isUnsaved(subView)
             const name = fileName(subView.path)
-            const isDiff = subView.kind === "diff"
+            const isDiff = subView.kind !== "file"
             const unsavedId = `${cardId}-${subViewKey(subView)}-unsaved`
             const closeThis = () => closeFile(subView)
             return (
@@ -219,7 +221,7 @@ export function SubViewCard({
                   {isDiff && (
                     <>
                       {" "}
-                      <span className="iv-sub-view-card__kind">diff</span>
+                      <span className="iv-sub-view-card__kind">{DIFF_LABELS[subView.kind]}</span>
                     </>
                   )}
                 </button>
@@ -231,7 +233,7 @@ export function SubViewCard({
                 <button
                   type="button"
                   className="iv-sub-view-card__close"
-                  aria-label={`Close ${isDiff ? `the diff of ${name}` : name}`}
+                  aria-label={`Close ${isDiff ? `the ${subView.kind === "diff" ? "" : "committed "}diff of ${name}` : name}`}
                   onClick={() => void closeThis()}
                 >
                   <span className="iv-sub-view-card__unsaved" aria-hidden />
@@ -294,14 +296,15 @@ export function SubViewCard({
           className="iv-sub-view-card__body"
           role="tabpanel"
           aria-label={
-            selected.kind === "diff"
+            selected.kind !== "file"
               ? `Diff of ${fileName(selected.path)}`
               : fileName(selected.path)
           }
         >
-          {selected.kind === "diff" ? (
+          {selected.kind !== "file" ? (
             <DiffView
               key={subViewKey(selected)}
+              kind={selected.kind}
               sessionId={sessionId}
               workingFolder={workingFolder}
               path={selected.path}

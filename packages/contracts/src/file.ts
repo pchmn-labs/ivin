@@ -106,6 +106,21 @@ export const ChangeList = Schema.Union([
 ])
 export type ChangeList = typeof ChangeList.Type
 
+// `base`: the branch compared with, `origin/<default branch>`; the changes are those of the commits
+// since its merge base, the uncommitted ones left out.
+export const CommittedChangeList = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("listed"),
+    base: Schema.String,
+    changes: Schema.Array(Change),
+  }),
+  Schema.Struct({ kind: Schema.Literal("not_repository") }),
+  Schema.Struct({ kind: Schema.Literal("no_origin") }),
+  Schema.Struct({ kind: Schema.Literal("no_default_branch") }),
+  Schema.Struct({ kind: Schema.Literal("no_merge_base") }),
+])
+export type CommittedChangeList = typeof CommittedChangeList.Type
+
 // `changed`: the part of the line that differs from the line it replaces or is replaced by.
 export const DiffLine = Schema.Struct({
   kind: Schema.Literals(["context", "added", "deleted"]),
@@ -121,7 +136,8 @@ export type DiffHunk = typeof DiffHunk.Type
 
 export const DIFF_SIZE_LIMIT = 4 * 1024 * 1024
 
-// `unchanged`: the file no longer has uncommitted changes.
+// `unchanged`: the file no longer differs from what it is compared with. `no_origin`,
+// `no_default_branch` and `no_merge_base` only come from a committed diff.
 export const FileDiff = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("text"),
@@ -134,6 +150,9 @@ export const FileDiff = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("too_large") }),
   Schema.Struct({ kind: Schema.Literal("unchanged") }),
   Schema.Struct({ kind: Schema.Literal("not_repository") }),
+  Schema.Struct({ kind: Schema.Literal("no_origin") }),
+  Schema.Struct({ kind: Schema.Literal("no_default_branch") }),
+  Schema.Struct({ kind: Schema.Literal("no_merge_base") }),
 ])
 export type FileDiff = typeof FileDiff.Type
 
@@ -197,6 +216,40 @@ export const FileRpcs = RpcGroup.make(
       PathOutsideWorkingFolder,
       GitFailed,
     ]),
+  }),
+  // What the commits of the session's branch changed since its merge base with
+  // `origin/<default branch>`, sorted by path, with paths as in `file.listChanges`.
+  Rpc.make("file.listCommittedChanges", {
+    payload: { sessionId: Schema.String },
+    success: CommittedChangeList,
+    error: Schema.Union([SessionNotFound, WorkingFolderDeleted, GitFailed]),
+  }),
+  // The diff of one path `file.listCommittedChanges` lists, from that merge base to HEAD.
+  Rpc.make("file.readCommittedDiff", {
+    payload: { sessionId: Schema.String, path: Schema.String },
+    success: FileDiff,
+    error: Schema.Union([
+      SessionNotFound,
+      WorkingFolderDeleted,
+      PathOutsideWorkingFolder,
+      GitFailed,
+    ]),
+  }),
+  // Restores a path `file.listChanges` lists to HEAD, index included, or deletes it when untracked.
+  // A path with no uncommitted change is left as it is.
+  Rpc.make("file.discardChange", {
+    payload: { sessionId: Schema.String, path: Schema.String },
+    error: Schema.Union([
+      SessionNotFound,
+      WorkingFolderDeleted,
+      PathOutsideWorkingFolder,
+      GitFailed,
+    ]),
+  }),
+  // `file.discardChange` for every path `file.listChanges` lists.
+  Rpc.make("file.discardAllChanges", {
+    payload: { sessionId: Schema.String },
+    error: Schema.Union([SessionNotFound, WorkingFolderDeleted, GitFailed]),
   }),
   // The paths created, changed or deleted on disk, a batch at a time; what git ignores is left out.
   Rpc.make("file.watch", {

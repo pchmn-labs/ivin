@@ -13,7 +13,12 @@ import {
 } from "react"
 import type { GitStatusEntry } from "@ivin/contracts/file"
 import type { SubView } from "@ivin/contracts/tab"
-import { UiHostProvider, type ChangeListing, type UiHost } from "@ivin/plugin-api/ui"
+import {
+  UiHostProvider,
+  type CommittedChangeListing,
+  type ChangeListing,
+  type UiHost,
+} from "@ivin/plugin-api/ui"
 import { sessionAnnotationsOf } from "../modules/annotation/atoms/list-annotations.ts"
 import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
@@ -31,6 +36,9 @@ import { selectedSessionIdAtom } from "../modules/tab/atoms/selected-session-id.
 import { folderKey, listFolderOf } from "../modules/file/atoms/list-folder.ts"
 import { gitStatusOf } from "../modules/file/atoms/git-status.ts"
 import { changesOf } from "../modules/file/atoms/list-changes.ts"
+import { committedChangesOf } from "../modules/file/atoms/list-committed-changes.ts"
+import { discardAllChangesAtom, discardChangeAtom } from "../modules/file/atoms/discard-change.ts"
+import { discardFailure } from "../modules/file/rules/discard-failure.ts"
 import { changeListingFailure } from "../modules/file/rules/change-listing.ts"
 import { listFilesOf } from "../modules/file/atoms/list-files.ts"
 import { folderChangesOf } from "../modules/file/atoms/watch-folder.ts"
@@ -50,7 +58,7 @@ import { useKeyboardHandler } from "../modules/keybinding/hooks/use-keyboard-han
 const NO_PROJECT = ""
 const NO_CHANGES: ReadonlyArray<GitStatusEntry> = []
 
-const LOADING: ChangeListing = { kind: "loading" }
+const LOADING = { kind: "loading" } as const satisfies ChangeListing
 
 const useProjectPath = () => useAtomValue(selectedProjectAtom)?.path ?? NO_PROJECT
 
@@ -175,6 +183,33 @@ const host: UiHost = {
   useOpenDiff: () => useOpenSubView("diff"),
   useDiffOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "diff"),
   useSettings: () => useAtomValue(settingsAtom),
+  useCommittedChanges: (sessionId) => {
+    const atom = committedChangesOf(sessionId)
+    const result = useAtomValue(atom)
+    const retry = useAtomRefresh(atom)
+    const listing: CommittedChangeListing = AsyncResult.isSuccess(result)
+      ? result.value
+      : AsyncResult.isFailure(result)
+        ? changeListingFailure(Cause.squash(result.cause))
+        : LOADING
+    return { listing, retry }
+  },
+  useOpenCommittedDiff: () => useOpenSubView("committed_diff"),
+  useCommittedDiffOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "committed_diff"),
+  useDiscardChange: () => {
+    const discard = useAtomSet(discardChangeAtom, { mode: "promiseExit" })
+    return async (sessionId, path) => {
+      const exit = await discard({ sessionId, path })
+      return Exit.isFailure(exit) ? discardFailure(Cause.squash(exit.cause), path) : undefined
+    }
+  },
+  useDiscardAllChanges: () => {
+    const discard = useAtomSet(discardAllChangesAtom, { mode: "promiseExit" })
+    return async (sessionId) => {
+      const exit = await discard({ sessionId })
+      return Exit.isFailure(exit) ? discardFailure(Cause.squash(exit.cause), null) : undefined
+    }
+  },
   components: hostComponents,
 }
 

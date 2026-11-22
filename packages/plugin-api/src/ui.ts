@@ -23,7 +23,9 @@ import type { Question, QuestionAnswer, TranscriptItem } from "@ivin/contracts/t
 import { HostContext, useHost } from "./host-context.ts"
 import type {
   ActionFailure,
+  CommittedChangeListing,
   ChangeListing,
+  DiscardFailure,
   FileListing,
   FolderListing,
   UiHost,
@@ -159,7 +161,15 @@ export type UiPlugin = (ctx: UiContext) => void
 
 export const defineUi = (activate: UiPlugin): UiPlugin => activate
 
-export type { ActionFailure, ChangeListing, FileListing, FolderListing, UiHost }
+export type {
+  ActionFailure,
+  CommittedChangeListing,
+  ChangeListing,
+  DiscardFailure,
+  FileListing,
+  FolderListing,
+  UiHost,
+}
 export * from "./components.ts"
 
 export const UiHostProvider = ({ host, children }: { host: UiHost; children?: ReactNode }) =>
@@ -190,6 +200,12 @@ export const useChanges = (sessionId: string) => useHost().useChanges(sessionId)
 export const useOpenDiff = () => useHost().useOpenDiff()
 export const useDiffOnScreen = (sessionId: string) => useHost().useDiffOnScreen(sessionId)
 export const useSettings = () => useHost().useSettings()
+export const useCommittedChanges = (sessionId: string) => useHost().useCommittedChanges(sessionId)
+export const useOpenCommittedDiff = () => useHost().useOpenCommittedDiff()
+export const useCommittedDiffOnScreen = (sessionId: string) =>
+  useHost().useCommittedDiffOnScreen(sessionId)
+export const useDiscardChange = () => useHost().useDiscardChange()
+export const useDiscardAllChanges = () => useHost().useDiscardAllChanges()
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"
 export { pendingQuestion } from "./pending-question.ts"
