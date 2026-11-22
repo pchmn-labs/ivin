@@ -32,6 +32,7 @@ const setup = async () => {
     lastActivityAt: at,
     archivedAt: null,
     lastImageNumber: 0,
+    waitingFor: null,
   })
   const sessions = sessionsOf(project)
   registry.mount(sessions.ids)

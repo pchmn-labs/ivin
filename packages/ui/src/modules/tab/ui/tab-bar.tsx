@@ -129,7 +129,11 @@ function TabItem({
             tabIndex={focusable ? 0 : -1}
             onClick={() => openTab({ sessionId })}
           >
-            <SessionMark status={session.status} harness={session.harness} />
+            <SessionMark
+              status={session.status}
+              waitingFor={session.waitingFor}
+              harness={session.harness}
+            />
             <span className="iv-tab-bar__title" data-testid="tab-title" title={session.title}>
               {session.title}
             </span>

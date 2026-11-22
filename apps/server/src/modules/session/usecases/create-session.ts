@@ -28,6 +28,7 @@ export const createSession = (projectPath: string) =>
       pendingMessages: [],
       unreadMessages: [],
       status: "idle",
+      waitingFor: null,
       statusChangedAt: now,
       createdAt: now,
       lastActivityAt: now,

@@ -74,7 +74,11 @@ function SessionRow({
         onSelect={() => openTab({ sessionId: id })}
         leading={
           <span data-testid="session-status">
-            <SessionMark status={session.status} harness={session.harness} />
+            <SessionMark
+              status={session.status}
+              waitingFor={session.waitingFor}
+              harness={session.harness}
+            />
           </span>
         }
         title={<span data-testid="session-title">{session.title}</span>}

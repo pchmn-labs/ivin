@@ -438,7 +438,7 @@ Phosphor icons at regular weight (the question icon filled, as the session mark'
 - **States:** hover wash; selected rows take the active wash and 500 weight; a row whose session waits on the user takes the dashed amber outline, inset by 1px; with controls under it, it also takes the amber wash (amber hover on hover). Row actions appear only on hover, focus or selection. Controls under a row (`below`) sit inside its frame, aligned with the title, and share its hover; a row's `tooltip` opens on its right.
 
 ### Session Mark
-The signature of the session list: the 16px mark of the session's harness with a small circular overlay at its bottom-right, over a transparent hole cut in the harness mark, so any row or tab background shows around it. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px amber disc with a "!" cut through it. Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
+The signature of the session list: the 16px mark of the session's harness with a small circular overlay at its bottom-right, over a transparent hole cut in the harness mark, so any row or tab background shows around it. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting is an 11px amber disc with a "!" cut through it for an approval, a "?" for the agent's questions. Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
 
 ### Status Mark
 A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv-duration-pulse`). Waiting is a larger 8px amber dot. Idle is a faint 1.5px ring. Failed is red. It always carries a label, visible or hidden.
@@ -529,7 +529,6 @@ The Command line section has one row in the same layout: "`ivin` in your shell",
 Decided but not built, because the data they need does not exist yet. Build them this way when it arrives.
 - **Letter project icons:** lettered project icons in place of the pixel creatures, chosen on the settings page.
 - **Plugin settings sections:** the `settings.section` slot, one section per plugin in the settings sidebar, after the built-in ones.
-- **"?" on the session mark:** a session waiting on the agent's questions takes a "?" overlay in place of the "!". It waits for the session to say what it waits on.
 - **"Allow <rule> for this session":** a third approval option, waiting for an approval answer richer than allow or deny.
 - **PR icon with checks colour:** a pull-request icon on a session whose colour follows its checks.
 - **Background tasks:** a dot on the session mark while a session runs a background task, the running tasks in the composer status line, and "In background" on the tool row that started one.

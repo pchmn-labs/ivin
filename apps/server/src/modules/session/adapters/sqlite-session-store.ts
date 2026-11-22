@@ -5,6 +5,7 @@ import type {
   Session,
   SessionStatus,
   PendingMessage,
+  WaitingFor,
 } from "@ivin/contracts/session"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
@@ -26,6 +27,7 @@ interface SessionRow {
   pending_messages: string
   unread_messages: string
   status: SessionStatus
+  waiting_for: WaitingFor
   status_changed_at: number
   created_at: number
   last_activity_at: number
@@ -54,6 +56,7 @@ const toSession = (row: SessionRow): Session => ({
   pendingMessages: JSON.parse(row.pending_messages) as PendingMessage[],
   unreadMessages: JSON.parse(row.unread_messages) as PendingMessage[],
   status: row.status,
+  waitingFor: row.waiting_for,
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
   createdAt: DateTime.makeUnsafe(row.created_at),
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
@@ -63,7 +66,7 @@ const toSession = (row: SessionRow): Session => ({
 
 const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model,
   effort, permission_mode, relaunch_failure, pending_messages, unread_messages, status,
-  status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
+  waiting_for, status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
   ) AS started,
   (SELECT COALESCE(MAX(number), 0) FROM images i WHERE i.session_id = sessions.id) AS last_image_number`
@@ -238,16 +241,23 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         Effect.sync(() => {
           db.prepare("UPDATE sessions SET working_folder_deleted = 1 WHERE id = ?").run(id)
         }),
-      setStatus: (id, status, at) =>
+      setStatus: (id, status, at, waitingFor = null) =>
         Effect.sync(() => {
-          db.prepare(
-            `UPDATE sessions SET status = ?, status_changed_at = ?
-             WHERE id = ? AND status <> ?`,
-          ).run(status, DateTime.toEpochMillis(at), id, status)
+          const waiting = status === "waiting" ? waitingFor : null
+          db.prepare(`UPDATE sessions SET status_changed_at = ? WHERE id = ? AND status <> ?`).run(
+            DateTime.toEpochMillis(at),
+            id,
+            status,
+          )
+          db.prepare(`UPDATE sessions SET status = ?, waiting_for = ? WHERE id = ?`).run(
+            status,
+            waiting,
+            id,
+          )
         }),
       resetRunning: Effect.sync(() => {
         db.prepare(
-          `UPDATE sessions SET status = 'idle', status_changed_at = last_activity_at
+          `UPDATE sessions SET status = 'idle', waiting_for = NULL, status_changed_at = last_activity_at
            WHERE status NOT IN ('idle', 'failed')`,
         ).run()
         db.prepare(`UPDATE sessions SET ${pendingToUnread} WHERE pending_messages <> '[]'`).run()

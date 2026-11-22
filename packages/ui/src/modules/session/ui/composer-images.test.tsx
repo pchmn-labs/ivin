@@ -40,6 +40,7 @@ const addSession = (server: FakeServer, id: string, lastImageNumber = 0) => {
     lastActivityAt: at,
     archivedAt: null,
     lastImageNumber,
+    waitingFor: null,
   })
 }
 

@@ -542,6 +542,7 @@ export const makeFakeServer = (
           lastActivityAt: at,
           archivedAt: null,
           lastImageNumber: 0,
+          waitingFor: null,
         }
         sessions.set(session.id, session)
         return session
@@ -758,6 +759,7 @@ export const makeFakeServer = (
             lastActivityAt: tick(),
             archivedAt: null,
             lastImageNumber: Math.max(session.lastImageNumber, ...sent.map((i) => i.number)),
+            waitingFor: null,
           }
           return saveSession(updated)
         }),

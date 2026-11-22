@@ -5,6 +5,7 @@ import type {
   Session,
   SessionStatus,
   PendingMessage,
+  WaitingFor,
 } from "@ivin/contracts/session"
 import { Context, type Effect } from "effect"
 
@@ -56,6 +57,7 @@ export class SessionStore extends Context.Service<
       id: string,
       status: SessionStatus,
       at: Session["statusChangedAt"],
+      waitingFor?: WaitingFor,
     ) => Effect.Effect<void>
     // No run survives a connection, so a session left working or waiting is idle again, its pending messages unread.
     readonly resetRunning: Effect.Effect<void>

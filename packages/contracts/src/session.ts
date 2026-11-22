@@ -12,6 +12,10 @@ export const SessionStatus = Schema.Literals([
 ])
 export type SessionStatus = typeof SessionStatus.Type
 
+// What a `waiting` session waits on; null in every other status.
+export const WaitingFor = Schema.NullOr(Schema.Literals(["approval", "question"]))
+export type WaitingFor = typeof WaitingFor.Type
+
 export const Harness = Schema.Literals(["claude", "codex", "acp", "scripted"])
 export type Harness = typeof Harness.Type
 
@@ -82,6 +86,7 @@ export const Session = Schema.Struct({
   pendingMessages: Schema.Array(PendingMessage),
   unreadMessages: Schema.Array(PendingMessage),
   status: SessionStatus,
+  waitingFor: WaitingFor,
   statusChangedAt: Schema.DateTimeUtcFromMillis,
   createdAt: Schema.DateTimeUtcFromMillis,
   lastActivityAt: Schema.DateTimeUtcFromMillis,

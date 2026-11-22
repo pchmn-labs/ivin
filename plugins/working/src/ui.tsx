@@ -102,7 +102,13 @@ function WaitingRow({ session, project, now }: { session: Session; project: stri
         data-testid="working-session"
         attention
         onSelect={() => openTab(session.id)}
-        leading={<SessionMark status={session.status} harness={session.harness} />}
+        leading={
+          <SessionMark
+            status={session.status}
+            waitingFor={session.waitingFor}
+            harness={session.harness}
+          />
+        }
         title={session.title}
         subtitle={
           <Detail
@@ -159,7 +165,13 @@ function RunningRow({ session, project, now }: { session: Session; project: stri
       <ListRow
         data-testid="working-session"
         onSelect={() => openTab(session.id)}
-        leading={<SessionMark status={session.status} harness={session.harness} />}
+        leading={
+          <SessionMark
+            status={session.status}
+            waitingFor={session.waitingFor}
+            harness={session.harness}
+          />
+        }
         title={session.title}
         subtitle={<Detail project={project} />}
         meta={elapsed(session.statusChangedAt.epochMilliseconds, now)}

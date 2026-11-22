@@ -5,6 +5,7 @@ import {
   type Session,
   type SessionStatus,
   type PendingMessage,
+  type WaitingFor,
 } from "@ivin/contracts/session"
 import type {
   HarnessDelta,
@@ -123,9 +124,9 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
       ),
     )
 
-    const setStatus = (sessionId: string, status: SessionStatus) =>
+    const setStatus = (sessionId: string, status: SessionStatus, waitingFor: WaitingFor = null) =>
       DateTime.now.pipe(
-        Effect.flatMap((at) => sessions.setStatus(sessionId, status, at)),
+        Effect.flatMap((at) => sessions.setStatus(sessionId, status, at, waitingFor)),
         Effect.andThen(sessionFeed.publish(sessionId)),
       )
 
@@ -177,9 +178,11 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           writing.withPermits(1)(
             write(event, id).pipe(
               Effect.andThen(
-                event.type === "approval_request" || event.type === "question_request"
-                  ? setStatus(session.id, "waiting")
-                  : Effect.void,
+                event.type === "approval_request"
+                  ? setStatus(session.id, "waiting", "approval")
+                  : event.type === "question_request"
+                    ? setStatus(session.id, "waiting", "question")
+                    : Effect.void,
               ),
             ),
           )
@@ -196,7 +199,10 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
                   ? { type: "approval_decision", requestId, allow: answer.allow, raw: null }
                   : { type: "question_answer", requestId, answers: answer.answers, raw: null },
               )
-              yield* setStatus(session.id, itemState.openRequests.size > 0 ? "waiting" : "working")
+              const stillOpen = [...itemState.openRequests.values()].at(-1)
+              yield* stillOpen === undefined
+                ? setStatus(session.id, "working")
+                : setStatus(session.id, "waiting", stillOpen.type)
               return true
             }),
           )

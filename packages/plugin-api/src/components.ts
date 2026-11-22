@@ -216,6 +216,8 @@ export interface ListSectionProps {
 export interface SessionMarkProps {
   readonly status: Session["status"]
   readonly harness: Session["harness"]
+  // Draws "?" in place of "!" on a session waiting on the agent's questions.
+  readonly waitingFor?: Session["waitingFor"]
 }
 
 // "now", "5 min", "3 d"…, kept current while shown.

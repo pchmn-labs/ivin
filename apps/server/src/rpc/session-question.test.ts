@@ -238,3 +238,23 @@ test("after a server restart the questions stay open in the transcript, and answ
     error: "QuestionNotOpen",
   })
 })
+
+test("a waiting session says whether it waits on questions or on an approval, and no longer once answered", async () => {
+  const seen = await withServer(
+    newDatabase(),
+    [[running, asked, said("Thanks."), approval, said("Done."), idle]],
+    (client) =>
+      Effect.gen(function* () {
+        const id = yield* askQuestions(client)
+        const onQuestions = (yield* sessionOf(client, id)).waitingFor
+        yield* client["session.answerQuestion"]({ sessionId: id, requestId: "q1", answers })
+        const onApproval = (yield* untilSession(client, id, (s) => s.waitingFor === "approval"))
+          .waitingFor
+        yield* client["session.answerApproval"]({ sessionId: id, requestId: "r1", allow: true })
+        const done = yield* untilSession(client, id, (s) => s.status === "idle")
+        return [onQuestions, onApproval, done.waitingFor]
+      }),
+  )
+
+  expect(seen).toEqual(["question", "approval", null])
+})

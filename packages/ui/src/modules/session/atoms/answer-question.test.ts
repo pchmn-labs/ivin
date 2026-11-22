@@ -32,6 +32,7 @@ test("answering questions stores the answers on their item and updates the sessi
     lastActivityAt: at,
     archivedAt: null,
     lastImageNumber: 0,
+    waitingFor: null,
   })
   server.seedItems("s1", [
     {
