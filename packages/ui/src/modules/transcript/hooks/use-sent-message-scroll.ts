@@ -62,7 +62,12 @@ export function useSentMessageScroll({
       view.scrollTop += row.getBoundingClientRect().top - view.getBoundingClientRect().top
     // Virtuoso follows only from the end, and a row taller than the room leaves the view short of it.
     // The next frame lets it measure the shrunk room first, or it misses that the view reached the end.
-    else if (held) requestAnimationFrame(() => (view.scrollTop = view.scrollHeight))
+    else if (held)
+      requestAnimationFrame(() => {
+        view.scrollTop = view.scrollHeight
+        // The browser sends its scroll event a frame later; a row added before then would not be followed.
+        view.dispatchEvent(new Event("scroll"))
+      })
   }, [setRoom])
 
   useLayoutEffect(() => {
