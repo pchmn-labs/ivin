@@ -19,10 +19,12 @@ export {
 export {
   layerScripted,
   scriptedFailure,
+  scriptedRead,
   scriptedRunOptions,
   type ScriptedElement,
   type ScriptedFailure,
   type ScriptedOptions,
+  type ScriptedRead,
   type ScriptedSend,
 } from "./modules/scripted/adapters/scripted-provider.ts"
 export { layerClaude } from "./modules/claude/adapters/claude-provider.ts"

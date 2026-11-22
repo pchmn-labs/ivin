@@ -35,6 +35,8 @@ const UserMessageBody = Schema.Struct({
   text: Schema.String,
   // Absent on messages stored before images existed.
   images: Schema.optional(Schema.Array(ImageRef)),
+  // The agent read it while a turn was running, so it belongs to that turn.
+  steer: Schema.optional(Schema.Boolean),
 })
 const AssistantTextBody = Schema.Struct({
   type: Schema.Literal("assistant_text"),
@@ -163,7 +165,19 @@ export const HarnessProviderSession = Schema.Struct({
 })
 export type HarnessProviderSession = typeof HarnessProviderSession.Type
 
-export const HarnessOutput = Schema.Union([HarnessEvent, HarnessDelta, HarnessProviderSession])
+// The agent took in a message sent while it worked. Never stored as an event.
+export const HarnessMessageRead = Schema.Struct({
+  type: Schema.Literal("message_read"),
+  messageId: Schema.String,
+})
+export type HarnessMessageRead = typeof HarnessMessageRead.Type
+
+export const HarnessOutput = Schema.Union([
+  HarnessEvent,
+  HarnessDelta,
+  HarnessProviderSession,
+  HarnessMessageRead,
+])
 export type HarnessOutput = typeof HarnessOutput.Type
 
 export const TranscriptEvent = Schema.Union(
@@ -197,6 +211,7 @@ export const MessageItem = Schema.Struct({
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
   images: Schema.Array(ImageRef),
+  steer: Schema.Boolean,
 })
 export const ThinkingItem = Schema.Struct({
   ...itemFields,

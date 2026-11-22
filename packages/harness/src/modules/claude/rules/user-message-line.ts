@@ -31,4 +31,9 @@ const contentOf = ({ text, images }: UserMessage) => {
 }
 
 export const userMessageLine = (message: UserMessage): string =>
-  JSON.stringify({ type: "user", message: { role: "user", content: contentOf(message) } })
+  JSON.stringify({
+    type: "user",
+    // Claude Code names the message by it in its `command_lifecycle` lines.
+    uuid: message.id,
+    message: { role: "user", content: contentOf(message) },
+  })

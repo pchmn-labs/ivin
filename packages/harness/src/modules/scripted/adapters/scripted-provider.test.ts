@@ -5,6 +5,7 @@ import { type ApprovalDecision, HarnessProvider } from "../../../shared/harness-
 import {
   layerScripted,
   scriptedFailure,
+  scriptedRead,
   type ScriptedElement,
   type ScriptedSend,
 } from "./scripted-provider.ts"
@@ -32,8 +33,8 @@ test("each send replays the next turn on the events stream and records what was 
         options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
-      yield* harness.send({ text: "hello", images: [] })
-      yield* harness.send({ text: "again", images: [] })
+      yield* harness.send({ id: "m1", text: "hello", images: [] })
+      yield* harness.send({ id: "m2", text: "again", images: [] })
       return yield* Stream.runCollect(Stream.take(harness.events, 3))
     }),
   )
@@ -44,8 +45,8 @@ test("each send replays the next turn on the events stream and records what was 
     "three",
   ])
   expect(sent).toEqual([
-    { sessionId: "s1", text: "hello", images: [] },
-    { sessionId: "s1", text: "again", images: [] },
+    { sessionId: "s1", id: "m1", text: "hello", images: [] },
+    { sessionId: "s1", id: "m2", text: "again", images: [] },
   ])
 })
 
@@ -58,7 +59,7 @@ test("sending with no turn left fails", async () => {
         options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
-      return yield* Effect.flip(harness.send({ text: "hello", images: [] }))
+      return yield* Effect.flip(harness.send({ id: "m3", text: "hello", images: [] }))
     }),
   )
 
@@ -74,8 +75,8 @@ test("with cycle, the turns start over once they are used up", async () => {
         options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
-      yield* harness.send({ text: "a", images: [] })
-      yield* harness.send({ text: "b", images: [] })
+      yield* harness.send({ id: "m4", text: "a", images: [] })
+      yield* harness.send({ id: "m5", text: "b", images: [] })
       return yield* Stream.runCollect(Stream.take(harness.events, 2))
     }).pipe(Effect.provide(layerScripted([[text("only")]], { cycle: true })), Effect.scoped),
   )
@@ -102,7 +103,7 @@ test("a turn pauses after an approval request and resumes on each decision", asy
         providerSessionId: null,
         options: { model: "m", effort: "e", permissionMode: "p" },
       })
-      yield* harness.send({ text: "go", images: [] })
+      yield* harness.send({ id: "m6", text: "go", images: [] })
       const first = yield* Stream.runCollect(Stream.take(harness.events, 2))
       yield* harness.respond({ requestId: "a", allow: true })
       const second = yield* Stream.runCollect(Stream.take(harness.events, 2))
@@ -139,7 +140,7 @@ test("responding with no paused turn fails", async () => {
         options: { model: "m", effort: "e", permissionMode: "p" },
         providerSessionId: null,
       })
-      yield* harness.send({ text: "go", images: [] })
+      yield* harness.send({ id: "m7", text: "go", images: [] })
       return yield* Effect.flip(harness.respond({ requestId: "a", allow: true }))
     }),
   )
@@ -178,7 +179,7 @@ test("a scripted failure fails the events stream at that point, after the events
           options: { model: "m", effort: "e", permissionMode: "p" },
           providerSessionId: null,
         })
-        yield* harness.send({ text: "go", images: [] })
+        yield* harness.send({ id: "m8", text: "go", images: [] })
         const seen: string[] = []
         const error = yield* Stream.runForEach(harness.events, (e) =>
           Effect.sync(() => void seen.push(e.type)),
@@ -218,4 +219,82 @@ test("a start failure fails start, and closing the scope is reported", async () 
     }).pipe(Effect.provide(layerScripted([], { startFailure: "No agent" })), Effect.scoped),
   )
   expect(error.message).toBe("No agent")
+})
+
+const running: HarnessOutput = { type: "status", status: "running", raw: null }
+const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
+const asked = approval("r1")
+const read = (messageId: string): HarnessOutput => ({ type: "message_read", messageId })
+
+const startS1 = (provider: HarnessProvider["Service"]) =>
+  provider.start({
+    sessionId: "s1",
+    cwd: "/p",
+    options: { model: "m", effort: "e", permissionMode: "p" },
+    providerSessionId: null,
+  })
+
+test("a message sent mid-turn waits, and the turn reads it where the script says", async () => {
+  const sent: ScriptedSend[] = []
+  const events = await run(
+    [[running, asked, scriptedRead, text("noted"), idle]],
+    sent,
+    (provider) =>
+      Effect.gen(function* () {
+        const harness = yield* startS1(provider)
+        yield* harness.send({ id: "m1", text: "go", images: [] })
+        yield* harness.send({ id: "m2", text: "also", images: [] })
+        yield* harness.respond({ requestId: "r1", allow: true })
+        return yield* Stream.runCollect(Stream.take(harness.events, 5))
+      }),
+  )
+
+  expect(events).toEqual([running, asked, read("m2"), text("noted"), idle])
+  expect(sent.map((s) => s.id)).toEqual(["m1", "m2"])
+})
+
+test("messages still waiting when a turn ends are read, then start the next turn", async () => {
+  const events = await run([[running, asked, idle], [running, text("next"), idle]], [], (provider) =>
+    Effect.gen(function* () {
+      const harness = yield* startS1(provider)
+      yield* harness.send({ id: "m1", text: "go", images: [] })
+      yield* harness.send({ id: "m2", text: "also", images: [] })
+      yield* harness.send({ id: "m3", text: "and", images: [] })
+      yield* harness.respond({ requestId: "r1", allow: true })
+      return yield* Stream.runCollect(Stream.take(harness.events, 8))
+    }),
+  )
+
+  expect(events).toEqual([
+    running,
+    asked,
+    idle,
+    read("m2"),
+    read("m3"),
+    running,
+    text("next"),
+    idle,
+  ])
+})
+
+test("an interrupt ends the turn, and a waiting message starts the next one", async () => {
+  const events = await run([[running, asked], [running, text("next"), idle]], [], (provider) =>
+    Effect.gen(function* () {
+      const harness = yield* startS1(provider)
+      yield* harness.send({ id: "m1", text: "go", images: [] })
+      yield* harness.send({ id: "m2", text: "also", images: [] })
+      yield* harness.interrupt
+      return yield* Stream.runCollect(Stream.take(harness.events, 7))
+    }),
+  )
+
+  expect(events.map((e) => e.type)).toEqual([
+    "status",
+    "approval_request",
+    "interruption",
+    "status",
+    "message_read",
+    "status",
+    "assistant_text",
+  ])
 })

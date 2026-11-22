@@ -13,6 +13,7 @@ import interruption from "./fixtures/interruption.jsonl?raw"
 import notLoggedIn from "./fixtures/not-logged-in.jsonl?raw"
 import plainAnswer from "./fixtures/plain-answer.jsonl?raw"
 import resumedSession from "./fixtures/resumed-session.jsonl?raw"
+import steer from "./fixtures/steer.jsonl?raw"
 import thinking from "./fixtures/thinking.jsonl?raw"
 import toolInterruption from "./fixtures/tool-interruption.jsonl?raw"
 import toolCall from "./fixtures/tool-call.jsonl?raw"
@@ -31,6 +32,7 @@ const fixtures = {
   "tool-interruption": toolInterruption,
   "plain-answer": plainAnswer,
   "resumed-session": resumedSession,
+  steer,
   thinking: thinking,
   "tool-call": toolCall,
 }
@@ -288,4 +290,11 @@ test("a git worktree add that fails gives a tool result flagged as an error", ()
     isError: true,
     output: expect.stringContaining("a branch named 'try/adopt' already exists"),
   })
+})
+
+test("each message Claude Code takes from its queue is read, the first one and a steer after a tool result", () => {
+  expect(fixture("steer").filter((o) => o.type !== "tool_result")).toEqual([
+    { type: "message_read", messageId: "f1a639d5-fbff-480b-ae2b-102a23ba890b" },
+    { type: "message_read", messageId: "c229e6e0-c4ef-494f-9f05-8a9c282d1666" },
+  ])
 })

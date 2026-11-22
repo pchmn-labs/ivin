@@ -16,6 +16,7 @@ export interface StartInput {
 }
 
 export interface UserMessage {
+  readonly id: string
   readonly text: string
   readonly images: readonly ImageData[]
 }
