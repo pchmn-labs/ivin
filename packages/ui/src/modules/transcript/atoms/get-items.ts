@@ -6,6 +6,7 @@ import { makeEntityList, type EntityWriter } from "@ivin/state/entity-list"
 import { strongFamily } from "@ivin/state/strong-family"
 import { foldDeltas } from "../rules/fold-deltas.ts"
 import { stableRows } from "../rules/stable-rows.ts"
+import type { TranscriptPlace } from "../rules/transcript-place.ts"
 import { shownRows, transcriptRows, turnWork, type TranscriptRow } from "../rules/turns.ts"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 
@@ -35,6 +36,8 @@ const applyDeltas = (writer: EntityWriter<TranscriptItem>, batch: ReadonlyArray<
 export const transcriptOf = strongFamily((sessionId: string) => {
   // Kept alive: the feed writes it before anything reads it, and an unread node is dropped.
   const paging = Atom.keepAlive(Atom.make<Paging>(unloaded))
+  // Where the view was scrolled when it last closed.
+  const place = Atom.keepAlive(Atom.make<TranscriptPlace | null>(null))
   const list = makeEntityList({
     id: (item: TranscriptItem) => item.id,
     compare: (a, b) => a.position - b.position,
@@ -81,7 +84,9 @@ export const transcriptOf = strongFamily((sessionId: string) => {
               )
             }),
             // The list is dropped with the feed, so a page loaded before no longer describes it.
-            Effect.onInterrupt(() => Atom.set(paging, unloaded)),
+            Effect.onInterrupt(() =>
+              Atom.set(paging, unloaded).pipe(Effect.andThen(Atom.set(place, null))),
+            ),
           )
         }),
     },
@@ -112,5 +117,5 @@ export const transcriptOf = strongFamily((sessionId: string) => {
       }),
     ),
   )
-  return { list, paging, view, work }
+  return { list, paging, place, view, work }
 })

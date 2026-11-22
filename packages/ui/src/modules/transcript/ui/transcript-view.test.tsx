@@ -1,4 +1,4 @@
-import { RegistryProvider } from "@effect/atom-react"
+import { RegistryProvider, useAtomMount } from "@effect/atom-react"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
@@ -8,7 +8,7 @@ import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
-import { PAGE_SIZE } from "../atoms/get-items.ts"
+import { PAGE_SIZE, transcriptOf } from "../atoms/get-items.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
 const message = (position: number, text = `message ${position}`): TranscriptItem => ({
@@ -321,3 +321,86 @@ test.each([true, false])(
     })
   },
 )
+
+// The session's tab keeps its transcript in memory while the view is closed, as switching tabs does.
+function KeptTranscript() {
+  useAtomMount(transcriptOf("s1").list.ids)
+  return null
+}
+
+const switchableView = (
+  server: ReturnType<typeof makeFakeServer>,
+  shown: boolean,
+  live = false,
+) => (
+  <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+    <KeptTranscript />
+    <div style={{ position: "relative", height: 300 }}>
+      <PluginsProvider plugins={builtinPlugins}>
+        {shown && <TranscriptView sessionId="s1" live={live} />}
+      </PluginsProvider>
+    </div>
+  </RegistryProvider>
+)
+
+test("the transcript opens again where the user had scrolled it", async () => {
+  const server = makeFakeServer()
+  server.seedItems(
+    "s1",
+    Array.from({ length: 40 }, (_, i) => message(i)),
+  )
+  const screen = await render(switchableView(server, true))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+  scroller().scrollTop -= 250
+  await frames()
+  const scrolledTo = scroller().scrollTop
+
+  await screen.rerender(switchableView(server, false))
+  await expect.element(page.getByTestId("transcript")).not.toBeInTheDocument()
+  await screen.rerender(switchableView(server, true))
+
+  await vi.waitFor(() => expect(Math.abs(scroller().scrollTop - scrolledTo)).toBeLessThan(2))
+  await frames()
+  expect(Math.abs(scroller().scrollTop - scrolledTo)).toBeLessThan(2)
+})
+
+test("a transcript left at its end opens again at its end, with the items that came meanwhile", async () => {
+  const server = makeFakeServer()
+  server.seedItems(
+    "s1",
+    Array.from({ length: 40 }, (_, i) => message(i)),
+  )
+  const screen = await render(switchableView(server, true))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+
+  await screen.rerender(switchableView(server, false))
+  await expect.element(page.getByTestId("transcript")).not.toBeInTheDocument()
+  for (let i = 40; i < 45; i++) server.pushItem(message(i))
+  await screen.rerender(switchableView(server, true))
+
+  await expect.element(page.getByText("message 44", { exact: true })).toBeVisible()
+})
+
+test("a sent message is still at the top of the view when the transcript opens again", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+  const screen = await render(switchableView(server, true))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+  const topInView = (text: string) =>
+    page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
+    scroller().getBoundingClientRect().top
+
+  server.pushItem(userMessage(40))
+  await screen.rerender(switchableView(server, true, true))
+  await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
+
+  await screen.rerender(switchableView(server, false, true))
+  await expect.element(page.getByTestId("transcript")).not.toBeInTheDocument()
+  server.pushItem(message(41))
+  await screen.rerender(switchableView(server, true, true))
+
+  await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
+  await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
+  await frames()
+  expect(topInView("question 40")).toBeLessThan(30)
+})
