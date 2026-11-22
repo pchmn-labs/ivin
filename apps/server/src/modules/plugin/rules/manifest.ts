@@ -16,9 +16,6 @@ const invalid = (reason: string): ManifestReading => ({ kind: "invalid", reason 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value)
 
-export const isPluginId = (text: string) => ID.test(text)
-
-// `text` is the plugin's package.json, null when the folder has none.
 export const readManifest = (text: string | null): ManifestReading => {
   if (text === null) return invalid("The plugin's folder has no package.json.")
   let json: unknown
@@ -30,7 +27,7 @@ export const readManifest = (text: string | null): ManifestReading => {
   const ivin = isRecord(json) ? json["ivin"] : undefined
   if (!isRecord(ivin)) return invalid("package.json has no ivin key, which holds the manifest.")
   const { id, name, ui } = ivin
-  if (typeof id !== "string" || !isPluginId(id)) {
+  if (typeof id !== "string" || !ID.test(id)) {
     return invalid("ivin.id in package.json must be lowercase letters, digits and dashes.")
   }
   if (name !== undefined && typeof name !== "string") {

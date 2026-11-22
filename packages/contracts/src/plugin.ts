@@ -23,11 +23,12 @@ export const UserPlugin = Schema.Union([
 ])
 export type UserPlugin = typeof UserPlugin.Type
 
+export const PluginFailure = Schema.Struct({ id: Schema.String, reason: Schema.String })
+export type PluginFailure = typeof PluginFailure.Type
+
 export const PluginRpcs = RpcGroup.make(
   Rpc.make("plugin.list", { success: Schema.Array(UserPlugin) }),
-  Rpc.make("plugin.reportFailure", {
-    payload: { id: Schema.String, reason: Schema.String },
-  }),
+  Rpc.make("plugin.reportFailure", { payload: PluginFailure }),
   // Oldest first; empty when the plugin never failed.
   Rpc.make("plugin.readLog", {
     payload: { id: Schema.String },

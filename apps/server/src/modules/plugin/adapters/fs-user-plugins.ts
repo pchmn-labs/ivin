@@ -1,5 +1,6 @@
 import { HOST_MODULES, HOST_MODULES_GLOBAL } from "@ivin/contracts/plugin"
 import { Effect, Layer } from "effect"
+import rolldownPackage from "rolldown/package.json" with { type: "json" }
 import { createHash } from "node:crypto"
 import { existsSync } from "node:fs"
 import {
@@ -17,7 +18,7 @@ import { PluginNotCompiled, UserPlugins, type PluginFolder } from "../usecases/u
 
 const HOST_PREFIX = "\0ivin-host:"
 // Bumped when a change to how plugins compile must invalidate the cached bundles.
-const COMPILE_VERSION = `1 ${HOST_MODULES.join(" ")}`
+const COMPILE_VERSION = `1 ${rolldownPackage.version} ${HOST_MODULES.join(" ")}`
 const PROVIDED_PACKAGES = ["react", "react-dom", "@ivin/plugin-api"]
 
 const isBare = (specifier: string) =>
@@ -31,6 +32,16 @@ const packageOf = (specifier: string) =>
 const isSafeName = (name: string) => name !== "" && !name.startsWith(".") && !/[/\\\0]/.test(name)
 
 const readText = (path: string) => readFile(path, "utf8").catch(() => null)
+const isFolder = (path: string) =>
+  stat(path).then(
+    (s) => s.isDirectory(),
+    () => false,
+  )
+const isFile = (path: string) =>
+  stat(path).then(
+    (s) => s.isFile(),
+    () => false,
+  )
 
 // Every file the bundle can depend on, in a stable order.
 const filesOf = async (folder: string): Promise<string[]> => {
@@ -125,11 +136,7 @@ export const layerFsUserPlugins = (ivinHome: string) => {
       for (const name of names.filter(isSafeName).sort()) {
         const path = join(pluginsFolder, name)
         // Followed, so a plugin can be a link to the folder its author works in.
-        const isFolder = await stat(path).then(
-          (s) => s.isDirectory(),
-          () => false,
-        )
-        if (isFolder)
+        if (await isFolder(path))
           folders.push({ name, path, manifest: await readText(join(path, "package.json")) })
       }
       return folders
@@ -145,13 +152,7 @@ export const layerFsUserPlugins = (ivinHome: string) => {
           }
           const name = `${await hashOf(folder, entry)}.js`
           const file = join(cacheFolder, name)
-          if (
-            await stat(file).then(
-              () => true,
-              () => false,
-            )
-          )
-            return name
+          if (await isFile(file)) return name
           const code = await bundle(folder, entryPath).catch((error: unknown) => {
             throw new Error(`Could not compile ${entry}: ${messageOf(error)}`)
           })

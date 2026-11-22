@@ -23,7 +23,7 @@ import {
 } from "@ivin/contracts/file"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
-import type { UserPlugin } from "@ivin/contracts/plugin"
+import type { PluginFailure, UserPlugin } from "@ivin/contracts/plugin"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type {
   Harness,
@@ -67,9 +67,8 @@ export interface FakeServer {
   readonly layer: Layer.Layer<ServerClient>
   readonly sessions: Map<string, Session>
   readonly errorReports: Array<ErrorReport>
-  // What `plugin.list` answers: the user's plugins, compiled or failed.
   readonly userPlugins: Array<UserPlugin>
-  readonly pluginFailures: Array<{ readonly id: string; readonly reason: string }>
+  readonly pluginFailures: Array<PluginFailure>
   // Adds an item to a transcript as the server would, and streams it to watchers.
   readonly pushItem: (item: TranscriptItem) => void
   // Streams any change (a delta, say) to watchers without storing it.
@@ -244,7 +243,7 @@ export const makeFakeServer = (
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
   const userPlugins: Array<UserPlugin> = []
-  const pluginFailures: Array<{ readonly id: string; readonly reason: string }> = []
+  const pluginFailures: Array<PluginFailure> = []
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
   const gitStatus = new Map<string, ReadonlyArray<GitStatusEntry>>()
   const changes = new Map<string, ChangeList | { readonly gitMessage: string }>()
@@ -410,7 +409,7 @@ export const makeFakeServer = (
     "server.getHarness": () => Effect.succeed({ id: harness, runOptions }),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
     "plugin.list": () => Effect.sync(() => [...userPlugins]),
-    "plugin.reportFailure": (failure: { id: string; reason: string }) =>
+    "plugin.reportFailure": (failure: PluginFailure) =>
       Effect.sync(() => void pluginFailures.push(failure)),
     "plugin.readLog": ({ id }: { id: string }) =>
       Effect.sync(() => pluginFailures.filter((f) => f.id === id).map((f) => f.reason)),

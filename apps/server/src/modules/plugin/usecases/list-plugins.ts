@@ -1,13 +1,8 @@
 import type { UserPlugin } from "@ivin/contracts/plugin"
-import { DateTime, Effect } from "effect"
+import { Effect } from "effect"
 import { readManifest } from "../rules/manifest.ts"
-import { UserPlugins, type UserPluginsService } from "./user-plugins.ts"
-
-export const logPluginFailure = (plugins: UserPluginsService, id: string, reason: string) =>
-  Effect.gen(function* () {
-    const now = yield* DateTime.now
-    yield* plugins.appendLog(id, `${DateTime.formatIso(now)} ${reason}`)
-  })
+import { reportPluginFailure } from "./report-plugin-failure.ts"
+import { UserPlugins } from "./user-plugins.ts"
 
 export const listPlugins = Effect.gen(function* () {
   const plugins = yield* UserPlugins
@@ -16,9 +11,7 @@ export const listPlugins = Effect.gen(function* () {
   const folderOfId = new Map<string, string>()
   return yield* Effect.forEach(folders, (folder): Effect.Effect<UserPlugin> => {
     const fail = (id: string, reason: string) =>
-      logPluginFailure(plugins, id, reason).pipe(
-        Effect.as<UserPlugin>({ _tag: "failed", id, reason }),
-      )
+      reportPluginFailure(id, reason).pipe(Effect.as<UserPlugin>({ _tag: "failed", id, reason }))
     const reading = readManifest(folder.manifest)
     if (reading.kind === "invalid") return fail(folder.name, reading.reason)
     const { id, name, ui } = reading.manifest

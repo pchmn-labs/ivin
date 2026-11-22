@@ -4,15 +4,15 @@ import { useCallback, useEffect, useState } from "react"
 import type { UiPlugin } from "@ivin/plugin-api/ui"
 import type { ImportBundle } from "../adapters/plugin-bundle.ts"
 import type { UiPluginEntry } from "../atoms/activate-plugin.ts"
-import { reportPluginFailureAtom, userPluginsAtom } from "../atoms/user-plugins.ts"
+import { listPluginsAtom } from "../atoms/list-plugins.ts"
+import { reportPluginFailureAtom } from "../atoms/report-plugin-failure.ts"
 
 const NONE: ReadonlyArray<UiPluginEntry> = []
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
-// The user's plugins whose UI half imported; `fail` drops one whose activation threw.
 export function useUserPlugins(importBundle: ImportBundle) {
-  const result = useAtomValue(userPluginsAtom)
+  const result = useAtomValue(listPluginsAtom)
   const listed = AsyncResult.isSuccess(result) ? result.value : null
   const report = useAtomSet(reportPluginFailureAtom)
   const [plugins, setPlugins] = useState(NONE)
@@ -45,12 +45,12 @@ export function useUserPlugins(importBundle: ImportBundle) {
     }
   }, [listed, importBundle, report])
 
-  const fail = useCallback(
+  const dropFailedPlugin = useCallback(
     (id: string, error: unknown) => {
       report({ id, reason: `Its activate function threw: ${messageOf(error)}` })
       setPlugins((current) => current.filter((plugin) => plugin.manifest.id !== id))
     },
     [report],
   )
-  return { plugins, fail }
+  return { plugins, dropFailedPlugin }
 }

@@ -15,7 +15,6 @@ const hostModules: Record<HostModule, unknown> = {
 
 export type ImportBundle = (bundle: string) => Promise<Record<string, unknown>>
 
-// A bundle reads the host's modules from the global as it loads.
 export const exposeHostModules = () => {
   Object.assign(globalThis, { [HOST_MODULES_GLOBAL]: hostModules })
 }

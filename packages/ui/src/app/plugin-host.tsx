@@ -182,7 +182,7 @@ export function PluginsProvider({
     const userIds = new Set(userPlugins.plugins.map((plugin) => plugin.manifest.id))
     return [...plugins.filter((plugin) => !userIds.has(plugin.manifest.id)), ...userPlugins.plugins]
   }, [plugins, userPlugins.plugins])
-  const { fail } = userPlugins
+  const { dropFailedPlugin } = userPlugins
   const deactivations = useRef(new Map<UiPluginEntry, () => void>())
   // Children wait for activation so a virtual list never measures rows that have no contributions yet.
   const [active, setActive] = useState(false)
@@ -196,7 +196,7 @@ export function PluginsProvider({
     for (const plugin of all) {
       if (current.has(plugin)) continue
       const onFailure = userPlugins.plugins.includes(plugin)
-        ? (error: unknown) => fail(plugin.manifest.id, error)
+        ? (error: unknown) => dropFailedPlugin(plugin.manifest.id, error)
         : undefined
       current.set(
         plugin,
@@ -209,7 +209,7 @@ export function PluginsProvider({
       )
     }
     setActive(true)
-  }, [registry, all, userPlugins.plugins, fail])
+  }, [registry, all, userPlugins.plugins, dropFailedPlugin])
   useEffect(
     () => () => {
       deactivations.current.forEach((deactivate) => deactivate())
