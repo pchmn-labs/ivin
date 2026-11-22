@@ -30,6 +30,7 @@ const mount = async (
     slots: { add: (slot, component) => void (slots[slot] = component as ComponentType<never>) },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    editorExtensions: { add: () => undefined },
     sidebar: { showPanel: () => undefined },
   }
   activate(ctx)

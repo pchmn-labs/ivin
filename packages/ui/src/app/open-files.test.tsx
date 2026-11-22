@@ -84,7 +84,7 @@ beforeEach(async () => {
 })
 afterEach(() => localStorage.clear())
 
-test("a file opened from the tree shows beside the chat, read only, in a tab of its own", async () => {
+test("a file opened from the tree shows beside the chat, in a tab of its own", async () => {
   const server = makeServer()
   await mount(server)
   await showFiles()
@@ -92,7 +92,6 @@ test("a file opened from the tree shows beside the chat, read only, in a tab of 
 
   await expect.element(fileTab("README.md")).toHaveAttribute("aria-selected", "true")
   await expect.element(code("README.md")).toHaveTextContent("# Shop")
-  await expect.element(code("README.md")).toHaveAttribute("aria-readonly", "true")
   expect(server.subViews.get("s1")?.subViews).toEqual([{ kind: "file", path: "README.md" }])
 })
 

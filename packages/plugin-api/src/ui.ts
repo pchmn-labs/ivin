@@ -1,5 +1,6 @@
 import { createElement } from "react"
 import type { ComponentType, ReactNode } from "react"
+import type { Extension as EditorExtension } from "@codemirror/state"
 import type {
   Annotation,
   AnnotationDataOf,
@@ -17,6 +18,7 @@ import type { ActionFailure, FolderListing, UiHost } from "./host-context.ts"
 
 export type {
   Annotation,
+  EditorExtension,
   AnnotationTarget,
   FolderEntry,
   IssueAnnotationData,
@@ -102,6 +104,10 @@ export interface UiContext {
   // A default keybinding, which the user's ~/.ivin/keybindings.json can change.
   readonly keybindings: {
     add: (keybinding: KeybindingOptions) => void
+  }
+  // CodeMirror extensions for the editor of every open file, built from `@ivin/plugin-api/editor`.
+  readonly editorExtensions: {
+    add: (extension: EditorExtension) => void
   }
   readonly sidebar: {
     // Opens the sidebar on this plugin's `sidebar.panel` contribution of that name.

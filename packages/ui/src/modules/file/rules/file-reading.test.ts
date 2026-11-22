@@ -4,7 +4,11 @@ import { expect, test } from "vitest"
 import { fileReading, fileReadingFailure } from "./file-reading.ts"
 
 test("a text file shows its text; a large or binary file shows why it is not shown", () => {
-  expect(fileReading({ kind: "text", text: "a" }, "src/a.ts")).toEqual({ kind: "text", text: "a" })
+  expect(fileReading({ kind: "text", text: "a", version: "1" }, "src/a.ts")).toEqual({
+    kind: "text",
+    text: "a",
+    version: "1",
+  })
   expect(fileReading({ kind: "too_large", size: 5.5 * 1024 * 1024 }, "dist/big.js")).toEqual({
     kind: "message",
     text: "big.js is 5.5 MB, over the 2 MB ivin shows, so it is not shown.",

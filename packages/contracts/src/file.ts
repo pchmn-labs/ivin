@@ -23,9 +23,10 @@ export class FolderNotListed extends Schema.TaggedError<FolderNotListed>()("Fold
 
 export const FILE_SIZE_LIMIT = 2 * 1024 * 1024
 
-// `binary`: a zero byte among its first bytes.
+// `binary`: a zero byte among its first bytes. `version` identifies the bytes read, for
+// `file.writeFile` to tell whether the file changed since.
 export const FileContent = Schema.Union([
-  Schema.Struct({ kind: Schema.Literal("text"), text: Schema.String }),
+  Schema.Struct({ kind: Schema.Literal("text"), text: Schema.String, version: Schema.String }),
   Schema.Struct({ kind: Schema.Literal("too_large"), size: Schema.Number }),
   Schema.Struct({ kind: Schema.Literal("binary") }),
 ])
@@ -36,6 +37,19 @@ export class FileNotRead extends Schema.TaggedError<FileNotRead>()("FileNotRead"
   sessionId: Schema.String,
   path: Schema.String,
   reason: Schema.Literals(["missing", "unreadable"]),
+}) {}
+
+// The file on disk is no longer the version the write expected, or no longer exists.
+export class FileChangedOnDisk extends Schema.TaggedError<FileChangedOnDisk>()(
+  "FileChangedOnDisk",
+  { sessionId: Schema.String, path: Schema.String },
+) {}
+
+// `missing`: its folder no longer exists, or the path is a folder.
+export class FileNotWritten extends Schema.TaggedError<FileNotWritten>()("FileNotWritten", {
+  sessionId: Schema.String,
+  path: Schema.String,
+  reason: Schema.Literals(["missing", "unwritable"]),
 }) {}
 
 export const FileRpcs = RpcGroup.make(
@@ -60,6 +74,24 @@ export const FileRpcs = RpcGroup.make(
       WorkingFolderDeleted,
       PathOutsideWorkingFolder,
       FileNotRead,
+    ]),
+  }),
+  // `path` as in `file.listFolder`. `expectedVersion` is the version `file.readFile` returned;
+  // null writes whatever is on disk now.
+  Rpc.make("file.writeFile", {
+    payload: {
+      sessionId: Schema.String,
+      path: Schema.String,
+      text: Schema.String,
+      expectedVersion: Schema.NullOr(Schema.String),
+    },
+    success: Schema.Struct({ version: Schema.String }),
+    error: Schema.Union([
+      SessionNotFound,
+      WorkingFolderDeleted,
+      PathOutsideWorkingFolder,
+      FileChangedOnDisk,
+      FileNotWritten,
     ]),
   }),
 )

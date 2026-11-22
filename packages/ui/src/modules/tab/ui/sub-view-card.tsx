@@ -1,13 +1,17 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { SubView } from "@ivin/contracts/tab"
 import { Exit } from "effect"
-import { useRef, useState, type KeyboardEvent } from "react"
+import { useContext, useId, useRef, useState, type KeyboardEvent } from "react"
 import { Button, IconButton } from "../../../core/components/button/button.tsx"
+import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { HarnessMark, type MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
+import { fileEditOf, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
+import { writeFileAtom } from "../../file/atoms/write-file.ts"
+import { noEdit } from "../../file/rules/file-edit.ts"
 import { fileName } from "../../file/rules/file-name.ts"
 import { FileView } from "../../file/ui/file-view.tsx"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
@@ -64,22 +68,43 @@ export function SubViewCard({
   const setFullWidth = useAtomSet(setFullWidthAtom, { mode: "promiseExit" })
   const selectSessionTab = useAtomSet(selectSessionTabAtom, { mode: "promiseExit" })
   const [failure, setFailure] = useState<Failure | null>(null)
+  const unsaved = useAtomValue(unsavedPathsOf(sessionId, workingFolder))
+  // Kept once the prompt closes, so its text stays while it fades out.
+  const [closing, setClosing] = useState<SubView | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const write = useAtomSet(writeFileAtom, { mode: "promise" })
+  const registry = useContext(RegistryContext)
   const card = useRef<HTMLElement>(null)
+  const cardId = useId()
   const fullWidthHint = useKeyHint("Full width", "tab.toggleFullWidth")
   const besideHint = useKeyHint("Beside chat", "tab.toggleFullWidth")
 
-  const closeFile = async (subView: SubView) => {
+  const closeNow = async (subView: SubView) => {
     const hadFocus = card.current?.contains(document.activeElement) ?? false
     setFailure(null)
     const exit = await close({ sessionId, workingFolder, subView })
     if (Exit.isFailure(exit))
       return setFailure({
         message: closeFileFailure(subView.path),
-        retry: () => void closeFile(subView),
+        retry: () => void closeNow(subView),
       })
+    registry.set(fileEditOf(sessionId, workingFolder, subView.path), noEdit)
     // The focused close button is gone with its tab.
     if (hadFocus)
       card.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
+  }
+
+  const closeFile = async (subView: SubView) => {
+    if (!unsaved.includes(subView.path)) return closeNow(subView)
+    setClosing(subView)
+    setConfirming(true)
+  }
+
+  const saveAndClose = async (subView: SubView) => {
+    setConfirming(false)
+    if (await write({ sessionId, workingFolder, path: subView.path })) await closeNow(subView)
+    // Its failure shows in its own view.
+    else open({ sessionId, workingFolder, subView })
   }
 
   const switchMode = async (to: boolean) => {
@@ -154,7 +179,9 @@ export function SubViewCard({
           )}
           {subViews.map((subView) => {
             const isSelected = !onSession && sameSubView(subView, selected)
+            const isUnsaved = unsaved.includes(subView.path)
             const name = fileName(subView.path)
+            const unsavedId = `${cardId}-${subViewKey(subView)}-unsaved`
             const closeThis = () => closeFile(subView)
             return (
               <div
@@ -162,6 +189,7 @@ export function SubViewCard({
                 className="iv-sub-view-card__item"
                 role="presentation"
                 data-selected={isSelected || undefined}
+                data-unsaved={isUnsaved || undefined}
                 onMouseDown={stopMiddleClickScroll}
                 onAuxClick={(event) => {
                   if (event.button !== 1) return
@@ -176,6 +204,7 @@ export function SubViewCard({
                   aria-selected={isSelected}
                   tabIndex={isSelected ? 0 : -1}
                   title={subView.path}
+                  aria-describedby={isUnsaved ? unsavedId : undefined}
                   onClick={() => open({ sessionId, workingFolder, subView })}
                 >
                   <span className="iv-sub-view-card__icon" aria-hidden>
@@ -183,12 +212,18 @@ export function SubViewCard({
                   </span>
                   <span className="iv-sub-view-card__name">{name}</span>
                 </button>
+                {isUnsaved && (
+                  <span id={unsavedId} className="iv-visually-hidden">
+                    Unsaved edits
+                  </span>
+                )}
                 <button
                   type="button"
                   className="iv-sub-view-card__close"
                   aria-label={`Close ${name}`}
                   onClick={() => void closeThis()}
                 >
+                  <span className="iv-sub-view-card__unsaved" aria-hidden />
                   <Icon name="x" size={12} />
                 </button>
               </div>
@@ -211,6 +246,33 @@ export function SubViewCard({
           />
         )}
       </div>
+      <Dialog
+        open={confirming}
+        onOpenChange={setConfirming}
+        title={`Close ${fileName(closing?.path ?? "")} without saving?`}
+        description="Your edits to it are lost unless you save them."
+        actions={
+          closing && (
+            <>
+              <Button variant="secondary" onClick={() => setConfirming(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => {
+                  setConfirming(false)
+                  void closeNow(closing)
+                }}
+              >
+                Close without saving
+              </Button>
+              <Button variant="primary" onClick={() => void saveAndClose(closing)}>
+                Save
+              </Button>
+            </>
+          )
+        }
+      />
       {failure !== null && (
         <div className="iv-sub-view-card__failure">
           <ErrorMessage message={failure.message} onRetry={failure.retry} />

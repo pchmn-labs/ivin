@@ -1,11 +1,12 @@
 import { AtomRegistry } from "effect/reactivity"
 import { expect, test } from "vitest"
+import { EditorView } from "@ivin/plugin-api/editor"
 import { defineUi } from "@ivin/plugin-api/ui"
 import { activatePlugin, type UiPluginEntry } from "./activate-plugin.ts"
 import { commandsAtom } from "../../command/atoms/commands.ts"
 import { runCommand } from "../../command/atoms/run-command.ts"
 import { defaultKeybindingsAtom } from "../../keybinding/atoms/keybindings.ts"
-import { contributionsAtom } from "./contributions.ts"
+import { contributionsAtom, editorExtensionsAtom } from "./contributions.ts"
 
 const plugin = (id: string): UiPluginEntry => ({
   manifest: { id },
@@ -57,4 +58,18 @@ test("a plugin's commands and default keybindings run while it is active, and le
   expect(registry.get(commandsAtom).some((c) => c.id === "prs.refresh")).toBe(false)
   expect(registry.get(defaultKeybindingsAtom).some((k) => k.pluginId === "prs")).toBe(false)
   expect(runCommand(registry, "prs.refresh")).toBe(false)
+})
+
+test("a plugin's editor extensions reach the file editor while it is active, and leave with it", () => {
+  const registry = AtomRegistry.make()
+  const mine = EditorView.contentAttributes.of({ "data-mine": "yes" })
+  const deactivate = activatePlugin(
+    registry,
+    { manifest: { id: "vim" }, activate: defineUi((ctx) => ctx.editorExtensions.add(mine)) },
+    () => undefined,
+  )
+  expect(registry.get(editorExtensionsAtom)).toEqual([mine])
+
+  deactivate()
+  expect(registry.get(editorExtensionsAtom)).toEqual([])
 })

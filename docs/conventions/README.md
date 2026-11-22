@@ -64,6 +64,6 @@ No modules and no layers; one file per concern, kebab-case.
 | `apps/cli` | the `ivin` binary, one file per command |
 | `packages/contracts` | Effect `Schema` only, the pure functions their checks call, and each setting's label and description beside the `Settings` schema, one file per subject |
 | `packages/state` | atom families, optimistic writes, stream bridging |
-| `packages/plugin-api` | entry points `server.ts` and `ui.ts`: types and runtime shims |
+| `packages/plugin-api` | entry points `server.ts`, `ui.ts` and `editor.ts`: types and runtime shims, and the host's CodeMirror |
 
 A flat package that grows logic of its own takes `src/modules/` and the layers above.

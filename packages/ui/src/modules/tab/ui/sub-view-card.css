@@ -142,3 +142,29 @@
 .iv-sub-view-card[data-on-session] .iv-sub-view-card__failure {
   background: var(--iv-bg);
 }
+
+.iv-sub-view-card__unsaved {
+  display: none;
+  width: var(--iv-space-2);
+  height: var(--iv-space-2);
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-text-muted);
+}
+
+.iv-sub-view-card__item[data-unsaved] .iv-sub-view-card__unsaved {
+  display: block;
+}
+
+.iv-sub-view-card__item[data-unsaved] .iv-sub-view-card__close > svg {
+  display: none;
+}
+
+.iv-sub-view-card__item[data-unsaved]:hover .iv-sub-view-card__unsaved,
+.iv-sub-view-card__item[data-unsaved]:focus-within .iv-sub-view-card__unsaved {
+  display: none;
+}
+
+.iv-sub-view-card__item[data-unsaved]:hover .iv-sub-view-card__close > svg,
+.iv-sub-view-card__item[data-unsaved]:focus-within .iv-sub-view-card__close > svg {
+  display: block;
+}

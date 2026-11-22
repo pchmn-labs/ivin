@@ -1,11 +1,21 @@
-import { syntaxHighlighting } from "@codemirror/language"
-import { Compartment, EditorSelection, EditorState } from "@codemirror/state"
+import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands"
+import { bracketMatching, indentOnInput, syntaxHighlighting } from "@codemirror/language"
+import { gotoLine, highlightSelectionMatches, search, searchKeymap } from "@codemirror/search"
+import {
+  Annotation,
+  Compartment,
+  EditorSelection,
+  EditorState,
+  type Extension,
+  Transaction,
+} from "@codemirror/state"
 import {
   drawSelection,
   EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
   highlightSpecialChars,
+  keymap,
   lineNumbers,
 } from "@codemirror/view"
 import { useEffect, useRef } from "react"
@@ -17,6 +27,45 @@ import "./code-view.css"
 // Prose keeps a paragraph on one line, so only Markdown wraps; code keeps its layout.
 const wrappingOf = (fileName: string) =>
   languageNameOf(fileName) === "markdown" ? EditorView.lineWrapping : []
+
+// Like VS Code, a file is written back with the line break most of its lines end with.
+const lineBreakOf = (text: string) => {
+  const crlf = text.match(/\r\n/g)?.length ?? 0
+  const lf = (text.match(/\n/g)?.length ?? 0) - crlf
+  return crlf > lf ? "\r\n" : "\n"
+}
+
+const textOf = (state: EditorState, lineBreak: string) =>
+  state.doc.sliceString(0, state.doc.length, lineBreak)
+
+const noExtensions: Extension = []
+
+const replacedText = Annotation.define<true>()
+
+const editing = (onChange: () => void): Extension => [
+  history(),
+  indentOnInput(),
+  bracketMatching(),
+  highlightSelectionMatches(),
+  search({ top: true }),
+  EditorState.allowMultipleSelections.of(true),
+  EditorView.clickAddsSelectionRange.of((event) => event.altKey),
+  keymap.of([
+    { key: "Ctrl-g", run: gotoLine, preventDefault: true },
+    ...defaultKeymap,
+    ...searchKeymap,
+    ...historyKeymap,
+    indentWithTab,
+    // An Escape the editor has no use for would reach the window and stop the agent.
+    { key: "Escape", run: () => true },
+  ]),
+  EditorView.updateListener.of((update) => {
+    const edited = update.transactions.some(
+      (transaction) => transaction.docChanged && !transaction.annotation(replacedText),
+    )
+    if (edited) onChange()
+  }),
+]
 
 export interface ShownLines {
   readonly start: number
@@ -44,6 +93,9 @@ export interface CodeViewProps {
   readonly onScroll?: (scrollTop: number) => void
   // Scrolled to and selected, in place of `scrollTop`.
   readonly shownLines?: ShownLines
+  // Makes the text editable, and receives it after each edit.
+  readonly onChange?: (text: string) => void
+  readonly extensions?: Extension
   readonly "data-testid"?: string
 }
 
@@ -53,16 +105,23 @@ export function CodeView({
   scrollTop = 0,
   onScroll,
   shownLines,
+  onChange,
+  extensions = noExtensions,
   "data-testid": testId,
 }: CodeViewProps) {
   const host = useRef<HTMLDivElement>(null)
   const view = useRef<EditorView | null>(null)
   const language = useRef(new Compartment())
   const wrapping = useRef(new Compartment())
+  const added = useRef(new Compartment())
+  const lineBreak = useRef(lineBreakOf(text))
   const latestOnScroll = useRef(onScroll)
+  const latestOnChange = useRef(onChange)
   useEffect(() => {
     latestOnScroll.current = onScroll
+    latestOnChange.current = onChange
   })
+  const editable = onChange !== undefined
 
   useEffect(() => {
     const editor = new EditorView({
@@ -76,10 +135,13 @@ export function CodeView({
           drawSelection(),
           highlightActiveLine(),
           syntaxHighlighting(highlightStyle),
-          EditorState.readOnly.of(true),
+          editable
+            ? editing(() => latestOnChange.current?.(textOf(editor.state, lineBreak.current)))
+            : EditorState.readOnly.of(true),
           EditorView.contentAttributes.of({ "aria-label": fileName }),
           language.current.of([]),
           wrapping.current.of(wrappingOf(fileName)),
+          added.current.of(extensions),
         ],
       }),
     })
@@ -104,11 +166,20 @@ export function CodeView({
 
   useEffect(() => {
     const editor = view.current!
-    const current = editor.state.doc.toString()
+    lineBreak.current = lineBreakOf(text)
+    const current = textOf(editor.state, lineBreak.current)
+    // An edit the view reported comes back as `text`; only another text replaces the document.
     if (current !== text) {
-      editor.dispatch({ changes: { from: 0, to: current.length, insert: text } })
+      editor.dispatch({
+        changes: { from: 0, to: editor.state.doc.length, insert: text },
+        annotations: [replacedText.of(true), Transaction.addToHistory.of(false)],
+      })
     }
   }, [text])
+
+  useEffect(() => {
+    view.current!.dispatch({ effects: added.current.reconfigure(extensions) })
+  }, [extensions])
 
   useEffect(() => {
     if (shownLines) showLines(view.current!, shownLines)
