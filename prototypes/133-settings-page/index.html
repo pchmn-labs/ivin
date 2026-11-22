@@ -129,8 +129,7 @@ svg { flex: none; display: block; }
 .nav-foot { margin-top: auto; padding: 8px; border-top: 1px solid var(--iv-border); color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
 .nav-file { color: var(--iv-text-muted); }
 .nav-file svg { color: var(--iv-text-faint); }
-.nav-path { padding: 2px 8px 8px 30px; }
-.nav-keys { padding: 8px 8px 0; border-top: 1px solid var(--iv-border); }
+.nav-keys { padding: 8px 8px 0; }
 .nav-foot kbd { font: inherit; }
 .section-page { flex: 1; overflow-y: auto; }
 .section-col { max-width: 720px; margin: 0 auto; padding: 20px 32px 64px; }
@@ -302,6 +301,7 @@ const I = {
 const GEAR = '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>'
 I.gear = sv(GEAR, 14)
 I.gear16 = sv(GEAR, 16)
+I.braces = sv('<path d="M8 4H7a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1M16 4h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-1"/>', 14)
 I.terminal = sv('<path d="m5 7 5 5-5 5M12 17h7"/>', 14)
 I.check = sv('<path d="M20 6 9 17l-5-5"/>', 14, 2)
 I.loader = sv('<path d="M12 3a9 9 0 1 0 9 9"/>', 14, 2)
@@ -379,7 +379,7 @@ function problem() {
   if (S.scenario !== "broken") return ""
   return `<div class="problem" role="alert">${I.alert}<div><div class="what"><span class="mono">${FILE}</span> is not valid JSON: CommaExpected at line 4, column 3.</div>
     <div class="next">Fix the file and this page updates as soon as it is valid. Until then ivin keeps the settings below, its last valid ones.</div>
-    <button class="btn" data-open-file>Open settings.json</button></div></div>`
+    <button class="btn" data-open-file>${I.braces}Open settings.json</button></div></div>`
 }
 const sectionBody = (sec, opts) => sec.cli ? cliRow() : sec.settings.map((s) => setting(s, opts)).join("")
 
@@ -434,7 +434,7 @@ function vWindow() {
   const nav = `<aside class="card">${cardTop()}<div class="column">
     <div class="nav-head"><button class="icon-btn" data-close-settings title="Back to sessions Esc">${I.back}</button><b>Settings</b></div>
     <div class="nav" role="tablist" aria-orientation="vertical">${SECTIONS.map((x) => `<button class="row" role="tab" aria-selected="${x.id === S.section}" ${x.id === S.section ? "data-selected" : ""} data-section="${x.id}">${I[x.icon] ? (typeof I[x.icon] === "function" ? I[x.icon]() : I[x.icon]) : ""}<span class="title">${x.title}</span></button>`).join("")}</div>
-    <div class="nav-foot"><button class="row nav-file" data-open-file title="${FILE}">${I.file()}<span class="title">Open settings.json</span></button><div class="nav-path"><span class="mono">${FILE}</span>, saved as you change a setting.</div><div class="nav-keys">↑↓ section · Esc back</div></div>
+    <div class="nav-foot"><button class="row nav-file" data-open-file title="${FILE}">${I.braces}<span class="title">Open settings.json</span></button><div class="nav-keys">↑↓ section · Esc back</div></div>
   </div></aside>`
   const body = `<div class="section-page" id="settings-root" tabindex="-1"><div class="section-col">
     ${problem()}
