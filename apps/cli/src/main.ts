@@ -12,10 +12,18 @@ import { socketPathOf, withServer } from "./connection.ts"
 import { doctor } from "./doctor.ts"
 import { link } from "./link.ts"
 import { sessionAnnotate } from "./session-annotate.ts"
+import { sessionRename } from "./session-rename.ts"
 import { settingsGet } from "./settings-get.ts"
 import { settingsSet } from "./settings-set.ts"
 
-const commands: readonly Command[] = [doctor, sessionAnnotate, link, settingsGet, settingsSet]
+const commands: readonly Command[] = [
+  doctor,
+  sessionAnnotate,
+  sessionRename,
+  link,
+  settingsGet,
+  settingsSet,
+]
 
 interface Outcome {
   readonly code: number

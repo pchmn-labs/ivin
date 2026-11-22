@@ -169,6 +169,57 @@ test("the first message sets the title, and a rename is never overwritten by it"
   expect(titles).toEqual(["Fix the login bug", "My name"])
 })
 
+test("the agent renames its session over the first message's title, but never over the user's", async () => {
+  const result = await withServer(newDatabase(), [turn, turn], [], (client) =>
+    Effect.gen(function* () {
+      const a = yield* client["session.create"]({ projectPath: "/p" })
+      const b = yield* client["session.create"]({ projectPath: "/p" })
+      yield* client["session.sendMessage"]({ sessionId: a.id, messageId: "m1", text: "ok go" })
+      const first = yield* client["session.rename"]({
+        sessionId: a.id,
+        title: "Fix tab drag",
+        by: "agent",
+      })
+      const second = yield* client["session.rename"]({
+        sessionId: a.id,
+        title: "Fix tab drop",
+        by: "agent",
+      })
+      yield* client["session.rename"]({ sessionId: b.id, title: "My name" })
+      const refused = yield* Effect.flip(
+        client["session.rename"]({ sessionId: b.id, title: "Agent name", by: "agent" }),
+      )
+      const listed = yield* client["session.list"]({ projectPath: "/p" })
+      const kept = listed.find((session) => session.id === b.id)?.title
+      return { first: first.title, second: second.title, refused: refused._tag, kept }
+    }),
+  )
+
+  expect(result).toEqual({
+    first: "Fix tab drag",
+    second: "Fix tab drop",
+    refused: "SessionTitleChosenByUser",
+    kept: "My name",
+  })
+})
+
+test("a title the agent gives before the first message is not replaced by it", async () => {
+  const title = await withServer(newDatabase(), [turn], [], (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p" })
+      yield* client["session.rename"]({ sessionId: session.id, title: "Agent name", by: "agent" })
+      const sent = yield* client["session.sendMessage"]({
+        sessionId: session.id,
+        messageId: "m1",
+        text: "something",
+      })
+      return sent.title
+    }),
+  )
+
+  expect(title).toBe("Agent name")
+})
+
 test("sending a message stores the user message then the scripted events in order", async () => {
   const db = newDatabase()
   const sent: ScriptedSend[] = []

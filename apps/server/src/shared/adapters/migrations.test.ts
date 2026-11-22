@@ -197,3 +197,28 @@ test("a stored session gets claude's default effort and permission mode, confirm
     },
   ])
 })
+
+test("a stored title counts as the first message's when that message holds it, else as the user's", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 17)))
+  const long = `${"word ".repeat(20)}end`
+  db.exec(
+    `INSERT INTO sessions (id, project_path, title, title_locked, created_at, last_activity_at)
+     VALUES ('fresh', '/p', 'New session', 0, 0, 0), ('message', '/p', 'Fix the bug', 1, 0, 0),
+       ('cut', '/p', '${long.slice(0, 59).trimEnd()}…', 1, 0, 0), ('named', '/p', 'Mine', 1, 0, 0);
+     INSERT INTO transcript_events (id, session_id, sequence, type, at, payload) VALUES
+       ('e1', 'message', 1, 'user_message', 0, '{"text":"Fix the bug\\nplease"}'),
+       ('e2', 'cut', 1, 'user_message', 0, '{"text":"${long}"}'),
+       ('e3', 'named', 1, 'user_message', 0, '{"text":"Fix the bug"}'),
+       ('e4', 'named', 2, 'user_message', 0, '{"text":"Mine"}')`,
+  )
+
+  Effect.runSync(runMigrations(db))
+
+  expect(db.prepare("SELECT id, title_source FROM sessions ORDER BY id").all()).toEqual([
+    { id: "cut", title_source: "message" },
+    { id: "fresh", title_source: null },
+    { id: "message", title_source: "message" },
+    { id: "named", title_source: "user" },
+  ])
+})
