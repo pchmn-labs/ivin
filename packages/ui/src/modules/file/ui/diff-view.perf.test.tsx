@@ -87,6 +87,7 @@ test("a 10,000-line diff opens without freezing, and scrolls at the frame rate",
   )
   server.diffs.set(`${session.workingFolder}/big.ts`, {
     kind: "text",
+    status: "modified",
     hunks,
     added: LINES / 4,
     deleted: LINES / 8,

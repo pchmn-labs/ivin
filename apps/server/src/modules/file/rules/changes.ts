@@ -9,8 +9,7 @@ const statusOf = (letter: string): ChangeStatus => {
 
 const countOf = (field: string) => (field === "-" ? null : Number(field))
 
-// `nameStatus` is `git diff --name-status -z -M`, `numstat` the same diff's `--numstat -z -M`,
-// `untracked` is `git ls-files --others -z`.
+// From `git diff -z -M` with `--name-status` and with `--numstat`, and `git ls-files --others -z`.
 export const parseChanges = (
   nameStatus: string,
   numstat: string,

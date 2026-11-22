@@ -259,6 +259,12 @@
   background: var(--iv-diff-deleted-change);
 }
 
+.iv-code-view .cm-gutterElement.iv-diff-hunk-gutter {
+  box-sizing: border-box;
+  border-block: 1px solid var(--iv-border);
+  background: var(--iv-bg-subtle);
+}
+
 .iv-code-view .iv-diff-hunk {
   display: flex;
   align-items: center;

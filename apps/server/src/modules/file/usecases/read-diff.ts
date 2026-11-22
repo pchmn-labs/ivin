@@ -22,5 +22,6 @@ export const readDiff = (sessionId: string, path: string) =>
       .diffOf(root, change, DIFF_SIZE_LIMIT)
       .pipe(Effect.mapError(({ message }) => new GitFailed({ sessionId, gitMessage: message })))
     if (output === null) return { kind: "too_large" } satisfies FileDiff
-    return parseDiff(output) satisfies FileDiff
+    const diff = parseDiff(output)
+    return (diff.kind === "text" ? { ...diff, status: change.status } : diff) satisfies FileDiff
   })

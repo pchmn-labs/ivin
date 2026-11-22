@@ -8,7 +8,7 @@ import { CodeView } from "../../../core/components/code-view/code-view.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { diffOf } from "../atoms/read-diff.ts"
-import { diffReading, diffReadingFailure } from "../rules/change-reading.ts"
+import { diffReading, diffReadingFailure } from "../rules/diff-reading.ts"
 import { diffDocument } from "../rules/diff-document.ts"
 import { fileName } from "../rules/file-name.ts"
 import "./diff-view.css"
@@ -35,8 +35,7 @@ export function DiffView({
       : null
   const diff = reading?.kind === "text" ? reading.diff : null
   const document = useMemo(() => (diff === null ? null : diffDocument(diff.hunks)), [diff])
-  const deletedFile =
-    diff !== null && diff.hunks.every((hunk) => hunk.lines.every((l) => l.kind === "deleted"))
+  const deletedFile = diff?.status === "deleted"
 
   return (
     <div className="iv-diff-view">

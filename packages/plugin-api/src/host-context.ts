@@ -27,7 +27,7 @@ export type FileListing =
   | { readonly kind: "deleted" }
   | { readonly kind: "failed"; readonly failure: ActionFailure }
 
-// `deleted`: the session's working folder no longer exists. `gitMessage` is git's own output.
+// `deleted`: the session's working folder no longer exists.
 export type ChangeListing =
   | { readonly kind: "loading" }
   | { readonly kind: "listed"; readonly changes: ReadonlyArray<Change> }

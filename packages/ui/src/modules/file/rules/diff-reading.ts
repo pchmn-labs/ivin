@@ -1,41 +1,6 @@
 import { DIFF_SIZE_LIMIT, type FileDiff, type GitFailed } from "@ivin/contracts/file"
-import type { ChangeListing } from "@ivin/plugin-api/ui"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 import { fileName } from "./file-name.ts"
-
-const gitMessageOf = (error: unknown) =>
-  errorTag(error) === "GitFailed" ? (error as GitFailed).gitMessage : null
-
-export const changeListingFailure = (error: unknown): ChangeListing => {
-  switch (errorTag(error)) {
-    case "WorkingFolderDeleted":
-      return { kind: "deleted" }
-    case "SessionNotFound":
-      return {
-        kind: "failed",
-        failure: {
-          text: "This session no longer exists, so it has no changes to show.",
-          retryable: false,
-        },
-        gitMessage: null,
-      }
-    case "GitFailed":
-      return {
-        kind: "failed",
-        failure: {
-          text: "Git could not list the changes. Fix what it reports, then retry.",
-          retryable: true,
-        },
-        gitMessage: gitMessageOf(error),
-      }
-    default:
-      return {
-        kind: "failed",
-        failure: { text: "The changes could not be listed. Retry.", retryable: true },
-        gitMessage: null,
-      }
-  }
-}
 
 export type DiffReading =
   | { readonly kind: "text"; readonly diff: Extract<FileDiff, { kind: "text" }> }
@@ -88,7 +53,7 @@ export const diffReadingFailure = (error: unknown, path: string): DiffReading =>
       return message(
         `Git could not show the diff of ${name}. Fix what it reports, then retry.`,
         true,
-        gitMessageOf(error),
+        (error as GitFailed).gitMessage,
       )
     default:
       return message(`The diff of ${name} could not be read. Retry.`, true)

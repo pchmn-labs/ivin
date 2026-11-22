@@ -24,7 +24,7 @@ class OutputTooLong {
   readonly _tag = "OutputTooLong"
 }
 
-const run = (
+const runGit = (
   cwd: string,
   args: readonly string[],
   {
@@ -62,7 +62,7 @@ const run = (
   })
 
 const git = (cwd: string, args: readonly string[], input?: string) =>
-  run(cwd, args, input === undefined ? {} : { input }).pipe(
+  runGit(cwd, args, input === undefined ? {} : { input }).pipe(
     Effect.catchTag("OutputTooLong", () =>
       Effect.fail(new GitError({ message: "git wrote too much" })),
     ),
@@ -92,13 +92,13 @@ const diffOf = (folder: string, change: Change, limit: number) =>
   Effect.gen(function* () {
     // git diff --no-index exits 1 when the files differ.
     if (change.status === "untracked")
-      return yield* run(
+      return yield* runGit(
         folder,
         ["diff", "--no-color", "--no-ext-diff", "--no-index", "--", "/dev/null", change.path],
         { maxBuffer: limit, succeedsOn: [1] },
       )
     const paths = change.previousPath === null ? [change.path] : [change.previousPath, change.path]
-    return yield* run(folder, [...DIFF, yield* diffBase(folder), "--", ...paths], {
+    return yield* runGit(folder, [...DIFF, yield* diffBase(folder), "--", ...paths], {
       maxBuffer: limit,
     })
   }).pipe(Effect.catchTag("OutputTooLong", () => Effect.succeed(null)))

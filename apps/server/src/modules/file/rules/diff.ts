@@ -26,7 +26,6 @@ const changedPart = (line: string, other: string): readonly [number, number] | n
   return [start, line.length - end]
 }
 
-// Pairs each run of deleted lines with the run of added lines right after it, line by line.
 const markChangedParts = (lines: DiffLine[]) => {
   for (let index = 0; index < lines.length;) {
     if (lines[index]!.kind !== "deleted") {

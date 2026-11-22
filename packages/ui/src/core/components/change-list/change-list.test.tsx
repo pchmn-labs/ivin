@@ -9,7 +9,10 @@ const items: ReadonlyArray<ChangeListItem> = [
   { id: "c.ts", name: "c.ts", folder: "", status: "untracked", added: null, deleted: null },
 ]
 
-const row = (name: string) => page.getByRole("button", { name: new RegExp(`^\\w+ ${name}`) })
+const row = (name: string) =>
+  page.getByRole("button", {
+    name: new RegExp(`^(modified|added|deleted|renamed|untracked) ${name}`),
+  })
 
 test("one row is a tab stop; Up and Down move between rows and Enter opens one", async () => {
   const onOpen = vi.fn()

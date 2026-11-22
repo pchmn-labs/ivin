@@ -1,6 +1,5 @@
 import type { DiffHunk } from "@ivin/contracts/file"
 
-// The lines of every hunk as one document, with what CodeView needs to draw them as a diff.
 export const diffDocument = (hunks: ReadonlyArray<DiffHunk>) => {
   const texts: string[] = []
   const rows: DiffHunk["lines"][number][] = []

@@ -26,7 +26,7 @@ import { selectedSessionIdAtom } from "../modules/tab/atoms/selected-session-id.
 import { folderKey, listFolderOf } from "../modules/file/atoms/list-folder.ts"
 import { gitStatusOf } from "../modules/file/atoms/git-status.ts"
 import { changesOf } from "../modules/file/atoms/list-changes.ts"
-import { changeListingFailure } from "../modules/file/rules/change-reading.ts"
+import { changeListingFailure } from "../modules/file/rules/change-listing.ts"
 import { listFilesOf } from "../modules/file/atoms/list-files.ts"
 import { folderChangesOf } from "../modules/file/atoms/watch-folder.ts"
 import { fileListingFailure, folderListingFailure } from "../modules/file/rules/folder-listing.ts"

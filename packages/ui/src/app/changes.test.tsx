@@ -65,6 +65,7 @@ const makeServer = () => {
   server.changes.set(worktree, { kind: "listed", changes: [change("notes.md", "untracked")] })
   server.diffs.set(`${project}/README.md`, {
     kind: "text",
+    status: "modified",
     added: 2,
     deleted: 1,
     hunks: [
@@ -81,6 +82,7 @@ const makeServer = () => {
   })
   server.diffs.set(`${project}/old.ts`, {
     kind: "text",
+    status: "deleted",
     added: 0,
     deleted: 1,
     hunks: [{ header: "@@ -1 +0,0 @@", lines: [line("deleted", "export {}", 1, null)] }],

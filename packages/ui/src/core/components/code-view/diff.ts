@@ -64,6 +64,11 @@ class HunkHeader extends WidgetType {
   }
 }
 
+const hunkBand = new RowClass("iv-diff-hunk-gutter")
+// The hunk's band goes on under the gutters too.
+const widgetMarker = (_view: EditorView, widget: WidgetType) =>
+  widget instanceof HunkHeader ? hunkBand : null
+
 const SIGNS = { context: "", added: "+", deleted: "−" } as const
 
 const rowAt = (rows: ReadonlyArray<DiffRow>, state: EditorState, from: number) =>
@@ -78,6 +83,7 @@ const numberGutter = (rows: ReadonlyArray<DiffRow>, side: "oldLine" | "newLine")
       return number == null ? null : new TextMarker(String(number))
     },
     initialSpacer: () => new TextMarker(String(widest)),
+    widgetMarker,
   })
 }
 
@@ -137,6 +143,7 @@ export const diffExtensions = (layout: DiffLayout): Extension => {
     numberGutter(layout.rows, "newLine"),
     gutter({
       class: "iv-diff-signs",
+      widgetMarker,
       lineMarker: (view, line) => {
         const row = rowAt(layout.rows, view.state, line.from)
         return row === undefined || row.kind === "context" ? null : new TextMarker(SIGNS[row.kind])

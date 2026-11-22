@@ -25,6 +25,8 @@ function Message({ children }: { children: string }) {
   )
 }
 
+const FOLDER_DELETED = "This session's working folder was deleted, so it has no changes to show."
+
 interface OpenFailure extends ActionFailure {
   readonly retry: () => void
 }
@@ -49,9 +51,7 @@ function ChangesOf({ session }: { session: Session }) {
     case "loading":
       return null
     case "deleted":
-      return (
-        <Message>This session's working folder was deleted, so it has no changes to show.</Message>
-      )
+      return <Message>{FOLDER_DELETED}</Message>
     case "not_repository":
       return (
         <Message>
@@ -97,10 +97,7 @@ function ChangesPanel() {
   if (sessionId === null)
     return <Message>No session on screen. Open one to see its uncommitted changes.</Message>
   if (session === undefined) return null
-  if (session.workingFolderDeleted)
-    return (
-      <Message>This session's working folder was deleted, so it has no changes to show.</Message>
-    )
+  if (session.workingFolderDeleted) return <Message>{FOLDER_DELETED}</Message>
   return <ChangesOf key={`${session.id}\n${session.workingFolder}`} session={session} />
 }
 
@@ -110,10 +107,10 @@ function ChangeCount({ session }: { session: Session }) {
 }
 
 function ChangesBadge() {
-  const sessionId = useSelectedSessionId()
-  const session = useSession(sessionId ?? "")
-  if (session === undefined || session.workingFolderDeleted) return null
-  return <ChangeCount session={session} />
+  const session = useSession(useSelectedSessionId() ?? "")
+  return session === undefined || session.workingFolderDeleted ? null : (
+    <ChangeCount session={session} />
+  )
 }
 
 export const activate = defineUi((ctx) => {

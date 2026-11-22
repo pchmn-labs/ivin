@@ -125,6 +125,7 @@ export const DIFF_SIZE_LIMIT = 4 * 1024 * 1024
 export const FileDiff = Schema.Union([
   Schema.Struct({
     kind: Schema.Literal("text"),
+    status: ChangeStatus,
     hunks: Schema.Array(DiffHunk),
     added: Schema.Number,
     deleted: Schema.Number,
