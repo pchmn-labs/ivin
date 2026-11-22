@@ -68,6 +68,8 @@ export interface FakeServer {
   readonly sessions: Map<string, Session>
   readonly errorReports: Array<ErrorReport>
   readonly userPlugins: Array<UserPlugin>
+  // Streams one more plugin to `plugin.list`, as the server does once its dependencies install.
+  readonly addUserPlugin: (plugin: UserPlugin) => void
   readonly pluginFailures: Array<PluginFailure>
   // Adds an item to a transcript as the server would, and streams it to watchers.
   readonly pushItem: (item: TranscriptItem) => void
@@ -243,6 +245,7 @@ export const makeFakeServer = (
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
   const userPlugins: Array<UserPlugin> = []
+  const laterPlugins = Effect.runSync(PubSub.unbounded<UserPlugin>())
   const pluginFailures: Array<PluginFailure> = []
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
   const gitStatus = new Map<string, ReadonlyArray<GitStatusEntry>>()
@@ -408,7 +411,14 @@ export const makeFakeServer = (
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
     "server.getHarness": () => Effect.succeed({ id: harness, runOptions }),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
-    "plugin.list": () => Effect.sync(() => [...userPlugins]),
+    "plugin.list": () =>
+      Stream.unwrap(
+        Effect.map(PubSub.subscribe(laterPlugins), (subscription) =>
+          Stream.fromIterable([...userPlugins]).pipe(
+            Stream.concat(Stream.fromSubscription(subscription)),
+          ),
+        ),
+      ),
     "plugin.reportFailure": (failure: PluginFailure) =>
       Effect.sync(() => void pluginFailures.push(failure)),
     "plugin.readLog": ({ id }: { id: string }) =>
@@ -1143,6 +1153,7 @@ export const makeFakeServer = (
     sessions,
     errorReports,
     userPlugins,
+    addUserPlugin: (plugin) => void Effect.runSync(PubSub.publish(laterPlugins, plugin)),
     pluginFailures,
     sentMessages,
     pickedFolders,

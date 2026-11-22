@@ -1,6 +1,6 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { UiPlugin } from "@ivin/plugin-api/ui"
 import type { ImportBundle } from "../adapters/plugin-bundle.ts"
 import type { UiPluginEntry } from "../atoms/activate-plugin.ts"
@@ -17,6 +17,9 @@ export function useUserPlugins(importBundle: ImportBundle) {
   const report = useAtomSet(reportPluginFailureAtom)
   const [plugins, setPlugins] = useState(NONE)
 
+  // Started once per bundle, so a longer list neither imports nor reports a plugin twice.
+  const loads = useRef(new Map<string, Promise<UiPluginEntry | null>>())
+
   useEffect(() => {
     if (listed === null) return
     let stopped = false
@@ -30,15 +33,18 @@ export function useUserPlugins(importBundle: ImportBundle) {
       } catch (error) {
         reason = `Could not load its UI half: ${messageOf(error)}`
       }
-      if (!stopped) report({ id, reason })
+      report({ id, reason })
       return null
     }
-    void Promise.all(
-      listed.flatMap((plugin) =>
-        plugin._tag === "compiled" ? [load(plugin.id, plugin.bundle)] : [],
-      ),
-    ).then((entries) => {
-      if (!stopped) setPlugins(entries.filter((entry) => entry !== null))
+    const entries = listed.flatMap((plugin) => {
+      if (plugin._tag !== "compiled") return []
+      const key = `${plugin.id}\0${plugin.bundle}`
+      const started = loads.current.get(key) ?? load(plugin.id, plugin.bundle)
+      loads.current.set(key, started)
+      return [started]
+    })
+    void Promise.all(entries).then((loaded) => {
+      if (!stopped) setPlugins(loaded.filter((entry) => entry !== null))
     })
     return () => {
       stopped = true

@@ -24,6 +24,7 @@ import { writeFile } from "../modules/file/usecases/write-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
 import { listPlugins } from "../modules/plugin/usecases/list-plugins.ts"
+import { lockPlugin } from "../modules/plugin/usecases/lock-plugin.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
@@ -142,6 +143,7 @@ export const handlers = Rpcs.toLayer(
       "plugin.list": () => listPlugins,
       "plugin.reportFailure": ({ id, reason }) => reportPluginFailure(id, reason),
       "plugin.readLog": ({ id }) => readPluginLog(id),
+      "plugin.lock": ({ id }) => lockPlugin(id),
       "setting.watch": () => watchSettings,
       "setting.get": ({ path }) => getSetting(path),
       "setting.set": ({ path, value }) => setSetting(path, value),

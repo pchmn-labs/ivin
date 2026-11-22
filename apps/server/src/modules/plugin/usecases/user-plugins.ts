@@ -1,3 +1,4 @@
+import type { PluginNotLocked } from "@ivin/contracts/plugin"
 import { Context, Data, Effect } from "effect"
 
 export class PluginNotCompiled extends Data.TaggedError("PluginNotCompiled")<{
@@ -14,7 +15,12 @@ export interface PluginFolder {
 export interface UserPluginsService {
   readonly folders: Effect.Effect<ReadonlyArray<PluginFolder>>
   // The bundle's file name in the cache, compiled only when the folder's files changed.
-  readonly compile: (folder: string, entry: string) => Effect.Effect<string, PluginNotCompiled>
+  readonly compile: (plugin: {
+    readonly id: string
+    readonly path: string
+    readonly entry: string
+  }) => Effect.Effect<string, PluginNotCompiled>
+  readonly lock: (path: string) => Effect.Effect<void, PluginNotLocked>
   readonly appendLog: (id: string, line: string) => Effect.Effect<void>
   readonly readLog: (id: string) => Effect.Effect<ReadonlyArray<string>>
 }

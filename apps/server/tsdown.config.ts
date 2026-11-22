@@ -2,6 +2,8 @@ import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import type { PackUserConfig } from "vite-plus/pack"
 
+const pnpmFolder = dirname(createRequire(import.meta.url).resolve("pnpm"))
+
 // Rolldown's native binding for this machine, which the server bundle cannot hold.
 const platformTag =
   process.platform === "linux" ? `linux-${process.arch}-gnu` : `${process.platform}-${process.arch}`
@@ -32,9 +34,10 @@ export default {
     neverBundle: [/^@rolldown\/binding-/],
     onlyBundle: false,
   },
-  // `webp-codec.ts` reads these from `dist/wasm`, and `fs-user-plugins.ts` the binding from `dist/native`.
+  // `webp-codec.ts` reads these from `dist/wasm`, `fs-user-plugins.ts` the binding from `dist/native`, `pnpm.ts` pnpm from `dist/pnpm`.
   copy: [
     { from: rolldownBinding, to: "dist/native", rename: "rolldown-binding.node" },
+    { from: pnpmFolder, to: "dist" },
     {
       from: [
         "node_modules/@jsquash/png/codec/pkg/squoosh_png_bg.wasm",

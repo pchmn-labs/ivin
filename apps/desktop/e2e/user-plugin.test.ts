@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test"
+import { execFile } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { launchPackagedApp, makeTempDir } from "./launch-app.ts"
@@ -36,6 +37,59 @@ export const activate = defineUi((ctx) => ctx.slots.add("sidebar.bottom", Hello)
   try {
     const window = await startSession(app)
     await expect(window.getByText("hello from a plugin 42")).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+// /usr/bin and /bin hold neither Node nor pnpm on the CI machines.
+const BARE_PATH = "/usr/bin:/bin"
+
+const runIvin = (userDataDir: string, args: string[]) =>
+  new Promise<{ code: number; output: string }>((resolve) => {
+    execFile(
+      join(userDataDir, "bin", "ivin"),
+      args,
+      { env: { PATH: BARE_PATH, IVIN_SOCKET: join(userDataDir, ".ivin/run/ivin.sock") } },
+      (error, stdout, stderr) =>
+        resolve({ code: error ? Number(error.code) : 0, output: stdout + stderr }),
+    )
+  })
+
+test("with no Node and no pnpm on the PATH, ivin plugin lock and the next load install a plugin's dependency", async () => {
+  const userDataDir = makeTempDir("user-data")
+  const dependency = join(makeTempDir("package"), "shouter")
+  mkdirSync(dependency)
+  writeFileSync(
+    join(dependency, "package.json"),
+    JSON.stringify({ name: "shouter", version: "1.0.0", main: "index.js" }),
+  )
+  writeFileSync(
+    join(dependency, "index.js"),
+    'const { createElement } = require("react")\nexports.Shout = ({ text }) => createElement("strong", null, text.toUpperCase())\n',
+  )
+  writePlugin(userDataDir, "shout", {
+    "package.json": JSON.stringify({
+      ivin: { id: "shout", ui: "src/ui.tsx" },
+      dependencies: { shouter: `file:${dependency}` },
+    }),
+    "src/ui.tsx": `import { Shout } from "shouter"
+import { defineUi } from "@ivin/plugin-api/ui"
+
+export const activate = defineUi((ctx) =>
+  ctx.slots.add("sidebar.bottom", () => <Shout text="hello from a dependency" />),
+)
+`,
+  })
+
+  const app = await launchPackagedApp(userDataDir, { path: BARE_PATH })
+  try {
+    const window = await startSession(app)
+    expect(await runIvin(userDataDir, ["plugin", "lock", "shout"])).toMatchObject({ code: 0 })
+
+    await window.reload()
+
+    await expect(window.getByText("HELLO FROM A DEPENDENCY")).toBeVisible()
   } finally {
     await app.close()
   }

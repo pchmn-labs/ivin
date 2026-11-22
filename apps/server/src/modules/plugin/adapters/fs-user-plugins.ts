@@ -1,4 +1,4 @@
-import { HOST_MODULES, HOST_MODULES_GLOBAL } from "@ivin/contracts/plugin"
+import { HOST_MODULES, HOST_MODULES_GLOBAL, PluginNotLocked } from "@ivin/contracts/plugin"
 import { Effect, Layer } from "effect"
 import rolldownPackage from "rolldown/package.json" with { type: "json" }
 import { createHash } from "node:crypto"
@@ -15,6 +15,7 @@ import {
 } from "node:fs/promises"
 import { join, relative, resolve, sep } from "node:path"
 import { PluginNotCompiled, UserPlugins, type PluginFolder } from "../usecases/user-plugins.ts"
+import { makePluginDependencies, type Installed } from "./plugin-dependencies.ts"
 
 const HOST_PREFIX = "\0ivin-host:"
 // Bumped when a change to how plugins compile must invalidate the cached bundles.
@@ -80,27 +81,40 @@ const loadRolldown = async () => {
   }
 }
 
-const bundle = async (folder: string, entry: string): Promise<string> => {
+const isUnder = (path: string | undefined, folder: string) =>
+  path !== undefined && path.startsWith(folder + sep)
+
+// `installed` holds the plugin's dependencies; its own node_modules is never read.
+const bundle = async (folder: string, entry: string, installed: Installed | null) => {
   const { rolldown } = await loadRolldown()
   const build = await rolldown({
     input: entry,
     cwd: folder,
     platform: "browser",
-    logLevel: "silent",
+    onLog: (level, log, handle) => {
+      if (log.code === "UNRESOLVED_IMPORT") handle("error", log)
+    },
     transform: { define: { "process.env.NODE_ENV": JSON.stringify("production") } },
     plugins: [
       {
-        name: "ivin-host-modules",
-        resolveId(specifier) {
+        name: "ivin-plugin-imports",
+        async resolveId(specifier, importer) {
+          // Before any other rule, so a dependency's imports of React get the host's too.
           if ((HOST_MODULES as ReadonlyArray<string>).includes(specifier)) {
             return HOST_PREFIX + specifier
           }
           if (!isBare(specifier)) return null
-          throw new Error(
-            PROVIDED_PACKAGES.includes(packageOf(specifier))
-              ? `It imports ${specifier}, which ivin does not provide to plugins.`
-              : `It imports ${specifier}: a plugin can import only ${HOST_MODULES.join(", ")} and its own files.`,
-          )
+          const name = packageOf(specifier)
+          if (PROVIDED_PACKAGES.includes(name)) {
+            throw new Error(`It imports ${specifier}, which ivin does not provide to plugins.`)
+          }
+          if (installed !== null && isUnder(importer, installed.folder)) return null
+          if (installed === null || !installed.names.has(name)) {
+            throw new Error(`It imports ${specifier}, which is not in its dependencies.`)
+          }
+          return this.resolve(specifier, join(installed.folder, "package.json"), {
+            skipSelf: true,
+          })
         },
         load(id) {
           if (!id.startsWith(HOST_PREFIX)) return null
@@ -124,6 +138,7 @@ const bundle = async (folder: string, entry: string): Promise<string> => {
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
 export const layerFsUserPlugins = (ivinHome: string) => {
+  const dependencies = makePluginDependencies(ivinHome)
   const pluginsFolder = join(ivinHome, "plugins")
   const cacheFolder = join(ivinHome, "cache", "plugins")
   const logFolder = join(ivinHome, "logs", "plugins")
@@ -141,11 +156,11 @@ export const layerFsUserPlugins = (ivinHome: string) => {
       }
       return folders
     }),
-    compile: (linkedFolder, entry) =>
+    compile: ({ id, path, entry }) =>
       Effect.tryPromise({
         try: async () => {
           // Rolldown names files from the real path, relative to `cwd`.
-          const folder = await realpath(linkedFolder)
+          const folder = await realpath(path)
           const entryPath = resolve(folder, entry)
           if (!entryPath.startsWith(folder + sep)) {
             throw new Error(`ivin.ui, ${entry}, leads out of the plugin's folder.`)
@@ -153,7 +168,12 @@ export const layerFsUserPlugins = (ivinHome: string) => {
           const name = `${await hashOf(folder, entry)}.js`
           const file = join(cacheFolder, name)
           if (await isFile(file)) return name
-          const code = await bundle(folder, entryPath).catch((error: unknown) => {
+          const installed = await dependencies.install(
+            id,
+            folder,
+            (await readText(join(folder, "package.json"))) ?? "{}",
+          )
+          const code = await bundle(folder, entryPath, installed).catch((error: unknown) => {
             throw new Error(`Could not compile ${entry}: ${messageOf(error)}`)
           })
           await mkdir(cacheFolder, { recursive: true })
@@ -164,6 +184,12 @@ export const layerFsUserPlugins = (ivinHome: string) => {
           return name
         },
         catch: (error) => new PluginNotCompiled({ reason: messageOf(error) }),
+      }),
+    lock: (path) =>
+      Effect.tryPromise({
+        try: async () =>
+          dependencies.lock(path, (await readText(join(path, "package.json"))) ?? "{}"),
+        catch: (error) => new PluginNotLocked({ reason: messageOf(error) }),
       }),
     appendLog: (id, line) =>
       Effect.promise(async () => {

@@ -1,65 +1,21 @@
-import { layerScripted } from "@ivin/harness"
-import { HOST_MODULES_GLOBAL, type UserPlugin } from "@ivin/contracts/plugin"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { dirname, join } from "node:path"
-import { pathToFileURL } from "node:url"
+import { Effect } from "effect"
+import { readFileSync, writeFileSync } from "node:fs"
 import * as React from "react"
-import * as jsxRuntime from "react/jsx-runtime"
 import { renderToString } from "react-dom/server"
 import { expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { layerDatabase } from "../shared/adapters/database.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import {
+  bundlePath,
+  importBundle,
+  listPlugins,
+  packageJson,
+  readLog,
+  tempDir,
+  withServer,
+  writePlugin,
+} from "./plugin-test-server.ts"
 
 // Rolldown starts its native binding on the first compile.
 vi.setConfig({ testTimeout: 20_000 })
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const tempDir = (prefix: string) => mkdtempSync(join(tmpdir(), `ivin-${prefix}-`))
-
-const withServer = <A, E>(home: string, use: (client: Client) => Effect.Effect<A, E>) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(layerDatabase(":memory:")),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: tempDir("images") })),
-          Layer.provide(layerScripted([])),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerFsUserPlugins(home)),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-
-const listPlugins = (home: string) => withServer(home, (client) => client["plugin.list"]())
-const readLog = (home: string, id: string) =>
-  withServer(home, (client) => client["plugin.readLog"]({ id }))
-
-const writePlugin = (home: string, folder: string, files: Record<string, string>) => {
-  for (const [path, text] of Object.entries(files)) {
-    const file = join(home, "plugins", folder, path)
-    mkdirSync(dirname(file), { recursive: true })
-    writeFileSync(file, text)
-  }
-}
-
-const packageJson = (ivin: Record<string, unknown>) => JSON.stringify({ name: "p", ivin })
 
 const greeter = {
   "package.json": packageJson({ id: "greeter", name: "Greeter", ui: "src/ui.tsx" }),
@@ -77,23 +33,6 @@ export const activate = defineUi((ctx) => {
   ctx.commands.register("greeter.answer", { title: "Answer", run: () => answer(21) })
 })
 `,
-}
-
-const bundlePath = (home: string, plugin: UserPlugin | undefined) => {
-  if (plugin?._tag !== "compiled") throw new Error(`not compiled: ${JSON.stringify(plugin)}`)
-  return join(home, "cache", "plugins", plugin.bundle)
-}
-
-// The window's role: give the bundle the host's modules, then import it.
-const importBundle = async (path: string) => {
-  Object.assign(globalThis, {
-    [HOST_MODULES_GLOBAL]: {
-      react: React,
-      "react/jsx-runtime": jsxRuntime,
-      "@ivin/plugin-api/ui": { defineUi: (activate: unknown) => activate },
-    },
-  })
-  return (await import(pathToFileURL(path).href)) as Record<string, unknown>
 }
 
 test("a plugin's UI half compiles into a bundle whose command returns its value and whose component uses the host's React", async () => {

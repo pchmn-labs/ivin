@@ -26,12 +26,27 @@ export type UserPlugin = typeof UserPlugin.Type
 export const PluginFailure = Schema.Struct({ id: Schema.String, reason: Schema.String })
 export type PluginFailure = typeof PluginFailure.Type
 
+export class PluginNotFound extends Schema.TaggedError<PluginNotFound>()("PluginNotFound", {
+  id: Schema.String,
+}) {}
+
+// pnpm's own message, for the plugin's author.
+export class PluginNotLocked extends Schema.TaggedError<PluginNotLocked>()("PluginNotLocked", {
+  reason: Schema.String,
+}) {}
+
 export const PluginRpcs = RpcGroup.make(
-  Rpc.make("plugin.list", { success: Schema.Array(UserPlugin) }),
+  // Each plugin as soon as it is compiled or failed: one whose dependencies install comes last.
+  Rpc.make("plugin.list", { success: UserPlugin, stream: true }),
   Rpc.make("plugin.reportFailure", { payload: PluginFailure }),
   // Oldest first; empty when the plugin never failed.
   Rpc.make("plugin.readLog", {
     payload: { id: Schema.String },
     success: Schema.Array(Schema.String),
+  }),
+  // Writes the plugin's pnpm-lock.yaml from the dependencies in its package.json.
+  Rpc.make("plugin.lock", {
+    payload: { id: Schema.String },
+    error: Schema.Union([PluginNotFound, PluginNotLocked]),
   }),
 )

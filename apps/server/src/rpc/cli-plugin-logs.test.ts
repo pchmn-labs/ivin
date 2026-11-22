@@ -1,3 +1,4 @@
+import { Stream } from "effect"
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
@@ -19,7 +20,7 @@ test("ivin plugin logs prints why a plugin failed to load", async () => {
   const ivinHome = homeWithBrokenPlugin()
   const run = await withCliServer(
     async (socketPath, run) => {
-      await run(listPlugins)
+      await run(Stream.runDrain(listPlugins))
       return runCli(["plugin", "logs", "broken"], { IVIN_SOCKET: socketPath })
     },
     { ivinHome },

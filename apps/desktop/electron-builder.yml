@@ -20,12 +20,13 @@ extraResources:
   - from: ../../plugins
     to: plugins
     filter: ["**/*", "!**/*.ts", "!**/*.tsx"]
-# Worker threads and native bindings cannot load from the asar; `webp-encoder.ts` and Rolldown's loader point here.
+# Worker threads, native bindings and child processes cannot load from the asar; `webp-encoder.ts`, Rolldown's loader and `pnpm.ts` point here.
 asarUnpack:
   - server/webp-worker.js
   - server/webp_enc*.js
   - server/wasm/**
   - server/native/**
+  - server/pnpm/**
 extraMetadata:
   main: main.js
 mac:
