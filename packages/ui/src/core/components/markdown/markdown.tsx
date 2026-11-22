@@ -1,14 +1,41 @@
-import { memo, useRef } from "react"
-import ReactMarkdown from "react-markdown"
+import { memo, useRef, type ComponentProps, type ComponentType } from "react"
+import ReactMarkdown, { type UrlTransform } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import "./markdown.css"
 import { extendBlocks, splitBlocks } from "../../../modules/transcript/rules/split-blocks.ts"
 
-const Block = memo(function Block({ source }: { source: string }) {
-  return <ReactMarkdown remarkPlugins={[remarkGfm]}>{source}</ReactMarkdown>
+export interface MarkdownLinkRendering {
+  readonly component: ComponentType<ComponentProps<"a">>
+  readonly urlTransform: UrlTransform
+}
+
+interface BlockProps {
+  readonly source: string
+  readonly linkRendering: MarkdownLinkRendering | undefined
+}
+
+const Block = memo(function Block({ source, linkRendering }: BlockProps) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      {...(linkRendering && {
+        components: { a: linkRendering.component },
+        urlTransform: linkRendering.urlTransform,
+      })}
+    >
+      {source}
+    </ReactMarkdown>
+  )
 })
 
-export function Markdown({ text }: { text: string }) {
+// `linkRendering` keeps its identity across renders, or every block renders again.
+export function Markdown({
+  text,
+  linkRendering,
+}: {
+  text: string
+  linkRendering?: MarkdownLinkRendering
+}) {
   const previous = useRef<{ text: string; blocks: ReadonlyArray<string> }>({
     text: "",
     blocks: [],
@@ -23,7 +50,7 @@ export function Markdown({ text }: { text: string }) {
   return (
     <div className="iv-markdown">
       {blocks.map((source, index) => (
-        <Block key={index} source={source} />
+        <Block key={index} source={source} linkRendering={linkRendering} />
       ))}
     </div>
   )
