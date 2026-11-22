@@ -44,7 +44,6 @@ export const PluginRpcs = RpcGroup.make(
     payload: { id: Schema.String },
     success: Schema.Array(Schema.String),
   }),
-  // Writes the plugin's pnpm-lock.yaml from the dependencies in its package.json.
   Rpc.make("plugin.lock", {
     payload: { id: Schema.String },
     error: Schema.Union([PluginNotFound, PluginNotLocked]),

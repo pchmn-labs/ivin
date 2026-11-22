@@ -65,6 +65,19 @@ const commandValue = (bundle: Record<string, unknown>) => {
   return run?.()
 }
 
+const plain = {
+  "package.json": packageJson({ id: "plain", ui: "src/ui.ts" }),
+  "src/ui.ts": "export const activate = () => {}\n",
+}
+
+// A failed plugin leaves the others loading.
+const failureOf = async (home: string) => {
+  writePlugin(home, "plain", plain)
+  const plugins = await listPlugins(home)
+  expect(plugins.find((p) => p.id === "plain")?._tag).toBe("compiled")
+  return plugins.find((p) => p.id === "counter")
+}
+
 const installs = (home: string) =>
   readdirSync(join(home, "cache", "plugins", "deps")).filter((name) => !name.startsWith("."))
 
@@ -122,14 +135,7 @@ test("the plugin's own node_modules is ignored, and changing it changes nothing"
 test("a plugin with dependencies and no lockfile fails, naming ivin plugin lock", async () => {
   const home = tempDir("home")
   writePlugin(home, "counter", counter({ doubler: `file:${doubler()}` }))
-  writePlugin(home, "plain", {
-    "package.json": packageJson({ id: "plain", ui: "src/ui.ts" }),
-    "src/ui.ts": "export const activate = () => {}\n",
-  })
-
-  const plugins = await listPlugins(home)
-  expect(plugins.find((p) => p.id === "plain")?._tag).toBe("compiled")
-  expect(plugins.find((p) => p.id === "counter")).toMatchObject({
+  expect(await failureOf(home)).toMatchObject({
     _tag: "failed",
     reason: expect.stringContaining("ivin plugin lock counter"),
   })
@@ -147,8 +153,7 @@ test("a lockfile that no longer matches package.json fails the plugin", async ()
     ),
   })
 
-  const [plugin] = await listPlugins(home)
-  expect(plugin).toMatchObject({
+  expect(await failureOf(home)).toMatchObject({
     _tag: "failed",
     reason: expect.stringContaining("pnpm-lock.yaml does not match"),
   })
@@ -161,8 +166,7 @@ test("an install that fails fails the plugin, with pnpm's reason", async () => {
     "pnpm-lock.yaml": "lockfileVersion: '9.0'\nimporters: [\n",
   })
 
-  const [plugin] = await listPlugins(home)
-  expect(plugin).toMatchObject({
+  expect(await failureOf(home)).toMatchObject({
     _tag: "failed",
     reason: expect.stringContaining("Could not install its dependencies"),
   })
@@ -179,8 +183,7 @@ test("a dependency that needs native code fails the plugin, naming it", async ()
   )
   await lock(home, "counter")
 
-  const [plugin] = await listPlugins(home)
-  expect(plugin).toMatchObject({
+  expect(await failureOf(home)).toMatchObject({
     _tag: "failed",
     reason: expect.stringContaining("native-thing needs native code"),
   })
@@ -195,10 +198,20 @@ test("an import missing from the plugin's dependencies fails the compile", async
   })
   await lock(home, "counter")
 
-  const [plugin] = await listPlugins(home)
-  expect(plugin).toMatchObject({
+  expect(await failureOf(home)).toMatchObject({
     _tag: "failed",
     reason: expect.stringContaining("left-pad, which is not in its dependencies"),
+  })
+})
+
+test("a dependency with a relative file: path fails the plugin, asking for an absolute one", async () => {
+  const home = tempDir("home")
+  writePlugin(home, "counter", counter({ doubler: "file:../doubler" }))
+  writePlugin(home, "counter", { "pnpm-lock.yaml": "lockfileVersion: '9.0'\n" })
+
+  expect(await failureOf(home)).toMatchObject({
+    _tag: "failed",
+    reason: expect.stringContaining("doubler is a relative path"),
   })
 })
 

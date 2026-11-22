@@ -84,7 +84,6 @@ const loadRolldown = async () => {
 const isUnder = (path: string | undefined, folder: string) =>
   path !== undefined && path.startsWith(folder + sep)
 
-// `installed` holds the plugin's dependencies; its own node_modules is never read.
 const bundle = async (folder: string, entry: string, installed: Installed | null) => {
   const { rolldown } = await loadRolldown()
   const build = await rolldown({
@@ -108,7 +107,18 @@ const bundle = async (folder: string, entry: string, installed: Installed | null
           if (PROVIDED_PACKAGES.includes(name)) {
             throw new Error(`It imports ${specifier}, which ivin does not provide to plugins.`)
           }
-          if (installed !== null && isUnder(importer, installed.folder)) return null
+          if (installed !== null && isUnder(importer, installed.folder)) {
+            // Default resolution would also look in the folders above the install.
+            const resolved = await this.resolve(specifier, importer, { skipSelf: true })
+            if (
+              resolved !== null &&
+              !resolved.external &&
+              !isUnder(resolved.id, installed.folder)
+            ) {
+              throw new Error(`A dependency imports ${specifier}, which is not installed with it.`)
+            }
+            return resolved
+          }
           if (installed === null || !installed.names.has(name)) {
             throw new Error(`It imports ${specifier}, which is not in its dependencies.`)
           }

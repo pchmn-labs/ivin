@@ -1,9 +1,23 @@
 import { createHash, randomUUID } from "node:crypto"
-import { copyFile, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import {
+  copyFile,
+  mkdir,
+  readdir,
+  readFile,
+  realpath,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises"
 import { join, relative, sep } from "node:path"
-import { PNPM_VERSION, pnpmError, runPnpm } from "./pnpm.ts"
-
-export type Dependencies = Readonly<Record<string, string>>
+import {
+  type Dependencies,
+  dependenciesOf,
+  installManifest,
+  pnpmError,
+  relativeLocalDependency,
+} from "../rules/dependencies.ts"
+import { PNPM_VERSION, runPnpm } from "./pnpm.ts"
 
 export interface Installed {
   readonly folder: string
@@ -12,21 +26,7 @@ export interface Installed {
 
 const LOCKFILE = "pnpm-lock.yaml"
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
-
-export const dependenciesOf = (packageJson: string): Dependencies => {
-  const { dependencies } = JSON.parse(packageJson) as { dependencies?: unknown }
-  if (!isRecord(dependencies)) return {}
-  return Object.fromEntries(
-    Object.entries(dependencies).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string",
-    ),
-  )
-}
-
-// Only the dependencies: the rest of the plugin's package.json (its peer @ivin/plugin-api) is not on npm.
-const installManifest = (dependencies: Dependencies) => `${JSON.stringify({ dependencies })}\n`
+class OutdatedLockfile extends Error {}
 
 const readText = (path: string) => readFile(path, "utf8").catch(() => null)
 
@@ -50,6 +50,13 @@ const nativePackage = async (installFolder: string): Promise<string | null> => {
   return (name[0]?.startsWith("@") ? name.slice(0, 2) : name.slice(0, 1)).join("/")
 }
 
+const assertNoRelativeLocalDependency = (dependencies: Dependencies) => {
+  const name = relativeLocalDependency(dependencies)
+  if (name !== null) {
+    throw new Error(`Its dependency ${name} is a relative path: give file: an absolute path.`)
+  }
+}
+
 export const makePluginDependencies = (ivinHome: string) => {
   const depsFolder = join(ivinHome, "cache", "plugins", "deps")
   const installing = new Map<string, Promise<string>>()
@@ -64,11 +71,8 @@ export const makePluginDependencies = (ivinHome: string) => {
       const run = await runPnpm(ivinHome, scratch, ["install", "--frozen-lockfile"])
       if (!run.ok) {
         const { code, message } = pnpmError(run.output)
-        throw new Error(
-          code === "ERR_PNPM_OUTDATED_LOCKFILE"
-            ? "Its pnpm-lock.yaml does not match the dependencies in its package.json."
-            : `Could not install its dependencies: ${message}`,
-        )
+        if (code === "ERR_PNPM_OUTDATED_LOCKFILE") throw new OutdatedLockfile()
+        throw new Error(`Could not install its dependencies: ${message}`)
       }
       const native = await nativePackage(scratch)
       if (native !== null) {
@@ -93,6 +97,7 @@ export const makePluginDependencies = (ivinHome: string) => {
     ): Promise<Installed | null> => {
       const dependencies = dependenciesOf(packageJson)
       if (Object.keys(dependencies).length === 0) return null
+      assertNoRelativeLocalDependency(dependencies)
       const lockfile = await readText(join(pluginFolder, LOCKFILE))
       if (lockfile === null) {
         throw new Error(`It has dependencies and no ${LOCKFILE}: run ivin plugin lock ${id}.`)
@@ -103,23 +108,23 @@ export const makePluginDependencies = (ivinHome: string) => {
       const pending = installing.get(key) ?? install(key, dependencies, lockfile)
       installing.set(key, pending)
       try {
-        return { folder: await pending, names: new Set(Object.keys(dependencies)) }
+        // Real, so it compares with the paths Rolldown resolves.
+        return { folder: await realpath(await pending), names: new Set(Object.keys(dependencies)) }
       } catch (error) {
-        const message = (error as Error).message
+        if (!(error instanceof OutdatedLockfile)) throw error
         throw new Error(
-          message.startsWith("Its pnpm-lock.yaml")
-            ? `${message} Run ivin plugin lock ${id}.`
-            : message,
+          `Its ${LOCKFILE} does not match the dependencies in its package.json: run ivin plugin lock ${id}.`,
         )
       } finally {
         installing.delete(key)
       }
     },
-    // Writes the plugin's lockfile, keeping the versions its current one holds.
     lock: async (pluginFolder: string, packageJson: string) => {
+      const dependencies = dependenciesOf(packageJson)
+      assertNoRelativeLocalDependency(dependencies)
       const scratch = await scratchFolder(depsFolder, "lock")
       try {
-        await writeFile(join(scratch, "package.json"), installManifest(dependenciesOf(packageJson)))
+        await writeFile(join(scratch, "package.json"), installManifest(dependencies))
         await copyFile(join(pluginFolder, LOCKFILE), join(scratch, LOCKFILE)).catch(() => undefined)
         const run = await runPnpm(ivinHome, scratch, ["install", "--lockfile-only"])
         if (!run.ok) throw new Error(pnpmError(run.output).message)

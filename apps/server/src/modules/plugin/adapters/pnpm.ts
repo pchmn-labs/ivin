@@ -23,7 +23,6 @@ export interface PnpmRun {
 
 const TIMEOUT_MS = 5 * 60_000
 
-// Runs the pnpm ivin ships with the app's own Node, so nothing comes from the user's PATH.
 export const runPnpm = (ivinHome: string, cwd: string, args: ReadonlyArray<string>) =>
   new Promise<PnpmRun>((resolve) => {
     execFile(
@@ -52,16 +51,3 @@ export const runPnpm = (ivinHome: string, cwd: string, args: ReadonlyArray<strin
       (error, stdout, stderr) => resolve({ ok: error === null, output: `${stdout}\n${stderr}` }),
     )
   })
-
-// pnpm's `ERR_PNPM_<CODE>  <message>` line, or its last line when it printed none.
-export const pnpmError = (output: string) => {
-  const lines = output.split("\n").map((line) => line.trim())
-  const error = lines.find((line) => /ERR_PNPM_[A-Z_]+/.test(line))
-  return {
-    code: error?.match(/ERR_PNPM_[A-Z_]+/)?.[0] ?? null,
-    message: (error ?? lines.filter((line) => line !== "").at(-1) ?? "pnpm failed").replace(
-      /^.*?ERR_PNPM_[A-Z_]+\s*/,
-      "",
-    ),
-  }
-}

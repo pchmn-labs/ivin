@@ -7,7 +7,6 @@ import { UserPlugins } from "./user-plugins.ts"
 const failed = (id: string, reason: string) =>
   reportPluginFailure(id, reason).pipe(Effect.as<UserPlugin>({ _tag: "failed", id, reason }))
 
-// Each plugin as soon as it is ready, so one whose dependencies install never holds up the rest.
 export const listPlugins = Stream.unwrap(
   Effect.gen(function* () {
     const plugins = yield* UserPlugins
