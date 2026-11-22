@@ -78,6 +78,14 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const serverHarness = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
   const offered = session && serverHarness?.id === session.harness ? serverHarness.runOptions : null
 
+  const known = session !== undefined
+  useEffect(() => {
+    // The approval sheet takes the focus, and a tab moved to by the arrow keys keeps it.
+    if (!known || session.status === "waiting") return
+    if (document.activeElement?.closest('[role="tablist"]')) return
+    editor.current?.focus()
+  }, [known])
+
   useEffect(() => {
     if (relaunchFailure === null) return
     setDraft((current) =>
@@ -266,7 +274,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
         <MessageEditor
           ref={editor}
           label="Message"
-          placeholder={`Message ${harness?.name ?? "the agent"}`}
+          placeholder="Ask, build, or paste an image…"
           value={text}
           images={draft.images}
           hotImageId={hoveredImage}

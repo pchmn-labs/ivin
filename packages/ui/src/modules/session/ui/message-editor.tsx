@@ -9,6 +9,7 @@ export interface MessageEditorHandle {
   // At `at` when it is still in the field, else at the caret, else at the end.
   readonly insertImages: (images: ReadonlyArray<DraftImage>, at: Range | null) => void
   readonly removeImage: (number: number) => void
+  readonly focus: () => void
 }
 
 export interface MessageEditorProps {
@@ -195,6 +196,15 @@ export function MessageEditor({
         document.execCommand("delete")
       })
       emit()
+    },
+    focus: () => {
+      const element = field.current
+      if (!element) return
+      element.focus()
+      const end = document.createRange()
+      end.selectNodeContents(element)
+      end.collapse(false)
+      select(end)
     },
   }))
 

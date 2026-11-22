@@ -140,24 +140,47 @@ const mountSession = async (
   return server
 }
 
-test("a codex session's composer names Codex and draws no Claude mark", async () => {
+test("a codex session's composer draws no Claude mark", async () => {
   await mountSession("idle", "codex")
-  await expect
-    .element(page.getByRole("textbox", { name: "Message" }))
-    .toHaveAttribute("aria-placeholder", "Message Codex")
+  await expect.element(page.getByTestId("run-options")).toBeInTheDocument()
   const model = page.getByTestId("run-options").element()
   expect(model.querySelector(".iv-harness-mark--agent")).not.toBeNull()
   expect(document.querySelector(".iv-composer .iv-harness-mark--claude")).toBeNull()
 })
 
-test("a claude session's composer names Claude and draws the Claude mark", async () => {
+test("a claude session's composer draws the Claude mark", async () => {
   await mountSession("idle")
-  await expect
-    .element(page.getByRole("textbox", { name: "Message" }))
-    .toHaveAttribute("aria-placeholder", "Message Claude")
+  await expect.element(page.getByTestId("run-options")).toBeInTheDocument()
   expect(
     page.getByTestId("run-options").element().querySelector(".iv-harness-mark--claude"),
   ).not.toBeNull()
+})
+
+test("opening a session puts the focus in its composer, after the draft's text", async () => {
+  await mountSession("idle")
+  const field = page.getByRole("textbox", { name: "Message" })
+  await expect.element(field).toHaveFocus()
+  await expect.element(field).toHaveAttribute("aria-placeholder", "Ask, build, or paste an image…")
+})
+
+test("opening a session that waits on an approval leaves the focus to the approval sheet", async () => {
+  await mountSession("waiting")
+  await expect.element(page.getByTestId("composer-session-status")).toBeInTheDocument()
+  await expect.element(page.getByRole("textbox", { name: "Message" })).not.toHaveFocus()
+})
+
+test("opening a session from a tab reached by the arrow keys keeps the focus on the tab", async () => {
+  const tablist = document.createElement("div")
+  tablist.setAttribute("role", "tablist")
+  const tab = document.createElement("button")
+  tab.setAttribute("role", "tab")
+  tablist.append(tab)
+  document.body.append(tablist)
+  tab.focus()
+  await mountSession("idle")
+  await expect.element(page.getByTestId("composer-session-status")).toBeInTheDocument()
+  expect(document.activeElement).toBe(tab)
+  tablist.remove()
 })
 
 test("the composer announces the status and follows the server", async () => {
