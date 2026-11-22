@@ -103,6 +103,8 @@ export function SubViewCard({
   const saveAndClose = async (subView: SubView) => {
     setConfirming(false)
     if (await write({ sessionId, workingFolder, path: subView.path })) await closeNow(subView)
+    // Its failure shows in its own view.
+    else open({ sessionId, workingFolder, subView })
   }
 
   const switchMode = async (to: boolean) => {

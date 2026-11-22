@@ -23,7 +23,6 @@ export const writeFile = (
     const folders = yield* FolderReader
     const root = yield* folders.realPath(session.workingFolder)
     if (root === null) return yield* new WorkingFolderDeleted({ sessionId })
-    // A symlink is written through, to its target, so the link stays a link.
     const existing = yield* folders.realPath([root, ...names].join("/"))
     const parent = yield* folders.realPath([root, ...names.slice(0, -1)].join("/"))
     const file = existing ?? (parent === null ? null : `${parent}/${names.at(-1)}`)

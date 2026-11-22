@@ -9,8 +9,10 @@ interface Edited extends FileEdit {
 
 const editsAtom = Atom.make<ReadonlyMap<string, Edited>>(new Map()).pipe(Atom.keepAlive)
 
+const folderKeyOf = (sessionId: string, workingFolder: string) => `${sessionId}\n${workingFolder}`
+
 const keyOf = (sessionId: string, workingFolder: string, path: string) =>
-  `${sessionId}\n${workingFolder}\n${path}`
+  `${folderKeyOf(sessionId, workingFolder)}\n${path}`
 
 const family = Atom.family((key: string) => {
   const [sessionId = "", workingFolder = "", path = ""] = key.split("\n")
@@ -46,7 +48,7 @@ const unsavedPathsFamily = Atom.family((folderKey: string) =>
 )
 
 export const unsavedPathsOf = (sessionId: string, workingFolder: string) =>
-  unsavedPathsFamily(`${sessionId}\n${workingFolder}`)
+  unsavedPathsFamily(folderKeyOf(sessionId, workingFolder))
 
 export const discardSessionEditsAtom = Atom.fnSync((sessionId: string, get) => {
   const edits = new Map(get(editsAtom))

@@ -28,9 +28,15 @@ import "./code-view.css"
 const wrappingOf = (fileName: string) =>
   languageNameOf(fileName) === "markdown" ? EditorView.lineWrapping : []
 
-// Only the file's own line break splits lines, so a save writes it back unchanged.
-const lineSeparatorOf = (text: string) =>
-  /\r\n/.test(text) && !/(^|[^\r])\n/.test(text) ? EditorState.lineSeparator.of("\r\n") : []
+// Like VS Code, a file is written back with the line break most of its lines end with.
+const lineBreakOf = (text: string) => {
+  const crlf = text.match(/\r\n/g)?.length ?? 0
+  const lf = (text.match(/\n/g)?.length ?? 0) - crlf
+  return crlf > lf ? "\r\n" : "\n"
+}
+
+const textOf = (state: EditorState, lineBreak: string) =>
+  state.doc.sliceString(0, state.doc.length, lineBreak)
 
 const noExtensions: Extension = []
 
@@ -50,6 +56,8 @@ const editing = (onChange: () => void): Extension => [
     ...searchKeymap,
     ...historyKeymap,
     indentWithTab,
+    // An Escape the editor has no use for would reach the window and stop the agent.
+    { key: "Escape", run: () => true },
   ]),
   EditorView.updateListener.of((update) => {
     const edited = update.transactions.some(
@@ -106,6 +114,7 @@ export function CodeView({
   const language = useRef(new Compartment())
   const wrapping = useRef(new Compartment())
   const added = useRef(new Compartment())
+  const lineBreak = useRef(lineBreakOf(text))
   const latestOnScroll = useRef(onScroll)
   const latestOnChange = useRef(onChange)
   useEffect(() => {
@@ -126,9 +135,8 @@ export function CodeView({
           drawSelection(),
           highlightActiveLine(),
           syntaxHighlighting(highlightStyle),
-          lineSeparatorOf(text),
           editable
-            ? editing(() => latestOnChange.current?.(editor.state.sliceDoc()))
+            ? editing(() => latestOnChange.current?.(textOf(editor.state, lineBreak.current)))
             : EditorState.readOnly.of(true),
           EditorView.contentAttributes.of({ "aria-label": fileName }),
           language.current.of([]),
@@ -158,7 +166,8 @@ export function CodeView({
 
   useEffect(() => {
     const editor = view.current!
-    const current = editor.state.sliceDoc()
+    lineBreak.current = lineBreakOf(text)
+    const current = textOf(editor.state, lineBreak.current)
     // An edit the view reported comes back as `text`; only another text replaces the document.
     if (current !== text) {
       editor.dispatch({

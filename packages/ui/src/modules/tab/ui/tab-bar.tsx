@@ -1,4 +1,5 @@
 import { RegistryContext, useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { Exit } from "effect"
 import { useContext, useState, type DragEvent, type KeyboardEvent } from "react"
 import { Button } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
@@ -44,7 +45,7 @@ function TabItem({
 }) {
   const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
   const openTab = useAtomSet(openTabAtom)
-  const closeTab = useAtomSet(closeTabAtom)
+  const closeTab = useAtomSet(closeTabAtom, { mode: "promiseExit" })
   const { tabs: settings } = useAtomValue(settingsAtom)
   const [confirming, setConfirming] = useState(false)
   // Read when the user closes, kept while the prompt fades out.
@@ -59,7 +60,7 @@ function TabItem({
     const paths = registry.get(unsavedPathsOf(sessionId, session.workingFolder))
     setUnsaved(paths)
     if (stopsAgent || paths.length > 0) setConfirming(true)
-    else closeTab({ sessionId })
+    else void closeTab({ sessionId })
   }
   const unsavedNames = unsaved.map(fileName)
   const unsavedText =
@@ -157,8 +158,9 @@ function TabItem({
               variant="danger"
               onClick={() => {
                 setConfirming(false)
-                discardEdits(sessionId)
-                closeTab({ sessionId })
+                void closeTab({ sessionId }).then(
+                  (exit) => Exit.isSuccess(exit) && discardEdits(sessionId),
+                )
               }}
             >
               {prompt.confirm}

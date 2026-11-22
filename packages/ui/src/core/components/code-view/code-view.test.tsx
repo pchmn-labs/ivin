@@ -96,6 +96,26 @@ test("a file with Windows line endings keeps them", async () => {
   await expect.poll(changed).toBe("one\r\ntwo!\r\n")
 })
 
+test("a file with mixed line endings is written with the one most of its lines end with", async () => {
+  const { changed } = await editor("one\r\ntwo\r\nthree\n")
+  await page.getByText("three").click()
+  await userEvent.keyboard("{End}!")
+  await expect.poll(changed).toBe("one\r\ntwo\r\nthree!\r\n")
+})
+
+test("Escape in the editor stays in it", async () => {
+  const escapes: string[] = []
+  const listen = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && !event.defaultPrevented) escapes.push(event.key)
+  }
+  window.addEventListener("keydown", listen)
+  await editor("hello")
+  await page.getByText("hello").click()
+  await userEvent.keyboard("{Escape}")
+  window.removeEventListener("keydown", listen)
+  expect(escapes).toEqual([])
+})
+
 test("Alt+Down moves the line down", async () => {
   const { changed } = await editor("alpha\nbeta\ngamma")
   await page.getByText("beta").click()

@@ -170,6 +170,22 @@ test("Save in the close prompt writes the file, then closes it", async () => {
   expect(fileOf(server)).toBe("# Shop draft")
 })
 
+test("a Save in the close prompt that fails keeps the file open and shows it with its failure", async () => {
+  const server = makeServer()
+  await mount(server)
+  await typeAtEnd("README.md", " draft")
+  await fileTab("main.ts").click()
+  server.unwritable = true
+
+  await card().getByRole("button", { name: "Close README.md" }).click()
+  await dialog().getByRole("button", { name: "Save", exact: true }).click()
+  await expect.element(fileTab("README.md")).toHaveAttribute("aria-selected", "true")
+  await expect
+    .element(card().getByText(/^README\.md was not saved\. Check its permissions/))
+    .toBeVisible()
+  await expect.element(code("README.md")).toHaveTextContent("# Shop draft")
+})
+
 test("closing a session's tab with unsaved files asks first", async () => {
   const server = makeServer()
   await mount(server)
@@ -237,6 +253,23 @@ test("a file that changed on disk under unsaved edits warns as soon as it is sho
     )
     .toBeVisible()
   await expect.element(code("README.md")).toHaveTextContent("# Shop mine")
+})
+
+test("a file deleted on disk under unsaved edits keeps them, and Overwrite writes it again", async () => {
+  const server = makeServer()
+  await mount(server)
+  await typeAtEnd("README.md", " mine")
+  await sessionTab("Fix the cart").getByRole("tab").click()
+  server.files.delete(readme)
+  await sessionTab("Checkout flow").getByRole("tab").click()
+
+  const warning = card().getByRole("alert")
+  await expect
+    .element(warning.getByText("README.md was deleted on disk while you had unsaved edits."))
+    .toBeVisible()
+  await expect.element(code("README.md")).toHaveTextContent("# Shop mine")
+  await warning.getByRole("button", { name: "Overwrite" }).click()
+  await expect.poll(() => fileOf(server)).toBe("# Shop mine")
 })
 
 test("a failed save says so next to the file and keeps the edits; Retry saves them", async () => {

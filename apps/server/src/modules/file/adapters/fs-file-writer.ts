@@ -4,7 +4,7 @@ import { basename, dirname, join } from "node:path"
 import { Effect, Layer } from "effect"
 import { FileUnwritable, FileWriter } from "../usecases/file-writer.ts"
 
-const unwritable = (error: unknown) =>
+const toFileUnwritable = (error: unknown) =>
   new FileUnwritable({
     reason: ["ENOENT", "ENOTDIR", "EISDIR"].includes((error as NodeJS.ErrnoException).code ?? "")
       ? "missing"
@@ -35,5 +35,6 @@ const replace = async (path: string, bytes: Uint8Array) => {
 }
 
 export const layerFsFileWriter = Layer.succeed(FileWriter)({
-  write: (path, bytes) => Effect.tryPromise({ try: () => replace(path, bytes), catch: unwritable }),
+  write: (path, bytes) =>
+    Effect.tryPromise({ try: () => replace(path, bytes), catch: toFileUnwritable }),
 })
