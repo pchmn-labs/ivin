@@ -60,7 +60,7 @@ function TabItem({
     const paths = registry.get(unsavedPathsOf(sessionId, session.workingFolder))
     setUnsaved(paths)
     if (stopsAgent || paths.length > 0) setConfirming(true)
-    else void closeTab({ sessionId })
+    else void closeTab({ projectPath, sessionId })
   }
   const unsavedNames = unsaved.map(fileName)
   const unsavedText =
@@ -158,7 +158,7 @@ function TabItem({
               variant="danger"
               onClick={() => {
                 setConfirming(false)
-                void closeTab({ sessionId }).then(
+                void closeTab({ projectPath, sessionId }).then(
                   (exit) => Exit.isSuccess(exit) && discardEdits(sessionId),
                 )
               }}

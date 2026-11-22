@@ -69,7 +69,7 @@ test("closing a session's tab drops its transcript, which loads again when shown
   const { registry, sessionId, transcript, rowIds, show, streamOnly } = await setup()
   ;(await show())()
 
-  registry.set(closeTabAtom, { sessionId })
+  registry.set(closeTabAtom, { projectPath: project, sessionId })
   await vi.waitFor(() => expect(registry.get(transcript.paging).loaded).toBe(false))
   streamOnly("missed", 1)
 

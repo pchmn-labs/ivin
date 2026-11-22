@@ -46,6 +46,20 @@ test("archiving a session closes its tab and moves it from the session list to t
   await vi.waitFor(() => expect(archivedIds()).toEqual(["s1"]))
 })
 
+test("an archived session leaves the session list and the tabs before the server answers", async () => {
+  const { registry, server, sessions, archivedIds, tabIds } = await setup()
+  const archive = server.holdNextCall("session.archive")
+
+  registry.set(archiveSessionAtom, { projectPath: project, sessionId: "s1" })
+  expect(registry.get(sessions.ids)).toEqual(["s2"])
+  expect(tabIds()).toEqual(["s2"])
+
+  archive.release()
+  await vi.waitFor(() => expect(archivedIds()).toEqual(["s1"]))
+  expect(registry.get(sessions.ids)).toEqual(["s2"])
+  expect(tabIds()).toEqual(["s2"])
+})
+
 test("restoring an archived session lists it again and takes it off the archived list", async () => {
   const { registry, sessions, archivedIds } = await setup()
   registry.set(archiveSessionAtom, { projectPath: project, sessionId: "s1" })
