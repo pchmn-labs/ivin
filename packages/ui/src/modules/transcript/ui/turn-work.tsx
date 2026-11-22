@@ -5,9 +5,13 @@ import { Icon, type IconName } from "../../../core/components/icon/icon.tsx"
 import { ItemSlot } from "./transcript-row.tsx"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { foldsOf } from "../atoms/folds.ts"
+import { useFollowEnd } from "../hooks/use-follow-end.ts"
 import {
+  SHOWN_CALLS_WHILE_LIVE,
   callPhrases,
   duration,
+  earlierSteps,
+  earlierStepsKey,
   pinnedCalls,
   stepOpenByDefault,
   turnOpenByDefault,
@@ -42,15 +46,19 @@ function StepView({
   sessionId,
   open,
   current,
+  live,
   onToggle,
 }: {
   step: Step
   sessionId: string
   open: boolean
   current: boolean
+  live: boolean
   onToggle: () => void
 }) {
   const shown = step.calls.length === 0 || open ? step.children : pinnedCalls(step)
+  const scrolls = live && open && shown.length > SHOWN_CALLS_WHILE_LIVE
+  const follow = useFollowEnd<HTMLDivElement>(scrolls ? shown : null)
   const running = current && step.calls.some((call) => call.status === "running")
   return (
     <div
@@ -87,7 +95,12 @@ function StepView({
         </button>
       )}
       {shown.length > 0 && (
-        <div className="iv-turn__calls">
+        <div
+          ref={follow.ref}
+          className="iv-turn__calls"
+          data-scroll={scrolls || undefined}
+          onScroll={scrolls ? follow.onScroll : undefined}
+        >
           {shown.map((item) => (
             <div key={item.id} className="iv-turn__call">
               <ItemSlot item={item} sessionId={sessionId} />
@@ -140,6 +153,37 @@ function TurnLine({ work, live }: { work: Work; live: boolean }): ReactNode {
   )
 }
 
+function EarlierStepsLine({
+  steps,
+  open,
+  onToggle,
+}: {
+  steps: ReadonlyArray<Step>
+  open: boolean
+  onToggle: () => void
+}) {
+  const count = `${steps.length} ${steps.length === 1 ? "earlier step" : "earlier steps"}`
+  return (
+    <div className="iv-turn__earlier">
+      <button
+        type="button"
+        className="iv-turn__earlier-line"
+        aria-expanded={open}
+        data-testid="earlier-steps"
+        onClick={onToggle}
+      >
+        <span>
+          {open ? `Hide ${count}` : count}
+          <Failed count={steps.reduce((sum, step) => sum + step.failed, 0)} />
+        </span>
+        <span className="iv-turn__chevron">
+          <Icon name="chevron-right" size={12} />
+        </span>
+      </button>
+    </div>
+  )
+}
+
 export function TurnWork({
   sessionId,
   rowId,
@@ -154,6 +198,9 @@ export function TurnWork({
   if (work === null) return null
   const toggle = (key: string, open: boolean) => setFolds(new Map(folds).set(key, !open))
   const open = folds.get(rowId) ?? turnOpenByDefault(work, live)
+  const earlier = earlierSteps(work, live)
+  const earlierOpen = folds.get(earlierStepsKey(rowId)) ?? false
+  const firstShown = earlierOpen ? 0 : earlier.length
 
   return (
     <div className="iv-turn" data-testid="turn" data-live={live || undefined}>
@@ -174,7 +221,15 @@ export function TurnWork({
       )}
       {open && work.steps.length > 0 && (
         <div className="iv-turn__timeline">
-          {work.steps.map((step, index) => {
+          {earlier.length > 0 && (
+            <EarlierStepsLine
+              steps={earlier}
+              open={earlierOpen}
+              onToggle={() => toggle(earlierStepsKey(rowId), earlierOpen)}
+            />
+          )}
+          {work.steps.slice(firstShown).map((step, shownIndex) => {
+            const index = firstShown + shownIndex
             const stepOpen = folds.get(step.id) ?? stepOpenByDefault(work, index, live)
             return (
               <StepView
@@ -183,6 +238,7 @@ export function TurnWork({
                 sessionId={sessionId}
                 open={stepOpen}
                 current={live && index === work.steps.length - 1}
+                live={live}
                 onToggle={() => toggle(step.id, stepOpen)}
               />
             )

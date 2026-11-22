@@ -6,6 +6,7 @@ import {
   lastTurnMessageId,
   pinnedCalls,
   runningTurnRows,
+  earlierSteps,
   stepOpenByDefault,
   transcriptRows,
   turnWork,
@@ -162,6 +163,18 @@ test("while the turn runs only its last step is open; once it ends every step is
 
   expect(work.steps.map((_, index) => stepOpenByDefault(work, index, true))).toEqual([false, true])
   expect(work.steps.map((_, index) => stepOpenByDefault(work, index, false))).toEqual([true, true])
+})
+
+test("while the turn runs, the steps before its last 3 are earlier steps; once it ends, none are", () => {
+  const work = turnWork(
+    "w",
+    ["t1", "t2", "t3", "t4", "t5"].flatMap((id) => [text(id), call(`c${id}`)]),
+    [],
+  )
+
+  expect(earlierSteps(work, true).map((step) => step.id)).toEqual(["t1", "t2"])
+  expect(earlierSteps(work, false)).toEqual([])
+  expect(earlierSteps({ ...work, steps: work.steps.slice(2) }, true)).toEqual([])
 })
 
 test("a finished turn of more than 8 calls opens its steps folded", () => {
