@@ -7,7 +7,6 @@ export const answerQuestionAtom = serverRuntime.fn<{
   readonly projectPath: string
   readonly sessionId: string
   readonly requestId: string
-  // Null declines the questions.
   readonly answers: readonly QuestionAnswer[] | null
 }>()(
   Effect.fnUntraced(function* ({ projectPath, sessionId, requestId, answers }) {

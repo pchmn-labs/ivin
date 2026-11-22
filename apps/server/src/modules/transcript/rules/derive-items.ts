@@ -8,7 +8,6 @@ type QuestionItem = Extract<TranscriptItem, { type: "question" }>
 export interface ItemState {
   readonly openMessage: MessageItem | null
   readonly openToolCalls: ReadonlyMap<string, ToolCallItem>
-  // Approvals and questions the user has not answered yet, by request id.
   readonly openRequests: ReadonlyMap<string, ApprovalItem | QuestionItem>
 }
 

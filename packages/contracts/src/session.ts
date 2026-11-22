@@ -261,7 +261,6 @@ export const SessionRpcs = RpcGroup.make(
     success: Session,
     error: Schema.Union([SessionNotFound, ApprovalNotOpen]),
   }),
-  // `answers: null` declines the questions.
   Rpc.make("session.answerQuestion", {
     payload: {
       sessionId: Schema.String,

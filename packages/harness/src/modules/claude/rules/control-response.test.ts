@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { approvalResponseLine, questionResponseLine } from "./approval-response.ts"
+import { approvalResponseLine, questionResponseLine } from "./control-response.ts"
 
 test("allowing replies with the original input", () => {
   expect(JSON.parse(approvalResponseLine("r1", true, { command: "ls" }))).toEqual({

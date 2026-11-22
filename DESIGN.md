@@ -420,7 +420,7 @@ Pick by what the user does; the sections below give each component's look.
 - **States:** hover changes fill only (yew hover on primary, hover wash elsewhere) over 120ms; press uses the active wash; disabled drops to 45% opacity (`--iv-opacity-disabled`, shared by fields, selects, menu items and options). Focus is the global 2px yew outline, 2px offset.
 
 ### Icons
-Phosphor icons at regular weight, 16px by default and 14px inline with small text, drawn through `Icon` from a fixed list of names (plus, folder-open, send, square, check, x, chevrons, ellipsis, terminal, file, pencil, circle-alert, loader, copy, git-branch, brain, wrench, user, sparkles, arrows, arrow-down, arrows-left-right, panel-left, new-session, search, archive, trash, restore, gear, brackets-curly, app-window, collapse-all, eye, eye-slash). A screen or plugin asks for a name, never imports an icon. The loader spins on `--iv-duration-spin` (900ms).
+Phosphor icons at regular weight (the question icon filled, as the session mark's status overlay is), 16px by default and 14px inline with small text, drawn through `Icon` from a fixed list of names (plus, question, folder-open, send, square, check, x, chevrons, ellipsis, terminal, file, pencil, circle-alert, loader, copy, git-branch, brain, wrench, user, sparkles, arrows, arrow-down, arrows-left-right, panel-left, new-session, search, archive, trash, restore, gear, brackets-curly, app-window, collapse-all, eye, eye-slash). A screen or plugin asks for a name, never imports an icon. The loader spins on `--iv-duration-spin` (900ms).
 
 ### Blocks
 - **Use:** the box for a transcript item. 1px hairline, 6px corners, padding 8, 12 or 16px.
@@ -542,7 +542,7 @@ Decided but not built, because the data they need does not exist yet. Build them
 - **Do** keep amber for "waiting for you" and approvals, and cursor red for errors and failures, through the `--iv-status-*` tokens.
 - **Do** mark anything the user must answer with the dashed `--iv-attention-outline`, and only that.
 - **Do** build plugin UI only from `@ivin/plugin-api` components, with layout through `Stack` and `Block`, and dock plugin prompts on the composer through `composer.above`.
-- **Do** draw icons through `Icon` by name, in Phosphor regular weight.
+- **Do** draw icons through `Icon` by name, in Phosphor regular weight, the question icon aside.
 - **Do** use mono for code, commands and file paths, and tabular figures for times, counts and costs.
 - **Do** keep transcript rows flat and cheap: a block, text, a disclosure, a code block.
 

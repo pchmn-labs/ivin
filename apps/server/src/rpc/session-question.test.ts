@@ -214,3 +214,27 @@ test("an approval cannot be answered through a question's request id", async () 
 
   expect(error._tag).toBe("ApprovalNotOpen")
 })
+
+test("after a server restart the questions stay open in the transcript, and answering them says they are no longer waited on", async () => {
+  const db = newDatabase()
+  const sessionId = await withServer(db, [[running, asked]], (client) => askQuestions(client))
+
+  const after = await withServer(db, [[running, asked]], (client) =>
+    Effect.gen(function* () {
+      const session = yield* sessionOf(client, sessionId)
+      const item = yield* questionItem(client, sessionId)
+      const error = yield* client["session.answerQuestion"]({
+        sessionId,
+        requestId: "q1",
+        answers,
+      }).pipe(Effect.flip)
+      return { status: session.status, item, error: error._tag }
+    }),
+  )
+
+  expect(after).toMatchObject({
+    status: "idle",
+    item: { status: "open" },
+    error: "QuestionNotOpen",
+  })
+})

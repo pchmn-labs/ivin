@@ -60,7 +60,6 @@ export interface UiHost {
     readonly requestId: string
     readonly allow: boolean
   }) => Promise<ActionFailure | undefined>
-  // `answers: null` declines the questions.
   readonly useAnswerQuestion: (
     sessionId: string,
   ) => (answer: {
