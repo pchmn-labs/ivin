@@ -5,6 +5,14 @@
   overflow: hidden;
 }
 
+.iv-app[hidden] {
+  display: none;
+}
+
+.iv-app:focus {
+  outline: none;
+}
+
 .iv-app--empty {
   position: relative;
   grid-template-columns: minmax(0, 1fr);

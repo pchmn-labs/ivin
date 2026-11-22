@@ -41,6 +41,9 @@ export type IconName =
   | "robot"
   | "arrows-out"
   | "split"
+  | "gear"
+  | "brackets-curly"
+  | "app-window"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"

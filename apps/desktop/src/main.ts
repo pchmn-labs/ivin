@@ -10,10 +10,11 @@ import {
   utilityProcess,
   type UtilityProcess,
 } from "electron"
+import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { delimiter, join } from "node:path"
 import { pathToFileURL } from "node:url"
-import { PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
+import { OPEN_SETTINGS_FILE, PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
 import { writeCliCommand } from "./cli-command.ts"
 import { linkTarget } from "./link-target.ts"
 import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
@@ -129,6 +130,21 @@ app.on("will-quit", (event) => {
 })
 
 const ivinHome = process.env["IVIN_HOME"] ?? join(homedir(), ".ivin")
+
+ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
+  const file = join(ivinHome, "settings.json")
+  try {
+    await mkdir(ivinHome, { recursive: true })
+    // The system has nothing to open until a setting is first changed.
+    await writeFile(file, "{}\n", { flag: "wx" }).catch((error: NodeJS.ErrnoException) => {
+      if (error.code !== "EEXIST") throw error
+    })
+  } catch (error) {
+    return String(error)
+  }
+  const failure = await shell.openPath(file)
+  return failure === "" ? null : `could not open ${file}: ${failure}`
+})
 
 void app.whenReady().then(() => {
   if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
