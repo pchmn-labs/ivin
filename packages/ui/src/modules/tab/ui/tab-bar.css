@@ -24,8 +24,6 @@
 }
 
 .iv-tab-bar__item {
-  --iv-mark-ring: var(--iv-bg);
-
   position: relative;
   display: flex;
   flex: 0 1 auto;
@@ -38,8 +36,6 @@
 }
 
 .iv-tab-bar__item[data-selected] {
-  --iv-mark-ring: var(--iv-bg-raised);
-
   background: var(--iv-bg-raised);
   /* Inset: the tab list scrolls, which clips an outer ring at its left edge. */
   box-shadow: inset 0 0 0 1px var(--iv-border);

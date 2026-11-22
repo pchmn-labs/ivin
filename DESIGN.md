@@ -430,7 +430,7 @@ Phosphor icons at regular weight, 16px by default and 14px inline with small tex
 - **States:** hover wash; selected rows take the active wash and 500 weight; a row whose session waits on the user takes the dashed amber outline, inset by 1px; with controls under it, it also takes the amber wash (amber hover on hover). Row actions appear only on hover, focus or selection. Controls under a row (`below`) sit inside its frame, aligned with the title, and share its hover; a row's `tooltip` opens on its right.
 
 ### Session Mark
-The signature of the session list: the 16px mark of the session's harness with a small circular overlay at its bottom-right, cut out from the card ground by a ring of the card colour. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px amber disc with a "!". Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
+The signature of the session list: the 16px mark of the session's harness with a small circular overlay at its bottom-right, over a transparent hole cut in the harness mark, so any row or tab background shows around it. Working is a 10px yew ring with one open quarter, spinning on `--iv-duration-spin`. Waiting (approval needed) is an 11px amber disc with a "!" cut through it. Failed is a 10px hollow red ring. Idle shows no overlay. The status always has a hidden label for screen readers.
 
 ### Status Mark
 A labelled status for plugins. Working is a 6px yew dot pulsing over 1.6s (`--iv-duration-pulse`). Waiting is a larger 8px amber dot. Idle is a faint 1.5px ring. Failed is red. It always carries a label, visible or hidden.
