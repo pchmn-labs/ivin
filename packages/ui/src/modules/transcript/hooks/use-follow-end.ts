@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef } from "react"
 
-// Keeps a scroll area at its end each time `content` changes, until the user scrolls away from the end.
+// Null `content` while the area does not scroll, so it starts at its end once it does.
 export function useFollowEnd<T extends HTMLElement>(content: unknown) {
   const ref = useRef<T>(null)
   const atEnd = useRef(true)
@@ -10,7 +10,8 @@ export function useFollowEnd<T extends HTMLElement>(content: unknown) {
   }, [])
   useLayoutEffect(() => {
     const element = ref.current
-    if (element && atEnd.current) element.scrollTop = element.scrollHeight
+    if (content === null) atEnd.current = true
+    else if (element && atEnd.current) element.scrollTop = element.scrollHeight
   }, [content])
   return { ref, onScroll }
 }

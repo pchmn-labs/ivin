@@ -58,7 +58,7 @@ function StepView({
 }) {
   const shown = step.calls.length === 0 || open ? step.children : pinnedCalls(step)
   const scrolls = live && open && shown.length > SHOWN_CALLS_WHILE_LIVE
-  const follow = useFollowEnd<HTMLDivElement>(shown)
+  const follow = useFollowEnd<HTMLDivElement>(scrolls ? shown : null)
   const running = current && step.calls.some((call) => call.status === "running")
   return (
     <div

@@ -136,7 +136,6 @@ export const stepOpenByDefault = (work: TurnWork, index: number, live: boolean) 
 export const SHOWN_STEPS_WHILE_LIVE = 3
 export const SHOWN_CALLS_WHILE_LIVE = 5
 
-// The steps above the last ones while the turn runs; once it ends, every step shows.
 export const earlierSteps = (work: TurnWork, live: boolean): ReadonlyArray<Step> =>
   live ? work.steps.slice(0, Math.max(0, work.steps.length - SHOWN_STEPS_WHILE_LIVE)) : []
 

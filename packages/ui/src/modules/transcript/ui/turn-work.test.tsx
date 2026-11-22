@@ -50,18 +50,23 @@ const items = (origin = 0) => {
   }
 }
 
+const view = (
+  server: ReturnType<typeof makeFakeServer>,
+  { sessionId = "s1", live = false, height = 600 } = {},
+) => (
+  <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+    <div style={{ height }}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <TranscriptView sessionId={sessionId} live={live} />
+      </PluginsProvider>
+    </div>
+  </RegistryProvider>
+)
+
 const mount = async (seeded: TranscriptItem[], live = false, height = 600) => {
   const server = makeFakeServer()
   server.seedItems("s1", seeded)
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ height }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" live={live} />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>,
-  )
+  await render(view(server, { live, height }))
   return server
 }
 
@@ -158,19 +163,10 @@ test("when the turn ends, the text after its last call leaves the timeline and b
   const { user, text, call } = items()
   const server = makeFakeServer()
   server.seedItems("s1", [user("u1", "fix it"), call("c1"), text("a", "Fixed it")])
-  const view = (live: boolean) => (
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ height: 600 }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" live={live} />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>
-  )
-  const screen = await render(view(true))
+  const screen = await render(view(server, { live: true }))
   await expect.element(page.getByTestId("turn-step").nth(1)).toHaveTextContent("Fixed it")
 
-  await screen.rerender(view(false))
+  await screen.rerender(view(server))
   await expect.element(turnLine()).toHaveAttribute("aria-expanded", "false")
   await expect.element(turnLine()).toHaveTextContent("Worked for 2s · 1 tool call")
   await expect.element(page.getByText("Fixed it")).toBeVisible()
@@ -410,22 +406,13 @@ test("unfolded earlier steps stay unfolded after a session switch", async () => 
   const server = makeFakeServer()
   server.seedItems("s1", stepsOf(13))
   server.seedItems("s2", [items().user("other", "Another session")])
-  const view = (sessionId: string) => (
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ height: 600 }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId={sessionId} live />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>
-  )
-  const screen = await render(view("s1"))
+  const screen = await render(view(server, { live: true }))
   await earlierLine().click()
   await expect.element(earlierLine()).toHaveAttribute("aria-expanded", "true")
 
-  await screen.rerender(view("s2"))
+  await screen.rerender(view(server, { sessionId: "s2", live: true }))
   await expect.element(page.getByText("Another session")).toBeVisible()
-  await screen.rerender(view("s1"))
+  await screen.rerender(view(server, { live: true }))
 
   await expect.element(earlierLine()).toHaveAttribute("aria-expanded", "true")
   expect(page.getByTestId("turn-step").all()).toHaveLength(13)
@@ -477,21 +464,12 @@ test("once the turn ends, the earlier steps line and the scrolling calls are gon
   const seeded = [...stepsOf(12), ...extra]
   const server = makeFakeServer()
   server.seedItems("s1", seeded)
-  const view = (live: boolean) => (
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ height: 600 }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" live={live} />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>
-  )
-  const screen = await render(view(true))
+  const screen = await render(view(server, { live: true }))
   await expect.element(earlierLine()).toBeVisible()
   expect(callList().scrollHeight).toBeGreaterThan(callList().clientHeight)
 
   server.pushItem({ ...interruption("i"), position: 1000 })
-  await screen.rerender(view(false))
+  await screen.rerender(view(server))
 
   await vi.waitFor(() => expect(turnLine().element().textContent).toMatch(/^Stopped after/))
   expect(earlierLine().query()).toBeNull()
@@ -499,4 +477,28 @@ test("once the turn ends, the earlier steps line and the scrolling calls are gon
   await page.getByTestId("step-summary").last().click()
   await expect.element(page.getByText("tool-x6")).toBeVisible()
   expect(callList().scrollHeight).toBe(callList().clientHeight)
+})
+
+test("while the turn runs, a step of 6 calls the user unfolds also stops at 5 rows", async () => {
+  const { user, text, call } = items(Date.now())
+  await mount(
+    [
+      user("u1"),
+      text("t1", "Reading"),
+      ...Array.from({ length: 6 }, (_, i) => call(`c${i + 1}`, "read")),
+      text("t2", "Running"),
+      call("r1", "command", "running"),
+    ],
+    true,
+  )
+
+  await page.getByTestId("step-summary").first().click()
+  await expect.element(page.getByText("tool-c6")).toBeInTheDocument()
+  const list = page
+    .getByTestId("turn-step")
+    .first()
+    .element()
+    .querySelector<HTMLElement>(".iv-turn__calls")!
+  expect(list.scrollHeight).toBeGreaterThan(list.clientHeight)
+  await vi.waitFor(() => expect(atListEnd(list)).toBe(true))
 })

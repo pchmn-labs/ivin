@@ -108,12 +108,10 @@
   background: var(--iv-border-strong);
 }
 
-/* The dots stand alone for the line from the turn line's icon to the next ring. */
 .iv-turn__timeline:has(> .iv-turn__earlier)::before {
   display: none;
 }
 
-/* The padding puts the dots as far from the turn line's spinner as from the next ring. */
 .iv-turn__earlier {
   position: relative;
   padding: 5px 0 2px 22px;
@@ -156,19 +154,6 @@
 
 .iv-turn__earlier-line:hover {
   color: var(--iv-text-muted);
-}
-
-.iv-turn__earlier-line .iv-turn__chevron {
-  display: inline-flex;
-  transition:
-    opacity var(--iv-duration-fast) ease-out,
-    rotate var(--iv-duration-fast) var(--iv-ease-out);
-}
-
-.iv-turn__earlier-line:hover .iv-turn__chevron,
-.iv-turn__earlier-line:focus-visible .iv-turn__chevron,
-.iv-turn__earlier-line[aria-expanded="true"] .iv-turn__chevron {
-  opacity: 1;
 }
 
 .iv-turn__earlier-line[aria-expanded="true"] .iv-turn__chevron {
@@ -219,7 +204,8 @@
   color: var(--iv-danger);
 }
 
-.iv-turn__lead > * {
+.iv-turn__lead > *,
+.iv-turn__earlier-line .iv-turn__chevron {
   display: inline-flex;
   grid-area: 1 / 1;
   transition:
@@ -245,7 +231,10 @@
 .iv-turn__line[aria-expanded="true"] .iv-turn__mark:not([data-state]) + .iv-turn__chevron,
 .iv-turn__summary:hover .iv-turn__chevron,
 .iv-turn__summary:focus-visible .iv-turn__chevron,
-.iv-turn__summary[aria-expanded="true"] .iv-turn__mark:not([data-state]) + .iv-turn__chevron {
+.iv-turn__summary[aria-expanded="true"] .iv-turn__mark:not([data-state]) + .iv-turn__chevron,
+.iv-turn__earlier-line:hover .iv-turn__chevron,
+.iv-turn__earlier-line:focus-visible .iv-turn__chevron,
+.iv-turn__earlier-line[aria-expanded="true"] .iv-turn__chevron {
   opacity: 1;
 }
 
@@ -265,7 +254,7 @@
   padding-left: 18px;
 }
 
-/* Five 28px call rows, and the 6px above them where the first branch starts. */
+/* SHOWN_CALLS_WHILE_LIVE (turns.ts) 28px call rows, and the 6px where the first branch starts. */
 .iv-turn__calls[data-scroll] {
   max-height: calc(5 * 28px + 6px);
   margin-top: -6px;
