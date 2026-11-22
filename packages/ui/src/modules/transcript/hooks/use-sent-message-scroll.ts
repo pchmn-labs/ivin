@@ -133,6 +133,7 @@ export function useSentMessageScroll({
     })
   }, [loaded, turnMessageId, rows, setRoom, fitRoom])
 
+  // On mount only: the view opens once at the restored place, then follows the transcript.
   useLayoutEffect(() => {
     if (!restored) return
     sentId.current = restored.id
@@ -142,7 +143,7 @@ export function useSentMessageScroll({
   }, [])
 
   // Only while room is left under the message: past that, the list's own scroll position says it all.
-  const place = useCallback((): SentMessagePlace | undefined => {
+  const sentMessagePlace = useCallback((): SentMessagePlace | undefined => {
     const id = sentId.current
     if (id === undefined || !roomLeftNow.current) return undefined
     return { id, top: sentTop.current, room: room.current, userScrolled: userScrolled.current }
@@ -186,5 +187,5 @@ export function useSentMessageScroll({
   const followOutput =
     roomLeft || sending ? false : (atBottom: boolean) => atBottom && ("auto" as const)
 
-  return { root, scrollerRef, followOutput, fitRoom, place }
+  return { root, scrollerRef, followOutput, fitRoom, sentMessagePlace }
 }

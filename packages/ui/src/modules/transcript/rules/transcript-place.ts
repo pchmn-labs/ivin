@@ -15,7 +15,6 @@ export interface TranscriptPlace {
   readonly sent: SentMessagePlace | undefined
 }
 
-// Left at its end, the transcript opens at its new end, past the items that came meanwhile.
 export const placeToRestore = (place: TranscriptPlace | null, firstIndex: number) =>
   place === null || place.firstIndex !== firstIndex || (place.atEnd && !place.sent)
     ? undefined
