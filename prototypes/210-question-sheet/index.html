@@ -64,6 +64,7 @@ code { font-family: var(--iv-font-mono); font-size: var(--iv-text-mono); padding
 .iv-action-sheet[data-entered] { animation: none; }
 .iv-action-sheet__head { display: flex; align-items: baseline; gap: var(--iv-space-2); margin: 0 0 var(--iv-space-2) var(--iv-space-1); font-weight: var(--iv-weight-medium); }
 .iv-action-sheet__title { flex: none; color: var(--iv-attention); }
+.iv-action-sheet__head > svg { align-self: center; color: var(--iv-attention); }
 .iv-action-sheet__hint { margin: var(--iv-space-2) 0 0; padding-left: var(--iv-space-1); color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
 .iv-option-list { display: flex; flex-direction: column; gap: 2px; }
 .iv-option-list__option { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 6px var(--iv-space-2); border: 0; border-radius: var(--iv-radius-md); background: transparent; color: var(--iv-text); text-align: left; cursor: default; transition: background-color var(--iv-duration-fast) var(--iv-ease-out); }
@@ -77,6 +78,8 @@ code { font-family: var(--iv-font-mono); font-size: var(--iv-text-mono); padding
 .other-input:focus { border-color: color-mix(in srgb, var(--iv-focus-ring) 60%, var(--iv-border-strong)); }
 .sheet-foot { display: flex; align-items: center; gap: var(--iv-space-1); margin-top: var(--iv-space-2); padding-left: var(--iv-space-1); }
 .sheet-foot .iv-action-sheet__hint { flex: 1; margin: 0; padding: 0; }
+.keys { display: flex; align-items: center; gap: var(--iv-space-2); color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+.keys kbd { margin-right: 4px; color: var(--iv-text-muted); font-family: inherit; font-weight: var(--iv-weight-medium); }
 
 /* 1. Stepper */
 .steps { display: flex; align-items: center; gap: 2px; margin-left: auto; font-weight: var(--iv-weight-regular); }
@@ -274,9 +277,9 @@ function stepper() {
   const last = S.step === QUESTIONS.length - 1
   const ticked = choicesOf(S.step).length
   const decline = `<button class="iv-button" data-act="decline">Decline <span class="faint" style="font-size:var(--iv-text-xs)">Esc</span></button>`
-  const foot = `<div class="sheet-foot"><span class="grow"></span>${decline}${q.multi ? `<span class="faint kbd" style="font-size:var(--iv-text-xs);margin-left:var(--iv-space-2)">${ticked ? `${ticked} chosen` : ""}</span><button class="iv-button" data-variant="primary" data-act="continue" ${ticked ? "" : "disabled"}>${last ? "Send" : "Continue"}</button>` : ""}</div>`
+  const foot = `<div class="sheet-foot"><span class="keys"><span><kbd>↑↓</kbd>Navigate</span>·<span><kbd>Space</kbd>Select</span></span><span class="grow"></span>${decline}${q.multi ? `<span class="faint kbd" style="font-size:var(--iv-text-xs);margin-left:var(--iv-space-2)">${ticked ? `${ticked} chosen` : ""}</span><button class="iv-button" data-variant="primary" data-act="continue" ${ticked ? "" : "disabled"}>${last ? "Send" : "Continue"}</button>` : ""}</div>`
   return `<div class="iv-action-sheet" data-testid="question-sheet">
-    <div class="iv-action-sheet__head"><span class="iv-action-sheet__title">The agent asks</span><span class="stepper">${tabs}</span></div>
+    <div class="iv-action-sheet__head">${QMARK.replace('width="14" height="14"', 'width="16" height="16"')}<span class="iv-action-sheet__title">The agent asks</span><span class="stepper">${tabs}</span></div>
     <div class="${S.stepAnim ? "step-in" : ""}">
       <div class="step-question">${esc(q.question)}</div>
       ${q.multi ? '<div class="step-sub">Choose one or more</div>' : ""}
