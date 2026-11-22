@@ -5,6 +5,7 @@ import {
   type TreeDataLoader,
 } from "@headless-tree/core"
 import { useTree } from "@headless-tree/react/react-compiler"
+import { useAtomValue } from "@effect/atom-react"
 import { useVirtualizer } from "@tanstack/react-virtual"
 import type { TreeProps, TreeRow, TreeRowStatus } from "@ivin/plugin-api/ui"
 import {
@@ -19,6 +20,8 @@ import {
 } from "react"
 import { useCommandHandlers } from "../../../modules/command/hooks/use-command-handler.ts"
 import { isMac } from "../../../modules/keybinding/adapters/platform.ts"
+import { fileIconsAtom } from "../../../modules/plugin/atoms/contributions.ts"
+import { fileIconOf } from "../../../modules/plugin/rules/file-icon.ts"
 import { Icon } from "../icon/icon.tsx"
 import "./tree.css"
 
@@ -106,6 +109,7 @@ export function Tree({
   "data-testid": testId,
 }: TreeProps) {
   const domId = useId()
+  const fileIcons = useAtomValue(fileIconsAtom)
   const scroller = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLDivElement>(null)
   const typed = useRef({ text: "", at: 0 })
@@ -332,7 +336,11 @@ export function Tree({
                   {row.expanded === null ? null : <Icon name="chevron-right" size={12} />}
                 </span>
                 <span className="iv-tree__icon" aria-hidden>
-                  <Icon name={row.expanded === null ? "file" : "folder"} size={14} />
+                  {fileIconOf(fileIcons, {
+                    name: row.name,
+                    folder: row.expanded !== null,
+                    open: row.expanded === true,
+                  }) ?? <Icon name={row.expanded === null ? "file" : "folder"} size={14} />}
                 </span>
                 <Name row={row} />
                 <StatusMark row={row} />

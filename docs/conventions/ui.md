@@ -38,7 +38,7 @@ packages/ui/src/
 
 ## Colour
 
-Every colour is a `--iv-` token, or `color-mix()` on one, with one exception: a harness mark keeps its brand colour (in `core/components/harness-mark/harness-mark.css`).
+Every colour is a `--iv-` token, or `color-mix()` on one, with two exceptions: a harness mark keeps its brand colour (in `core/components/harness-mark/harness-mark.css`), and an icon from a file icon theme (a `fileIcons` contribution, such as the `file-icons` plugin's) keeps its own colours.
 
 ## Checked by `pnpm lint`
 

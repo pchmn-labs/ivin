@@ -3,7 +3,12 @@ import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
 import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
 import { addCommandHandler } from "../../command/atoms/run-command.ts"
 import { defaultKeybindingsAtom } from "../../keybinding/atoms/keybindings.ts"
-import { contributionsAtom, editorContributionsAtom } from "./contributions.ts"
+import { pluginFileUrl } from "../rules/plugin-file-url.ts"
+import {
+  contributionsAtom,
+  editorContributionsAtom,
+  fileIconContributionsAtom,
+} from "./contributions.ts"
 
 export interface UiPluginEntry {
   readonly manifest: { readonly id: string }
@@ -23,12 +28,15 @@ export const activatePlugin = (
       atom,
       registry.get(atom).filter((item) => item.pluginId !== pluginId),
     )
+  let active = true
   const removeOwn = () => {
+    active = false
     removeFrom(contributionsAtom)
     removeFrom(commandsAtom)
     removeFrom(commandHandlersAtom)
     removeFrom(defaultKeybindingsAtom)
     removeFrom(editorContributionsAtom)
+    removeFrom(fileIconContributionsAtom)
   }
 
   const ctx: UiContext = {
@@ -76,6 +84,17 @@ export const activatePlugin = (
           { pluginId, extension },
         ]),
     },
+    fileIcons: {
+      // A plugin may add its icons once something it loads arrives, after it was turned off.
+      add: (icon) => {
+        if (!active) return
+        registry.set(fileIconContributionsAtom, [
+          ...registry.get(fileIconContributionsAtom),
+          { pluginId, icon },
+        ])
+      },
+    },
+    fileUrl: (path) => pluginFileUrl(pluginId, path),
     sidebar: {
       showPanel: (name = "sidebar.panel") => showSidebarPanel(`${pluginId}/${name}`),
     },

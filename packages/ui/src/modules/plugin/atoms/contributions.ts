@@ -1,5 +1,5 @@
 import { Atom } from "effect/reactivity"
-import type { EditorExtension, SlotName } from "@ivin/plugin-api/ui"
+import type { EditorExtension, FileIcon, SlotName } from "@ivin/plugin-api/ui"
 
 export interface Contribution {
   readonly id: string
@@ -21,4 +21,12 @@ export const editorContributionsAtom = Atom.make<
 
 export const editorExtensionsAtom = Atom.readable((get): ReadonlyArray<EditorExtension> =>
   get(editorContributionsAtom).map((contribution) => contribution.extension),
+)
+
+export const fileIconContributionsAtom = Atom.make<
+  ReadonlyArray<{ readonly pluginId: string; readonly icon: FileIcon }>
+>([]).pipe(Atom.keepAlive)
+
+export const fileIconsAtom = Atom.readable((get): ReadonlyArray<FileIcon> =>
+  get(fileIconContributionsAtom).map((contribution) => contribution.icon),
 )

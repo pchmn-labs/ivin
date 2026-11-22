@@ -17,6 +17,7 @@ import "./settings-nav.css"
 const sectionIcons: Record<SettingsPageSectionKey, IconName> = {
   tabs: "app-window",
   worktrees: "worktree",
+  files: "folder",
   commandLine: "terminal",
 }
 

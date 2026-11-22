@@ -4,12 +4,14 @@ import { Rpc, RpcGroup } from "effect/rpc"
 export const Settings = Schema.Struct({
   tabs: Schema.Struct({ stopAgentOnClose: Schema.Boolean }),
   worktrees: Schema.Struct({ removeOnTabClose: Schema.Boolean }),
+  files: Schema.Struct({ folderIcons: Schema.Boolean }),
 })
 export type Settings = typeof Settings.Type
 
 export const defaultSettings: Settings = {
   tabs: { stopAgentOnClose: true },
   worktrees: { removeOnTabClose: true },
+  files: { folderIcons: true },
 }
 
 export type SettingPath = {
@@ -51,6 +53,19 @@ export const settingSections: ReadonlyArray<SettingSection> = [
         label: "Remove a merged worktree when its tab closes",
         description:
           "Closing a session's tab deletes its worktree once the branch is merged and nothing in it is left uncommitted. Off, worktrees stay until you remove them.",
+      },
+    ],
+  },
+  {
+    key: "files",
+    title: "Files",
+    description: "The tree of the Files tab.",
+    settings: [
+      {
+        path: "files.folderIcons",
+        label: "Show folder icons",
+        description:
+          "Folders show the icon theme's icon for their name, open or closed. Off, a folder shows only its chevron and its name.",
       },
     ],
   },

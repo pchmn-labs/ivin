@@ -12,6 +12,7 @@
     "**/out/**",
     "**/release/**",
     "**/playwright-report/**",
-    "**/test-results/**"
+    "**/test-results/**",
+    "plugins/file-icons/theme/**"
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "name": "@ivin/plugin-file-icons",
+  "version": "0.0.0",
+  "private": true,
+  "peerDependencies": {
+    "@ivin/plugin-api": "^0"
+  },
+  "ivin": {
+    "id": "file-icons",
+    "name": "File icons",
+    "ui": "src/ui.tsx"
+  }
+}

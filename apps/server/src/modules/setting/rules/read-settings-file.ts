@@ -57,6 +57,9 @@ const read = (text: string | null): Settings => {
         defaultSettings.worktrees.removeOnTabClose,
       ),
     },
+    files: {
+      folderIcons: booleanOf(file, "files", "folderIcons", defaultSettings.files.folderIcons),
+    },
   }
 }
 

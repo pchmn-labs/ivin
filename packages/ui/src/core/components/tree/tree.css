@@ -69,6 +69,16 @@
   color: var(--iv-text-faint);
 }
 
+.iv-tree__icon:empty {
+  display: none;
+}
+
+.iv-tree__icon img {
+  display: block;
+  width: var(--iv-tree-icon-size);
+  height: var(--iv-tree-icon-size);
+}
+
 .iv-tree__name {
   flex: 1;
   min-width: 0;

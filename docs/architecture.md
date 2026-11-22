@@ -347,7 +347,11 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 | `view` | params | a full tab view |
 | `settings.section` | — | a plugin's settings page (generated from the manifest's `settings` when absent) |
 
-Plus non-visual contributions: `commands` (command palette), `keybindings`, `themes`, `fileIcons` (not built yet: a function giving a row's icon, which replaces the `Tree`'s own icon function, [ADR-0007](adr/0007-the-file-tree-is-headless-tree-on-tanstack-virtual.md)), `editorExtensions`, `fileOpeners` (HTML preview, not built yet).
+Plus non-visual contributions: `commands` (command palette), `keybindings`, `themes`, `fileIcons`, `editorExtensions`, `fileOpeners` (HTML preview, not built yet).
+
+`ctx.fileIcons.add((row) => icon)` gives the `Tree`'s rows their icons ([ADR-0007](adr/0007-the-file-tree-is-headless-tree-on-tanstack-virtual.md)): given a row's name, whether it is a folder and whether it is open, the function returns a React node, or null to leave the row to the next function, then to the `Tree`'s own icon. The functions are tried in the order the plugins added them, and the `Tree` draws the first icon given, an `<img>` at `--iv-tree-icon-size`. The built-in `file-icons` plugin gives them from a VS Code file icon theme, Material Icon Theme, which it ships in its folder.
+
+`ctx.fileUrl(path)` is the URL of a file of the plugin's own folder, for an `<img>`: `ivin-plugin://<plugin id>/<path>`, which the desktop app serves from that folder, as it serves sent images ([ADR-0005](adr/0005-sent-images-are-files-served-to-the-window-by-the-desktop-app.md)). It refuses a path that leads out of the plugin's folder, through `..` or a symlink. The built-in plugins' folders ship in the app's resources, their code left out.
 
 `ctx.editorExtensions.add(extension)` adds a CodeMirror extension to the editor of every open file, after the core's: to take a key the core binds, a plugin wraps its keymap in `Prec.highest`. A plugin builds it from `@ivin/plugin-api/editor`, which re-exports the host's `@codemirror/state` and `@codemirror/view`: a second copy of CodeMirror would not recognise the host's extensions.
 
