@@ -39,7 +39,7 @@ To run ivin, show it to the user, capture its screens or show a UI change in a p
 
 Run a tool through the root `package.json` script that wraps it, because the script carries the config. With no script for what you need, call Vite+ through `pnpm vp <command>`, and any other tool through `pnpm exec <tool>`, never `npx`.
 
-While building, run the test files you touch: `pnpm test <path>…`. Run `pnpm check` once, before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI.
+While building, run the test files you touch: `pnpm test <path>…`. A test you add or change that runs in the browser (frame-rate tests aside) or spawns a real process passes 20 runs in a row before the commit: `pnpm test <path> -t "<test name>" --repeats 20`. Run `pnpm check` once, before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI.
 
 ### Grilling
 
