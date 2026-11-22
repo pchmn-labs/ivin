@@ -28,6 +28,13 @@ interface FolderTree {
 
 const NOTHING_OPEN: FolderTree = { open: new Set(), folders: new Map() }
 
+// Lives as long as the plugin is active.
+interface PluginState {
+  // What each session had open.
+  readonly remembered: Map<string, FolderTree>
+  readonly collapseAll: Set<() => void>
+}
+
 // A session moved to another working folder starts a new tree.
 const treeKey = (session: Session) => `${session.id}\n${session.workingFolder}`
 
@@ -43,12 +50,10 @@ function Message({ children }: { children: string }) {
 
 function FolderTreeView({
   session,
-  remembered,
-  collapseAll,
+  state: { remembered, collapseAll },
 }: {
   session: Session
-  remembered: Map<string, FolderTree>
-  collapseAll: Set<() => void>
+  state: PluginState
 }) {
   const listFolder = useListFolder()
   const openFile = useOpenFile()
@@ -140,13 +145,7 @@ function FolderTreeView({
   )
 }
 
-function FilesPanel({
-  remembered,
-  collapseAll,
-}: {
-  remembered: Map<string, FolderTree>
-  collapseAll: Set<() => void>
-}) {
+function FilesPanel({ state }: { state: PluginState }) {
   const sessionId = useSelectedSessionId()
   const session = useSession(sessionId ?? "")
   const { projects } = useProjects()
@@ -166,30 +165,18 @@ function FilesPanel({
       {session.workingFolderDeleted ? (
         <Message>{FOLDER_DELETED}</Message>
       ) : (
-        <FolderTreeView
-          key={treeKey(session)}
-          session={session}
-          remembered={remembered}
-          collapseAll={collapseAll}
-        />
+        <FolderTreeView key={treeKey(session)} session={session} state={state} />
       )}
     </Stack>
   )
 }
 
 export const activate = defineUi((ctx) => {
-  // What each session had open, for as long as the plugin is active.
-  const remembered = new Map<string, FolderTree>()
-  // The mounted tree's collapse, for the command to reach.
-  const collapseAll = new Set<() => void>()
-  ctx.slots.add(
-    "sidebar.panel",
-    () => <FilesPanel remembered={remembered} collapseAll={collapseAll} />,
-    {
-      name: "panel",
-      title: "Files",
-    },
-  )
+  const state: PluginState = { remembered: new Map(), collapseAll: new Set() }
+  ctx.slots.add("sidebar.panel", () => <FilesPanel state={state} />, {
+    name: "panel",
+    title: "Files",
+  })
   ctx.commands.register("files.show", {
     title: "Show files",
     run: () => ctx.sidebar.showPanel("panel"),
@@ -197,6 +184,6 @@ export const activate = defineUi((ctx) => {
   ctx.keybindings.add({ key: "mod+2", command: "files.show" })
   ctx.commands.register("files.collapseAll", {
     title: "Collapse all folders",
-    run: () => collapseAll.forEach((run) => run()),
+    run: () => state.collapseAll.forEach((run) => run()),
   })
 })

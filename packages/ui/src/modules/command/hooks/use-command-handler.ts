@@ -6,13 +6,13 @@ export function useCommandHandler(commandId: string, run: () => void, enabled = 
   useCommandHandlers({ [commandId]: run }, enabled)
 }
 
-// The set of command ids must not change between renders.
 export function useCommandHandlers(handlers: Readonly<Record<string, () => void>>, enabled = true) {
   const registry = useContext(RegistryContext)
   const latest = useRef(handlers)
   useEffect(() => {
     latest.current = handlers
   })
+  // A string, so the same ids from a new object keep the handlers registered.
   const ids = Object.keys(handlers).join("\n")
   useEffect(() => {
     if (!enabled) return

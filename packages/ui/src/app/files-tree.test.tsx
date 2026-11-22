@@ -90,15 +90,27 @@ test("Up and Down move, Home and End jump to the ends", async () => {
   expect(active()).toBe("src")
 })
 
-test("Page Down and Page Up move by a page of rows", async () => {
+test("Page Down goes to the last row in view, then a page further; Page Up the same way up", async () => {
   await focusTree()
+  const scroller = document.querySelector<HTMLElement>(".iv-tree__list")!
+  const lastInView = () => {
+    const bottom = scroller.getBoundingClientRect().bottom
+    const rows = [...scroller.querySelectorAll('[role="treeitem"]')]
+    return rows
+      .findLast((row) => row.getBoundingClientRect().bottom <= bottom + 1)
+      ?.getAttribute("aria-label")
+  }
+  const last = lastInView()!
   await userEvent.keyboard("{PageDown}")
-  const afterPage = active()!
-  expect(files.indexOf(afterPage)).toBeGreaterThan(5)
-  await expect.element(item(afterPage)).toBeVisible()
-  await userEvent.keyboard("{PageUp}")
+  expect(active()).toBe(last)
+  expect(scroller.scrollTop).toBe(0)
+  await userEvent.keyboard("{PageDown}")
+  const order = ["src", "docs", ...files, "README.md"]
+  expect(order.indexOf(active()!)).toBeGreaterThan(order.indexOf(last))
+  await expect.element(item(active()!)).toBeVisible()
+  await userEvent.keyboard("{PageUp}{PageUp}{PageUp}")
   expect(active()).toBe("src")
-  await userEvent.keyboard("{PageDown}{PageDown}{PageDown}")
+  await userEvent.keyboard("{PageDown}{PageDown}{PageDown}{PageDown}")
   expect(active()).toBe("README.md")
 })
 
@@ -138,6 +150,28 @@ test("a move selects the row it lands on; Shift with Up or Down extends the sele
   expect(selected()).toEqual(["file-00.ts"])
 })
 
+test("the first Shift move after the tree takes the focus selects from the active row", async () => {
+  await focusTree()
+  await userEvent.keyboard("{Shift>}{ArrowDown}{/Shift}")
+  expect(selected()).toEqual(["src", "docs"])
+})
+
+test("closing the folder that holds the active row makes the folder active", async () => {
+  const server = makeServer()
+  server.setUserKeybindings({
+    keybindings: [{ key: "mod+shift+k", command: "files.collapseAll", when: null }],
+    problem: null,
+  })
+  await focusTree(server)
+  await userEvent.keyboard("{ArrowDown}{ArrowRight}{ArrowRight}")
+  expect(active()).toBe("guide.md")
+  await userEvent.keyboard(`{${mod}>}{Shift>}k{/Shift}{/${mod}}`)
+  await expect.element(item("guide.md")).not.toBeInTheDocument()
+  expect(active()).toBe("docs")
+  await userEvent.keyboard("{Shift>}{ArrowDown}{/Shift}")
+  expect(selected()).toEqual(["docs", "file-00.ts"])
+})
+
 test("Shift-click extends the selection and ⌘-click adds or removes a row, without opening files", async () => {
   const server = await focusTree()
   await item("file-01.ts").click({ modifiers: [mod] })
@@ -172,6 +206,21 @@ test("typing a name jumps to the next row that starts with it", async () => {
   await userEvent.keyboard("file-12")
   expect(active()).toBe("file-12.ts")
   await expect.element(item("file-12.ts")).toBeVisible()
+})
+
+test("a space continues a name being typed, and opens the row otherwise", async () => {
+  const server = makeServer()
+  server.folders.set(project, folder("a b.md", "a c.md", "README.md"))
+  server.files.set(`${project}/a c.md`, { kind: "text", text: "c" })
+  await mount(server)
+  await userEvent.keyboard(`{${mod}>}2{/${mod}}`)
+  await expect.element(item("a b.md")).toBeVisible()
+  await userEvent.keyboard("a c")
+  expect(active()).toBe("a c.md")
+  await expect.element(openFiles()).not.toBeInTheDocument()
+  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  await userEvent.keyboard(" ")
+  await expect.element(openFiles()).toBeVisible()
 })
 
 test("a key of the tree can be bound to another key in keybindings.json", async () => {
