@@ -12,6 +12,50 @@ export const defaultSettings: Settings = {
   worktrees: { removeOnTabClose: true },
 }
 
+export type SettingPath = {
+  [Section in keyof Settings]: `${Section}.${keyof Settings[Section] & string}`
+}[keyof Settings]
+
+export interface SettingSection {
+  readonly key: keyof Settings
+  readonly title: string
+  readonly description: string
+  readonly settings: ReadonlyArray<{
+    readonly path: SettingPath
+    readonly label: string
+    readonly description: string
+  }>
+}
+
+export const settingSections: ReadonlyArray<SettingSection> = [
+  {
+    key: "tabs",
+    title: "Tabs",
+    description: "What happens when you close a session's tab.",
+    settings: [
+      {
+        path: "tabs.stopAgentOnClose",
+        label: "Stop the agent when its tab closes",
+        description:
+          "Closing the tab of a working session asks first, then stops its agent. Off, the agent keeps working with no tab open.",
+      },
+    ],
+  },
+  {
+    key: "worktrees",
+    title: "Worktrees",
+    description: "The worktrees ivin makes for your sessions.",
+    settings: [
+      {
+        path: "worktrees.removeOnTabClose",
+        label: "Remove a merged worktree when its tab closes",
+        description:
+          "Closing a session's tab deletes its worktree once the branch is merged and nothing in it is left uncommitted. Off, worktrees stay until you remove them.",
+      },
+    ],
+  },
+]
+
 export const SettingsFileProblem = Schema.Struct({
   reason: Schema.Literals(["notJson", "notAnObject", "invalidSetting"]),
   // The dotted path of the invalid setting, such as "tabs.stopAgentOnClose".

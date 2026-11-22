@@ -39,7 +39,8 @@ function ProjectButton({ project, selected }: { project: Project; selected: bool
   )
 }
 
-export function ProjectRail({ children }: { children?: ReactNode }) {
+// `actions` sit above Open folder, `children` below it.
+export function ProjectRail({ actions, children }: { actions?: ReactNode; children?: ReactNode }) {
   const { projects, selectedPath } = useAtomValue(projectsAtom.value)
   const { openFolder } = useOpenFolder()
 
@@ -53,6 +54,7 @@ export function ProjectRail({ children }: { children?: ReactNode }) {
         />
       ))}
       <span className="iv-project-rail__spacer" />
+      {actions}
       <IconButton icon="plus" label="Open folder…" size="sm" onClick={openFolder} />
       {children}
     </nav>

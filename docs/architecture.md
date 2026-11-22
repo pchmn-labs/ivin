@@ -398,6 +398,8 @@ The server reads `settings.json` and streams it (`setting.watch`). `setting.get`
 }
 ```
 
+The settings page shows the streamed settings and writes a change through `setting.set`, as `ivin settings set` does. Each setting's label and description sit beside the `Settings` schema, in `settingSections` in `contracts`, and a test fails when a setting has none. The page opens `settings.json` in the system's app for JSON files through the desktop app (`window.ivin.openSettingsFile`), which first creates the file when it is missing.
+
 ### CLI
 
 ```

@@ -25,7 +25,7 @@ import type {
   SessionStatus,
   WorkingFolderChoice,
 } from "@ivin/contracts/session"
-import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
+import { defaultSettings, SettingsFileInvalid, type UserSettings } from "@ivin/contracts/setting"
 import type { ProjectTabs, SubView, TabSubViews } from "@ivin/contracts/tab"
 import type {
   ImageData,
@@ -338,6 +338,26 @@ export const makeFakeServer = (
           Stream.make(userSettings).pipe(Stream.concat(Stream.fromSubscription(subscription))),
         ),
       ),
+    // Refuses while the file has a problem, as the server cannot edit a file it cannot parse.
+    "setting.set": ({ path, value }: { path: string; value: unknown }) =>
+      userSettings.problem !== null
+        ? Effect.fail(
+            new SettingsFileInvalid({
+              path: "~/.ivin/settings.json",
+              reason: "notJson",
+              parseError: null,
+            }),
+          )
+        : Effect.sync(() => {
+            const [section, key] = path.split(".") as [string, string]
+            const settings = structuredClone(userSettings.settings) as Record<
+              string,
+              Record<string, unknown>
+            >
+            settings[section]![key] = value
+            userSettings = { settings: settings as UserSettings["settings"], problem: null }
+            Effect.runSync(PubSub.publish(settingChanges, userSettings))
+          }),
     "project.list": () => Effect.sync(openProjects),
     "project.open": ({ path }: { path: string }) =>
       Effect.sync(() => {

@@ -27,6 +27,8 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "composer.chooseModel", title: "Choose the model", pluginId: null },
   { id: "composer.chooseEffort", title: "Choose the effort", pluginId: null },
   { id: "composer.choosePermissionMode", title: "Choose the permission mode", pluginId: null },
+  { id: "settings.open", title: "Open settings", pluginId: null },
+  { id: "settings.close", title: "Close settings", pluginId: null },
 ]
 
 export const commandsAtom = Atom.make<ReadonlyArray<Command>>(coreCommands).pipe(Atom.keepAlive)

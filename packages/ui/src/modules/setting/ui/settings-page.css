@@ -1,0 +1,47 @@
+.iv-settings-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.iv-settings-page__column {
+  display: flex;
+  flex-direction: column;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--iv-space-5) var(--iv-space-8) var(--iv-space-10);
+}
+
+.iv-settings-page__title {
+  margin: 0 0 var(--iv-space-1);
+  font-size: var(--iv-text-xl);
+  font-weight: var(--iv-weight-semibold);
+  line-height: var(--iv-text-xl-lh);
+}
+
+.iv-settings-page__list {
+  margin: var(--iv-space-4) 0 0;
+  padding: 0;
+  border-bottom: 1px solid var(--iv-border);
+  list-style: none;
+}
+
+.iv-settings-page__setting {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--iv-space-4);
+  padding: var(--iv-space-4) 0;
+  border-top: 1px solid var(--iv-border);
+}
+
+.iv-settings-page__setting-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.iv-settings-page__setting-text .iv-error-message {
+  margin-top: var(--iv-space-1);
+}

@@ -1,0 +1,26 @@
+.iv-settings-file-problem {
+  display: flex;
+  gap: var(--iv-space-2);
+  margin-bottom: var(--iv-space-5);
+  padding: var(--iv-space-3) var(--iv-space-4);
+  border: 1px solid color-mix(in srgb, var(--iv-danger) 40%, transparent);
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-danger-subtle);
+}
+
+.iv-settings-file-problem__icon {
+  display: flex;
+  height: var(--iv-text-md-lh);
+  align-items: center;
+  color: var(--iv-danger);
+}
+
+.iv-settings-file-problem__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.iv-settings-file-problem__actions {
+  margin-top: var(--iv-space-2);
+}
