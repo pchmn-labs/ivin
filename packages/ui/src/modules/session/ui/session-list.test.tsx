@@ -160,6 +160,9 @@ test("a branch name too long for the row keeps its gap after the worktree icon",
   const location = page.getByTestId("session-location").element() as HTMLElement
   location.parentElement!.style.width = "160px"
   const icon = location.querySelector("svg")!.getBoundingClientRect()
-  const branch = location.querySelector(".iv-session-location__branch")!.getBoundingClientRect()
+  const branchItem = location.querySelector<HTMLElement>(".iv-session-location__branch")!
+  const branchLabel = branchItem.querySelector<HTMLElement>(".iv-session-location__name")!
+  expect(branchLabel.scrollWidth).toBeGreaterThan(branchLabel.clientWidth)
+  const branch = branchItem.getBoundingClientRect()
   expect(branch.left - icon.right).toBeGreaterThanOrEqual(4)
 })

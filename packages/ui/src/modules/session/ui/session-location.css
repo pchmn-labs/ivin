@@ -20,7 +20,7 @@
   min-width: 0;
 }
 
-.iv-session-location__item:has(> .iv-visually-hidden) {
+.iv-session-location__item--icon-only {
   flex-shrink: 0;
 }
 
