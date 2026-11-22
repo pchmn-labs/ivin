@@ -107,6 +107,11 @@ export interface FakeServer {
   readonly setUserKeybindings: (state: UserKeybindings) => void
   // Makes the next call of this RPC die, as a lost connection would.
   readonly failNextCall: (rpc: string) => void
+  // Makes the next call of this RPC wait until `release` is called, or die as `failNextCall`.
+  readonly holdNextCall: (rpc: string) => {
+    readonly release: () => void
+    readonly fail: () => void
+  }
   // What `file.listFolder` lists, by absolute folder path; a session whose working folder is
   // missing here has had it deleted.
   readonly folders: Map<string, ReadonlyArray<FolderEntry>>
@@ -253,6 +258,7 @@ export const makeFakeServer = (
         : Effect.fail(new SessionNotFound({ sessionId })),
     )
   const failing = new Set<string>()
+  const holding = new Map<string, Promise<boolean>>()
   const sentMessages: Array<FakeServer["sentMessages"][number]> = []
   const pickedFolders: Array<WorkingFolderChoice> = []
   let worktreeFailure: string | null = null
@@ -1077,10 +1083,21 @@ export const makeFakeServer = (
   const failingClient = Object.fromEntries(
     Object.entries(client).map(([rpc, call]) => [
       rpc,
-      (...args: Array<unknown>) =>
-        failing.delete(rpc)
-          ? Effect.die(new Error(`${rpc} failed`))
-          : (call as (...a: Array<unknown>) => unknown)(...args),
+      (...args: Array<unknown>) => {
+        const run = () =>
+          failing.delete(rpc)
+            ? Effect.die(new Error(`${rpc} failed`))
+            : (call as (...a: Array<unknown>) => unknown)(...args)
+        const held = holding.get(rpc)
+        if (!held) return run()
+        holding.delete(rpc)
+        return Effect.promise(() => held).pipe(
+          Effect.flatMap((ok) => {
+            if (!ok) failing.add(rpc)
+            return run() as Effect.Effect<unknown, unknown>
+          }),
+        )
+      },
     ]),
   )
 
@@ -1135,6 +1152,11 @@ export const makeFakeServer = (
       Effect.runSync(PubSub.publish(keybindingChanges, state))
     },
     failNextCall: (rpc) => void failing.add(rpc),
+    holdNextCall: (rpc) => {
+      let settle!: (ok: boolean) => void
+      holding.set(rpc, new Promise<boolean>((resolve) => (settle = resolve)))
+      return { release: () => settle(true), fail: () => settle(false) }
+    },
     shell,
     folders,
     listedFolders,

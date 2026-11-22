@@ -180,7 +180,7 @@ Why atoms rather than Zustand stores (T3 Code mixes both, Zustand for local UI s
 ### Responsiveness
 
 - **Normalised, fine-grained state.** A list atom holds ids; each session, message and tool call is its own atom in a family. Appending a message or streaming into one re-renders that row only.
-- **Optimistic by default.** Sending, renaming, archiving or reordering updates the atom at once and reconciles with the server's answer; the server is local, so it rarely waits more than a frame.
+- **Optimistic by default.** Sending, renaming, archiving, closing a tab or reordering updates the atom at once and reconciles with the server's answer; the server is local, so it rarely waits more than a frame.
 - **Frame-batched streaming.** Token deltas are coalesced per animation frame before reaching atoms; finished Markdown blocks are memoised and only the open block is re-parsed.
 - **Virtualised lists** for transcripts, sidebar and file trees; React Compiler for memoisation; transitions (`useTransition`, `useDeferredValue`) for heavy views such as diffs and search.
 - **Perf tests** next to the leak test: stream a 10k-token answer and scroll a 2k-event transcript, failing below a frame-rate threshold.
