@@ -109,14 +109,20 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
               .all(projectPath) as unknown as SessionRow[]
           ).map(toSession),
         ),
-      rename: (id, title) =>
-        Effect.sync(() => {
-          db.prepare("UPDATE sessions SET title = ?, title_locked = 1 WHERE id = ?").run(title, id)
-        }),
+      rename: (id, title, by) =>
+        Effect.sync(
+          () =>
+            db
+              .prepare(
+                `UPDATE sessions SET title = ?, title_source = ?
+                 WHERE id = ? AND (? = 'user' OR title_source IS NOT 'user')`,
+              )
+              .run(title, by, id, by).changes > 0,
+        ),
       setTitleIfUnset: (id, title) =>
         Effect.sync(() => {
           db.prepare(
-            "UPDATE sessions SET title = ?, title_locked = 1 WHERE id = ? AND title_locked = 0",
+            "UPDATE sessions SET title = ?, title_source = 'message' WHERE id = ? AND title_source IS NULL",
           ).run(title, id)
         }),
       providerSessionId: (id) =>

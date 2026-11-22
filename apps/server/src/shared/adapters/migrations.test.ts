@@ -197,3 +197,19 @@ test("a stored session gets claude's default effort and permission mode, confirm
     },
   ])
 })
+
+test("a session whose title was locked counts it as the user's", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 17)))
+  db.exec(
+    `INSERT INTO sessions (id, project_path, title, title_locked, created_at, last_activity_at)
+     VALUES ('named', '/p', 'Mine', 1, 0, 0), ('fresh', '/p', '', 0, 0, 0)`,
+  )
+
+  Effect.runSync(runMigrations(db))
+
+  expect(db.prepare("SELECT id, title_source FROM sessions ORDER BY id").all()).toEqual([
+    { id: "fresh", title_source: null },
+    { id: "named", title_source: "user" },
+  ])
+})

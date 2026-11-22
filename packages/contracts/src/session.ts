@@ -93,6 +93,11 @@ export class SessionNotFound extends Schema.TaggedError<SessionNotFound>()("Sess
   sessionId: Schema.String,
 }) {}
 
+export class SessionTitleChosenByUser extends Schema.TaggedError<SessionTitleChosenByUser>()(
+  "SessionTitleChosenByUser",
+  { sessionId: Schema.String },
+) {}
+
 export class ApprovalNotOpen extends Schema.TaggedError<ApprovalNotOpen>()("ApprovalNotOpen", {
   sessionId: Schema.String,
   requestId: Schema.String,
@@ -195,10 +200,15 @@ export const SessionRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String },
     error: SessionNotFound,
   }),
+  // `by` defaults to the user, whose title the agent may not replace.
   Rpc.make("session.rename", {
-    payload: { sessionId: Schema.String, title: Schema.String },
+    payload: {
+      sessionId: Schema.String,
+      title: Schema.String,
+      by: Schema.optional(Schema.Literals(["user", "agent"])),
+    },
     success: Session,
-    error: SessionNotFound,
+    error: Schema.Union([SessionNotFound, SessionTitleChosenByUser]),
   }),
   // The renderer picks `messageId`, so its optimistic message and the stored event share an id.
   // `workingFolder` is read on the first message only; the checkout when absent.

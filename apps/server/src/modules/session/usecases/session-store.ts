@@ -1,6 +1,8 @@
 import type { RelaunchFailure, RunOptions, Session, SessionStatus } from "@ivin/contracts/session"
 import { Context, type Effect } from "effect"
 
+export type TitleSource = "user" | "agent"
+
 export class SessionStore extends Context.Service<
   SessionStore,
   {
@@ -8,7 +10,8 @@ export class SessionStore extends Context.Service<
     readonly findById: (id: string) => Effect.Effect<Session | null>
     // Archived sessions included.
     readonly listByProject: (projectPath: string) => Effect.Effect<readonly Session[]>
-    readonly rename: (id: string, title: string) => Effect.Effect<void>
+    // False, title unchanged, when the agent renames a session the user named.
+    readonly rename: (id: string, title: string, by: TitleSource) => Effect.Effect<boolean>
     // No-op once the title was set by a first message or a rename.
     readonly setTitleIfUnset: (id: string, title: string) => Effect.Effect<void>
     readonly providerSessionId: (id: string) => Effect.Effect<string | null>

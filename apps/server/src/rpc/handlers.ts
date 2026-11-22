@@ -142,7 +142,7 @@ export const handlers = Rpcs.toLayer(
       "session.archive": ({ sessionId }) => archiveSession(sessionId),
       "session.restore": ({ sessionId }) => restoreSession(sessionId),
       "session.delete": ({ sessionId }) => deleteSession(sessionId),
-      "session.rename": ({ sessionId, title }) => renameSession(sessionId, title),
+      "session.rename": ({ sessionId, title, by }) => renameSession(sessionId, title, by),
       "session.sendMessage": ({ sessionId, messageId, text, images = [], workingFolder }) =>
         sendMessage(sessionId, messageId, text, images, workingFolder),
       "session.pickWorkingFolder": ({ sessionId, workingFolder }) =>
