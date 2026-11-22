@@ -1,6 +1,6 @@
 import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
-import { useCallback, useContext } from "react"
+import { useCallback, useContext, useEffect, useRef } from "react"
 import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
@@ -24,6 +24,10 @@ import { ResizeHandle } from "../core/components/resize-handle/resize-handle.tsx
 import { getVersionAtom } from "../modules/server/atoms/get-version.ts"
 import { useCommandHandler } from "../modules/command/hooks/use-command-handler.ts"
 import { KeybindingsFileProblem } from "../modules/keybinding/ui/keybindings-file-problem.tsx"
+import { settingsPageOpenAtom } from "../modules/setting/atoms/settings-page.ts"
+import { SettingsButton } from "../modules/setting/ui/settings-button.tsx"
+import { SettingsNav } from "../modules/setting/ui/settings-nav.tsx"
+import { SettingsPage } from "../modules/setting/ui/settings-page.tsx"
 import "./app.css"
 
 const CARD_MIN = 240
@@ -51,6 +55,21 @@ export function App() {
     },
     projectPath !== null,
   )
+  const [settingsOpen, setSettingsOpen] = useAtom(settingsPageOpenAtom)
+  const focusBeforeSettings = useRef<HTMLElement | null>(null)
+  useCommandHandler("settings.open", () => {
+    if (registry.get(settingsPageOpenAtom)) return
+    const focused = document.activeElement
+    focusBeforeSettings.current = focused instanceof HTMLElement ? focused : null
+    setSettingsOpen(true)
+  })
+  const closeSettings = useCallback(() => setSettingsOpen(false), [setSettingsOpen])
+  useCommandHandler("settings.close", closeSettings, settingsOpen)
+  useEffect(() => {
+    if (settingsOpen) return
+    focusBeforeSettings.current?.focus()
+    focusBeforeSettings.current = null
+  }, [settingsOpen])
   useCommandHandler(
     "sidebar.showSessions",
     () => showSidebarTab(registry, SESSIONS_TAB, { focus: true }),
@@ -82,7 +101,7 @@ export function App() {
   return (
     <PluginsProvider plugins={builtinPlugins}>
       {current === null || projectPath === null ? (
-        <div className="iv-app iv-app--empty">
+        <div className="iv-app iv-app--empty" hidden={settingsOpen}>
           <main className="iv-app__main">
             <MainTopBar projectPath={null} controls={null} />
             {serverLost}
@@ -93,7 +112,11 @@ export function App() {
           <div className="iv-app__corner">{version}</div>
         </div>
       ) : (
-        <div className="iv-app" data-sidebar={sidebarOpen ? "open" : "closed"}>
+        <div
+          className="iv-app"
+          data-sidebar={sidebarOpen ? "open" : "closed"}
+          hidden={settingsOpen}
+        >
           {sidebarOpen && (
             <aside className="iv-app__card" aria-label="Projects and sessions">
               <div className="iv-app__card-top">
@@ -104,7 +127,7 @@ export function App() {
                 />
               </div>
               <div className="iv-app__card-body">
-                <ProjectRail>{version}</ProjectRail>
+                <ProjectRail actions={<SettingsButton />}>{version}</ProjectRail>
                 <ProjectColumn project={current}>
                   <SidebarTabs project={current} />
                 </ProjectColumn>
@@ -146,6 +169,28 @@ export function App() {
             <TabView projectPath={projectPath} />
           </main>
           <SessionActionDialog />
+        </div>
+      )}
+      {settingsOpen && (
+        // Focusable, so a click on the page keeps the keyboard in its area.
+        <div className="iv-app" data-keybinding-area="settings" tabIndex={-1}>
+          <aside className="iv-app__card" aria-label="Settings">
+            <div className="iv-app__card-top" />
+            <SettingsNav onClose={closeSettings} />
+            <ResizeHandle
+              label="Resize the sidebar"
+              edge="right"
+              property="--iv-card-width"
+              name="sidebar"
+              min={CARD_MIN}
+              max={() => CARD_MAX}
+            />
+          </aside>
+          <main className="iv-app__main">
+            <MainTopBar projectPath={null} controls={null} />
+            {serverLost}
+            <SettingsPage />
+          </main>
         </div>
       )}
     </PluginsProvider>

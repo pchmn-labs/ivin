@@ -29,6 +29,8 @@ export const coreKeybindings: ReadonlyArray<DefaultKeybinding> = [
     when: "composer",
     pluginId: null,
   },
+  { key: "mod+,", command: "settings.open", when: null, pluginId: null },
+  { key: "escape", command: "settings.close", when: "settings", pluginId: null },
 ]
 
 export const defaultKeybindingsAtom = Atom.make<ReadonlyArray<DefaultKeybinding>>(

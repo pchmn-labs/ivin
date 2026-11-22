@@ -1,8 +1,3 @@
-declare global {
-  interface Window {
-    // Exposed by apps/desktop/src/preload.ts.
-    readonly ivin: { readonly pickFolder: () => Promise<string | null> }
-  }
-}
+import "../../../core/desktop-bridge.ts"
 
 export const pickFolder = (): Promise<string | null> => window.ivin.pickFolder()

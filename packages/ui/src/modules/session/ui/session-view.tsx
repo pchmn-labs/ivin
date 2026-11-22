@@ -62,12 +62,7 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
           </Text>
         </div>
       )}
-      <Composer
-        key={sessionId}
-        projectPath={projectPath}
-        sessionId={sessionId}
-        {...(blank && { placeholder: "Describe the task" })}
-      />
+      <Composer key={sessionId} projectPath={projectPath} sessionId={sessionId} />
       <ImageViewer sessionId={sessionId} />
     </div>
   )

@@ -1,4 +1,5 @@
 import {
+  AppWindow,
   Archive,
   ArrowCounterClockwise,
   ArrowDown,
@@ -7,6 +8,7 @@ import {
   ArrowsLeftRight,
   ArrowsOut,
   ArrowUp,
+  BracketsCurly,
   Brain,
   CaretDown,
   CaretRight,
@@ -17,6 +19,7 @@ import {
   File,
   Folder,
   FolderOpen,
+  Gear,
   GitBranch,
   GitFork,
   MagnifyingGlass,
@@ -80,6 +83,9 @@ const icons = {
   robot: Robot,
   "arrows-out": ArrowsOut,
   split: SquareSplitHorizontal,
+  gear: Gear,
+  "brackets-curly": BracketsCurly,
+  "app-window": AppWindow,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {

@@ -37,7 +37,7 @@ test("controls below a row sit in its frame, outside its button", async () => {
   expect(opened).toEqual([])
 })
 
-test("a row's tooltip shows its whole text, under its label, after a hover", async () => {
+test("a row's tooltip shows its text, under its label, after a hover", async () => {
   await render(
     <ListRow
       data-testid="row"

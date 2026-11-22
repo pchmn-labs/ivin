@@ -219,6 +219,10 @@ try {
   await window.getByRole("textbox", { name: "Message" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("full-width-session")
+  await window.keyboard.press(process.platform === "darwin" ? "Meta+Comma" : "Control+Comma")
+  await window.getByRole("navigation", { name: "Settings sections" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("settings")
 } finally {
   await app.close()
 }
