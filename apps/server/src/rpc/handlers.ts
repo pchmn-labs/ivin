@@ -38,6 +38,7 @@ import { deleteSession } from "../modules/session/usecases/delete-session.ts"
 import { listArchivedSessions } from "../modules/session/usecases/list-archived-sessions.ts"
 import { restoreSession } from "../modules/session/usecases/restore-session.ts"
 import { answerApproval } from "../modules/session/usecases/answer-approval.ts"
+import { answerQuestion } from "../modules/session/usecases/answer-question.ts"
 import { interruptSession } from "../modules/session/usecases/interrupt-session.ts"
 import { sendNow } from "../modules/session/usecases/send-now.ts"
 import { createSession } from "../modules/session/usecases/create-session.ts"
@@ -166,6 +167,8 @@ export const handlers = Rpcs.toLayer(
         pickWorkingFolder(sessionId, workingFolder),
       "session.answerApproval": ({ sessionId, requestId, allow }) =>
         answerApproval(sessionId, requestId, allow),
+      "session.answerQuestion": ({ sessionId, requestId, answers }) =>
+        answerQuestion(sessionId, requestId, answers),
       "session.pickBranch": ({ sessionId, name, remote }) => pickBranch(sessionId, name, remote),
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
       "session.sendNow": ({ sessionId }) => sendNow(sessionId),

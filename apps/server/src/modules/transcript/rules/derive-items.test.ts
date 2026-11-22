@@ -227,6 +227,44 @@ test("a decision with no request, and any status, produce no item", () => {
   ).toEqual([])
 })
 
+const questions = [{ question: "Which?", header: "Pick", options: [], multiSelect: false }]
+const asked = (requestId: string): Body => ({
+  type: "question_request",
+  requestId,
+  toolCallId: "t1",
+  questions,
+})
+const answered = (requestId: string, answers: unknown): Body => ({
+  type: "question_answer",
+  requestId,
+  answers,
+})
+
+test("a question request is an open question item, and its answers fill it in place", () => {
+  const answers = [{ question: "Which?", choices: ["A"] }]
+
+  expect(derive(events(asked("q1")))).toMatchObject([
+    { id: "e1", type: "question", requestId: "q1", questions, status: "open", answers: [] },
+  ])
+  expect(derive(events(asked("q1"), answered("q1", answers)))).toMatchObject([
+    { id: "e1", status: "answered", answers },
+  ])
+  expect(derive(events(asked("q1"), answered("q1", null)))).toMatchObject([
+    { id: "e1", status: "declined", answers: [] },
+  ])
+})
+
+test("an approval decision does not close a question, nor an answer an approval", () => {
+  const items = derive(
+    events(asked("q1"), request("r1"), decision("q1", true), answered("r1", null)),
+  )
+
+  expect(items).toMatchObject([
+    { type: "question", status: "open" },
+    { type: "approval", decision: null },
+  ])
+})
+
 test("an interruption is its own item and closes the open assistant message", () => {
   const items = derive(
     events(user("hi"), assistant("one"), { type: "interruption" }, assistant("two")),

@@ -54,6 +54,7 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
     useTranscript: () => items,
     useAnnotations: () => [],
     useAnswerApproval: () => async () => undefined,
+    useAnswerQuestion: () => async () => undefined,
     useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useOpenFile: () => async () => undefined,
     useListFiles: () => async () => ({ kind: "listed" as const, paths: [], truncated: false }),

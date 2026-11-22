@@ -49,6 +49,7 @@ const mount = async (
     useTranscript: () => items,
     useAnnotations: () => [],
     useAnswerApproval: () => answer,
+    useAnswerQuestion: () => async () => undefined,
     useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useOpenFile: () => async () => undefined,
     useListFiles: () => async () => ({ kind: "listed" as const, paths: [], truncated: false }),

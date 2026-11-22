@@ -1,6 +1,7 @@
 import { expect, test } from "vitest"
 import {
   answerApprovalFailure,
+  answerQuestionFailure,
   checkoutFailure,
   createSessionFailure,
   sendMessageFailure,
@@ -40,6 +41,17 @@ test("an approval answer has a message for each error type and a default", () =>
     text: "Your answer was not sent.",
     retryable: true,
   })
+})
+
+test("answers to questions the agent no longer waits on say so and offer no retry", () => {
+  const questionNotOpen = { _tag: "QuestionNotOpen", sessionId: "s1", requestId: "q1" }
+
+  expect(answerQuestionFailure(sessionNotFound).retryable).toBe(false)
+  expect(answerQuestionFailure(questionNotOpen)).toEqual({
+    text: "The agent no longer waits on these questions, so there is nothing left to answer.",
+    retryable: false,
+  })
+  expect(answerQuestionFailure(unknown).retryable).toBe(true)
 })
 
 const worktreeNotCreated = (reason: string) => ({

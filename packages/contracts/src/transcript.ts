@@ -69,6 +69,39 @@ const ApprovalDecisionBody = Schema.Struct({
   requestId: Schema.String,
   allow: Schema.Boolean,
 })
+export const QuestionOption = Schema.Struct({
+  label: Schema.String,
+  description: Schema.String,
+})
+export type QuestionOption = typeof QuestionOption.Type
+
+export const Question = Schema.Struct({
+  question: Schema.String,
+  header: Schema.String,
+  options: Schema.Array(QuestionOption),
+  multiSelect: Schema.Boolean,
+})
+export type Question = typeof Question.Type
+
+// `choices` holds the labels picked, or the user's own text in place of an option.
+export const QuestionAnswer = Schema.Struct({
+  question: Schema.String,
+  choices: Schema.Array(Schema.String),
+})
+export type QuestionAnswer = typeof QuestionAnswer.Type
+
+const QuestionRequestBody = Schema.Struct({
+  type: Schema.Literal("question_request"),
+  requestId: Schema.String,
+  toolCallId: Schema.NullOr(Schema.String),
+  questions: Schema.Array(Question),
+})
+// `answers: null`: the user declined the questions.
+const QuestionAnswerBody = Schema.Struct({
+  type: Schema.Literal("question_answer"),
+  requestId: Schema.String,
+  answers: Schema.NullOr(Schema.Array(QuestionAnswer)),
+})
 const StatusBody = Schema.Struct({
   type: Schema.Literal("status"),
   status: Schema.Literals(["running", "idle"]),
@@ -126,6 +159,8 @@ const eventBodies = [
   ToolResultBody,
   ApprovalRequestBody,
   ApprovalDecisionBody,
+  QuestionRequestBody,
+  QuestionAnswerBody,
   UsageBody,
   StatusBody,
   ErrorBody,
@@ -238,6 +273,16 @@ export const ApprovalItem = Schema.Struct({
   decision: Schema.NullOr(Schema.Literals(["allow", "deny"])),
 })
 
+export const QuestionItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("question"),
+  requestId: Schema.String,
+  toolCallId: Schema.NullOr(Schema.String),
+  questions: Schema.Array(Question),
+  status: Schema.Literals(["open", "answered", "declined"]),
+  answers: Schema.Array(QuestionAnswer),
+})
+
 export const UsageItem = Schema.Struct({
   ...itemFields,
   type: Schema.Literal("usage"),
@@ -274,6 +319,7 @@ export const TranscriptItem = Schema.Union([
   ThinkingItem,
   ToolCallItem,
   ApprovalItem,
+  QuestionItem,
   UsageItem,
   ErrorItem,
   InterruptionItem,

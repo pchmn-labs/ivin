@@ -134,6 +134,61 @@ export const demoApprovalScript: readonly (readonly HarnessOutput[])[] = [
   demoApprovalTurn,
 ]
 
+const demoQuestions = [
+  {
+    question: "Which test runner should the new tests use?",
+    header: "Runner",
+    options: [
+      { label: "Vitest", description: "Already set up in the workspace." },
+      { label: "Node's test runner", description: "No dependency, fewer features." },
+    ],
+    multiSelect: false,
+  },
+  {
+    question: "Which folders should the tests cover?",
+    header: "Folders",
+    options: [
+      { label: "src/orders", description: "Order intake and pricing." },
+      { label: "src/billing", description: "Invoices and refunds." },
+      { label: "src/shipping", description: "Labels and tracking." },
+    ],
+    multiSelect: true,
+  },
+]
+
+export const demoQuestionTurn: readonly HarnessOutput[] = [
+  { type: "status", status: "running", raw: null },
+  { type: "assistant_text", text: "A couple of questions before I write the tests.", raw: null },
+  {
+    type: "tool_call",
+    toolCallId: "demo-tool-question",
+    name: "AskUserQuestion",
+    input: { questions: demoQuestions },
+    raw: null,
+  },
+  {
+    type: "question_request",
+    requestId: "demo-question-1",
+    toolCallId: "demo-tool-question",
+    questions: demoQuestions,
+    raw: null,
+  },
+  {
+    type: "tool_result",
+    toolCallId: "demo-tool-question",
+    output: "The user answered.",
+    isError: false,
+    raw: null,
+  },
+  { type: "assistant_text", text: "Thanks, I'll write them that way.", raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
+export const demoQuestionScript: readonly (readonly HarnessOutput[])[] = [
+  demoTurn,
+  demoQuestionTurn,
+]
+
 // Reads the message sent while it waits on the approval, then waits on a second one.
 const demoSteerTurn: readonly ScriptedElement[] = [
   ...demoApprovalTurn.slice(0, demoApprovalTurn.findIndex((o) => o.type === "tool_result") + 1),

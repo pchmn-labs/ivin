@@ -1,5 +1,6 @@
 import type {
   ApprovalNotOpen,
+  QuestionNotOpen,
   CheckoutInUse,
   CheckoutRefused,
   GitRefused,
@@ -107,6 +108,16 @@ export const answerApprovalFailure = (error: unknown): ActionFailure =>
           retryable: false,
         }
       : { text: "Your answer was not sent.", retryable: true }
+
+export const answerQuestionFailure = (error: unknown): ActionFailure =>
+  isTag<SessionNotFound>(error, "SessionNotFound")
+    ? { text: "This session no longer exists, so your answers were not sent.", retryable: false }
+    : isTag<QuestionNotOpen>(error, "QuestionNotOpen")
+      ? {
+          text: "The agent no longer waits on these questions, so there is nothing left to answer.",
+          retryable: false,
+        }
+      : { text: "Your answers were not sent.", retryable: true }
 
 export type CheckoutAction = "switch" | "fastForward"
 

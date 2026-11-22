@@ -1,7 +1,7 @@
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Effect, type Scope, Stream } from "effect"
 import { expect, test } from "vitest"
-import { type ApprovalDecision, HarnessProvider } from "../../../shared/harness-provider.ts"
+import { type RequestAnswer, HarnessProvider } from "../../../shared/harness-provider.ts"
 import {
   layerScripted,
   scriptedFailure,
@@ -94,7 +94,7 @@ const approval = (requestId: string): HarnessOutput => ({
 })
 
 test("a turn pauses after an approval request and resumes on each decision", async () => {
-  const responded: ApprovalDecision[] = []
+  const responded: RequestAnswer[] = []
   const events = await Effect.runPromise(
     Effect.gen(function* () {
       const harness = yield* (yield* HarnessProvider).start({
@@ -129,6 +129,48 @@ test("a turn pauses after an approval request and resumes on each decision", asy
     { requestId: "a", allow: true },
     { requestId: "b", allow: false },
   ])
+})
+
+test("a turn pauses after a question request and resumes on its answers", async () => {
+  const responded: RequestAnswer[] = []
+  const answers = [{ question: "Which?", choices: ["A"] }]
+  const events = await Effect.runPromise(
+    Effect.gen(function* () {
+      const harness = yield* (yield* HarnessProvider).start({
+        sessionId: "s1",
+        cwd: "/p",
+        providerSessionId: null,
+        options: { model: "m", effort: "e", permissionMode: "p" },
+      })
+      yield* harness.send({ id: "m8", text: "go", images: [] })
+      const first = yield* Stream.runCollect(Stream.take(harness.events, 1))
+      yield* harness.respond({ requestId: "q", answers })
+      const second = yield* Stream.runCollect(Stream.take(harness.events, 1))
+      return [first, second].map((chunk) => chunk.map((e) => e.type))
+    }).pipe(
+      Effect.provide(
+        layerScripted(
+          [
+            [
+              {
+                type: "question_request",
+                requestId: "q",
+                toolCallId: null,
+                questions: [],
+                raw: null,
+              },
+              text("y"),
+            ],
+          ],
+          { responded },
+        ),
+      ),
+      Effect.scoped,
+    ),
+  )
+
+  expect(events).toEqual([["question_request"], ["assistant_text"]])
+  expect(responded).toEqual([{ requestId: "q", answers }])
 })
 
 test("responding with no paused turn fails", async () => {

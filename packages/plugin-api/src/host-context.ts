@@ -5,7 +5,7 @@ import type { OpenProjects } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Settings } from "@ivin/contracts/setting"
 import type { Tab } from "@ivin/contracts/tab"
-import type { TranscriptItem } from "@ivin/contracts/transcript"
+import type { QuestionAnswer, TranscriptItem } from "@ivin/contracts/transcript"
 import type { HostComponents, MenuItem } from "./components.ts"
 
 export interface ActionFailure {
@@ -59,6 +59,13 @@ export interface UiHost {
   ) => (answer: {
     readonly requestId: string
     readonly allow: boolean
+  }) => Promise<ActionFailure | undefined>
+  // `answers: null` declines the questions.
+  readonly useAnswerQuestion: (
+    sessionId: string,
+  ) => (answer: {
+    readonly requestId: string
+    readonly answers: ReadonlyArray<QuestionAnswer> | null
   }) => Promise<ActionFailure | undefined>
   // Archive and Delete for the session's menu, and the last of them that failed.
   readonly useSessionActions: (session: Session) => {

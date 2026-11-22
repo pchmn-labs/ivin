@@ -1,8 +1,8 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
-import { ImageData, ImageRef } from "./transcript.ts"
+import { ImageData, ImageRef, QuestionAnswer } from "./transcript.ts"
 
-// `waiting`: the agent waits on the user, such as an approval.
+// `waiting`: the agent waits on the user, such as an approval or an answer to its questions.
 export const SessionStatus = Schema.Literals([
   "preparing_worktree",
   "working",
@@ -111,6 +111,11 @@ export class SessionTitleChosenByUser extends Schema.TaggedError<SessionTitleCho
 ) {}
 
 export class ApprovalNotOpen extends Schema.TaggedError<ApprovalNotOpen>()("ApprovalNotOpen", {
+  sessionId: Schema.String,
+  requestId: Schema.String,
+}) {}
+
+export class QuestionNotOpen extends Schema.TaggedError<QuestionNotOpen>()("QuestionNotOpen", {
   sessionId: Schema.String,
   requestId: Schema.String,
 }) {}
@@ -255,6 +260,16 @@ export const SessionRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String, requestId: Schema.String, allow: Schema.Boolean },
     success: Session,
     error: Schema.Union([SessionNotFound, ApprovalNotOpen]),
+  }),
+  // `answers: null` declines the questions.
+  Rpc.make("session.answerQuestion", {
+    payload: {
+      sessionId: Schema.String,
+      requestId: Schema.String,
+      answers: Schema.NullOr(Schema.Array(QuestionAnswer)),
+    },
+    success: Session,
+    error: Schema.Union([SessionNotFound, QuestionNotOpen]),
   }),
   // A branch held by another worktree, the checkout included, moves the session there; a remote
   // one (`origin/<name>`) is checked out as a tracking branch.

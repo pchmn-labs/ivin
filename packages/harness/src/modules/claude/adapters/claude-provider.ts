@@ -7,12 +7,12 @@ import type { HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Duration, Effect, Layer, Stream } from "effect"
 import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/harness-provider.ts"
-import { approvalResponseLine } from "../rules/approval-response.ts"
+import { approvalResponseLine, questionResponseLine } from "../rules/approval-response.ts"
 import { claudeArgs } from "../rules/claude-args.ts"
 import { claudeRunOptions } from "../rules/run-options.ts"
 import { findOnPath } from "./find-on-path.ts"
 import { listClaudeModels } from "./list-models.ts"
-import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
+import { controlRequestInput, decodeClaudeLine } from "../rules/decode-claude-line.ts"
 import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
 import { claudeSkillsFolder } from "../rules/skills-folder.ts"
 import { toolActivity } from "../rules/tool-activity.ts"
@@ -143,6 +143,8 @@ export const layerClaudeWith = (
                   Effect.sync(() => {
                     if (output.type === "approval_request")
                       openRequests.set(output.requestId, output.input)
+                    if (output.type === "question_request")
+                      openRequests.set(output.requestId, controlRequestInput(output.raw))
                   }),
                 ),
                 Stream.filter((output: HarnessOutput) => {
@@ -174,13 +176,18 @@ export const layerClaudeWith = (
                   ),
                 )
               }),
-            respond: ({ requestId, allow }) =>
+            respond: (answer) =>
               Effect.suspend(() => {
+                const { requestId } = answer
                 if (!openRequests.has(requestId))
                   return Effect.fail(
                     new HarnessError({ message: `No approval request is open for ${requestId}` }),
                   )
-                const line = approvalResponseLine(requestId, allow, openRequests.get(requestId))
+                const input = openRequests.get(requestId)
+                const line =
+                  "allow" in answer
+                    ? approvalResponseLine(requestId, answer.allow, input)
+                    : questionResponseLine(requestId, input, answer.answers)
                 return Effect.callback<void, HarnessError>((resume) => {
                   child.stdin.write(`${line}\n`, (error) =>
                     resume(

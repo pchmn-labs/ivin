@@ -1,6 +1,6 @@
 import type { HarnessProgram } from "@ivin/contracts/server"
 import type { Harness, HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
-import type { HarnessOutput, ImageData, ToolKind } from "@ivin/contracts/transcript"
+import type { HarnessOutput, ImageData, QuestionAnswer, ToolKind } from "@ivin/contracts/transcript"
 import { Context, Data, type Effect, type Scope, type Stream } from "effect"
 
 export class HarnessError extends Data.TaggedError("HarnessError")<{
@@ -26,6 +26,13 @@ export interface ApprovalDecision {
   readonly allow: boolean
 }
 
+export interface QuestionAnswers {
+  readonly requestId: string
+  readonly answers: readonly QuestionAnswer[] | null
+}
+
+export type RequestAnswer = ApprovalDecision | QuestionAnswers
+
 export interface ToolUse {
   readonly name: string
   readonly input: unknown
@@ -45,7 +52,7 @@ export type ToolActivity =
 export interface HarnessRun {
   readonly events: Stream.Stream<HarnessOutput, HarnessError>
   readonly send: (message: UserMessage) => Effect.Effect<void, HarnessError>
-  readonly respond: (decision: ApprovalDecision) => Effect.Effect<void, HarnessError>
+  readonly respond: (answer: RequestAnswer) => Effect.Effect<void, HarnessError>
   readonly interrupt: Effect.Effect<void>
 }
 

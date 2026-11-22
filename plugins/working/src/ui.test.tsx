@@ -71,6 +71,7 @@ const mountPanel = async (
       answers.push({ sessionId, ...answer })
       return answerFails ? { text: "The session has stopped.", retryable: true } : undefined
     },
+    useAnswerQuestion: () => async () => undefined,
     useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
     useOpenFile: () => async () => undefined,
     useListFiles: () => async () => ({ kind: "listed" as const, paths: [], truncated: false }),

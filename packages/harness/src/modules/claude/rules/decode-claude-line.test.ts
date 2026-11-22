@@ -11,6 +11,8 @@ import permissionAllow from "./fixtures/permission-allow.jsonl?raw"
 import permissionDeny from "./fixtures/permission-deny.jsonl?raw"
 import interruption from "./fixtures/interruption.jsonl?raw"
 import notLoggedIn from "./fixtures/not-logged-in.jsonl?raw"
+import questionAnswer from "./fixtures/question-answer.jsonl?raw"
+import questionDecline from "./fixtures/question-decline.jsonl?raw"
 import plainAnswer from "./fixtures/plain-answer.jsonl?raw"
 import resumedSession from "./fixtures/resumed-session.jsonl?raw"
 import steer from "./fixtures/steer.jsonl?raw"
@@ -31,6 +33,8 @@ const fixtures = {
   "not-logged-in": notLoggedIn,
   "tool-interruption": toolInterruption,
   "plain-answer": plainAnswer,
+  "question-answer": questionAnswer,
+  "question-decline": questionDecline,
   "resumed-session": resumedSession,
   steer,
   thinking: thinking,
@@ -201,6 +205,52 @@ test.each([
     ).toEqual(["tool_call", "approval_request", "tool_result"])
   },
 )
+
+test.each(["question-answer", "question-decline"] as const)(
+  "%s: the agent's questions become a question request, not an approval request",
+  (name) => {
+    const events = stored(fixture(name))
+    const call = events.find((o) => o.type === "tool_call")
+
+    expect(events.some((o) => o.type === "approval_request")).toBe(false)
+    expect(events.find((o) => o.type === "question_request")).toMatchObject({
+      requestId: expect.any(String),
+      toolCallId: call && "toolCallId" in call ? call.toolCallId : null,
+      questions: [
+        {
+          question: "Which colour do you like?",
+          header: "Colour",
+          options: [
+            { label: "Red", description: expect.any(String) },
+            { label: "Blue", description: expect.any(String) },
+          ],
+          multiSelect: false,
+        },
+        {
+          question: "Which fruits do you eat?",
+          header: "Fruits",
+          options: [{ label: "Apple" }, { label: "Pear" }, { label: "Plum" }],
+          multiSelect: true,
+        },
+      ],
+    })
+  },
+)
+
+test("questions whose input does not read as questions stay an approval request", () => {
+  const line = JSON.stringify({
+    type: "control_request",
+    request_id: "r1",
+    request: {
+      subtype: "can_use_tool",
+      tool_name: "AskUserQuestion",
+      input: { prompt: "?" },
+      tool_use_id: "t1",
+    },
+  })
+
+  expect(decodeClaudeLine(line)).toMatchObject([{ type: "approval_request", requestId: "r1" }])
+})
 
 test("a control request of another subtype is ignored", () => {
   const line = JSON.stringify({
