@@ -11,6 +11,11 @@ body,
   margin: 0;
 }
 
+#root {
+  /* Popups portal to <body>; without this an in-app z-index (the sticky panel head) paints over them. */
+  isolation: isolate;
+}
+
 body {
   font-family: var(--iv-font-sans);
   font-size: var(--iv-text-md);
