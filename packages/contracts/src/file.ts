@@ -79,6 +79,69 @@ export class FileNotWritten extends Schema.TaggedError<FileNotWritten>()("FileNo
   reason: Schema.Literals(["missing", "unwritable"]),
 }) {}
 
+// `renamed`: a rename git sees in the index; an unstaged one is a `deleted` and an `untracked` file.
+// A conflicted file is `modified`.
+export const ChangeStatus = Schema.Literals([
+  "modified",
+  "added",
+  "deleted",
+  "renamed",
+  "untracked",
+])
+export type ChangeStatus = typeof ChangeStatus.Type
+
+// `added` and `deleted` count lines, null for a binary or an untracked file.
+export const Change = Schema.Struct({
+  path: Schema.String,
+  previousPath: Schema.NullOr(Schema.String),
+  status: ChangeStatus,
+  added: Schema.NullOr(Schema.Number),
+  deleted: Schema.NullOr(Schema.Number),
+})
+export type Change = typeof Change.Type
+
+export const ChangeList = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("listed"), changes: Schema.Array(Change) }),
+  Schema.Struct({ kind: Schema.Literal("not_repository") }),
+])
+export type ChangeList = typeof ChangeList.Type
+
+// `changed`: the part of the line that differs from the line it replaces or is replaced by.
+export const DiffLine = Schema.Struct({
+  kind: Schema.Literals(["context", "added", "deleted"]),
+  text: Schema.String,
+  oldLine: Schema.NullOr(Schema.Number),
+  newLine: Schema.NullOr(Schema.Number),
+  changed: Schema.NullOr(Schema.Tuple([Schema.Number, Schema.Number])),
+})
+export type DiffLine = typeof DiffLine.Type
+
+export const DiffHunk = Schema.Struct({ header: Schema.String, lines: Schema.Array(DiffLine) })
+export type DiffHunk = typeof DiffHunk.Type
+
+export const DIFF_SIZE_LIMIT = 4 * 1024 * 1024
+
+// `unchanged`: the file no longer has uncommitted changes.
+export const FileDiff = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("text"),
+    hunks: Schema.Array(DiffHunk),
+    added: Schema.Number,
+    deleted: Schema.Number,
+  }),
+  Schema.Struct({ kind: Schema.Literal("binary") }),
+  Schema.Struct({ kind: Schema.Literal("too_large") }),
+  Schema.Struct({ kind: Schema.Literal("unchanged") }),
+  Schema.Struct({ kind: Schema.Literal("not_repository") }),
+])
+export type FileDiff = typeof FileDiff.Type
+
+// `gitMessage` is git's own output, which the user fixes the repository from.
+export class GitFailed extends Schema.TaggedError<GitFailed>()("GitFailed", {
+  sessionId: Schema.String,
+  gitMessage: Schema.String,
+}) {}
+
 export const FileRpcs = RpcGroup.make(
   // One level of a folder of the session's working folder, folders first; `path` is relative to
   // it, with `/` between names, and "" for the working folder itself. The `.git` folder is left out.
@@ -115,6 +178,24 @@ export const FileRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String },
     success: Schema.Array(GitStatusEntry),
     error: Schema.Union([SessionNotFound, WorkingFolderDeleted]),
+  }),
+  // The working folder's uncommitted changes against HEAD, untracked files included, sorted by path,
+  // with paths in the form of `file.listFolder`.
+  Rpc.make("file.listChanges", {
+    payload: { sessionId: Schema.String },
+    success: ChangeList,
+    error: Schema.Union([SessionNotFound, WorkingFolderDeleted, GitFailed]),
+  }),
+  // The uncommitted diff of one path `file.listChanges` lists, against HEAD.
+  Rpc.make("file.readDiff", {
+    payload: { sessionId: Schema.String, path: Schema.String },
+    success: FileDiff,
+    error: Schema.Union([
+      SessionNotFound,
+      WorkingFolderDeleted,
+      PathOutsideWorkingFolder,
+      GitFailed,
+    ]),
   }),
   // The paths created, changed or deleted on disk, a batch at a time; what git ignores is left out.
   Rpc.make("file.watch", {

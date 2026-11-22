@@ -168,6 +168,24 @@ test("sub-views and the selected one are back after a restart on the same databa
   expect(listed.selected).toEqual(file("b"))
 })
 
+test("a diff sub-view is back after a restart beside the file of the same path", async () => {
+  const db = newDatabase()
+  const diff = (path: string) => ({ kind: "diff" as const, path })
+  const sessionId = await withServer(db, (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* newTab(client)
+      yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
+      yield* client["tab.openSubView"]({ sessionId, subView: diff("a") })
+      return sessionId
+    }),
+  )
+
+  const listed = await withServer(db, (client) => client["tab.listSubViews"]({ sessionId }))
+
+  expect(listed.subViews).toEqual([file("a"), diff("a")])
+  expect(listed.selected).toEqual(diff("a"))
+})
+
 test("moving the session to another working folder closes its sub-views", async () => {
   const other = join(project, ".worktrees", "other")
   git(project, "worktree", "add", "--quiet", "-b", "other", other)

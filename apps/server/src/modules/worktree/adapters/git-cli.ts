@@ -1,3 +1,5 @@
+import type { Change } from "@ivin/contracts/file"
+import { parseChanges } from "../../file/rules/changes.ts"
 import { parseGitStatus } from "../../file/rules/git-status.ts"
 import { Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
@@ -15,18 +17,39 @@ import { Git, GitError } from "../usecases/git.ts"
 interface ExecFailure {
   readonly stderr?: string
   readonly message?: string
+  readonly code?: number | string
 }
 
-const git = (cwd: string, args: readonly string[], input?: string) =>
-  Effect.callback<string, GitError>((resume, signal) => {
+class OutputTooLong {
+  readonly _tag = "OutputTooLong"
+}
+
+const run = (
+  cwd: string,
+  args: readonly string[],
+  {
+    input,
+    maxBuffer = 16 << 20,
+    succeedsOn = [0],
+  }: {
+    readonly input?: string
+    readonly maxBuffer?: number
+    readonly succeedsOn?: ReadonlyArray<number>
+  } = {},
+) =>
+  Effect.callback<string, GitError | OutputTooLong>((resume, signal) => {
     const child = execFile(
       "git",
       args,
       // A fetch must never wait on a credential prompt nobody can answer.
-      { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer: 16 << 20 },
+      { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer },
       (error, stdout) => {
         if (!error) return resume(Effect.succeed(stdout))
         const failure = error as ExecFailure
+        if (failure.code === "ERR_CHILD_PROCESS_STDIO_MAXBUFFER")
+          return resume(Effect.fail(new OutputTooLong()))
+        if (typeof failure.code === "number" && succeedsOn.includes(failure.code))
+          return resume(Effect.succeed(stdout))
         const message = failure.stderr?.trim() || failure.message || "git failed"
         resume(Effect.fail(new GitError({ message })))
       },
@@ -37,6 +60,48 @@ const git = (cwd: string, args: readonly string[], input?: string) =>
     // Not execFile's `signal`: aborting a spawn that failed, such as on a missing cwd, kills our process group.
     signal.addEventListener("abort", () => child.pid !== undefined && child.kill(), { once: true })
   })
+
+const git = (cwd: string, args: readonly string[], input?: string) =>
+  run(cwd, args, input === undefined ? {} : { input }).pipe(
+    Effect.catchTag("OutputTooLong", () =>
+      Effect.fail(new GitError({ message: "git wrote too much" })),
+    ),
+  )
+
+// What a diff compares the working folder with: HEAD, or the empty tree before the first commit.
+const EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
+const diffBase = (folder: string) =>
+  orNull(git(folder, ["rev-parse", "--verify", "--quiet", "HEAD"])).pipe(
+    Effect.map((head) => (head === null ? EMPTY_TREE : "HEAD")),
+  )
+
+// No optional locks: a diff that refreshed the index would fire the watcher that asked for it.
+const DIFF = ["--no-optional-locks", "diff", "--no-color", "--no-ext-diff", "--relative", "-M"]
+
+const listChanges = (folder: string) =>
+  Effect.gen(function* () {
+    if ((yield* orNull(git(folder, ["rev-parse", "--show-prefix"]))) === null) return null
+    const base = yield* diffBase(folder)
+    const nameStatus = yield* git(folder, [...DIFF, "--name-status", "-z", base, "--"])
+    const numstat = yield* git(folder, [...DIFF, "--numstat", "-z", base, "--"])
+    const untracked = yield* git(folder, ["ls-files", "-z", "--others", "--exclude-standard"])
+    return parseChanges(nameStatus, numstat, untracked)
+  })
+
+const diffOf = (folder: string, change: Change, limit: number) =>
+  Effect.gen(function* () {
+    // git diff --no-index exits 1 when the files differ.
+    if (change.status === "untracked")
+      return yield* run(
+        folder,
+        ["diff", "--no-color", "--no-ext-diff", "--no-index", "--", "/dev/null", change.path],
+        { maxBuffer: limit, succeedsOn: [1] },
+      )
+    const paths = change.previousPath === null ? [change.path] : [change.previousPath, change.path]
+    return yield* run(folder, [...DIFF, yield* diffBase(folder), "--", ...paths], {
+      maxBuffer: limit,
+    })
+  }).pipe(Effect.catchTag("OutputTooLong", () => Effect.succeed(null)))
 
 const orNull = <A>(effect: Effect.Effect<A, GitError>) =>
   effect.pipe(Effect.orElseSucceed(() => null))
@@ -162,4 +227,6 @@ export const layerGitCli = Layer.succeed(Git)({
       const deleted = new Set((yield* git(folder, ["ls-files", "-z", "--deleted"])).split("\0"))
       return listed.split("\0").filter((path) => path !== "" && !deleted.has(path))
     }).pipe(Effect.orElseSucceed(() => null)),
+  listChanges,
+  diffOf,
 })

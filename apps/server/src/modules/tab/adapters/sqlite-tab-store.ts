@@ -1,4 +1,4 @@
-import type { Tab } from "@ivin/contracts/tab"
+import type { SubView, Tab } from "@ivin/contracts/tab"
 import { Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
 import { type StoredSubView, TabStore } from "../usecases/tab-store.ts"
@@ -11,13 +11,14 @@ interface TabRow {
 const toTab = (row: TabRow): Tab => ({ sessionId: row.session_id, projectPath: row.project_path })
 
 interface SubViewRow {
+  kind: SubView["kind"]
   path: string
   working_folder: string
   selected: number
 }
 
 const toStoredSubView = (row: SubViewRow): StoredSubView => ({
-  subView: { kind: "file", path: row.path },
+  subView: { kind: row.kind, path: row.path },
   workingFolder: row.working_folder,
   selected: row.selected === 1,
 })
@@ -88,7 +89,7 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
           (
             db
               .prepare(
-                "SELECT path, working_folder, selected FROM sub_views WHERE session_id = ? ORDER BY position",
+                "SELECT kind, path, working_folder, selected FROM sub_views WHERE session_id = ? ORDER BY position",
               )
               .all(sessionId) as unknown as SubViewRow[]
           ).map(toStoredSubView),
