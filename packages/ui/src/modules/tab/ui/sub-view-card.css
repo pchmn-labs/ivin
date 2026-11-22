@@ -21,6 +21,14 @@
   border-bottom: 1px solid var(--iv-border);
 }
 
+.iv-sub-view-card[data-on-session] {
+  background: var(--iv-bg);
+}
+
+.iv-sub-view-card[data-on-session] .iv-sub-view-card__row {
+  background: var(--iv-bg-card);
+}
+
 .iv-sub-view-card__tabs {
   display: flex;
   flex: 1;
@@ -137,10 +145,6 @@
   flex: none;
   padding: var(--iv-space-2) var(--iv-space-3) 0;
   background: inherit;
-}
-
-.iv-sub-view-card[data-on-session] .iv-sub-view-card__failure {
-  background: var(--iv-bg);
 }
 
 .iv-sub-view-card__unsaved {
