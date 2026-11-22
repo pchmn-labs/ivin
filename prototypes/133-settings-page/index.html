@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en" data-theme="forest-dark">
+<head>
+<meta charset="utf-8" />
+<title>#133 — Settings page</title>
+<link rel="stylesheet" href="../../packages/ui/src/core/theme/tokens.css" />
+<link rel="stylesheet" href="../../packages/ui/src/core/theme/base.css" />
+<style>
+body { overflow: hidden; }
+button { color: inherit; font: inherit; }
+svg { flex: none; display: block; }
+.mono { font-family: var(--iv-font-mono); }
+.faint { color: var(--iv-text-faint); }
+.muted { color: var(--iv-text-muted); }
+.spacer { flex: 1; }
+:focus-visible { outline: 2px solid var(--iv-focus-ring); outline-offset: 2px; }
+
+/* Window shell, as shipped */
+.app { display: grid; grid-template-columns: var(--iv-card-width) 1fr; height: 100vh; }
+.card { display: flex; flex-direction: column; margin: 8px 0 8px 8px; border: 1px solid var(--iv-border); border-radius: var(--iv-radius-card); background: var(--iv-bg-card); overflow: hidden; min-height: 0; }
+.card-top { display: flex; align-items: center; gap: 2px; height: 40px; padding: 0 8px 0 var(--iv-traffic-lights-width); flex: none; }
+.card-body { display: flex; flex: 1; min-height: 0; }
+.rail { display: flex; flex-direction: column; align-items: center; gap: 8px; width: var(--iv-rail-width); padding: 4px 0 10px; border-right: 1px solid var(--iv-border); flex: none; }
+.rail-btn { display: grid; place-items: center; width: var(--iv-rail-button-size); height: var(--iv-rail-button-size); border: 0; border-radius: var(--iv-radius-rail-button); background: transparent; cursor: pointer; }
+.rail-btn[data-selected] { background: var(--iv-bg-raised); box-shadow: 0 0 0 1px var(--iv-border), var(--iv-shadow-raised); }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--iv-accent); }
+.column { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.list-head { display: flex; align-items: center; gap: 8px; height: var(--iv-list-head-height); padding: 0 8px 0 12px; flex: none; }
+.list-head b { flex: 1; min-width: 0; font-size: var(--iv-text-lg); font-weight: var(--iv-weight-semibold); }
+.panel { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 8px; }
+.caption { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; color: var(--iv-text-faint); font-size: var(--iv-text-xs); font-weight: var(--iv-weight-medium); }
+.row { display: flex; align-items: center; gap: 8px; height: var(--iv-row-height); padding: 0 8px; border: 0; border-radius: var(--iv-radius-md); background: transparent; cursor: pointer; white-space: nowrap; width: 100%; text-align: left; }
+.row + .row { margin-top: 2px; }
+.row:hover { background: var(--iv-bg-hover); }
+.row[data-selected] { background: var(--iv-bg-active); font-weight: var(--iv-weight-medium); }
+.row .title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.row .meta { color: var(--iv-text-faint); font-size: var(--iv-text-xs); font-variant-numeric: tabular-nums; }
+.claude { color: #d97757; }
+.utabs { display: flex; gap: 16px; padding: 0 12px; border-bottom: 1px solid var(--iv-border); flex: none; margin-bottom: 6px; }
+.utab { height: 32px; border: 0; background: none; color: var(--iv-text-muted); font-weight: var(--iv-weight-medium); box-shadow: inset 0 -2px 0 transparent; }
+.utab[aria-selected="true"] { color: var(--iv-text); box-shadow: inset 0 -2px 0 var(--iv-accent); }
+.icon-btn { display: inline-grid; place-items: center; width: var(--iv-control-sm); height: var(--iv-control-sm); padding: 0; border: 0; border-radius: var(--iv-radius-md); background: transparent; color: var(--iv-text-muted); cursor: pointer; transition: background-color var(--iv-duration-fast) ease-out, color var(--iv-duration-fast) ease-out, transform var(--iv-duration-press) var(--iv-ease-out); }
+.icon-btn:hover { background: var(--iv-bg-hover); color: var(--iv-text); }
+.icon-btn:active { transform: scale(0.96); }
+.icon-btn.md { width: var(--iv-control-md); height: var(--iv-control-md); }
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.titlebar { display: flex; align-items: center; gap: 4px; height: 40px; margin-top: 8px; padding: 0 12px; flex: none; }
+.tab { display: flex; align-items: center; gap: 8px; width: var(--iv-tab-width); min-width: var(--iv-tab-min-width); height: var(--iv-tab-height); padding: 0 var(--iv-tab-padding); border: 0; border-radius: var(--iv-radius-tab); background: transparent; color: var(--iv-text-muted); font-size: var(--iv-text-sm); font-weight: var(--iv-weight-medium); white-space: nowrap; overflow: hidden; cursor: pointer; flex: 0 1 auto; text-align: left; }
+.tab:hover { background: var(--iv-bg-hover); }
+.tab[data-selected] { background: var(--iv-bg-raised); box-shadow: 0 0 0 1px var(--iv-border); color: var(--iv-text); }
+.tab span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tab .x { flex: none; color: var(--iv-text-faint); }
+
+/* Chat, the screen behind settings */
+.chat { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.transcript { flex: 1; overflow-y: auto; }
+.tcol { max-width: var(--iv-content-width); margin: 0 auto; padding: var(--iv-space-4) var(--iv-space-6); font-size: 14px; line-height: 24px; color: var(--iv-text-prose); }
+.item { padding: var(--iv-space-2) 0; }
+.item p { margin: 0; }
+.bubble { padding: 10px 12px; border-radius: var(--iv-radius-card) var(--iv-radius-card) var(--iv-radius-sm) var(--iv-radius-card); background: var(--iv-bubble); }
+.inline-code { font-family: var(--iv-font-mono); font-size: 0.92em; padding: 1px 4px; border-radius: var(--iv-radius-sm); background: var(--iv-bg-active); }
+.composer { width: 100%; max-width: var(--iv-content-width); margin: 0 auto; padding: 0 var(--iv-space-6) var(--iv-space-3); }
+.surface { display: flex; flex-direction: column; gap: 8px; padding: 8px; border: 1px solid var(--iv-border-strong); border-radius: var(--iv-radius-lg); background: var(--iv-bg-raised); }
+.surface:focus-within { border-color: var(--iv-focus-ring); }
+.surface textarea { width: 100%; min-height: 40px; resize: none; padding: 4px 8px; border: 0; outline: none; background: transparent; color: var(--iv-text); font: inherit; }
+.surface textarea::placeholder { color: var(--iv-text-faint); }
+.surface-row { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.send { display: grid; place-items: center; width: 28px; height: 28px; border-radius: var(--iv-radius-md); background: var(--iv-accent); color: var(--iv-accent-contrast); opacity: var(--iv-opacity-disabled); }
+.statusline { height: 24px; }
+
+/* Buttons */
+.btn { display: inline-flex; align-items: center; gap: 6px; height: var(--iv-control-sm); padding: 0 8px; border: 1px solid var(--iv-border-strong); border-radius: var(--iv-radius-md); background: var(--iv-bg-raised); color: var(--iv-text); font-size: var(--iv-text-sm); font-weight: var(--iv-weight-medium); cursor: pointer; white-space: nowrap; transition: background-color var(--iv-duration-fast) ease-out, transform var(--iv-duration-press) var(--iv-ease-out); }
+.btn:hover { background: var(--iv-bg-hover); }
+.btn:active { transform: scale(0.97); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--iv-text-muted); }
+.btn.ghost:hover { background: var(--iv-bg-hover); color: var(--iv-text); }
+.btn.primary { border-color: transparent; background: var(--iv-accent); color: var(--iv-accent-contrast); }
+.btn.primary:hover { background: var(--iv-accent-hover); }
+.btn:disabled { opacity: var(--iv-opacity-disabled); pointer-events: none; }
+
+/* Switch: the one new control */
+.switch { position: relative; flex: none; width: 30px; height: 18px; padding: 0; border: 1px solid var(--iv-border-strong); border-radius: 999px; background: var(--iv-bg-raised); cursor: pointer; transition: background-color var(--iv-duration-fast) ease-out, border-color var(--iv-duration-fast) ease-out; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--iv-text-muted); transition: transform var(--iv-duration-base) var(--iv-ease-out), background-color var(--iv-duration-fast) ease-out; }
+.switch[aria-checked="true"] { border-color: transparent; background: var(--iv-accent); }
+.switch[aria-checked="true"]::after { transform: translateX(12px); background: var(--iv-accent-contrast); }
+.switch:disabled { opacity: var(--iv-opacity-disabled); cursor: default; }
+.switch:active:not(:disabled)::after { width: 14px; }
+.switch[aria-checked="true"]:active:not(:disabled)::after { transform: translateX(10px); }
+@media (prefers-reduced-motion: reduce) { .switch, .switch::after { transition: none; } }
+
+/* Setting rows, shared */
+.setting { display: flex; align-items: flex-start; gap: 16px; padding: 12px 16px; transition: background-color 900ms ease-out; }
+.setting .text { flex: 1; min-width: 0; }
+.setting .label { font-weight: var(--iv-weight-medium); }
+.setting .desc { color: var(--iv-text-muted); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); margin-top: 2px; }
+.setting .key { color: var(--iv-text-faint); font-family: var(--iv-font-mono); font-size: var(--iv-text-xs); margin-top: 4px; }
+.setting .control { display: flex; align-items: center; height: 20px; }
+.setting[data-flash] { background: color-mix(in srgb, var(--iv-accent) 10%, transparent); transition: none; }
+.err { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--iv-danger); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); }
+.err .btn { margin-left: 4px; }
+.changed { margin-top: 6px; color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+.problem { display: flex; gap: 10px; padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--iv-danger) 40%, transparent); border-radius: var(--iv-radius-md); background: var(--iv-danger-subtle); }
+.problem > svg { color: var(--iv-danger); margin-top: 3px; }
+.problem .what { font-weight: var(--iv-weight-medium); }
+.problem .next { color: var(--iv-text-muted); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); margin: 2px 0 10px; }
+.cli-state { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: var(--iv-text-sm); color: var(--iv-text-muted); }
+.cli-state svg { color: var(--iv-accent); }
+.spin { animation: spin var(--iv-duration-spin) linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 1 · Tab */
+.page { flex: 1; overflow-y: auto; }
+.page-col { max-width: 640px; margin: 0 auto; padding: 24px 24px 64px; }
+.page-head { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; }
+.page-head h1 { margin: 0; font-size: var(--iv-text-xl, 16px); line-height: 24px; font-weight: var(--iv-weight-semibold); }
+.group + .group { margin-top: 24px; }
+.group-label { padding: 0 4px 6px; color: var(--iv-text-faint); font-size: var(--iv-text-xs); font-weight: var(--iv-weight-medium); }
+.group-box { border: 1px solid var(--iv-border); border-radius: var(--iv-radius-card); background: var(--iv-bg-card); overflow: hidden; }
+.group-box .setting + .setting { border-top: 1px solid var(--iv-border); }
+.page .problem { margin-bottom: 24px; }
+.file-foot { margin-top: 24px; padding: 0 4px; color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+
+/* 2 · Window */
+.nav-head { display: flex; align-items: center; gap: 6px; height: var(--iv-list-head-height); padding: 0 8px 0 4px; flex: none; }
+.nav-head b { font-size: var(--iv-text-lg); font-weight: var(--iv-weight-semibold); }
+.nav { padding: 4px 8px; }
+.nav .row svg { color: var(--iv-text-faint); }
+.nav .row[data-selected] svg { color: var(--iv-text-muted); }
+.nav-foot { margin-top: auto; padding: 8px 12px 12px; border-top: 1px solid var(--iv-border); color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+.nav-foot kbd { font: inherit; }
+.section-page { flex: 1; overflow-y: auto; }
+.section-col { max-width: 720px; margin: 0 auto; padding: 20px 32px 64px; }
+.section-col h2 { margin: 0 0 4px; font-size: 16px; line-height: 24px; font-weight: var(--iv-weight-semibold); }
+.section-col .lede { margin: 0 0 16px; color: var(--iv-text-muted); }
+.flat .setting { padding: 16px 0; border-top: 1px solid var(--iv-border); }
+.flat .setting:last-child { border-bottom: 1px solid var(--iv-border); }
+.section-col .problem { margin-bottom: 20px; }
+
+/* 3 · Dialog */
+.backdrop { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; background: var(--iv-backdrop); animation: fade var(--iv-duration-base) var(--iv-ease-out); }
+.dialog { display: flex; flex-direction: column; width: 560px; max-height: min(640px, calc(100vh - 80px)); border: 1px solid var(--iv-border-strong); border-radius: var(--iv-radius-lg); background: var(--iv-bg-raised); box-shadow: var(--iv-shadow-overlay); transform-origin: center; animation: pop var(--iv-duration-base) var(--iv-ease-out); }
+.dialog-head { display: flex; align-items: center; gap: 8px; padding: 16px 16px 8px 20px; flex: none; }
+.dialog-head h2 { margin: 0; font-size: 16px; line-height: 24px; font-weight: var(--iv-weight-semibold); flex: 1; }
+.dialog-body { flex: 1; overflow-y: auto; padding: 0 20px 8px; }
+.dialog-body .group-label { padding: 16px 0 2px; }
+.dialog-body .setting { padding: 10px 0; }
+.dialog-body .setting + .setting { border-top: 1px solid var(--iv-border); }
+.dialog-body .problem { margin-top: 8px; }
+.dialog-foot { display: flex; align-items: center; gap: 8px; padding: 10px 12px 10px 20px; border-top: 1px solid var(--iv-border); flex: none; color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+@keyframes fade { from { opacity: 0; } }
+@keyframes pop { from { opacity: 0; transform: scale(0.97); } }
+@media (prefers-reduced-motion: reduce) { .backdrop, .dialog { animation: none; } }
+
+/* Harness chrome */
+.scenario { position: fixed; bottom: 30px; right: 12px; z-index: 2147483646; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(10, 10, 10, 0.82); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; }
+.scenario button { height: 24px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.55); cursor: pointer; }
+.scenario button[data-active] { background: rgba(255, 255, 255, 0.12); color: #fff; }
+.scenario .act { color: #fff; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2) inset; }
+.toast-cli { position: fixed; bottom: 68px; right: 12px; z-index: 2147483646; padding: 6px 10px; border-radius: 8px; background: rgba(10, 10, 10, 0.82); color: rgba(255,255,255,.8); font: 12px ui-monospace, Menlo, monospace; }
+
+.proto-picker {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 8px 24px rgba(0, 0, 0, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.proto-picker-highlight {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.proto-picker[data-ready] .proto-picker-highlight {
+  transition:
+    transform 250ms cubic-bezier(0.23, 1, 0.32, 1),
+    width 250ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .proto-picker[data-ready] .proto-picker-highlight { transition: none; }
+}
+.proto-picker-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    color 150ms ease-out,
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .proto-picker-item:hover {
+    color: rgba(255, 255, 255, 0.85);
+  }
+}
+.proto-picker-item:active {
+  transform: scale(0.97);
+}
+.proto-picker-item:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+.proto-picker-item[data-active] {
+  color: #fff;
+}
+.proto-picker-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.proto-picker-replay {
+  padding: 0 10px;
+  font-size: 14px;
+}
+.proto-picker[data-position="top"] {
+  bottom: auto;
+  top: 24px;
+}
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<div class="scenario" aria-label="Scenario">
+  <button data-scenario="normal">Normal</button>
+  <button data-scenario="broken">Broken file</button>
+  <button data-scenario="failing">Write fails</button>
+  <button data-scenario="closed">Closed (press ⌘,)</button>
+  <button class="act" data-run="cli">Run ivin settings set</button>
+</div>
+
+<nav class="proto-picker" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Tab</button>
+  <button class="proto-picker-item">Window</button>
+  <button class="proto-picker-item">Dialog</button>
+</nav>
+
+<script>
+const sv = (d, s = 16, w = 1.5) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`
+const I = {
+  claude: (s = 16) => `<svg class="claude" width="${s}" height="${s}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg>`,
+  panel: sv('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>'),
+  left: sv('<path d="m15 18-6-6 6-6"/>'),
+  right: sv('<path d="m9 18 6-6-6-6"/>'),
+  chev: sv('<path d="m9 18 6-6-6-6"/>', 12, 2),
+  chevDown: sv('<path d="m6 9 6 6 6-6"/>', 12, 2),
+  plus: sv('<path d="M12 5v14M5 12h14"/>'),
+  dots: sv('<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>'),
+  list: sv('<path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'),
+  folder: (s = 16) => sv('<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>', s),
+  file: (s = 14) => sv('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/>', s),
+  diff: (s = 16) => sv('<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M6 8.5V15a3 3 0 0 0 3 3h6.5M18 15.5V9a3 3 0 0 0-3-3H8.5"/>', s),
+  search: (s = 14) => sv('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', s),
+  eye: sv('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>', 14),
+  eyeOff: sv('<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3 3.9M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2"/>', 14),
+  collapse: sv('<path d="m7 15 5-5 5 5M7 20l5-5 5 5" transform="rotate(180 12 12)"/>', 14),
+  x: sv('<path d="M18 6 6 18M6 6l12 12"/>', 12, 2),
+  expand: sv('<path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>', 14),
+  split: sv('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/>', 14),
+  undo: sv('<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>', 14),
+  open: sv('<path d="M14 3h7v7M10 14 21 3M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"/>', 14),
+  alert: sv('<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>', 14, 2),
+  branch: sv('<circle cx="6" cy="6" r="2.5"/><circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="8" r="2.5"/><path d="M6 8.5v7M18 10.5c0 4-6 3-11 5.5"/>', 12),
+  wt: sv('<path d="M4 20V10l8-6 8 6v10"/><path d="M10 20v-6h4v6"/>', 12),
+  arrowUp: sv('<path d="m5 12 7-7 7 7M12 19V5"/>', 16, 2),
+  wrench: sv('<path d="M14.7 6.3a4 4 0 0 0 5 5L22 14l-8 8-2.3-2.3a4 4 0 0 0-5-5L4 12l8-8Z"/>', 14),
+}
+
+I.gear = sv('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>', 14)
+I.terminal = sv('<path d="m5 7 5 5-5 5M12 17h7"/>', 14)
+I.check = sv('<path d="M20 6 9 17l-5-5"/>', 14, 2)
+I.loader = sv('<path d="M12 3a9 9 0 1 0 9 9"/>', 14, 2)
+I.back = sv('<path d="M19 12H5M12 19l-7-7 7-7"/>', 16)
+I.tabs = sv('<rect x="3" y="5" width="18" height="15" rx="2"/><path d="M3 9h18M9 5v4"/>', 14)
+
+const creature = (hue, s = 20) => {
+  const p = ["00011000","00111100","01111110","11011011","11111111","00100100","01011010","10100101"]
+  let r = ""
+  p.forEach((row, y) => [...row].forEach((c, x) => { if (c === "1") r += `<rect x="${x}" y="${y}" width="1" height="1"/>` }))
+  return `<svg width="${s}" height="${s}" viewBox="0 0 8 8" shape-rendering="crispEdges" fill="var(--iv-project-hue-${hue})" aria-hidden="true">${r}</svg>`
+}
+
+// ---------- Data: labels and descriptions as they would live beside the schema ----------
+const FILE = "~/.ivin/settings.json"
+const SECTIONS = [
+  { id: "tabs", title: "Tabs", lede: "What happens when you close a session's tab.", icon: "tabs", settings: [
+    { path: "tabs.stopAgentOnClose", label: "Stop the agent when its tab closes", desc: "Closing the tab of a working session asks first, then stops its agent. Off, the agent keeps working with no tab open." },
+  ]},
+  { id: "worktrees", title: "Worktrees", lede: "Worktrees ivin made for your sessions.", icon: "branch", settings: [
+    { path: "worktrees.removeOnTabClose", label: "Remove a merged worktree when its tab closes", desc: "Once a session's branch is merged into origin, closing its last tab deletes its worktree. Off, worktrees stay until you remove them." },
+  ]},
+  { id: "cli", title: "Command line", lede: "Run ivin from your own terminal.", icon: "terminal", cli: true },
+]
+
+let S
+const fresh = (scenario) => ({
+  scenario,
+  open: scenario !== "closed",
+  values: { "tabs.stopAgentOnClose": true, "worktrees.removeOnTabClose": true },
+  errors: {},
+  saving: {},
+  changedBy: {},
+  flash: null,
+  section: "tabs",
+  cli: "missing",
+})
+let variant = 0
+let returnFocus = null
+
+// ---------- Pieces ----------
+const sw = (s) => {
+  const disabled = S.scenario === "broken"
+  return `<button class="switch" role="switch" aria-checked="${S.values[s.path]}" aria-label="${s.label}" data-path="${s.path}" ${disabled ? "disabled" : ""}></button>`
+}
+function setting(s, { key = false } = {}) {
+  const err = S.errors[s.path]
+  return `<div class="setting" data-row="${s.path}" ${S.flash === s.path ? "data-flash" : ""}>
+    <div class="text">
+      <div class="label">${s.label}</div>
+      <div class="desc">${s.desc}</div>
+      ${key ? `<div class="key">${s.path}</div>` : ""}
+      ${err ? `<div class="err" role="alert">${I.alert}<span>Could not save: ${FILE} is read-only.</span><button class="btn" data-retry="${s.path}">Retry</button></div>` : ""}
+      ${S.changedBy[s.path] ? `<div class="changed">Changed in ${FILE} just now.</div>` : ""}
+    </div>
+    <div class="control">${S.saving[s.path] ? `<span class="faint spin" style="margin-right:8px">${I.loader}</span>` : ""}${sw(s)}</div>
+  </div>`
+}
+function cliRow() {
+  const state = {
+    missing: `<div class="cli-state">Not installed. Your agents can run it; your shell cannot.</div>`,
+    installing: `<div class="cli-state"><span class="spin">${I.loader}</span>Installing…</div>`,
+    installed: `<div class="cli-state">${I.check}Installed at <span class="mono">/usr/local/bin/ivin</span></div>`,
+  }[S.cli]
+  const btn = S.cli === "installed"
+    ? `<button class="btn ghost" data-install>Reinstall</button>`
+    : `<button class="btn" data-install ${S.cli === "installing" ? "disabled" : ""}>Install</button>`
+  return `<div class="setting" data-row="cli">
+    <div class="text"><div class="label"><span class="mono">ivin</span> in your shell</div>
+    <div class="desc">Adds a link to ivin's command so a new terminal runs <span class="mono">ivin doctor</span> or <span class="mono">ivin settings</span>.</div>${state}</div>
+    <div class="control">${btn}</div>
+  </div>`
+}
+function problem() {
+  if (S.scenario !== "broken") return ""
+  return `<div class="problem" role="alert">${I.alert}<div><div class="what"><span class="mono">${FILE}</span> is not valid JSON: CommaExpected at line 4, column 3.</div>
+    <div class="next">Fix the file and this page updates as soon as it is valid. Until then ivin keeps the settings below, its last valid ones.</div>
+    <button class="btn" data-open-file>Open settings.json</button></div></div>`
+}
+const sectionBody = (sec, opts) => sec.cli ? cliRow() : sec.settings.map((s) => setting(s, opts)).join("")
+
+// ---------- Shell ----------
+function cardTop() {
+  return `<div class="card-top"><button class="icon-btn" title="Toggle sidebar">${I.panel}</button><span class="spacer"></span><button class="icon-btn" title="Back">${I.left}</button><button class="icon-btn" title="Forward">${I.right}</button></div>`
+}
+function rail() {
+  return `<div class="rail"><button class="rail-btn" data-selected title="ivin">${creature(0)}</button><button class="rail-btn" title="silbo">${creature(3)}</button><span class="spacer"></span><button class="icon-btn" title="Open folder">${I.folder()}</button><span class="dot" title="Connected"></span></div>`
+}
+function sessionsCard() {
+  return `<aside class="card">${cardTop()}<div class="card-body">${rail()}<div class="column">
+    <div class="list-head">${creature(0, 16)}<b>ivin</b><button class="icon-btn" title="New session">${I.plus}</button><button class="icon-btn" title="More">${I.dots}</button></div>
+    <div class="utabs"><button class="utab" aria-selected="true">Sessions</button><button class="utab" aria-selected="false">Files</button></div>
+    <div class="panel"><div class="caption">Sessions 2</div>
+      <button class="row" data-selected>${I.claude()}<span class="title">Add the settings page</span><span class="meta">4m</span></button>
+      <button class="row">${I.claude()}<span class="title">Fix the branch picker on detached HEAD</span><span class="meta">1h</span></button>
+    </div></div></div></aside>`
+}
+function titlebar(settingsTab) {
+  return `<div class="titlebar">
+    <button class="tab" ${settingsTab ? "" : "data-selected"} data-close-settings>${I.claude()}<span>Add the settings page</span></button>
+    <button class="tab">${I.claude()}<span>Fix the branch picker on detached HEAD</span></button>
+    ${settingsTab ? `<button class="tab" data-selected><span style="flex:none;color:var(--iv-text-muted)">${I.gear}</span><span>Settings</span><span class="x" data-close-settings title="Close ⌘W">${I.x}</span></button>` : ""}
+    <button class="icon-btn md" title="New session">${I.plus}</button></div>`
+}
+function chat() {
+  return `<div class="chat"><div class="transcript"><div class="tcol">
+    <div class="item"><div class="bubble">Add a settings page that shows the two settings and changes them through the same write as <span class="inline-code">ivin settings set</span>.</div></div>
+    <div class="item"><p>The page will read <span class="inline-code">setting.watch</span>, so a change made in the file or by the CLI shows at once, and write through <span class="inline-code">setting.set</span>, which keeps the file's comments.</p></div>
+  </div></div>
+  <div class="composer"><div class="surface"><textarea id="composer-field" placeholder="Message the agent…" rows="1"></textarea><div class="surface-row"><span>${I.claude(14)}</span><span class="send">${I.arrowUp}</span></div></div><div class="statusline"></div></div></div>`
+}
+
+// ---------- Variants ----------
+// 1 · Tab: settings open as a tab in the title bar, a centred page of grouped boxes.
+function vTab() {
+  if (!S.open) return `<div class="app">${sessionsCard()}<main class="main">${titlebar(false)}${chat()}</main></div>`
+  const page = `<div class="page" id="settings-root" tabindex="-1"><div class="page-col">
+    <div class="page-head"><h1>Settings</h1><span class="spacer"></span><button class="btn ghost" data-open-file>${I.file()}Open settings.json</button></div>
+    ${problem()}
+    ${SECTIONS.map((sec) => `<section class="group"><div class="group-label">${sec.title}</div><div class="group-box">${sectionBody(sec)}</div></section>`).join("")}
+    <div class="file-foot">Saved to <span class="mono">${FILE}</span> as you change them.</div>
+  </div></div>`
+  return `<div class="app">${sessionsCard()}<main class="main">${titlebar(true)}${page}</main></div>`
+}
+
+// 2 · Window: the sidebar turns into the settings' sections; one section at a time, with its file key.
+function vWindow() {
+  if (!S.open) return `<div class="app">${sessionsCard()}<main class="main">${titlebar(false)}${chat()}</main></div>`
+  const sec = SECTIONS.find((x) => x.id === S.section)
+  const nav = `<aside class="card">${cardTop()}<div class="column">
+    <div class="nav-head"><button class="icon-btn" data-close-settings title="Back to sessions Esc">${I.back}</button><b>Settings</b></div>
+    <div class="nav" role="tablist" aria-orientation="vertical">${SECTIONS.map((x) => `<button class="row" role="tab" aria-selected="${x.id === S.section}" ${x.id === S.section ? "data-selected" : ""} data-section="${x.id}">${I[x.icon] ? (typeof I[x.icon] === "function" ? I[x.icon]() : I[x.icon]) : ""}<span class="title">${x.title}</span></button>`).join("")}</div>
+    <div class="nav-foot">↑↓ section · Esc back</div>
+  </div></aside>`
+  const body = `<div class="section-page" id="settings-root" tabindex="-1"><div class="section-col">
+    ${problem()}
+    <h2>${sec.title}</h2><p class="lede">${sec.lede}</p>
+    <div class="flat">${sectionBody(sec, { key: true })}</div>
+    <div class="file-foot" style="display:flex;align-items:center;gap:8px;padding:0">Saved to <span class="mono">${FILE}</span> as you change them.<span class="spacer"></span><button class="btn ghost" data-open-file>${I.file()}Open settings.json</button></div>
+  </div></div>`
+  return `<div class="app">${nav}<main class="main"><div class="titlebar"></div>${body}</main></div>`
+}
+
+// 3 · Dialog: a modal over the window; one scroll, the file in the footer.
+function vDialog() {
+  const base = `<div class="app">${sessionsCard()}<main class="main">${titlebar(false)}${chat()}</main></div>`
+  if (!S.open) return base
+  const dialog = `<div class="backdrop" data-backdrop><div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title" id="settings-root" tabindex="-1">
+    <div class="dialog-head"><h2 id="dlg-title">Settings</h2><button class="icon-btn" data-close-settings title="Close Esc">${I.x}</button></div>
+    <div class="dialog-body">${problem()}
+      ${SECTIONS.map((sec) => `<div class="group-label">${sec.title}</div>${sectionBody(sec)}`).join("")}
+    </div>
+    <div class="dialog-foot"><span>Saved to <span class="mono">${FILE}</span> as you change them.</span><span class="spacer"></span><button class="btn ghost" data-open-file>${I.file()}Open settings.json</button></div>
+  </div></div>`
+  return base + dialog
+}
+
+const variants = [vTab, vWindow, vDialog]
+
+// ---------- Render and behaviour ----------
+const stage = document.getElementById("stage")
+function render(focusSel) {
+  const active = document.activeElement
+  const keep = active?.dataset?.path ? `[data-path="${active.dataset.path}"]` : active?.dataset?.section ? `[data-section="${active.dataset.section}"]` : null
+  stage.innerHTML = variants[variant]()
+  const target = focusSel ? stage.querySelector(focusSel) : keep ? stage.querySelector(keep) : null
+  target?.focus()
+}
+function openSettings() {
+  if (S.open) return
+  returnFocus = document.activeElement?.id || null
+  S.open = true
+  render("#settings-root")
+  const first = stage.querySelector("#settings-root .switch:not(:disabled), #settings-root [data-section]")
+  ;(first || stage.querySelector("#settings-root")).focus()
+}
+function closeSettings() {
+  if (!S.open) return
+  S.open = false
+  render(returnFocus ? `#${returnFocus}` : "#composer-field")
+}
+function write(path, value) {
+  S.values[path] = value
+  delete S.changedBy[path]
+  if (S.scenario === "failing" && !S.errors[path]?.retried) {
+    S.saving[path] = true
+    render()
+    setTimeout(() => { delete S.saving[path]; S.errors[path] = { retried: false }; render() }, 400)
+    return
+  }
+  delete S.errors[path]
+  render()
+}
+stage.addEventListener("click", (e) => {
+  const t = e.target.closest("button, [data-backdrop], [data-close-settings]")
+  if (!t) return
+  if (t.matches("[data-backdrop]") && e.target !== t) return
+  if (t.matches("[data-close-settings], [data-backdrop]")) { e.stopPropagation(); return closeSettings() }
+  if (t.matches(".switch")) return write(t.dataset.path, !S.values[t.dataset.path])
+  if (t.dataset.retry) { S.errors[t.dataset.retry].retried = true; return write(t.dataset.retry, S.values[t.dataset.retry]) }
+  if (t.dataset.section) { S.section = t.dataset.section; return render(`[data-section="${S.section}"]`) }
+  if (t.matches("[data-install]")) {
+    S.cli = "installing"; render()
+    return setTimeout(() => { S.cli = "installed"; render() }, 700)
+  }
+  if (t.matches("[data-open-file]")) {
+    t.textContent = "Opened in your editor"
+  }
+})
+document.addEventListener("keydown", (e) => {
+  if (e.metaKey && e.key === ",") { e.preventDefault(); return openSettings() }
+  if (e.key === "Escape" && S.open) { e.preventDefault(); return closeSettings() }
+  if (variant === 1 && S.open && e.target.dataset?.section && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+    e.preventDefault()
+    const i = SECTIONS.findIndex((x) => x.id === S.section)
+    S.section = SECTIONS[(i + (e.key === "ArrowDown" ? 1 : SECTIONS.length - 1)) % SECTIONS.length].id
+    render(`[data-section="${S.section}"]`)
+  }
+  // Keep Tab inside the dialog.
+  if (variant === 2 && S.open && e.key === "Tab") {
+    const f = [...stage.querySelectorAll(".dialog button:not(:disabled)")]
+    if (!f.length) return
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f.at(-1).focus() }
+    else if (!e.shiftKey && document.activeElement === f.at(-1)) { e.preventDefault(); f[0].focus() }
+  }
+})
+
+// "ivin settings set" from a terminal while the page is open.
+document.querySelector("[data-run]").addEventListener("click", () => {
+  const path = "tabs.stopAgentOnClose"
+  const value = !S.values[path]
+  const toast = document.createElement("div")
+  toast.className = "toast-cli"
+  toast.textContent = `$ ivin settings set ${path} ${value}`
+  document.body.append(toast)
+  setTimeout(() => toast.remove(), 1600)
+  if (S.scenario === "broken") return
+  S.values[path] = value
+  S.changedBy[path] = true
+  delete S.errors[path]
+  S.section = "tabs"
+  S.flash = path
+  render()
+  requestAnimationFrame(() => requestAnimationFrame(() => { S.flash = null; stage.querySelector(`[data-row="${path}"]`)?.removeAttribute("data-flash") }))
+})
+
+const scenarioBtns = [...document.querySelectorAll("[data-scenario]")]
+function setScenario(name) {
+  S = fresh(name)
+  scenarioBtns.forEach((b) => b.toggleAttribute("data-active", b.dataset.scenario === name))
+  const url = new URL(location); url.searchParams.set("s", name); history.replaceState(null, "", url)
+  render()
+}
+scenarioBtns.forEach((b) => b.addEventListener("click", () => setScenario(b.dataset.scenario)))
+
+// ---------- Picker wiring (PICKER.md, adapted to the state render) ----------
+const picker = document.querySelector(".proto-picker")
+const highlightEl = picker.querySelector(".proto-picker-highlight")
+const items = [...picker.querySelectorAll(".proto-picker-item:not(.proto-picker-replay)")]
+function moveHighlight() {
+  const el = items[variant]
+  highlightEl.style.width = el.offsetWidth + "px"
+  highlightEl.style.transform = `translateX(${el.offsetLeft}px)`
+}
+function setActive(i) {
+  if (i < 0 || i >= variants.length) return
+  variant = i
+  items.forEach((el, j) => {
+    el.toggleAttribute("data-active", j === i)
+    if (j === i) el.setAttribute("aria-current", "true")
+    else el.removeAttribute("aria-current")
+  })
+  moveHighlight()
+  const url = new URL(location)
+  url.searchParams.set("v", i + 1)
+  history.replaceState(null, "", url)
+  stage.innerHTML = ""
+  requestAnimationFrame(() => render())
+}
+items.forEach((el, i) => el.addEventListener("click", () => setActive(i)))
+window.addEventListener("resize", moveHighlight)
+document.addEventListener("keydown", (e) => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  const num = parseInt(e.key, 10)
+  if (num >= 1 && num <= variants.length) setActive(num - 1)
+  else if (e.key === "ArrowRight") setActive((variant + 1) % variants.length)
+  else if (e.key === "ArrowLeft") setActive((variant - 1 + variants.length) % variants.length)
+})
+const params = new URLSearchParams(location.search)
+const reqS = params.get("s")
+setScenario(scenarioBtns.some((b) => b.dataset.scenario === reqS) ? reqS : "normal")
+const requested = parseInt(params.get("v"), 10)
+setActive(requested >= 1 && requested <= variants.length ? requested - 1 : 0)
+requestAnimationFrame(() => requestAnimationFrame(() => picker.setAttribute("data-ready", "")))
+</script>
+</body>
+</html>
