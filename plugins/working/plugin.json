@@ -1,7 +1,0 @@
-{
-  "id": "working",
-  "name": "Working",
-  "version": "0.0.0",
-  "apiVersion": 0,
-  "ui": "ui.tsx"
-}

@@ -1,0 +1,13 @@
+{
+  "name": "@ivin/plugin-inactive-sessions",
+  "version": "0.0.0",
+  "private": true,
+  "peerDependencies": {
+    "@ivin/plugin-api": "^0"
+  },
+  "ivin": {
+    "id": "inactive-sessions",
+    "name": "Inactive sessions",
+    "ui": "src/ui.tsx"
+  }
+}
