@@ -8,7 +8,7 @@ import {
   parseTree,
   type ParseError,
   printParseErrorCode,
-} from "jsonc-parser"
+} from "jsonc-parser/lib/esm/main.js" // Its default UMD build breaks once bundled.
 
 type Refusal = Pick<SettingsFileInvalid, "reason" | "parseError">
 
