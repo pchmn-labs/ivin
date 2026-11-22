@@ -17,7 +17,7 @@ import {
   pnpmError,
   relativeLocalDependency,
 } from "../rules/dependencies.ts"
-import { PNPM_VERSION, runPnpm } from "./pnpm.ts"
+import { pnpmVersion, runPnpm } from "./pnpm.ts"
 
 export interface Installed {
   readonly folder: string
@@ -57,7 +57,7 @@ const assertNoRelativeLocalDependency = (dependencies: Dependencies) => {
   }
 }
 
-export const makePluginDependencies = (ivinHome: string) => {
+export const makePluginDependencies = (ivinHome: string, pnpmFolder: string) => {
   const depsFolder = join(ivinHome, "cache", "plugins", "deps")
   const installing = new Map<string, Promise<string>>()
 
@@ -68,7 +68,7 @@ export const makePluginDependencies = (ivinHome: string) => {
     try {
       await writeFile(join(scratch, "package.json"), installManifest(dependencies))
       await writeFile(join(scratch, LOCKFILE), lockfile)
-      const run = await runPnpm(ivinHome, scratch, ["install", "--frozen-lockfile"])
+      const run = await runPnpm(pnpmFolder, ivinHome, scratch, ["install", "--frozen-lockfile"])
       if (!run.ok) {
         const { code, message } = pnpmError(run.output)
         if (code === "ERR_PNPM_OUTDATED_LOCKFILE") throw new OutdatedLockfile()
@@ -103,7 +103,7 @@ export const makePluginDependencies = (ivinHome: string) => {
         throw new Error(`It has dependencies and no ${LOCKFILE}: run ivin plugin lock ${id}.`)
       }
       const key = createHash("sha256")
-        .update(`${PNPM_VERSION}\0${installManifest(dependencies)}\0${lockfile}`)
+        .update(`${await pnpmVersion(pnpmFolder)}\0${installManifest(dependencies)}\0${lockfile}`)
         .digest("hex")
       const pending = installing.get(key) ?? install(key, dependencies, lockfile)
       installing.set(key, pending)
@@ -126,7 +126,7 @@ export const makePluginDependencies = (ivinHome: string) => {
       try {
         await writeFile(join(scratch, "package.json"), installManifest(dependencies))
         await copyFile(join(pluginFolder, LOCKFILE), join(scratch, LOCKFILE)).catch(() => undefined)
-        const run = await runPnpm(ivinHome, scratch, ["install", "--lockfile-only"])
+        const run = await runPnpm(pnpmFolder, ivinHome, scratch, ["install", "--lockfile-only"])
         if (!run.ok) throw new Error(pnpmError(run.output).message)
         await copyFile(join(scratch, LOCKFILE), join(pluginFolder, LOCKFILE))
       } finally {

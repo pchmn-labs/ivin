@@ -34,7 +34,7 @@ export default {
     neverBundle: [/^@rolldown\/binding-/],
     onlyBundle: false,
   },
-  // `webp-codec.ts` reads these from `dist/wasm`, `fs-user-plugins.ts` the binding from `dist/native`, `pnpm.ts` pnpm from `dist/pnpm`.
+  // `webp-codec.ts` reads these from `dist/wasm`, `fs-user-plugins.ts` the binding from `dist/native`, the desktop app pnpm from `dist/pnpm`.
   copy: [
     { from: rolldownBinding, to: "dist/native", rename: "rolldown-binding.node" },
     { from: pnpmFolder, to: "dist" },

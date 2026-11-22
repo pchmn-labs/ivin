@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test"
 import { execFile } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
+import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { launchPackagedApp, makeTempDir } from "./launch-app.ts"
 import { startSession } from "./session-helpers.ts"
@@ -45,6 +46,9 @@ export const activate = defineUi((ctx) => ctx.slots.add("sidebar.bottom", Hello)
 // /usr/bin and /bin hold neither Node nor pnpm on the CI machines.
 const BARE_PATH = "/usr/bin:/bin"
 
+const readLog = async (userDataDir: string, id: string) =>
+  readFile(join(userDataDir, ".ivin/logs/plugins", `${id}.log`), "utf8").catch(() => "no log")
+
 const runIvin = (userDataDir: string, args: string[]) =>
   new Promise<{ code: number; output: string }>((resolve) => {
     execFile(
@@ -85,11 +89,17 @@ export const activate = defineUi((ctx) =>
   const app = await launchPackagedApp(userDataDir, { path: BARE_PATH })
   try {
     const window = await startSession(app)
-    expect(await runIvin(userDataDir, ["plugin", "lock", "shout"])).toMatchObject({ code: 0 })
+    const lock = await runIvin(userDataDir, ["plugin", "lock", "shout"])
+    expect(lock, lock.output).toMatchObject({ code: 0 })
 
     await window.reload()
 
-    await expect(window.getByText("HELLO FROM A DEPENDENCY")).toBeVisible()
+    await expect(window.getByText("HELLO FROM A DEPENDENCY"))
+      .toBeVisible()
+      .catch(async (error: Error) => {
+        // Why the plugin did not load, read once the wait is over.
+        throw new Error(`${error.message}\n\nPlugin log: ${await readLog(userDataDir, "shout")}`)
+      })
   } finally {
     await app.close()
   }

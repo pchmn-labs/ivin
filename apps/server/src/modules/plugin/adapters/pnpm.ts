@@ -1,20 +1,17 @@
 import { execFile } from "node:child_process"
-import { existsSync, readFileSync } from "node:fs"
+import { readFile } from "node:fs/promises"
 import { createRequire } from "node:module"
-import { dirname, join, sep } from "node:path"
+import { dirname, join } from "node:path"
 
-// Copied beside the server bundle by its build, outside the asar archive; the tests use node_modules.
-const shippedPnpm = join(import.meta.dirname, "pnpm")
+// The pnpm the tests run, when the desktop app gives the server none.
+export const installedPnpmFolder = () => dirname(createRequire(import.meta.url).resolve("pnpm"))
 
-const pnpmFolder = existsSync(shippedPnpm)
-  ? shippedPnpm.replace(`${sep}app.asar${sep}`, `${sep}app.asar.unpacked${sep}`)
-  : dirname(createRequire(import.meta.url).resolve("pnpm"))
-
-export const PNPM_VERSION = (
-  JSON.parse(readFileSync(join(pnpmFolder, "package.json"), "utf8")) as { version: string }
-).version
-
-const pnpmEntry = () => join(pnpmFolder, "bin", "pnpm.mjs")
+export const pnpmVersion = async (pnpmFolder: string) => {
+  const text = await readFile(join(pnpmFolder, "package.json"), "utf8").catch(() => {
+    throw new Error(`ivin's pnpm is missing from ${pnpmFolder}: reinstall ivin.`)
+  })
+  return (JSON.parse(text) as { version: string }).version
+}
 
 export interface PnpmRun {
   readonly ok: boolean
@@ -23,12 +20,17 @@ export interface PnpmRun {
 
 const TIMEOUT_MS = 5 * 60_000
 
-export const runPnpm = (ivinHome: string, cwd: string, args: ReadonlyArray<string>) =>
+export const runPnpm = (
+  pnpmFolder: string,
+  ivinHome: string,
+  cwd: string,
+  args: ReadonlyArray<string>,
+) =>
   new Promise<PnpmRun>((resolve) => {
     execFile(
       process.execPath,
       [
-        pnpmEntry(),
+        join(pnpmFolder, "bin", "pnpm.mjs"),
         ...args,
         "--ignore-workspace",
         "--ignore-scripts",

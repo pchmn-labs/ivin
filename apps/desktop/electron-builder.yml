@@ -9,6 +9,7 @@ files:
     filter: ["main.js", "preload.cjs"]
   - from: ../server/dist
     to: server
+    filter: ["**/*", "!pnpm/**"]
   - from: ../../packages/ui/dist
     to: renderer
   - package.json
@@ -17,16 +18,17 @@ extraResources:
     to: cli
   - from: ../server/skills
     to: skills
+  - from: ../server/dist/pnpm
+    to: pnpm
   - from: ../../plugins
     to: plugins
     filter: ["**/*", "!**/*.ts", "!**/*.tsx"]
-# Worker threads, native bindings and child processes cannot load from the asar; `webp-encoder.ts`, Rolldown's loader and `pnpm.ts` point here.
+# Worker threads and native bindings cannot load from the asar; `webp-encoder.ts` and Rolldown's loader point here.
 asarUnpack:
   - server/webp-worker.js
   - server/webp_enc*.js
   - server/wasm/**
   - server/native/**
-  - server/pnpm/**
 extraMetadata:
   main: main.js
 mac:

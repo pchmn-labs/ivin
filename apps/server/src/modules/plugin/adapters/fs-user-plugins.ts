@@ -16,6 +16,7 @@ import {
 import { join, relative, resolve, sep } from "node:path"
 import { PluginNotCompiled, UserPlugins, type PluginFolder } from "../usecases/user-plugins.ts"
 import { makePluginDependencies, type Installed } from "./plugin-dependencies.ts"
+import { installedPnpmFolder } from "./pnpm.ts"
 
 const HOST_PREFIX = "\0ivin-host:"
 // Bumped when a change to how plugins compile must invalidate the cached bundles.
@@ -147,8 +148,9 @@ const bundle = async (folder: string, entry: string, installed: Installed | null
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
-export const layerFsUserPlugins = (ivinHome: string) => {
-  const dependencies = makePluginDependencies(ivinHome)
+// `pnpmFolder` is the pnpm the desktop app ships; the tests run the one in node_modules.
+export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string) => {
+  const dependencies = makePluginDependencies(ivinHome, pnpmFolder ?? installedPnpmFolder())
   const pluginsFolder = join(ivinHome, "plugins")
   const cacheFolder = join(ivinHome, "cache", "plugins")
   const logFolder = join(ivinHome, "logs", "plugins")
