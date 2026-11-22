@@ -44,9 +44,11 @@ function Message({ children }: { children: string }) {
 function FolderTreeView({
   session,
   remembered,
+  collapseAll,
 }: {
   session: Session
   remembered: Map<string, FolderTree>
+  collapseAll: Set<() => void>
 }) {
   const listFolder = useListFolder()
   const openFile = useOpenFile()
@@ -79,6 +81,12 @@ function FolderTreeView({
   useEffect(() => {
     for (const path of ["", ...openOnMount]) load(path)
   }, [])
+
+  useEffect(() => {
+    const run = () => setTree((current) => ({ ...current, open: new Set() }))
+    collapseAll.add(run)
+    return () => void collapseAll.delete(run)
+  }, [collapseAll])
 
   const toggle = (path: string) => {
     const open = new Set(tree.open)
@@ -132,7 +140,13 @@ function FolderTreeView({
   )
 }
 
-function FilesPanel({ remembered }: { remembered: Map<string, FolderTree> }) {
+function FilesPanel({
+  remembered,
+  collapseAll,
+}: {
+  remembered: Map<string, FolderTree>
+  collapseAll: Set<() => void>
+}) {
   const sessionId = useSelectedSessionId()
   const session = useSession(sessionId ?? "")
   const { projects } = useProjects()
@@ -152,7 +166,12 @@ function FilesPanel({ remembered }: { remembered: Map<string, FolderTree> }) {
       {session.workingFolderDeleted ? (
         <Message>{FOLDER_DELETED}</Message>
       ) : (
-        <FolderTreeView key={treeKey(session)} session={session} remembered={remembered} />
+        <FolderTreeView
+          key={treeKey(session)}
+          session={session}
+          remembered={remembered}
+          collapseAll={collapseAll}
+        />
       )}
     </Stack>
   )
@@ -161,13 +180,23 @@ function FilesPanel({ remembered }: { remembered: Map<string, FolderTree> }) {
 export const activate = defineUi((ctx) => {
   // What each session had open, for as long as the plugin is active.
   const remembered = new Map<string, FolderTree>()
-  ctx.slots.add("sidebar.panel", () => <FilesPanel remembered={remembered} />, {
-    name: "panel",
-    title: "Files",
-  })
+  // The mounted tree's collapse, for the command to reach.
+  const collapseAll = new Set<() => void>()
+  ctx.slots.add(
+    "sidebar.panel",
+    () => <FilesPanel remembered={remembered} collapseAll={collapseAll} />,
+    {
+      name: "panel",
+      title: "Files",
+    },
+  )
   ctx.commands.register("files.show", {
     title: "Show files",
     run: () => ctx.sidebar.showPanel("panel"),
   })
   ctx.keybindings.add({ key: "mod+2", command: "files.show" })
+  ctx.commands.register("files.collapseAll", {
+    title: "Collapse all folders",
+    run: () => collapseAll.forEach((run) => run()),
+  })
 })

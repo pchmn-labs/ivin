@@ -31,6 +31,22 @@ export const coreKeybindings: ReadonlyArray<DefaultKeybinding> = [
   },
   { key: "mod+,", command: "settings.open", when: null, pluginId: null },
   { key: "escape", command: "settings.close", when: "settings", pluginId: null },
+  ...(
+    [
+      ["arrowup", "tree.focusPrevious"],
+      ["arrowdown", "tree.focusNext"],
+      ["arrowleft", "tree.collapseOrParent"],
+      ["arrowright", "tree.expandOrEnter"],
+      ["home", "tree.focusFirst"],
+      ["end", "tree.focusLast"],
+      ["pageup", "tree.focusPageUp"],
+      ["pagedown", "tree.focusPageDown"],
+      ["shift+arrowup", "tree.selectPrevious"],
+      ["shift+arrowdown", "tree.selectNext"],
+      ["enter", "tree.open"],
+      ["space", "tree.open"],
+    ] as const
+  ).map(([key, command]) => ({ key, command, when: "tree", pluginId: null })),
 ]
 
 export const defaultKeybindingsAtom = Atom.make<ReadonlyArray<DefaultKeybinding>>(

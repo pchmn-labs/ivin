@@ -285,7 +285,7 @@ export interface TreeRow {
   readonly expanded: boolean | null
 }
 
-// A virtualised tree, driven by the arrow keys; it shows the rows given, so opening a row is the
+// A virtualised tree with VS Code's explorer keys and selection; it shows the rows given, so opening a row is the
 // caller's: `onToggle` asks for it, and the rows given next include its children.
 export interface TreeProps {
   readonly label: string
