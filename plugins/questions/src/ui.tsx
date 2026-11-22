@@ -22,6 +22,7 @@ const progress = new Map<string, { drafts: ReadonlyArray<Draft>; step: number }>
 const KEYS = [
   { key: "↑↓", label: "Navigate" },
   { key: "Space", label: "Select" },
+  { key: "Esc", label: "Decline" },
 ]
 
 function QuestionRecord({ item }: SlotProps["transcript.question"]) {
@@ -127,12 +128,9 @@ function PendingSheet({
       }
       keys={KEYS}
       actions={
-        <>
+        <Stack direction="row" align="center" gap={3}>
           <Button variant="ghost" onClick={() => send(null)} disabled={sending}>
-            Decline{" "}
-            <Text as="span" size="xs" tone="faint">
-              Esc
-            </Text>
+            Decline
           </Button>
           {question.multiSelect ? (
             <>
@@ -148,7 +146,7 @@ function PendingSheet({
               </Button>
             </>
           ) : null}
-        </>
+        </Stack>
       }
       data-testid="question-sheet"
     >

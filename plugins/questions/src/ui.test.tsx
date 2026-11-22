@@ -125,6 +125,8 @@ test("an open question docks the question sheet on its first question", async ()
     .toHaveAttribute("aria-current", "step")
   await expect.element(page.getByText("Which test runner?")).toBeVisible()
   await expect.element(page.getByRole("radio", { name: /^Vitest/ })).toHaveFocus()
+  await expect.element(sheet().getByText("Esc", { exact: true })).toBeVisible()
+  await expect.element(sheet().getByRole("button", { name: "Decline" })).toBeVisible()
 })
 
 test("answered by keyboard only: a number, then ticks and Enter send every answer", async () => {
