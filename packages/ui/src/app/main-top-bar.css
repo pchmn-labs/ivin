@@ -1,13 +1,19 @@
 .iv-main-top-bar {
+  --iv-main-top-bar-tab-gap: calc((var(--iv-space-10) - var(--iv-tab-height)) / 2);
+
   display: flex;
   flex: none;
   align-items: center;
   gap: var(--iv-space-2);
   min-width: 0;
   height: var(--iv-space-10);
-  /* Less below, so the tabs end 8px above the content, like the gap between the cards. */
-  margin: var(--iv-space-2) 0
-    calc(var(--iv-space-2) - (var(--iv-space-10) - var(--iv-tab-height)) / 2);
+  /* Puts the tabs' edges level with the cards' edges, not the bar's. */
+  margin: calc(var(--iv-space-2) - var(--iv-main-top-bar-tab-gap)) 0;
   padding: 0 var(--iv-space-3) 0 var(--iv-space-2);
   -webkit-app-region: drag;
+}
+
+/* The traffic lights sit at a fixed height, so the bar holding them keeps its row centred on them. */
+.iv-main-top-bar:has(> .iv-shell-controls) {
+  margin-top: var(--iv-space-2);
 }
