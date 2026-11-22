@@ -66,6 +66,8 @@ const createWindow = async () => {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // A window never shown must still render for e2e and `shot`.
+      backgroundThrottling: !openInBackground,
     },
   })
   window.webContents.setWindowOpenHandler(({ url }) => {
@@ -77,7 +79,8 @@ const createWindow = async () => {
     event.preventDefault()
     openOutside(event.url)
   })
-  window.once("ready-to-show", () => (openInBackground ? window.showInactive() : window.show()))
+  // Any show call, even showInactive, raises the window above other apps.
+  if (!openInBackground) window.once("ready-to-show", () => window.show())
   if (devUrl) {
     // The Vite dev server may start after the window opens.
     window.webContents.on("did-fail-load", () => setTimeout(() => void window.loadURL(devUrl), 500))
