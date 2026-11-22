@@ -1,6 +1,7 @@
 import { memo, useRef, type ComponentProps, type ComponentType } from "react"
-import ReactMarkdown, { type UrlTransform } from "react-markdown"
+import ReactMarkdown, { type Components, type UrlTransform } from "react-markdown"
 import remarkGfm from "remark-gfm"
+import { CopyButton } from "../copy-button/copy-button.tsx"
 import "./markdown.css"
 import { extendBlocks, splitBlocks } from "../../../modules/transcript/rules/split-blocks.ts"
 
@@ -14,14 +15,25 @@ interface BlockProps {
   readonly linkRendering: MarkdownLinkRendering | undefined
 }
 
+function MarkdownCode({ node: _node, ...props }: ComponentProps<"pre"> & { node?: unknown }) {
+  const pre = useRef<HTMLPreElement>(null)
+  return (
+    <div className="iv-markdown__code">
+      <pre {...props} ref={pre} />
+      <CopyButton text={() => pre.current?.textContent ?? ""} />
+    </div>
+  )
+}
+
 const Block = memo(function Block({ source, linkRendering }: BlockProps) {
+  const components: Components = linkRendering
+    ? { pre: MarkdownCode, a: linkRendering.component }
+    : { pre: MarkdownCode }
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      {...(linkRendering && {
-        components: { a: linkRendering.component },
-        urlTransform: linkRendering.urlTransform,
-      })}
+      components={components}
+      {...(linkRendering && { urlTransform: linkRendering.urlTransform })}
     >
       {source}
     </ReactMarkdown>
