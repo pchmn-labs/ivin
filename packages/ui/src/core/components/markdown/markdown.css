@@ -13,7 +13,7 @@
 .iv-markdown p,
 .iv-markdown ul,
 .iv-markdown ol,
-.iv-markdown pre,
+.iv-markdown__code,
 .iv-markdown blockquote,
 .iv-markdown table {
   margin: 0 0 var(--iv-space-3);
@@ -59,7 +59,12 @@
   font-size: 0.92em;
 }
 
+.iv-markdown__code {
+  position: relative;
+}
+
 .iv-markdown pre {
+  margin: 0;
   max-height: 360px;
   padding: var(--iv-space-2) var(--iv-space-3);
   overflow: auto;
@@ -99,6 +104,9 @@
   padding: var(--iv-space-1) var(--iv-space-3);
   border: 1px solid var(--iv-border);
   text-align: left;
+  vertical-align: top;
+  /* `anywhere` would let the table squeeze a column down to one letter per line. */
+  overflow-wrap: break-word;
 }
 
 .iv-markdown th {

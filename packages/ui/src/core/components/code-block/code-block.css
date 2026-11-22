@@ -1,4 +1,8 @@
 .iv-code-block {
+  position: relative;
+}
+
+.iv-code-block__text {
   max-height: 240px;
   margin: 0;
   padding: var(--iv-space-2) var(--iv-space-3);

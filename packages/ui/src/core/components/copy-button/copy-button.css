@@ -1,0 +1,15 @@
+.iv-copy-button {
+  position: absolute;
+  top: var(--iv-space-1);
+  right: var(--iv-space-1);
+  border-radius: var(--iv-radius-sm);
+  background: var(--iv-bg-subtle);
+  opacity: 0;
+  transition: opacity var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+:hover > .iv-copy-button,
+:focus-within > .iv-copy-button,
+.iv-copy-button[data-copied] {
+  opacity: 1;
+}
