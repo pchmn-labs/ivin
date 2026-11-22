@@ -39,7 +39,13 @@ export function SessionLocation({
         </span>
       ) : (
         <>
-          <span className="iv-session-location__item">
+          <span
+            className={
+              labelHidden
+                ? "iv-session-location__item iv-session-location__item--icon-only"
+                : "iv-session-location__item"
+            }
+          >
             <Icon name={ICONS[location.kind]} size={12} />
             <span className={labelHidden ? "iv-visually-hidden" : "iv-session-location__name"}>
               {location.label}

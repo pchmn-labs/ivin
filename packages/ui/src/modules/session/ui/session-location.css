@@ -20,6 +20,10 @@
   min-width: 0;
 }
 
+.iv-session-location__item--icon-only {
+  flex-shrink: 0;
+}
+
 .iv-session-location__branch {
   overflow: hidden;
   font-family: var(--iv-font-mono);
