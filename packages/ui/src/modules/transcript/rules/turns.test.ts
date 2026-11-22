@@ -276,3 +276,35 @@ test("a turn whose steers come after its last call still times every item", () =
   expect(work.endAt - work.startAt).toBe(3000)
   expect(work.outcome).toBe("answered")
 })
+
+const question = (id: string, toolCallId: string): TranscriptItem => ({
+  ...base(id),
+  type: "question",
+  requestId: id,
+  toolCallId,
+  questions: [],
+  status: "answered",
+  answers: [],
+})
+
+test("the agent's questions replace the tool call that asked them, as a row of their own", () => {
+  const items = [user("u"), text("t1"), call("ask", "other"), question("q", "ask"), text("t2")]
+
+  expect(transcriptRows(items).map((row) => row.id)).toEqual(["u", "work:u", "t1", "q", "t2"])
+})
+
+test("questions asked before the turn's last tool call stay in its work, as a step's child", () => {
+  const items = [user("u"), text("t1"), call("ask", "other"), question("q", "ask"), call("c1")]
+  const rows = transcriptRows(items)
+  const work = rows.at(-1)
+  const ids = work?.type === "work" ? work.itemIds : []
+
+  expect(ids).toEqual(["t1", "q", "c1"])
+  expect(
+    turnWork(
+      "w",
+      items.filter((item) => ids.includes(item.id)),
+      items,
+    ).steps[0]!.children.map((child) => child.id),
+  ).toEqual(["q", "c1"])
+})

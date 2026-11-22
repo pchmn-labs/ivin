@@ -49,6 +49,7 @@ const makeServer = () => {
       lastActivityAt: at,
       archivedAt: null,
       lastImageNumber: 0,
+      waitingFor: null,
     })
   }
   server.folders.set(project, folder("src/", "logo.png", "bundle.js", "gone.ts", "README.md"))

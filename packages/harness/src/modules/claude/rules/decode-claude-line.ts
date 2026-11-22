@@ -175,9 +175,40 @@ const fromSystem = (line: unknown, subtype: string | undefined): HarnessOutput[]
   return status === "requesting" ? [{ type: "status", status: "running", raw: line }] : []
 }
 
+// The tool input of a `question_request`, which the response must send back with the answers.
+export const controlRequestInput = (raw: unknown): unknown =>
+  Schema.decodeUnknownSync(ControlRequestLine)(raw).request.input
+
+const QuestionsInput = Schema.Struct({
+  questions: Schema.Array(
+    Schema.Struct({
+      question: Schema.String,
+      header: Schema.String,
+      options: Schema.Array(Schema.Struct({ label: Schema.String, description: Schema.String })),
+      multiSelect: Schema.Boolean,
+    }),
+  ),
+})
+const isQuestionsInput = Schema.is(QuestionsInput)
+
 const fromControlRequest = (line: unknown): HarnessOutput[] => {
   const { request_id, request } = Schema.decodeUnknownSync(ControlRequestLine)(line)
   if (request.subtype !== "can_use_tool" || request.tool_name === undefined) return []
+  if (request.tool_name === "AskUserQuestion" && isQuestionsInput(request.input))
+    return [
+      {
+        type: "question_request",
+        requestId: request_id,
+        toolCallId: request.tool_use_id ?? null,
+        questions: request.input.questions.map(({ question, header, options, multiSelect }) => ({
+          question,
+          header,
+          options: options.map(({ label, description }) => ({ label, description })),
+          multiSelect,
+        })),
+        raw: line,
+      },
+    ]
   return [
     {
       type: "approval_request",

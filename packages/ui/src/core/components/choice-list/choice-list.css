@@ -1,0 +1,95 @@
+.iv-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.iv-choice-list__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px var(--iv-space-2);
+  border-radius: var(--iv-radius-md);
+  color: var(--iv-text);
+  cursor: default;
+  transition: background-color var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-choice-list__option:focus-visible {
+  outline-offset: -2px;
+}
+
+.iv-choice-list__option[data-cursor] {
+  background: var(--iv-bg-active);
+}
+
+.iv-choice-list__option:not([data-cursor]):hover {
+  background: var(--iv-bg-hover);
+}
+
+.iv-choice-list__option[aria-disabled="true"] {
+  opacity: var(--iv-opacity-disabled);
+}
+
+.iv-choice-list__mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--iv-text-faint);
+  border-radius: 50%;
+  color: var(--iv-accent-contrast);
+}
+
+.iv-choice-list[data-multiple] .iv-choice-list__mark {
+  border-radius: 4px;
+}
+
+.iv-choice-list__option[aria-checked="true"] .iv-choice-list__mark {
+  border-color: var(--iv-accent);
+  background: radial-gradient(circle, var(--iv-accent) 0 3.5px, transparent 4px);
+}
+
+.iv-choice-list[data-multiple] .iv-choice-list__option[aria-checked="true"] .iv-choice-list__mark {
+  background: var(--iv-accent);
+}
+
+.iv-choice-list__label {
+  flex: none;
+  font-weight: var(--iv-weight-medium);
+}
+
+.iv-choice-list__description {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv-choice-list__description[data-empty] {
+  color: var(--iv-text-faint);
+}
+
+.iv-choice-list__field {
+  flex: 1;
+  min-width: 0;
+}
+
+.iv-choice-list__field .iv-field--input {
+  height: var(--iv-control-sm);
+  font-size: var(--iv-text-sm);
+}
+
+.iv-choice-list__hint {
+  margin-left: auto;
+  padding-left: var(--iv-space-2);
+  color: var(--iv-text-faint);
+  font-family: var(--iv-font-sans);
+  font-size: var(--iv-text-xs);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--iv-weight-medium);
+}

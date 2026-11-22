@@ -26,5 +26,6 @@ export const makeTestSession = (
   lastActivityAt: DateTime.makeUnsafe(0),
   archivedAt: null,
   lastImageNumber: 0,
+  waitingFor: null,
   ...session,
 })

@@ -45,6 +45,7 @@ const setup = async (
     lastActivityAt: at,
     archivedAt: null,
     lastImageNumber: 0,
+    waitingFor: null,
   })
   server.openTab("s1")
   await render(

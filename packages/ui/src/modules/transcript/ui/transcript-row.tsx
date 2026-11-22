@@ -23,6 +23,8 @@ export function ItemSlot({ item, sessionId }: { item: TranscriptItem; sessionId:
   }
   if (item.type === "approval")
     return <Slot slot="transcript.approval" props={{ item, sessionId }} />
+  if (item.type === "question")
+    return <Slot slot="transcript.question" props={{ item, sessionId }} />
   if (item.type === "usage") return null
   return <Slot slot="transcript.message" props={{ item, sessionId }} />
 }

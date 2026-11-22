@@ -50,6 +50,7 @@ export type IconName =
   | "eye-slash"
   | "clock"
   | "diff"
+  | "question"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"
@@ -215,6 +216,8 @@ export interface ListSectionProps {
 export interface SessionMarkProps {
   readonly status: Session["status"]
   readonly harness: Session["harness"]
+  // Draws "?" in place of "!" on a session waiting on the agent's questions.
+  readonly waitingFor?: Session["waitingFor"]
 }
 
 // "now", "5 min", "3 d"…, kept current while shown.
@@ -240,9 +243,51 @@ export interface ActionSheetProps {
   readonly icon?: IconName
   readonly title: string
   readonly detail?: string
+  // On the right of the title row, such as `Steps`.
+  readonly aside?: ReactNode
   readonly hint?: string
+  // A footer: the key hints on the left, the actions on the right.
+  readonly keys?: ReadonlyArray<{ readonly key: string; readonly label: string }>
+  readonly actions?: ReactNode
   readonly children?: ReactNode
   readonly "data-testid"?: string
+}
+
+export interface StepsProps {
+  readonly label: string
+  readonly steps: ReadonlyArray<{ readonly label: string; readonly done: boolean }>
+  readonly current: number
+  readonly onSelect?: (index: number) => void
+}
+
+export interface ChoiceListProps {
+  readonly label: string
+  // Check boxes when true, radio buttons otherwise.
+  readonly multiple?: boolean
+  readonly options: ReadonlyArray<{
+    readonly id: string
+    readonly label: string
+    readonly description?: string
+  }>
+  readonly selected: ReadonlyArray<string>
+  readonly onSelectedChange: (selected: ReadonlyArray<string>) => void
+  // Enter, or a single choice picked by click or number; receives the selection it confirms.
+  readonly onSubmit: (selected: ReadonlyArray<string>) => void
+  readonly onEscape?: () => void
+  readonly onPrevious?: () => void
+  readonly onNext?: () => void
+  // A last option answered in the user's own words, selected under its `id`.
+  readonly other?: {
+    readonly id: string
+    readonly label: string
+    readonly placeholder: string
+    readonly text: string
+    readonly onTextChange: (text: string) => void
+  }
+  readonly disabled?: boolean
+  readonly keyboardSource?: (target: EventTarget | null) => boolean
+  /** Focuses the list on mount, unless a text field other than a keyboard source holds the focus. */
+  readonly autoFocus?: boolean
 }
 
 export interface OptionListProps {
@@ -383,6 +428,8 @@ export interface HostComponents {
   readonly Markdown: ComponentType<MarkdownProps>
   readonly ActionSheet: ComponentType<ActionSheetProps>
   readonly OptionList: ComponentType<OptionListProps>
+  readonly ChoiceList: ComponentType<ChoiceListProps>
+  readonly Steps: ComponentType<StepsProps>
   readonly ErrorMessage: ComponentType<ErrorMessageProps>
   readonly ListRow: ComponentType<ListRowProps>
   readonly ListSection: ComponentType<ListSectionProps>
@@ -417,6 +464,8 @@ export const StatusMark = hostComponent((c) => c.StatusMark)
 export const Markdown = hostComponent((c) => c.Markdown)
 export const ActionSheet = hostComponent((c) => c.ActionSheet)
 export const OptionList = hostComponent((c) => c.OptionList)
+export const ChoiceList = hostComponent((c) => c.ChoiceList)
+export const Steps = hostComponent((c) => c.Steps)
 export const ErrorMessage = hostComponent((c) => c.ErrorMessage)
 export const ListRow = hostComponent((c) => c.ListRow)
 export const ChangeList = hostComponent((c) => c.ChangeList)

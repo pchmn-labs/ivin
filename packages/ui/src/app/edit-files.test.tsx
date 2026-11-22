@@ -45,6 +45,7 @@ const makeServer = () => {
       lastActivityAt: at,
       archivedAt: null,
       lastImageNumber: 0,
+      waitingFor: null,
     })
   }
   server.folders.set(project, folder("README.md", "main.ts"))

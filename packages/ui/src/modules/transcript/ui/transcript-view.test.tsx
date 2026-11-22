@@ -84,6 +84,7 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
     lastActivityAt: at,
     archivedAt: null,
     lastImageNumber: 0,
+    waitingFor: null,
   })
 
   await render(

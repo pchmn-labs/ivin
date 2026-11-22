@@ -1,5 +1,6 @@
 import {
   demoApprovalScript,
+  demoQuestionScript,
   demoScript,
   demoShotScript,
   layerClaude,
@@ -92,6 +93,7 @@ const layerHarnesses = {
   claude: layerClaude,
   scripted: layerScripted(demoScript, { cycle: true }),
   "scripted-approval": layerScripted(demoApprovalScript),
+  "scripted-question": layerScripted(demoQuestionScript),
   "scripted-shot": layerScripted(demoShotScript),
 } as const
 if (!(harnessId in layerHarnesses)) {

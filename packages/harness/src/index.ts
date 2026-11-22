@@ -2,6 +2,8 @@ export {
   HarnessError,
   HarnessProvider,
   type ApprovalDecision,
+  type QuestionAnswers,
+  type RequestAnswer,
   type HarnessRun,
   type StartInput,
   type ToolActivity,
@@ -12,6 +14,7 @@ export {
 export {
   demoAnswer,
   demoApprovalScript,
+  demoQuestionScript,
   demoShotScript,
   demoScript,
   demoUsage,

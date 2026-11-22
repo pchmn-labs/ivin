@@ -39,6 +39,7 @@ import { defaultSettings, SettingsFileInvalid, type UserSettings } from "@ivin/c
 import type { ProjectTabs, SubView, TabSubViews } from "@ivin/contracts/tab"
 import type {
   ImageData,
+  QuestionAnswer,
   TranscriptItem,
   TranscriptItemChange,
   RunOption,
@@ -551,6 +552,7 @@ export const makeFakeServer = (
           lastActivityAt: at,
           archivedAt: null,
           lastImageNumber: 0,
+          waitingFor: null,
         }
         sessions.set(session.id, session)
         return session
@@ -767,6 +769,7 @@ export const makeFakeServer = (
             lastActivityAt: tick(),
             archivedAt: null,
             lastImageNumber: Math.max(session.lastImageNumber, ...sent.map((i) => i.number)),
+            waitingFor: null,
           }
           return saveSession(updated)
         }),
@@ -1023,6 +1026,29 @@ export const makeFakeServer = (
             ...item,
             decision: input.allow ? ("allow" as const) : ("deny" as const),
           }
+          items[index] = answered
+          Effect.runSync(PubSub.publish(pubsub, { type: "upsert", item: answered }))
+        }
+        const updated = { ...sessions.get(input.sessionId)!, status: "working" as const }
+        sessions.set(input.sessionId, updated)
+        return updated
+      }),
+    "session.answerQuestion": (input: {
+      sessionId: string
+      requestId: string
+      answers: ReadonlyArray<QuestionAnswer> | null
+    }) =>
+      Effect.sync(() => {
+        const items = itemsOf(input.sessionId)
+        const index = items.findIndex(
+          (i) => i.type === "question" && i.requestId === input.requestId,
+        )
+        const item = items[index]
+        if (item?.type === "question") {
+          const answered =
+            input.answers === null
+              ? { ...item, status: "declined" as const }
+              : { ...item, status: "answered" as const, answers: input.answers }
           items[index] = answered
           Effect.runSync(PubSub.publish(pubsub, { type: "upsert", item: answered }))
         }

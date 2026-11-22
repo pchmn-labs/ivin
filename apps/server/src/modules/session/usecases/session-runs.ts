@@ -1,9 +1,11 @@
 import {
   ApprovalNotOpen,
+  QuestionNotOpen,
   type RunOptions,
   type Session,
   type SessionStatus,
   type PendingMessage,
+  type WaitingFor,
 } from "@ivin/contracts/session"
 import type {
   HarnessDelta,
@@ -11,7 +13,13 @@ import type {
   HarnessOutput,
   ImageData,
 } from "@ivin/contracts/transcript"
-import { HarnessProvider, type ApprovalDecision, type HarnessError } from "@ivin/harness"
+import {
+  HarnessProvider,
+  type ApprovalDecision,
+  type HarnessError,
+  type QuestionAnswers,
+  type RequestAnswer,
+} from "@ivin/harness"
 import { Context, DateTime, Effect, Exit, Layer, Scope, Semaphore, Stream } from "effect"
 import { applyEvent, emptyItemState } from "../../transcript/rules/derive-items.ts"
 import {
@@ -60,6 +68,11 @@ export class SessionRuns extends Context.Service<
       session: Session,
       answer: ApprovalDecision,
     ) => Effect.Effect<void, ApprovalNotOpen>
+    // Fails with `QuestionNotOpen` when the questions are not pending; a harness failure fails the session.
+    readonly answerQuestion: (
+      session: Session,
+      answer: QuestionAnswers,
+    ) => Effect.Effect<void, QuestionNotOpen>
     // No-op with no run.
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
     // Stops the turn so the agent takes the pending messages as the next one; no-op without any.
@@ -80,8 +93,9 @@ interface ActiveRun {
   readonly turnStarted: Effect.Effect<void>
   readonly record: (event: HarnessEvent, id?: string) => Effect.Effect<void>
   readonly send: (message: UserMessage) => Effect.Effect<void, HarnessError>
-  readonly decide: (decision: ApprovalDecision) => Effect.Effect<void, ApprovalNotOpen>
-  readonly respond: (decision: ApprovalDecision) => Effect.Effect<void, HarnessError>
+  // False when no request of the answer's kind is open under its id.
+  readonly decide: (answer: RequestAnswer) => Effect.Effect<boolean>
+  readonly respond: (answer: RequestAnswer) => Effect.Effect<void, HarnessError>
   readonly interrupt: Effect.Effect<void>
   readonly fail: (error: HarnessError) => Effect.Effect<void>
   readonly end: Effect.Effect<void>
@@ -110,9 +124,9 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
       ),
     )
 
-    const setStatus = (sessionId: string, status: SessionStatus) =>
+    const setStatus = (sessionId: string, status: SessionStatus, waitingFor: WaitingFor = null) =>
       DateTime.now.pipe(
-        Effect.flatMap((at) => sessions.setStatus(sessionId, status, at)),
+        Effect.flatMap((at) => sessions.setStatus(sessionId, status, at, waitingFor)),
         Effect.andThen(sessionFeed.publish(sessionId)),
       )
 
@@ -164,30 +178,39 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
           writing.withPermits(1)(
             write(event, id).pipe(
               Effect.andThen(
-                event.type === "approval_request" ? setStatus(session.id, "waiting") : Effect.void,
+                event.type === "approval_request"
+                  ? setStatus(session.id, "waiting", "approval")
+                  : event.type === "question_request"
+                    ? setStatus(session.id, "waiting", "question")
+                    : Effect.void,
               ),
             ),
           )
 
         // Check, decision and status share one permit so a turn-ending idle cannot land between them.
-        const decide = (decision: ApprovalDecision) =>
+        const decide = (answer: RequestAnswer) =>
           writing.withPermits(1)(
             Effect.gen(function* () {
-              if (!itemState.openApprovals.has(decision.requestId)) {
-                return yield* new ApprovalNotOpen({
-                  sessionId: session.id,
-                  requestId: decision.requestId,
-                })
-              }
-              yield* write({ type: "approval_decision", ...decision, raw: null })
-              yield* setStatus(session.id, itemState.openApprovals.size > 0 ? "waiting" : "working")
+              const { requestId } = answer
+              const kind = "allow" in answer ? "approval" : "question"
+              if (itemState.openRequests.get(requestId)?.type !== kind) return false
+              yield* write(
+                "allow" in answer
+                  ? { type: "approval_decision", requestId, allow: answer.allow, raw: null }
+                  : { type: "question_answer", requestId, answers: answer.answers, raw: null },
+              )
+              const stillOpen = [...itemState.openRequests.values()].at(-1)
+              yield* stillOpen === undefined
+                ? setStatus(session.id, "working")
+                : setStatus(session.id, "waiting", stillOpen.type)
+              return true
             }),
           )
 
         const turnStatus = (status: "running" | "idle") =>
           writing.withPermits(1)(
             Effect.suspend(() =>
-              status === "running" && itemState.openApprovals.size > 0
+              status === "running" && itemState.openRequests.size > 0
                 ? Effect.void
                 : setStatus(session.id, status === "idle" ? "idle" : "working"),
             ),
@@ -353,6 +376,19 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
         }),
       )
 
+    const answerRequest = <E>(session: Session, answer: RequestAnswer, notOpen: E) =>
+      Effect.gen(function* () {
+        const run = runs.get(session.id)
+        if (!run || !(yield* run.decide(answer))) return yield* Effect.fail(notOpen)
+        yield* run
+          .respond(answer)
+          .pipe(
+            Effect.catchTag("HarnessError", (error) =>
+              run.end.pipe(Effect.andThen(run.fail(error))),
+            ),
+          )
+      })
+
     return {
       send: (session, message) =>
         Effect.gen(function* () {
@@ -383,23 +419,17 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             )
         }),
       answerApproval: (session, answer) =>
-        Effect.gen(function* () {
-          const run = runs.get(session.id)
-          if (!run) {
-            return yield* new ApprovalNotOpen({
-              sessionId: session.id,
-              requestId: answer.requestId,
-            })
-          }
-          yield* run.decide(answer)
-          yield* run
-            .respond(answer)
-            .pipe(
-              Effect.catchTag("HarnessError", (error) =>
-                run.end.pipe(Effect.andThen(run.fail(error))),
-              ),
-            )
-        }),
+        answerRequest(
+          session,
+          answer,
+          new ApprovalNotOpen({ sessionId: session.id, requestId: answer.requestId }),
+        ),
+      answerQuestion: (session, answer) =>
+        answerRequest(
+          session,
+          answer,
+          new QuestionNotOpen({ sessionId: session.id, requestId: answer.requestId }),
+        ),
       interrupt: (sessionId) =>
         Effect.gen(function* () {
           const run = runs.get(sessionId)

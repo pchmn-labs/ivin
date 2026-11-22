@@ -19,7 +19,7 @@ import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Settings } from "@ivin/contracts/setting"
 import type { Tab } from "@ivin/contracts/tab"
-import type { TranscriptItem } from "@ivin/contracts/transcript"
+import type { Question, QuestionAnswer, TranscriptItem } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
 import type {
   ActionFailure,
@@ -55,6 +55,8 @@ export type MessageItem = Extract<TranscriptItem, { type: "message" }>
 export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
 export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 export type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
+export type QuestionItem = Extract<TranscriptItem, { type: "question" }>
+export type { Question, QuestionAnswer }
 export type ErrorItem = Extract<TranscriptItem, { type: "error" }>
 export type InterruptionItem = Extract<TranscriptItem, { type: "interruption" }>
 export type WorkingFolderItem = Extract<TranscriptItem, { type: "working_folder" }>
@@ -71,6 +73,7 @@ export interface SlotProps {
   "transcript.message": { readonly item: MessageSlotItem; readonly sessionId: string }
   "transcript.toolCall": { readonly item: ToolCallItem; readonly sessionId: string }
   "transcript.approval": { readonly item: ApprovalItem; readonly sessionId: string }
+  "transcript.question": { readonly item: QuestionItem; readonly sessionId: string }
   "composer.status": { readonly sessionId: string }
   "composer.above": {
     readonly session: Session
@@ -172,6 +175,7 @@ export const useTranscript = (sessionId: string) => useHost().useTranscript(sess
 export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
   useHost().useAnnotations(sessionId, kind) as ReadonlyArray<AnnotationOf<K>>
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
+export const useAnswerQuestion = (sessionId: string) => useHost().useAnswerQuestion(sessionId)
 export const useSessionActions = (session: Session) => useHost().useSessionActions(session)
 export const useListFolder = () => useHost().useListFolder()
 export const useOpenFile = () => useHost().useOpenFile()
@@ -188,3 +192,4 @@ export const useDiffOnScreen = (sessionId: string) => useHost().useDiffOnScreen(
 export const useSettings = () => useHost().useSettings()
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"
+export { pendingQuestion } from "./pending-question.ts"

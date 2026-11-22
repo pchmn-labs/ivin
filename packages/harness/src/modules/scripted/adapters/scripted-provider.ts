@@ -2,10 +2,10 @@ import type { HarnessRunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
 import { Cause, type Duration, Effect, Layer, Queue, Stream } from "effect"
 import {
-  type ApprovalDecision,
   HarnessError,
   HarnessProvider,
   type HarnessRun,
+  type RequestAnswer,
   type StartInput,
 } from "../../../shared/harness-provider.ts"
 import { toolActivity } from "../../claude/rules/tool-activity.ts"
@@ -44,7 +44,9 @@ const isRead = (element: ScriptedElement): element is ScriptedRead =>
   "_tag" in element && element._tag === "ScriptedRead"
 
 const isPause = (element: ScriptedElement) =>
-  !isFailure(element) && !isRead(element) && element.type === "approval_request"
+  !isFailure(element) &&
+  !isRead(element) &&
+  (element.type === "approval_request" || element.type === "question_request")
 
 const EVENT_BUFFER = 64
 
@@ -57,7 +59,7 @@ export interface ScriptedOptions {
   readonly closeDelay?: Duration.Input
   readonly startFailure?: string
   readonly starts?: StartInput[]
-  readonly responded?: ApprovalDecision[]
+  readonly responded?: RequestAnswer[]
   // Announces a provider session id on start, as an adapter does when it learns one.
   readonly reportSession?: boolean
   readonly runOptions?: HarnessRunOptions
@@ -174,13 +176,13 @@ export const layerScripted = (
                 waiting.push(id)
                 return Effect.void
               }),
-            respond: (decision) =>
+            respond: (answer) =>
               Effect.suspend(() => {
                 if (paused === null)
                   return Effect.fail(
                     new HarnessError({ message: "The scripted harness has no paused turn" }),
                   )
-                responded.push(decision)
+                responded.push(answer)
                 return play(paused)
               }),
             interrupt: Effect.suspend(() => {

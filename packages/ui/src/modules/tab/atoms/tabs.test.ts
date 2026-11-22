@@ -159,6 +159,7 @@ const seeded = () => {
       lastActivityAt: at,
       archivedAt: null,
       lastImageNumber: 0,
+      waitingFor: null,
     })
     server.openTab(id)
   }

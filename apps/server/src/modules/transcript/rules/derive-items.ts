@@ -3,17 +3,30 @@ import type { ToolKind, TranscriptEvent, TranscriptItem } from "@ivin/contracts/
 type MessageItem = Extract<TranscriptItem, { type: "message" }>
 type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
+type QuestionItem = Extract<TranscriptItem, { type: "question" }>
 
 export interface ItemState {
   readonly openMessage: MessageItem | null
   readonly openToolCalls: ReadonlyMap<string, ToolCallItem>
-  readonly openApprovals: ReadonlyMap<string, ApprovalItem>
+  readonly openRequests: ReadonlyMap<string, ApprovalItem | QuestionItem>
 }
 
 export const emptyItemState: ItemState = {
   openMessage: null,
   openToolCalls: new Map(),
-  openApprovals: new Map(),
+  openRequests: new Map(),
+}
+
+const openRequest = (state: ItemState, item: ApprovalItem | QuestionItem): ItemState => ({
+  ...state,
+  openMessage: null,
+  openRequests: new Map(state.openRequests).set(item.requestId, item),
+})
+
+const closeRequest = (state: ItemState, requestId: string): ItemState => {
+  const openRequests = new Map(state.openRequests)
+  openRequests.delete(requestId)
+  return { ...state, openRequests }
 }
 
 export const applyEvent = (
@@ -92,16 +105,34 @@ export const applyEvent = (
         input: event.input,
         decision: null,
       }
-      const openApprovals = new Map(state.openApprovals).set(event.requestId, item)
-      return { state: { ...state, openMessage: null, openApprovals }, item }
+      return { state: openRequest(state, item), item }
     }
     case "approval_decision": {
-      const request = state.openApprovals.get(event.requestId)
-      if (!request) return { state, item: null }
+      const request = state.openRequests.get(event.requestId)
+      if (request?.type !== "approval") return { state, item: null }
       const item: ApprovalItem = { ...request, decision: event.allow ? "allow" : "deny" }
-      const openApprovals = new Map(state.openApprovals)
-      openApprovals.delete(event.requestId)
-      return { state: { ...state, openApprovals }, item }
+      return { state: closeRequest(state, event.requestId), item }
+    }
+    case "question_request": {
+      const item: QuestionItem = {
+        ...base,
+        type: "question",
+        requestId: event.requestId,
+        toolCallId: event.toolCallId,
+        questions: event.questions,
+        status: "open",
+        answers: [],
+      }
+      return { state: openRequest(state, item), item }
+    }
+    case "question_answer": {
+      const request = state.openRequests.get(event.requestId)
+      if (request?.type !== "question") return { state, item: null }
+      const item: QuestionItem =
+        event.answers === null
+          ? { ...request, status: "declined" }
+          : { ...request, status: "answered", answers: event.answers }
+      return { state: closeRequest(state, event.requestId), item }
     }
     case "usage": {
       const item: TranscriptItem = {

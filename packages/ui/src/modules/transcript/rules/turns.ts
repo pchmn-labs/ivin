@@ -22,9 +22,12 @@ const isUserMessage = (item: TranscriptItem) =>
 
 // Items before the first user message are a turn cut by paging.
 // The last turn gets a work row before its first tool call, for the line that says the agent works.
-export const transcriptRows = (items: ReadonlyArray<TranscriptItem>): TranscriptRow[] => {
+export const transcriptRows = (all: ReadonlyArray<TranscriptItem>): TranscriptRow[] => {
   const rows: TranscriptRow[] = []
   const turns: TranscriptItem[][] = []
+  // The agent's questions show in place of the tool call that asked them.
+  const asked = new Set(all.flatMap((item) => (item.type === "question" ? [item.toolCallId] : [])))
+  const items = all.filter((item) => item.type !== "tool_call" || !asked.has(item.toolCallId))
   for (const item of items) {
     if (isUserMessage(item) || turns.length === 0) turns.push([item])
     else turns.at(-1)!.push(item)

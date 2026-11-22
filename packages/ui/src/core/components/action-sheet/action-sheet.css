@@ -37,6 +37,10 @@
   color: var(--iv-attention);
 }
 
+.iv-action-sheet[data-tone="attention"] .iv-action-sheet__head .iv-icon {
+  color: var(--iv-attention);
+}
+
 .iv-action-sheet[data-tone="danger"] .iv-action-sheet__title,
 .iv-action-sheet[data-tone="danger"] .iv-action-sheet__head .iv-icon {
   color: var(--iv-danger);
@@ -59,6 +63,38 @@
   padding-left: var(--iv-space-1);
   color: var(--iv-text-faint);
   font-size: var(--iv-text-xs);
+}
+
+.iv-action-sheet__aside {
+  align-self: center;
+  margin-left: auto;
+  font-weight: var(--iv-weight-regular);
+}
+
+.iv-action-sheet__foot {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  margin-top: var(--iv-space-2);
+  padding-left: var(--iv-space-1);
+}
+
+.iv-action-sheet__keys {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: var(--iv-space-3);
+  min-width: 0;
+  margin: 0;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}
+
+.iv-action-sheet__key kbd {
+  margin-right: var(--iv-space-1);
+  color: var(--iv-text-muted);
+  font-family: var(--iv-font-sans);
+  font-weight: var(--iv-weight-medium);
 }
 
 @keyframes iv-sheet-in {

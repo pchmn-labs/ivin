@@ -25,7 +25,13 @@ function InactiveSession({ session }: { session: Session }) {
       data-testid="inactive-session"
       attention={session.status === "waiting"}
       onSelect={() => openTab(session.id)}
-      leading={<SessionMark status={session.status} harness={session.harness} />}
+      leading={
+        <SessionMark
+          status={session.status}
+          waitingFor={session.waitingFor}
+          harness={session.harness}
+        />
+      }
       title={session.title}
       meta={<RelativeTime at={session.lastActivityAt} />}
       actions={

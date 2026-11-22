@@ -192,6 +192,10 @@ export const migrations: readonly Migration[] = [
     ALTER TABLE sessions ADD COLUMN pending_messages TEXT NOT NULL DEFAULT '[]';
     ALTER TABLE sessions ADD COLUMN unread_messages TEXT NOT NULL DEFAULT '[]'`,
   },
+  {
+    version: 20,
+    sql: "ALTER TABLE sessions ADD COLUMN waiting_for TEXT",
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>
