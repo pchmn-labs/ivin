@@ -1,5 +1,5 @@
 .iv-session-mark {
-  --iv-mark-badge-size: 10px;
+  --iv-mark-overlay-size: 10px;
 
   position: relative;
   display: grid;
@@ -10,16 +10,16 @@
 }
 
 .iv-session-mark[data-status="waiting"] {
-  --iv-mark-badge-size: 11px;
+  --iv-mark-overlay-size: 11px;
 }
 
 .iv-session-mark:not([data-status="idle"]) > .iv-harness-mark {
-  /* Only alpha counts in a mask: the hole under the badge shows whatever background the row has. */
+  /* Only alpha counts in a mask. */
   mask-image: radial-gradient(
-    circle at calc(100% + 4px - var(--iv-mark-badge-size) / 2)
-      calc(100% + 4px - var(--iv-mark-badge-size) / 2),
-    transparent calc(var(--iv-mark-badge-size) / 2),
-    var(--iv-bg) calc(var(--iv-mark-badge-size) / 2 + 0.5px)
+    circle at calc(100% + 4px - var(--iv-mark-overlay-size) / 2)
+      calc(100% + 4px - var(--iv-mark-overlay-size) / 2),
+    transparent calc(var(--iv-mark-overlay-size) / 2),
+    var(--iv-bg) calc(var(--iv-mark-overlay-size) / 2 + 0.5px)
   );
 }
 
@@ -28,8 +28,8 @@
   right: -4px;
   bottom: -4px;
   display: none;
-  width: var(--iv-mark-badge-size);
-  height: var(--iv-mark-badge-size);
+  width: var(--iv-mark-overlay-size);
+  height: var(--iv-mark-overlay-size);
   border-radius: 50%;
   line-height: 0;
 }
