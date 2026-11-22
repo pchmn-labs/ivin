@@ -4,14 +4,12 @@ import { Effect, Stream } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { isWithin } from "../rules/folder-path.ts"
-import { ancestorsOf, isGitStateChange, isUnderGit } from "../rules/watched-paths.ts"
+import { ancestorsOf, isGitStateChange, isIgnoreFile, isUnderGit } from "../rules/watched-paths.ts"
 import { FolderReader } from "./folder-reader.ts"
 import { SharedFolderWatch } from "./shared-folder-watch.ts"
 
 const BATCH_WINDOW = "100 millis"
 const BATCH_SIZE = 50_000
-
-const isIgnoreFile = (path: string) => path === ".git/info/exclude" || path.endsWith(".gitignore")
 
 export const watchFolder = (sessionId: string) =>
   Stream.unwrap(

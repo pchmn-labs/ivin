@@ -4,6 +4,7 @@ import { FolderWatcher, type FolderWatchFailed } from "./folder-watcher.ts"
 interface Watch {
   readers: number
   ended: boolean
+  // null ends the stream.
   readonly paths: PubSub.PubSub<string | null>
   readonly scope: Scope.Closeable
 }
@@ -11,7 +12,7 @@ interface Watch {
 export class SharedFolderWatch extends Context.Service<
   SharedFolderWatch,
   {
-    // One watcher per folder, opened with the first reader and closed with the last; null ends the stream.
+    // One watcher per folder, opened with the first reader and closed with the last.
     readonly subscribe: (
       folder: string,
     ) => Effect.Effect<Stream.Stream<string>, FolderWatchFailed, Scope.Scope>

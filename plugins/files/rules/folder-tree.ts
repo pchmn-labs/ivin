@@ -1,4 +1,5 @@
 import type { FolderListing } from "@ivin/plugin-api/ui"
+import { parentOf } from "./paths.ts"
 
 export type FolderState = { readonly kind: "loading" } | FolderListing
 
@@ -6,8 +7,6 @@ export interface FolderTree {
   readonly open: ReadonlySet<string>
   readonly folders: ReadonlyMap<string, FolderState>
 }
-
-const parentOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf("/")))
 
 const isUnder = (folder: string, path: string) =>
   folder === "" ? path !== "" : path.startsWith(`${folder}/`)

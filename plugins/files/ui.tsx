@@ -33,11 +33,13 @@ import {
   type FolderTree,
 } from "./rules/folder-tree.ts"
 import { gitMarks } from "./rules/git-marks.ts"
+import { ancestorsOf, nameOf, parentOf } from "./rules/paths.ts"
 import { rankFiles } from "./rules/rank-files.ts"
 import { treeRows } from "./rules/tree-rows.ts"
 
 const GO_TO_FILE_LIMIT = 50
-const LIST_TRUNCATED = "Only the first 50,000 files of this folder are searched."
+const LIST_TRUNCATED =
+  "This folder holds too many files to search them all, so only the first ones are searched."
 
 interface SessionView {
   readonly tree: FolderTree
@@ -58,16 +60,6 @@ interface PluginState {
 
 // A session moved to another working folder starts a new tree.
 const treeKey = (session: Session) => `${session.id}\n${session.workingFolder}`
-
-const parentOf = (path: string) => path.slice(0, Math.max(0, path.lastIndexOf("/")))
-const nameOf = (path: string) => path.slice(path.lastIndexOf("/") + 1)
-
-const ancestorsOf = (path: string) => {
-  const folders: string[] = []
-  for (let folder = parentOf(path); folder !== ""; folder = parentOf(folder))
-    folders.unshift(folder)
-  return folders
-}
 
 const FOLDER_DELETED = "This session's working folder was deleted, so it has no files to show."
 
