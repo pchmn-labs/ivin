@@ -1,5 +1,5 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { settingSections, type SettingSection } from "@ivin/contracts/setting"
+import type { SettingSection } from "@ivin/contracts/setting"
 import { useId } from "react"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Switch } from "../../../core/components/switch/switch.tsx"
@@ -7,6 +7,8 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { setSettingOf, shownSettingOf } from "../atoms/set-setting.ts"
 import { settingsSectionAtom } from "../atoms/settings-page.ts"
 import { settingsProblemAtom } from "../atoms/settings.ts"
+import { settingsPageSections } from "../rules/settings-page-sections.ts"
+import { CommandLineSection } from "./command-line-section.tsx"
 import { SettingsFileProblem } from "./settings-file-problem.tsx"
 import "./settings-page.css"
 
@@ -50,7 +52,7 @@ function SettingRow({
 export function SettingsPage() {
   const selected = useAtomValue(settingsSectionAtom)
   const problem = useAtomValue(settingsProblemAtom)
-  const section = settingSections.find((s) => s.key === selected) ?? settingSections[0]!
+  const section = settingsPageSections.find((s) => s.key === selected) ?? settingsPageSections[0]
   return (
     <div className="iv-settings-page">
       <section className="iv-settings-page__column" aria-labelledby="iv-settings-page-title">
@@ -60,9 +62,13 @@ export function SettingsPage() {
         </h2>
         <Text tone="muted">{section.description}</Text>
         <ul className="iv-settings-page__list">
-          {section.settings.map((setting) => (
-            <SettingRow key={setting.path} setting={setting} disabled={problem !== null} />
-          ))}
+          {section.key === "commandLine" ? (
+            <CommandLineSection />
+          ) : (
+            section.settings.map((setting) => (
+              <SettingRow key={setting.path} setting={setting} disabled={problem !== null} />
+            ))
+          )}
         </ul>
       </section>
     </div>

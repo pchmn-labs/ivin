@@ -1,4 +1,5 @@
 import { AnnotationRpcs } from "./annotation.ts"
+import { CliRpcs } from "./cli.ts"
 import { FileRpcs } from "./file.ts"
 import { KeybindingRpcs } from "./keybinding.ts"
 import { LogRpcs } from "./log.ts"
@@ -12,6 +13,7 @@ import { WorktreeRpcs } from "./worktree.ts"
 
 export const Rpcs = ServerRpcs.merge(
   AnnotationRpcs,
+  CliRpcs,
   FileRpcs,
   KeybindingRpcs,
   LogRpcs,
