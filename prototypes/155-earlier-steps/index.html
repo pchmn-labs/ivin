@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en" data-theme="forest-dark">
+<head>
+<meta charset="utf-8" />
+<title>#155 — Earlier steps and calls in a working turn</title>
+<link rel="stylesheet" href="../../packages/ui/src/core/theme/tokens.css" />
+<link rel="stylesheet" href="../../packages/ui/src/core/theme/base.css" />
+<style>
+body { overflow: hidden; }
+button { color: inherit; font: inherit; }
+svg { flex: none; display: block; }
+.faint { color: var(--iv-text-faint); }
+:focus-visible { outline: 2px solid var(--iv-focus-ring); outline-offset: 2px; }
+/* Re-rendered on every tick: a negative delay keeps each loop in phase with the clock. */
+.spin { animation: spin var(--iv-duration-spin) linear infinite; animation-delay: var(--spin-delay); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Main area, as shipped */
+.main { display: flex; flex-direction: column; height: 100vh; min-width: 0; }
+.titlebar { display: flex; align-items: center; gap: 4px; height: 40px; margin-top: 8px; padding: 0 12px 0 80px; flex: none; }
+.stab { display: flex; align-items: center; gap: 8px; width: var(--iv-tab-width); height: var(--iv-tab-height); padding: 0 var(--iv-tab-padding); border-radius: var(--iv-radius-tab); background: var(--iv-bg-raised); box-shadow: 0 0 0 1px var(--iv-border); color: var(--iv-text); font-size: 12px; font-weight: var(--iv-weight-medium); }
+.stab .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--iv-status-working); }
+
+.iv-transcript { --iv-text-md: 14px; --iv-text-md-lh: 24px; --iv-text-sm: 13px; --iv-text-sm-lh: 20px; --iv-text-mono: 13px; position: relative; flex: 1; min-height: 0; color: var(--iv-text-prose); font-size: var(--iv-text-md); line-height: var(--iv-text-md-lh); }
+.scroller { position: absolute; inset: 0; overflow-y: auto; mask-image: linear-gradient(to bottom, color-mix(in srgb, var(--iv-bg) 50%, transparent), var(--iv-bg) var(--iv-space-2)); }
+.column { max-width: var(--iv-content-width); margin: 0 auto; padding: 0 var(--iv-space-6); }
+.item { padding: var(--iv-space-2) 0; }
+.footer { height: var(--iv-space-8); }
+.bubble-row { display: flex; justify-content: flex-end; }
+.bubble { max-width: 80%; padding: 10px 14px; border-radius: var(--iv-radius-card); background: var(--iv-bubble); color: var(--iv-text); }
+.prose p { margin: 0; }
+code { font-family: var(--iv-font-mono); font-size: var(--iv-text-mono); padding: 1px 4px; border-radius: var(--iv-radius-sm); background: var(--iv-bg-active); }
+.answer p + p { margin-top: 12px; }
+
+.composer { flex: none; max-width: var(--iv-content-width); width: 100%; margin: 0 auto; padding: 0 var(--iv-space-6) var(--iv-space-4); }
+.composer-box { display: flex; align-items: flex-end; gap: 8px; min-height: 88px; padding: 12px; border: 1px solid var(--iv-border); border-radius: var(--iv-radius-card); background: var(--iv-bg-raised); color: var(--iv-text-faint); font-size: 13px; }
+.composer-box .grow { flex: 1; align-self: flex-start; }
+.stop { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--iv-text); color: var(--iv-bg); }
+.stop i { width: 9px; height: 9px; border-radius: 2px; background: currentColor; }
+
+/* Turn and timeline, as shipped (turn-work.css) */
+.iv-turn__line { position: relative; display: flex; align-items: center; gap: var(--iv-space-2); width: 100%; min-height: 24px; padding: 0; border: 0; background: none; color: var(--iv-text-faint); font: inherit; font-size: var(--iv-text-sm); text-align: left; cursor: default; user-select: none; }
+.iv-turn__line .iv-turn__lead { color: var(--iv-text-muted); }
+.iv-turn__label { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.iv-turn__failed { color: var(--iv-danger); }
+.iv-turn__rule { flex: 1; height: 1px; background: var(--iv-border); }
+.iv-turn__timeline { position: relative; margin: var(--iv-space-1) 0 var(--iv-space-2); }
+.iv-turn__timeline::before { content: ""; position: absolute; top: -4px; left: 6.5px; width: 1px; height: 7px; background: var(--iv-border-strong); }
+.iv-turn__step { position: relative; padding-left: 22px; }
+.iv-turn__timeline > * + * { margin-top: 10px; }
+.iv-turn__step::before { content: ""; position: absolute; top: 8px; left: 3.5px; width: 7px; height: 7px; border: 1.5px solid var(--iv-text-faint); border-radius: 50%; background: var(--iv-bg); box-sizing: border-box; }
+.iv-turn__step[data-failed]::before { border-color: var(--iv-danger); }
+.iv-turn__step[data-current]::before { border-color: var(--iv-accent); background: color-mix(in srgb, var(--iv-accent) 30%, var(--iv-bg)); animation: ring-pulse var(--iv-duration-pulse) ease-in-out infinite; animation-delay: var(--pulse-delay); }
+@keyframes ring-pulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--iv-accent) 18%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .iv-turn__step[data-current]::before { animation: none; } }
+.iv-turn__timeline > :not(:last-child)::after { content: ""; position: absolute; top: 20px; bottom: -13px; left: 6.5px; width: 1px; background: var(--iv-border-strong); }
+.iv-turn__sentence { color: var(--iv-text-prose); }
+.iv-turn__summary { display: flex; align-items: center; gap: var(--iv-space-1); width: 100%; min-height: 22px; margin-bottom: 2px; padding: 0; border: 0; background: none; color: var(--iv-text-faint); font: inherit; font-size: var(--iv-text-sm); text-align: left; cursor: default; user-select: none; }
+.iv-turn__summary:hover { color: var(--iv-text-muted); }
+.iv-turn__lead { display: inline-grid; flex: none; place-items: center; width: 14px; height: 14px; line-height: 0; }
+.iv-turn__lead > * { display: inline-flex; grid-area: 1 / 1; transition: opacity var(--iv-duration-fast) ease-out, rotate var(--iv-duration-fast) var(--iv-ease-out); }
+.iv-turn__chevron { opacity: 0; }
+.iv-turn__summary:hover .iv-turn__mark, .iv-turn__summary:focus-visible .iv-turn__mark, .iv-turn__summary[aria-expanded="true"] .iv-turn__mark:not([data-state]) { opacity: 0; }
+.iv-turn__summary:hover .iv-turn__chevron, .iv-turn__summary:focus-visible .iv-turn__chevron, .iv-turn__summary[aria-expanded="true"] .iv-turn__mark:not([data-state]) + .iv-turn__chevron { opacity: 1; }
+.iv-turn__summary[aria-expanded="true"] .iv-turn__chevron { rotate: 90deg; }
+.iv-turn__phrases { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iv-turn__calls { margin-bottom: var(--iv-space-1); padding-left: 18px; }
+.iv-turn__call { position: relative; padding: 2px 0; }
+.iv-turn__call::before, .iv-turn__call::after { content: ""; position: absolute; left: -11.5px; border: 0 solid color-mix(in srgb, var(--iv-text) 9%, var(--iv-bg)); }
+.iv-turn__call::before { top: 0; bottom: 0; border-left-width: 1px; }
+.iv-turn__call:first-child::before { top: -6px; }
+.iv-turn__call:last-child::before { bottom: auto; height: 5px; }
+.iv-turn__call:first-child:last-child::before { height: 11px; }
+.iv-turn__call::after { top: 5px; width: 8px; height: 8px; border-bottom-width: 1px; border-left-width: 1px; border-bottom-left-radius: 3px; }
+
+/* Tool call row, as shipped (tool-calls plugin) */
+.tool { display: flex; align-items: center; gap: var(--iv-space-2); min-width: 0; height: 24px; color: var(--iv-text); }
+.tool > svg { color: var(--iv-text-muted); }
+.tool .name { font-weight: var(--iv-weight-medium); flex: none; }
+.tool .arg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--iv-text-muted); font-family: var(--iv-font-mono); font-size: var(--iv-text-mono); }
+.tool .status { color: var(--iv-text-muted); font-size: var(--iv-text-sm); }
+.tool .status.failed { color: var(--iv-danger); }
+
+/* The earlier line, shared: a button like a summary */
+.earlier { display: flex; align-items: center; gap: var(--iv-space-1); min-height: 22px; padding: 0; border: 0; background: none; color: var(--iv-text-faint); font: inherit; font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); text-align: left; cursor: default; user-select: none; white-space: nowrap; }
+.earlier:hover { color: var(--iv-text-muted); }
+.earlier .iv-turn__chevron { display: inline-flex; transition: opacity var(--iv-duration-fast) ease-out, rotate var(--iv-duration-fast) var(--iv-ease-out); }
+.earlier .iv-turn__chevron { opacity: 0; }
+.earlier:hover .iv-turn__chevron, .earlier:focus-visible .iv-turn__chevron, .earlier[aria-expanded="true"] .iv-turn__chevron { opacity: 1; }
+.earlier[aria-expanded="true"] .iv-turn__chevron { rotate: 90deg; }
+.earlier[data-hide] .iv-turn__chevron { rotate: -90deg; }
+.earlier-steps-row { position: relative; padding: 5px 0 2px 22px; }
+.iv-turn__timeline > .earlier-steps-row + * { margin-top: 6px; }
+.earlier-steps-row > .earlier { width: 100%; }
+
+/* Folded: three dots on the timeline in place of the hidden steps */
+.earlier-steps-row { --dots: radial-gradient(circle, var(--iv-text-faint) 0.9px, transparent 1.15px) 0 0 / 2px 5px repeat-y; }
+.earlier-steps-row::before { content: ""; position: absolute; top: calc(50% + 1.5px); left: 6px; width: 2px; height: 15px; margin-top: -7.5px; background: var(--dots); }
+/* The dots alone stand for the line, from the turn's icon to the next ring. */
+.iv-turn__timeline:has(> .earlier-steps-row:first-child)::before { display: none; }
+.iv-turn__timeline > .earlier-steps-row::after { display: none; }
+
+/* 1. Dotted run: unfolded, the dots spread along the steps the line will hide */
+.v-run .earlier-steps-row[data-open]::before { top: calc(50% - 7.5px); bottom: 0; height: auto; margin-top: 0; }
+.v-run .iv-turn__timeline > .earlier-steps-row[data-open]::after { display: none; }
+.v-run .iv-turn__step[data-earlier]::after { left: 6px; width: 2px; top: 17px; background: var(--dots); }
+.v-run .iv-turn__step[data-earlier] { --dots: radial-gradient(circle, var(--iv-text-faint) 0.9px, transparent 1.15px) 0 0 / 2px 5px repeat-y; }
+
+/* 2. Dots stay: the three dots do not change, only the label and chevron do */
+
+/* 3. Range ticks: unfolded, a tick opens and closes the steps the line will hide */
+.v-range .earlier-steps-row[data-open]::before { left: 3.5px; width: 7px; height: auto; top: 50%; bottom: -8px; margin-top: 0; background: linear-gradient(var(--iv-text-faint), var(--iv-text-faint)) center top / 7px 1px no-repeat, linear-gradient(var(--iv-border-strong), var(--iv-border-strong)) center top / 1px 100% no-repeat; }
+.v-range .iv-turn__timeline > .earlier-steps-row[data-open]::after { display: none; }
+.v-range .iv-turn__step[data-earlier-last]::after { left: 3.5px; width: 7px; bottom: -4px; background: linear-gradient(var(--iv-border-strong), var(--iv-border-strong)) center top / 1px 100% no-repeat, linear-gradient(var(--iv-text-faint), var(--iv-text-faint)) center bottom / 7px 1px no-repeat; }
+
+/* The open step's calls stop at 5 rows and scroll */
+.calls-scroll { max-height: 146px; margin-top: -6px; padding-top: 6px; overflow-y: auto; mask-image: linear-gradient(to bottom, transparent, #000 14px); }
+
+/* Harness controls, beside the picker */
+.harness { position: fixed; top: 24px; right: 24px; z-index: 2147483646; display: flex; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(10, 10, 10, 0.82); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 8px 24px rgba(0, 0, 0, 0.24); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; line-height: 1; }
+.harness button { height: 26px; padding: 0 10px; border: 0; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.6); cursor: pointer; }
+.harness button:hover { color: #fff; }
+.harness button[aria-pressed="true"] { background: rgba(255, 255, 255, 0.12); color: #fff; }
+
+/* Picker — harness chrome, verbatim from PICKER.md */
+.proto-picker { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 2147483647; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(10, 10, 10, 0.82); -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 8px 24px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; line-height: 1; -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+.proto-picker-highlight { position: absolute; top: 4px; left: 0; height: 28px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+.proto-picker[data-ready] .proto-picker-highlight { transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1), width 250ms cubic-bezier(0.23, 1, 0.32, 1); }
+@media (prefers-reduced-motion: reduce) { .proto-picker[data-ready] .proto-picker-highlight { transition: none; } }
+.proto-picker-item { position: relative; display: flex; align-items: center; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.55); font: inherit; cursor: pointer; transition: color 150ms ease-out, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+@media (hover: hover) and (pointer: fine) { .proto-picker-item:hover { color: rgba(255, 255, 255, 0.85); } }
+.proto-picker-item:active { transform: scale(0.97); }
+.proto-picker-item:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.4); outline-offset: 2px; }
+.proto-picker-item[data-active] { color: #fff; }
+.proto-picker-divider { width: 1px; height: 16px; margin: 0 4px; background: rgba(255, 255, 255, 0.12); }
+.proto-picker-replay { padding: 0 10px; font-size: 14px; }
+.proto-picker[data-position="top"] { bottom: auto; top: 24px; }
+</style>
+</head>
+<body>
+<div class="main">
+  <div class="titlebar"><div class="stab"><span class="dot"></span>Fix the discount total</div></div>
+  <div class="iv-transcript"><div class="scroller" id="scroller"><div class="column" id="stage"></div></div></div>
+  <div class="composer"><div class="composer-box"><span class="grow">Ask for a change, or queue a message…</span><span class="stop"><i></i></span></div></div>
+</div>
+
+<div class="harness" aria-label="Harness">
+  <button id="play" aria-pressed="true" title="Stream new calls (P)">Streaming</button>
+</div>
+
+<nav class="proto-picker" data-position="top" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Dotted run</button>
+  <button class="proto-picker-item">Dots stay</button>
+  <button class="proto-picker-item">Range ticks</button>
+  <span class="proto-picker-divider" aria-hidden="true"></span>
+  <button class="proto-picker-item proto-picker-replay" aria-label="Replay animation (R)">↻</button>
+</nav>
+
+<script>
+const P = {
+  stack: "M230.91,172A8,8,0,0,1,228,182.91l-96,56a8,8,0,0,1-8.06,0l-96-56A8,8,0,0,1,36,169.09l92,53.65,92-53.65A8,8,0,0,1,230.91,172ZM220,121.09l-92,53.65L36,121.09A8,8,0,0,0,28,134.91l96,56a8,8,0,0,0,8.06,0l96-56A8,8,0,1,0,220,121.09ZM24,80a8,8,0,0,1,4-6.91l96-56a8,8,0,0,1,8.06,0l96,56a8,8,0,0,1,0,13.820l-96,56a8,8,0,0,1-8.06,0l-96-56A8,8,0,0,1,24,80Zm23.88,0L128,126.74,208.12,80,128,33.26Z",
+  command: "M117.31,134l-72,64a8,8,0,1,1-10.63-12L100,128,34.69,70A8,8,0,1,1,45.32,58l72,64a8,8,0,0,1,0,12ZM216,184H120a8,8,0,0,0,0,16h96a8,8,0,0,0,0-16Z",
+  read: "M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z",
+  edit: "M227.31,73.37,182.63,28.68a16,16,0,0,0-22.63,0L36.690,152A15.86,15.86,0,0,0,32,163.31V208a16,16,0,0,0,16,16H92.69A15.86,15.86,0,0,0,104,219.31L227.31,96a16,16,0,0,0,0-22.63ZM92.69,208H48V163.31l88-88L180.69,120ZM192,108.68,147.31,64l24-24L216,84.68Z",
+  search: "M229.66,218.34l-50.07-50.06a88.11,88.11,0,1,0-11.31,11.31l50.06,50.07a8,8,0,0,0,11.32-11.32ZM40,112a72,72,0,1,1,72,72A72.08,72.08,0,0,1,40,112Z",
+  agent: "M200,48H136V16a8,8,0,0,0-16,0V48H56A32,32,0,0,0,24,80V192a32,32,0,0,0,32,32H200a32,32,0,0,0,32-32V80A32,32,0,0,0,200,48Zm16,144a16,16,0,0,1-16,16H56a16,16,0,0,1-16-16V80A16,16,0,0,1,56,64H200a16,16,0,0,1,16,16Zm-52-56H92a28,28,0,0,0,0,56h72a28,28,0,0,0,0-56Zm-24,16v24H116V152ZM80,164a12,12,0,0,1,12-12h8v24H92A12,12,0,0,1,80,164Zm84,12h-8V152h8a12,12,0,0,1,0,24ZM72,108a12,12,0,1,1,12,12A12,12,0,0,1,72,108Zm88,0a12,12,0,1,1,12,12A12,12,0,0,1,160,108Z",
+  loader: "M232,128a104,104,0,0,1-208,0c0-41,23.81-78.36,60.66-95.27a8,8,0,0,1,6.68,14.54C60.15,61.590,40,93.27,40,128a88,88,0,0,0,176,0c0-34.73-20.15-66.41-51.34-80.73a8,8,0,0,1,6.68-14.54C208.19,49.64,232,87,232,128Z",
+  chevron: "M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z",
+}
+const cssMs = (name) => { const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim(); return v.endsWith("ms") ? parseFloat(v) : parseFloat(v) * 1000 }
+function syncLoops() {
+  const root = document.documentElement.style
+  root.setProperty("--spin-delay", `-${Date.now() % cssMs("--iv-duration-spin")}ms`)
+  root.setProperty("--pulse-delay", `-${Date.now() % cssMs("--iv-duration-pulse")}ms`)
+}
+const svg = (d, size = 14, cls = "") =>
+  `<svg class="${cls}" width="${size}" height="${size}" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`
+const NAMES = { command: "Bash", read: "Read", edit: "Edit", search: "Grep", agent: "Agent" }
+
+const SCRIPT = [
+  ["I'll start by reading the checkout flow to see where the total is computed.", [["read", "src/checkout/summary.tsx"], ["read", "src/cart/cart-store.ts"], ["search", "applyDiscount"]]],
+  ["The total comes from `cart-store.ts`. Let me check how discounts are applied.", [["read", "src/lib/currency.ts"], ["search", "taxRate"], ["read", "src/cart/discounts.ts"]]],
+  ["Discounts are applied after tax, which explains the wrong total. Let me find the tests.", [["search", "describe\\(\"cart"], ["read", "src/cart/cart-store.test.ts"]]],
+  ["There is no test for a discount with tax. I'll add one that fails first.", [["edit", "src/cart/cart-store.test.ts"], ["command", "pnpm test src/cart/cart-store.test.ts", "error"]]],
+  ["The new test fails as expected. Now I'll move the discount before tax.", [["edit", "src/cart/cart-store.ts"], ["command", "pnpm test src/cart"]]],
+  ["Two other tests break: they assumed the old order. Let me look at them.", [["read", "src/cart/totals.test.ts"], ["read", "src/checkout/summary.test.tsx"], ["command", "git log -3 --format=%s -- src/cart/totals.test.ts"]]],
+  ["Those tests encoded the bug. I'll update their expected totals.", [["edit", "src/cart/totals.test.ts"], ["edit", "src/checkout/summary.test.tsx"], ["command", "pnpm test src/cart src/checkout"]]],
+  ["All cart tests pass. Let me check that the summary page uses the same function.", [["agent", "Find every place that computes an order total"], ["read", "src/checkout/summary.tsx"]]],
+  ["`summary.tsx` recomputes the total on its own. I'll make it call the store.", [["edit", "src/checkout/summary.tsx"], ["command", "pnpm typecheck", "error"]]],
+  ["Typecheck fails in `payment-step.tsx`: it reads a field I renamed.", [["read", "src/checkout/payment-step.tsx"], ["edit", "src/checkout/payment-step.tsx"], ["command", "pnpm typecheck"]]],
+  ["Fixed the field name. Running the whole suite now.", [["command", "pnpm test"], ["command", "pnpm e2e --grep checkout", "error"]]],
+  ["One end-to-end test times out on the payment step. Let me read its log.", [["read", "e2e/checkout.spec.ts"], ["command", "cat test-results/checkout-pay/trace.txt"], ["search", "data-testid=\"pay-spinner\""], ["read", "src/checkout/pay-button.tsx"], ["search", "pay-spinner"], ["read", "src/checkout/use-payment.ts"], ["read", "src/checkout/payment-step.tsx"], ["command", "git diff --stat"]]],
+  ["The test waits for a spinner that no longer shows. I'll wait for the summary instead.", [["edit", "e2e/checkout.spec.ts"], ["command", "pnpm e2e --grep checkout"], ["command", "pnpm e2e"], ["read", "e2e/cart.spec.ts"], ["edit", "e2e/cart.spec.ts"], ["command", "pnpm e2e --grep cart"], ["command", "pnpm lint"], ["command", "pnpm format"], ["command", "pnpm check"], ["command", "git status --short"], ["read", "CHANGELOG.md"], ["edit", "CHANGELOG.md"]]],
+  ["Everything passes. Let me write the commit.", [["command", "git add -A"], ["command", "git commit -m \"fix(cart): apply discounts before tax\""]]],
+]
+const SEED_STEPS = 12
+const SEED_CALLS = 7
+const SHOW_STEPS = 3
+const SHOW_CALLS = 5
+
+let state, timer, clock, variant = 0, playing = true
+
+function seed() {
+  const steps = []
+  for (let s = 0; s < SEED_STEPS; s++) steps.push(makeStep(s, SCRIPT[s][1].length))
+  steps.push(makeStep(SEED_STEPS, SEED_CALLS))
+  steps.at(-1).calls.at(-1).status = "running"
+  state = { steps, cursor: [SEED_STEPS, SEED_CALLS], startAt: Date.now() - 201000, folds: new Map() }
+}
+function makeStep(s, count) {
+  const [sentence, calls] = SCRIPT[s]
+  return { id: `s${s}`, sentence, calls: calls.slice(0, count).map((c, i) => makeCall(s, i)) }
+}
+function makeCall(s, i) {
+  const [kind, arg, end] = SCRIPT[s][1][i]
+  return { id: `s${s}c${i}`, kind, arg, end: end === "error" ? "error" : "ok", status: end === "error" ? "error" : "ok" }
+}
+
+function tick() {
+  const running = state.steps.at(-1).calls.at(-1)
+  if (running && running.status === "running") running.status = running.end
+  let [s, c] = state.cursor
+  if (c >= SCRIPT[s][1].length) {
+    s += 1; c = 0
+    if (s >= SCRIPT.length) { seed(); render(); return }
+    state.steps.push({ id: `s${s}`, sentence: SCRIPT[s][0], calls: [] })
+  }
+  const call = makeCall(s, c)
+  call.status = "running"
+  state.steps.at(-1).calls.push(call)
+  state.cursor = [s, c + 1]
+  render({ follow: true })
+}
+
+const phraseOf = { command: (n) => n === 1 ? "ran a command" : `ran ${n} commands`, read: (n) => `read ${n} ${n === 1 ? "file" : "files"}`, edit: (n) => `edited ${n} ${n === 1 ? "file" : "files"}`, search: (n) => n === 1 ? "searched" : `searched ${n} times`, agent: (n) => n === 1 ? "ran an agent" : `ran ${n} agents` }
+function phrases(calls) {
+  const counts = new Map()
+  for (const call of calls) counts.set(call.kind, (counts.get(call.kind) ?? 0) + 1)
+  const text = [...counts].map(([k, n]) => phraseOf[k](n)).join(" · ")
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}
+const failedOf = (calls) => calls.filter((c) => c.status === "error").length
+const failedTag = (n) => n ? `<span class="faint"> · </span><span class="iv-turn__failed">${n} failed</span>` : ""
+const inline = (text) => text.replace(/`([^`]+)`/g, "<code>$1</code>")
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
+
+function callRow(call) {
+  const status = call.status === "running" ? `<span class="status">${svg(P.loader, 12, "spin")}</span>` : call.status === "error" ? `<span class="status failed">failed</span>` : ""
+  return `<div class="tool">${svg(P[call.kind])}<span class="name">${NAMES[call.kind]}</span><span class="arg">${call.arg}</span>${status}</div>`
+}
+
+const chevron = `<span class="iv-turn__chevron">${svg(P.chevron, 12)}</span>`
+
+function earlierStepsLine(hidden, open) {
+  const failed = hidden.filter((s) => failedOf(s.calls) > 0).length
+  const n = plural(hidden.length, "earlier step", "earlier steps")
+  const attrs = `class="earlier" data-key="earlier-steps" aria-expanded="${open}" ${open ? "data-hide" : ""}`
+  return `<div class="earlier-steps-row" ${open ? "data-open" : ""}><button ${attrs}><span>${open ? `Hide ${n}` : n}${failedTag(failed)}</span>${chevron}</button></div>`
+}
+
+function stepView(step, index, last, extra = "") {
+  const current = index === last
+  const open = state.folds.get(step.id) ?? current
+  const pinned = step.calls.filter((c) => c.status === "error" || c.kind === "agent")
+  const running = current && step.calls.some((c) => c.status === "running")
+  if (open && step.calls.length > SHOW_CALLS) {
+    return stepShell(step, current, running, open, extra, `<div class="iv-turn__calls calls-scroll" data-scroll="calls-${step.id}">${step.calls.map(wrapCall).join("")}</div>`)
+  }
+  const rows = (open ? step.calls : pinned).map(wrapCall).join("")
+  return stepShell(step, current, running, open, extra, rows ? `<div class="iv-turn__calls">${rows}</div>` : "")
+}
+
+function stepShell(step, current, running, open, extra, calls) {
+  const summary = step.calls.length === 0 ? "" : `<button class="iv-turn__summary" data-key="summary-${step.id}" aria-expanded="${open}">
+      <span class="iv-turn__lead"><span class="iv-turn__mark" ${running ? 'data-state="running"' : ""}>${running ? svg(P.loader, 12, "spin") : svg(P.stack)}</span>${chevron}</span>
+      <span class="iv-turn__phrases">${phrases(step.calls)}${failedTag(failedOf(step.calls))}</span></button>`
+  return `<div class="iv-turn__step" data-step="${step.id}" ${extra} ${failedOf(step.calls) ? "data-failed" : ""} ${current ? "data-current" : ""}>
+    <div class="iv-turn__sentence prose"><p>${inline(step.sentence)}</p></div>${summary}
+    ${calls}</div>`
+}
+const wrapCall = (call) => `<div class="iv-turn__call" data-call="${call.id}">${callRow(call)}</div>`
+
+function turnLine() {
+  const seconds = Math.round((Date.now() - state.startAt) / 1000)
+  const failed = state.steps.reduce((n, s) => n + failedOf(s.calls), 0)
+  const time = seconds >= 60 ? `${Math.floor(seconds / 60)}m ${seconds % 60}s` : `${seconds}s`
+  return `<span class="iv-turn__lead"><span class="iv-turn__mark">${svg(P.loader, 12, "spin")}</span></span>
+    <span class="iv-turn__label">Working for <span id="clock">${time}</span>${failedTag(failed)}</span><span class="iv-turn__rule"></span>`
+}
+
+const stage = document.getElementById("stage")
+const scroller = document.getElementById("scroller")
+
+function render({ follow = false, anchor = null } = {}) {
+  const atBottom = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 4
+  const before = anchor && document.querySelector(anchor)?.getBoundingClientRect().top
+  const focusKey = document.activeElement?.matches(":focus-visible") ? document.activeElement.dataset.key : null
+  const last = state.steps.length - 1
+  const scrolls = new Map([...stage.querySelectorAll("[data-scroll]")].map((el) => [el.dataset.scroll, { top: el.scrollTop, atBottom: el.scrollHeight - el.scrollTop - el.clientHeight < 4 }]))
+  const hidden = state.steps.slice(0, Math.max(0, state.steps.length - SHOW_STEPS))
+  const stepsOpen = state.folds.get("steps") ?? false
+  const head = hidden.length ? earlierStepsLine(hidden, stepsOpen) : ""
+  const earlier = stepsOpen ? hidden.map((step, i) => stepView(step, i, last, i === hidden.length - 1 ? "data-earlier data-earlier-last" : "data-earlier")).join("") : ""
+  const shown = state.steps.slice(hidden.length).map((step, i) => stepView(step, hidden.length + i, last)).join("")
+  const timeline = head + earlier + shown
+  syncLoops()
+  stage.className = `column ${["v-run", "v-stay", "v-range"][variant]}`
+  stage.innerHTML = `
+    <div class="item bubble-row"><div class="bubble">The checkout total is wrong when a discount code is applied: a 10% code on a 50 € cart with 20% VAT shows 55 € instead of 54 €. Can you find out why and fix it?</div></div>
+    <div class="item"><div class="iv-turn"><div class="iv-turn__line" aria-expanded="true">${turnLine()}</div>
+      <div class="iv-turn__timeline">${timeline}</div></div></div>
+    <div class="footer"></div>`
+  for (const el of stage.querySelectorAll("[data-scroll]")) {
+    const prior = scrolls.get(el.dataset.scroll)
+    el.scrollTop = prior && !prior.atBottom ? prior.top : el.scrollHeight
+  }
+  if (focusKey) stage.querySelector(`[data-key="${focusKey}"]`)?.focus({ preventScroll: true })
+  if (anchor && before != null) {
+    const after = document.querySelector(anchor)?.getBoundingClientRect().top
+    if (after != null) scroller.scrollTop += after - before
+  } else if (follow && atBottom) scroller.scrollTop = scroller.scrollHeight
+}
+
+stage.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-key]")
+  if (!btn) return
+  const key = btn.dataset.key
+  let foldKey
+  const anchor = `[data-key="${key}"]`
+  if (key === "earlier-steps") foldKey = "steps"
+  else foldKey = key.slice("summary-".length)
+  const open = btn.getAttribute("aria-expanded") === "true"
+  state.folds.set(foldKey, !open)
+  render({ anchor })
+})
+
+function start() {
+  clearInterval(timer); clearInterval(clock)
+  if (playing) timer = setInterval(tick, 1100)
+  clock = setInterval(() => { const el = document.getElementById("clock"); if (el) { syncLoops(); el.parentElement.parentElement.innerHTML = turnLine() } }, 1000)
+}
+const playBtn = document.getElementById("play")
+function togglePlay() { playing = !playing; playBtn.setAttribute("aria-pressed", playing); playBtn.textContent = playing ? "Streaming" : "Paused"; start() }
+playBtn.addEventListener("click", togglePlay)
+
+function mount() {
+  seed()
+  render()
+  scroller.scrollTop = scroller.scrollHeight
+  start()
+}
+
+// Picker wiring, from PICKER.md
+const picker = document.querySelector(".proto-picker")
+const highlight = picker.querySelector(".proto-picker-highlight")
+const items = [...picker.querySelectorAll(".proto-picker-item:not(.proto-picker-replay)")]
+const replay = picker.querySelector(".proto-picker-replay")
+function moveHighlight() {
+  const el = items[variant]
+  highlight.style.width = el.offsetWidth + "px"
+  highlight.style.transform = `translateX(${el.offsetLeft}px)`
+}
+function setActive(i) {
+  if (i < 0 || i >= items.length) return
+  variant = i
+  items.forEach((el, j) => {
+    el.toggleAttribute("data-active", j === i)
+    if (j === i) el.setAttribute("aria-current", "true")
+    else el.removeAttribute("aria-current")
+  })
+  moveHighlight()
+  const url = new URL(location)
+  url.searchParams.set("v", i + 1)
+  history.replaceState(null, "", url)
+  requestAnimationFrame(mount)
+}
+items.forEach((el, i) => el.addEventListener("click", () => setActive(i)))
+replay.addEventListener("click", () => mount())
+window.addEventListener("resize", moveHighlight)
+document.addEventListener("keydown", (e) => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  const num = parseInt(e.key, 10)
+  if (num >= 1 && num <= items.length) setActive(num - 1)
+  else if (e.key === "ArrowRight") setActive((variant + 1) % items.length)
+  else if (e.key === "ArrowLeft") setActive((variant - 1 + items.length) % items.length)
+  else if (e.key === "r" || e.key === "R") mount()
+  else if (e.key === "p" || e.key === "P") togglePlay()
+})
+const requested = parseInt(new URLSearchParams(location.search).get("v"), 10)
+setActive(requested >= 1 && requested <= items.length ? requested - 1 : 0)
+requestAnimationFrame(() => requestAnimationFrame(() => picker.setAttribute("data-ready", "")))
+</script>
+</body>
+</html>
