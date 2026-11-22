@@ -21,6 +21,8 @@ interface Paging {
   readonly hasBefore: boolean
 }
 
+const unloaded: Paging = { loaded: false, hasBefore: false }
+
 const applyDeltas = (writer: EntityWriter<TranscriptItem>, batch: ReadonlyArray<TranscriptDelta>) =>
   Effect.gen(function* () {
     const held = new Map<string, TranscriptItem | undefined>()
@@ -32,7 +34,7 @@ const applyDeltas = (writer: EntityWriter<TranscriptItem>, batch: ReadonlyArray<
 
 export const transcriptOf = strongFamily((sessionId: string) => {
   // Kept alive: the feed writes it before anything reads it, and an unread node is dropped.
-  const paging = Atom.keepAlive(Atom.make<Paging>({ loaded: false, hasBefore: false }))
+  const paging = Atom.keepAlive(Atom.make<Paging>(unloaded))
   const list = makeEntityList({
     id: (item: TranscriptItem) => item.id,
     compare: (a, b) => a.position - b.position,
@@ -78,6 +80,8 @@ export const transcriptOf = strongFamily((sessionId: string) => {
                 ),
               )
             }),
+            // The list is dropped with the feed, so a page loaded before no longer describes it.
+            Effect.ensuring(Atom.set(paging, unloaded)),
           )
         }),
     },
