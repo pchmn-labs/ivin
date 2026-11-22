@@ -44,6 +44,7 @@ export type IconName =
   | "gear"
   | "brackets-curly"
   | "app-window"
+  | "collapse-all"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"

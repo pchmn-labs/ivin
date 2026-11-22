@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import {
   ErrorMessage,
   Icon,
+  IconButton,
   Stack,
   Text,
   Tree,
@@ -48,6 +49,22 @@ function Message({ children }: { children: string }) {
   )
 }
 
+function FolderRow({ session, children }: { session: Session; children?: ReactNode }) {
+  const { projects } = useProjects()
+  const project = projects.find((p) => p.path === session.projectPath)
+  return (
+    <Stack direction="row" gap={1} align="center">
+      <Stack direction="row" gap={1} align="center" grow>
+        <Icon name={session.inWorktree ? "worktree" : "folder"} size={12} />
+        <Text size="xs" tone="faint" mono truncate title={session.workingFolder}>
+          {folderLabel(session.workingFolder, session.projectPath, project?.name ?? "")}
+        </Text>
+      </Stack>
+      {children}
+    </Stack>
+  )
+}
+
 function FolderTreeView({
   session,
   state: { remembered, collapseAll },
@@ -87,10 +104,10 @@ function FolderTreeView({
     for (const path of ["", ...openOnMount]) load(path)
   }, [])
 
+  const closeAll = () => setTree((current) => ({ ...current, open: new Set() }))
   useEffect(() => {
-    const run = () => setTree((current) => ({ ...current, open: new Set() }))
-    collapseAll.add(run)
-    return () => void collapseAll.delete(run)
+    collapseAll.add(closeAll)
+    return () => void collapseAll.delete(closeAll)
   }, [collapseAll])
 
   const toggle = (path: string) => {
@@ -101,6 +118,41 @@ function FolderTreeView({
     load(path)
   }
 
+  return (
+    <Stack direction="column" gap={2} grow>
+      <FolderRow session={session}>
+        <IconButton
+          icon="collapse-all"
+          label="Collapse all folders"
+          size="sm"
+          disabled={tree.open.size === 0}
+          onClick={closeAll}
+        />
+      </FolderRow>
+      <FolderContent
+        tree={tree}
+        load={load}
+        toggle={toggle}
+        openFailure={openFailure}
+        open={open}
+      />
+    </Stack>
+  )
+}
+
+function FolderContent({
+  tree,
+  load,
+  toggle,
+  openFailure,
+  open,
+}: {
+  tree: FolderTree
+  load: (path: string) => void
+  toggle: (path: string) => void
+  openFailure: ({ path: string } & ActionFailure) | null
+  open: (path: string) => Promise<void>
+}) {
   const root = tree.folders.get("")
   if (root?.kind === "deleted") {
     return <Message>{FOLDER_DELETED}</Message>
@@ -125,7 +177,7 @@ function FolderTreeView({
       failedFolders.push({ path, ...state.failure })
   }
   return (
-    <Stack direction="column" gap={2} grow>
+    <>
       {failedFolders.map(({ path, text, retryable }) => (
         <ErrorMessage key={path} message={text} {...(retryable && { onRetry: () => load(path) })} />
       ))}
@@ -141,34 +193,26 @@ function FolderTreeView({
         onToggle={toggle}
         onOpen={(path) => void open(path)}
       />
-    </Stack>
+    </>
   )
 }
 
 function FilesPanel({ state }: { state: PluginState }) {
   const sessionId = useSelectedSessionId()
   const session = useSession(sessionId ?? "")
-  const { projects } = useProjects()
   if (sessionId === null) {
     return <Message>No session on screen. Open one to see the files of its working folder.</Message>
   }
   if (session === undefined) return null
-  const project = projects.find((p) => p.path === session.projectPath)
-  return (
-    <Stack direction="column" gap={2} grow>
-      <Stack direction="row" gap={1} align="center">
-        <Icon name={session.inWorktree ? "worktree" : "folder"} size={12} />
-        <Text size="xs" tone="faint" mono truncate title={session.workingFolder}>
-          {folderLabel(session.workingFolder, session.projectPath, project?.name ?? "")}
-        </Text>
-      </Stack>
-      {session.workingFolderDeleted ? (
+  if (session.workingFolderDeleted) {
+    return (
+      <Stack direction="column" gap={2} grow>
+        <FolderRow session={session} />
         <Message>{FOLDER_DELETED}</Message>
-      ) : (
-        <FolderTreeView key={treeKey(session)} session={session} state={state} />
-      )}
-    </Stack>
-  )
+      </Stack>
+    )
+  }
+  return <FolderTreeView key={treeKey(session)} session={session} state={state} />
 }
 
 export const activate = defineUi((ctx) => {

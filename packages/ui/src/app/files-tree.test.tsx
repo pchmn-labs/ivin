@@ -256,3 +256,16 @@ test("Collapse all folders closes every open folder", async () => {
   await expect.element(item("guide.md")).not.toBeInTheDocument()
   await expect.element(item("src")).toHaveAttribute("aria-expanded", "false")
 })
+
+test("the Collapse all folders button closes every open folder, and is disabled with none open", async () => {
+  await focusTree()
+  const collapse = page.getByRole("button", { name: "Collapse all folders" })
+  await expect.element(collapse).toBeDisabled()
+  await item("docs").click()
+  await expect.element(item("guide.md")).toBeVisible()
+  await expect.element(collapse).toBeEnabled()
+
+  await collapse.click()
+  await expect.element(item("guide.md")).not.toBeInTheDocument()
+  await expect.element(collapse).toBeDisabled()
+})
