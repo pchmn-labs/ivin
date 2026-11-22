@@ -251,3 +251,12 @@ test("a mode switch the server refuses goes back", async () => {
   await expect.element(besideButton()).toBeVisible()
   await expect.element(card().getByText(/could not switch/)).not.toBeInTheDocument()
 })
+
+test("the Session tab has the same room on both sides of its label", async () => {
+  await mount(makeServer())
+  await openTwoFiles()
+  await fullWidthButton().click()
+
+  const style = getComputedStyle(rowTab("Session").element())
+  expect(style.paddingRight).toBe(style.paddingLeft)
+})

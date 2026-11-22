@@ -36,10 +36,6 @@
   scrollbar-width: none;
 }
 
-.iv-sub-view-card__tab--session {
-  padding-right: var(--iv-space-3);
-}
-
 .iv-sub-view-card__separator {
   flex: none;
   width: 1px;
@@ -84,6 +80,10 @@
   font-weight: var(--iv-weight-medium);
   white-space: nowrap;
   cursor: pointer;
+}
+
+.iv-sub-view-card__tab--session {
+  padding-right: var(--iv-space-3);
 }
 
 .iv-sub-view-card__tab:focus-visible,
