@@ -1,5 +1,5 @@
 import { syntaxHighlighting } from "@codemirror/language"
-import { Compartment, EditorState } from "@codemirror/state"
+import { Compartment, EditorSelection, EditorState } from "@codemirror/state"
 import {
   drawSelection,
   EditorView,
@@ -18,6 +18,23 @@ import "./code-view.css"
 const wrappingOf = (fileName: string) =>
   languageNameOf(fileName) === "markdown" ? EditorView.lineWrapping : []
 
+export interface ShownLines {
+  readonly start: number
+  readonly end: number
+  // A new value shows the lines again, even the same ones.
+  readonly request: number
+}
+
+const showLines = (editor: EditorView, { start, end }: ShownLines) => {
+  const { doc } = editor.state
+  const from = doc.line(Math.min(Math.max(start, 1), doc.lines)).from
+  const to = doc.line(Math.min(Math.max(end, 1), doc.lines)).to
+  editor.dispatch({
+    selection: EditorSelection.range(from, to),
+    effects: EditorView.scrollIntoView(from, { y: "center" }),
+  })
+}
+
 export interface CodeViewProps {
   readonly text: string
   // Picks the language, and names the view for assistive technology.
@@ -25,6 +42,8 @@ export interface CodeViewProps {
   // Where the view opens scrolled to, in pixels.
   readonly scrollTop?: number
   readonly onScroll?: (scrollTop: number) => void
+  // Scrolled to and selected, in place of `scrollTop`.
+  readonly shownLines?: ShownLines
   readonly "data-testid"?: string
 }
 
@@ -33,6 +52,7 @@ export function CodeView({
   fileName,
   scrollTop = 0,
   onScroll,
+  shownLines,
   "data-testid": testId,
 }: CodeViewProps) {
   const host = useRef<HTMLDivElement>(null)
@@ -66,12 +86,14 @@ export function CodeView({
     view.current = editor
     const scrolled = () => latestOnScroll.current?.(editor.scrollDOM.scrollTop)
     editor.scrollDOM.addEventListener("scroll", scrolled, { passive: true })
-    editor.requestMeasure({
-      read: () => null,
-      write: () => {
-        editor.scrollDOM.scrollTop = scrollTop
-      },
-    })
+    if (shownLines === undefined) {
+      editor.requestMeasure({
+        read: () => null,
+        write: () => {
+          editor.scrollDOM.scrollTop = scrollTop
+        },
+      })
+    }
     return () => {
       editor.scrollDOM.removeEventListener("scroll", scrolled)
       editor.destroy()
@@ -87,6 +109,10 @@ export function CodeView({
       editor.dispatch({ changes: { from: 0, to: current.length, insert: text } })
     }
   }, [text])
+
+  useEffect(() => {
+    if (shownLines) showLines(view.current!, shownLines)
+  }, [shownLines?.request])
 
   useEffect(() => {
     view.current!.dispatch({ effects: wrapping.current.reconfigure(wrappingOf(fileName)) })

@@ -94,7 +94,7 @@ function Message({ item, sessionId }: SlotProps["transcript.message"]) {
       </Block>
     )
   }
-  return <Markdown text={item.text} />
+  return <Markdown text={item.text} sessionId={sessionId} />
 }
 
 export const activate = defineUi((ctx) => {

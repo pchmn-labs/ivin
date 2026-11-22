@@ -14,9 +14,9 @@ import { StatusMark } from "../core/components/status-mark/status-mark.tsx"
 import { Text } from "../core/components/text/text.tsx"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { Tree } from "../core/components/tree/tree.tsx"
-import { Markdown } from "../core/components/markdown/markdown.tsx"
 import { ListRow } from "../core/components/list-row/list-row.tsx"
 import { ListSection } from "../core/components/list-section/list-section.tsx"
+import { SessionMarkdown } from "../modules/file/ui/session-markdown.tsx"
 import { ProjectCreature } from "../modules/project/ui/project-creature.tsx"
 import { RelativeTime } from "../modules/session/ui/relative-time.tsx"
 import { SessionMark } from "../modules/session/ui/session-mark.tsx"
@@ -36,7 +36,7 @@ export const hostComponents = {
   Disclosure,
   CodeBlock,
   StatusMark,
-  Markdown,
+  Markdown: SessionMarkdown,
   ActionSheet,
   OptionList,
   ErrorMessage,
