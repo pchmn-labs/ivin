@@ -86,6 +86,12 @@ describe("repeatTargets", () => {
     ).toEqual([])
   })
 
+  test("a packaged app test file is never targeted", () => {
+    expect(
+      repeatTargets([{ path: "apps/desktop/e2e/a.test.ts", source, added: [6], removedAfter: [] }]),
+    ).toEqual([])
+  })
+
   test("a file with no changed line is not targeted", () => {
     expect(targets([])).toEqual([])
   })
