@@ -59,10 +59,10 @@ _Avoid_: permission, permission prompt
 Typed, namespaced metadata attached to a session or a project, written by plugins, the CLI or the agent.
 
 **Tab**:
-Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Beside its session, a tab shows its sub-views. A session with no tab is **inactive**, listed under "Inactive sessions" in the sidebar.
+Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Beside its session, a tab shows its sub-views; in **full width** they cover the main area, and a Session tab in their row shows the session's chat. A session with no tab is **inactive**, listed under "Inactive sessions" in the sidebar.
 
 **Sub-view**:
-A file (and later a diff) of the session's working folder that a tab shows beside its chat. A tab keeps its sub-views in the order they were opened, with one selected; they close when the session moves to another working folder.
+A file (and later a diff) of the session's working folder that a tab shows beside its chat, or across the main area in full width. A tab keeps its sub-views in the order they were opened, with one selected; they close when the session moves to another working folder.
 _Avoid_: editor, pane
 
 **Plugin**:

@@ -12,3 +12,10 @@ export const openFileFailure = (error: unknown, path: string): ActionFailure =>
 
 export const closeFileFailure = (path: string): string =>
   `${fileName(path)} could not be closed. Retry.`
+
+export const switchModeFailure = (fullWidth: boolean): string =>
+  fullWidth
+    ? "This tab could not switch to full width. Retry."
+    : "This tab could not go back beside the chat. Retry."
+
+export const selectSessionTabFailure = "The Session tab could not be selected. Retry."

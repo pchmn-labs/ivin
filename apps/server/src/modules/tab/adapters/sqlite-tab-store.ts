@@ -114,6 +114,22 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
             "UPDATE sub_views SET selected = (kind = ? AND path = ?) WHERE session_id = ?",
           ).run(subView?.kind ?? "", subView?.path ?? "", sessionId)
         }),
+      layoutOf: (sessionId) =>
+        Effect.sync(() => {
+          const row = db
+            .prepare("SELECT full_width, session_tab_selected FROM tabs WHERE session_id = ?")
+            .get(sessionId) as { full_width: number; session_tab_selected: number } | undefined
+          return {
+            fullWidth: row?.full_width === 1,
+            sessionTabSelected: row?.session_tab_selected === 1,
+          }
+        }),
+      setLayout: (sessionId, layout) =>
+        Effect.sync(() => {
+          db.prepare(
+            "UPDATE tabs SET full_width = ?, session_tab_selected = ? WHERE session_id = ?",
+          ).run(Number(layout.fullWidth), Number(layout.sessionTabSelected), sessionId)
+        }),
       removeSubViewsOutside: (sessionId, workingFolder) =>
         Effect.sync(() => {
           db.prepare("DELETE FROM sub_views WHERE session_id = ? AND working_folder <> ?").run(

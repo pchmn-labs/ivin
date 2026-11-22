@@ -7,6 +7,11 @@ export interface StoredSubView {
   readonly selected: boolean
 }
 
+export interface TabLayout {
+  readonly fullWidth: boolean
+  readonly sessionTabSelected: boolean
+}
+
 export class TabStore extends Context.Service<
   TabStore,
   {
@@ -26,6 +31,8 @@ export class TabStore extends Context.Service<
     ) => Effect.Effect<void>
     readonly removeSubView: (sessionId: string, subView: SubView) => Effect.Effect<void>
     readonly selectSubView: (sessionId: string, subView: SubView | null) => Effect.Effect<void>
+    readonly layoutOf: (sessionId: string) => Effect.Effect<TabLayout>
+    readonly setLayout: (sessionId: string, layout: TabLayout) => Effect.Effect<void>
     readonly removeSubViewsOutside: (
       sessionId: string,
       workingFolder: string,

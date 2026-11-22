@@ -39,6 +39,8 @@ export type IconName =
   | "search"
   | "stack"
   | "robot"
+  | "arrows-out"
+  | "split"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"
