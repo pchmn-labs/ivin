@@ -27,7 +27,11 @@ export function useSentMessageScroll({
   const userScrolled = useRef(false)
   const [roomLeft, setRoomLeft] = useState(false)
   // Null until loaded, so the turns already there when the transcript opens are not scrolled to.
-  const seen = useRef<{ turn: string | undefined; lastRow: string | undefined } | null>(null)
+  const seen = useRef<{
+    turn: string | undefined
+    firstRow: string | undefined
+    lastRow: string | undefined
+  } | null>(null)
 
   const turnMessageId = lastTurnMessageId(rows)
 
@@ -53,10 +57,10 @@ export function useSentMessageScroll({
   const contentTop = (view: HTMLElement, element: Element) =>
     view.scrollTop + element.getBoundingClientRect().top - view.getBoundingClientRect().top
 
-  // Virtuoso unmounts the message once it scrolls out of view, so its last known place stands in.
-  const sentRowTop = (view: HTMLElement) => {
+  const trackSentRowTop = (view: HTMLElement) => {
     const row = sentRow()
     if (row) sentTop.current = contentTop(view, row)
+    // Virtuoso unmounts the message once it scrolls out of view, so its last known place stands in.
     return sentTop.current
   }
 
@@ -64,7 +68,7 @@ export function useSentMessageScroll({
     const view = scroller.current
     const end = footer()
     if (scrolling.current || !view || !end) return
-    const top = sentRowTop(view)
+    const top = trackSentRowTop(view)
     if (top === undefined) return
     const held = hasRoomLeft()
     setRoom(view.clientHeight - (contentTop(view, end) - top))
@@ -84,7 +88,9 @@ export function useSentMessageScroll({
   useLayoutEffect(() => {
     if (!loaded) return
     const previous = seen.current
-    seen.current = { turn: turnMessageId, lastRow: rows.at(-1)?.id }
+    seen.current = { turn: turnMessageId, firstRow: rows[0]?.id, lastRow: rows.at(-1)?.id }
+    // Older items loaded above move every row down.
+    if (previous && previous.firstRow !== seen.current.firstRow) sentTop.current = undefined
     if (previous === null || previous.turn === turnMessageId || !turnMessageId) return
     // A message revealed by loading older items sits before the previous last row.
     const index = rows.findIndex((row) => row.id === turnMessageId)
