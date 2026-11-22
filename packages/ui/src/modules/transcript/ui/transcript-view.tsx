@@ -1,11 +1,12 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
 import { Text } from "../../../core/components/text/text.tsx"
 import { shownRows, type TranscriptRow as RowData } from "../rules/turns.ts"
 import { useLoadBefore } from "../hooks/use-load-before.ts"
+import { useRestoredPlace, useSavePlace } from "../hooks/use-transcript-place.ts"
 import { useSentMessageScroll } from "../hooks/use-sent-message-scroll.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
 import { TurnWork } from "./turn-work.tsx"
@@ -21,8 +22,21 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
   const loadItemsBefore = useAtomSet(loadItemsBeforeAtom)
   const shown = useMemo(() => shownRows(rows, live), [rows, live])
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
-  const { root, scrollerRef, followOutput, fitRoom } = useSentMessageScroll({ loaded, rows })
   const firstIndex = FIRST_ITEM_INDEX - prepended
+  const restored = useRestoredPlace({ sessionId, loaded, firstIndex })
+  const { root, scrollerRef, followOutput, fitRoom, sentMessagePlace } = useSentMessageScroll({
+    loaded,
+    rows,
+    restored: restored?.sent,
+  })
+  const save = useSavePlace({ sessionId, firstIndex, sentMessagePlace })
+  const bothScrollerRefs = useCallback(
+    (element: HTMLElement | Window | null) => {
+      scrollerRef(element)
+      save.scrollerRef(element instanceof HTMLElement ? element : null)
+    },
+    [scrollerRef, save.scrollerRef],
+  )
   const { rangeChanged, startReached } = useLoadBefore({
     rows,
     firstIndex,
@@ -36,13 +50,16 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
   return (
     <div className="iv-transcript" ref={root}>
       <Virtuoso
-        scrollerRef={scrollerRef}
+        ref={save.listRef}
+        scrollerRef={bothScrollerRefs}
         data-testid="transcript"
         className="iv-transcript__list"
         data={shown}
         defaultItemHeight={ROW_HEIGHT}
         firstItemIndex={firstIndex}
-        initialTopMostItemIndex={{ index: "LAST", align: "end" }}
+        {...(restored
+          ? { restoreStateFrom: restored.list }
+          : { initialTopMostItemIndex: { index: "LAST", align: "end" } as const })}
         computeItemKey={(_, row) => row.id}
         followOutput={followOutput}
         totalListHeightChanged={fitRoom}
