@@ -272,11 +272,9 @@ function stepper() {
     return `<div class="iv-option-list__option" role="${q.multi ? "checkbox" : "radio"}" aria-checked="${picked}" data-row="${r}" ${S.row === r ? "data-cursor" : ""} ${picked ? "data-picked" : ""}>${lead}${body}${tail}</div>`
   }).join("")
   const last = S.step === QUESTIONS.length - 1
-  const hint = q.multi ? `↑↓ to move, Space or 1–${rows.length} to tick, Enter to ${last ? "send" : "go on"}, Esc to decline` : `↑↓ or 1–${rows.length} to choose, Enter to ${last ? "send" : "go on"}, ←→ between questions, Esc to decline`
   const ticked = choicesOf(S.step).length
-  const foot = q.multi
-    ? `<div class="sheet-foot"><p class="iv-action-sheet__hint">${hint}</p><span class="faint kbd" style="font-size:var(--iv-text-xs)">${ticked ? `${ticked} chosen` : ""}</span><button class="iv-button" data-variant="primary" data-act="continue" ${ticked ? "" : "disabled"}>${last ? "Send" : "Continue"}</button></div>`
-    : `<p class="iv-action-sheet__hint">${hint}</p>`
+  const decline = `<button class="iv-button" data-act="decline">Decline <span class="faint" style="font-size:var(--iv-text-xs)">Esc</span></button>`
+  const foot = `<div class="sheet-foot"><span class="grow"></span>${decline}${q.multi ? `<span class="faint kbd" style="font-size:var(--iv-text-xs);margin-left:var(--iv-space-2)">${ticked ? `${ticked} chosen` : ""}</span><button class="iv-button" data-variant="primary" data-act="continue" ${ticked ? "" : "disabled"}>${last ? "Send" : "Continue"}</button>` : ""}</div>`
   return `<div class="iv-action-sheet" data-testid="question-sheet">
     <div class="iv-action-sheet__head"><span class="iv-action-sheet__title">The agent asks</span><span class="stepper">${tabs}</span></div>
     <div class="${S.stepAnim ? "step-in" : ""}">
@@ -300,7 +298,7 @@ function stepperKey(e) {
   else if (e.key === "ArrowRight") goTo(S.step + 1)
   else if (e.key === "ArrowLeft") goTo(S.step - 1)
   else if (/^[1-9]$/.test(e.key) && +e.key <= n) choose(+e.key - 1)
-  else if (e.key === " " && q.multi) { if (S.row === OTHER(q)) choose(S.row); else pick(S.step, S.row) }
+  else if (e.key === " ") { if (S.row === OTHER(q) && !S.answers[S.step].other.trim()) choose(S.row); else pick(S.step, S.row) }
   else if (e.key === "Enter") { if (q.multi) { if (!isAnswered(S.step)) choose(S.row); if (isAnswered(S.step)) advance() } else choose(S.row) }
   else return false
   return true
