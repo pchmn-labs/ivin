@@ -80,6 +80,17 @@ code { font-family: var(--iv-font-mono); font-size: var(--iv-text-mono); padding
 
 /* 1. Stepper */
 .steps { display: flex; align-items: center; gap: 2px; margin-left: auto; font-weight: var(--iv-weight-regular); }
+.radio { flex: none; width: 16px; height: 16px; margin: 1px; border: 1.5px solid var(--iv-text-faint); border-radius: 50%; }
+.iv-option-list__option[data-picked] .radio { border-color: var(--iv-accent); background: radial-gradient(circle, var(--iv-accent) 0 3.5px, transparent 4px); }
+.stepper { display: flex; align-items: center; gap: 6px; margin-left: auto; font-weight: var(--iv-weight-regular); }
+.st { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 2px; border: 0; border-radius: var(--iv-radius-sm); background: transparent; color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
+.st:hover { color: var(--iv-text-muted); }
+.st-dot { display: grid; place-items: center; line-height: 1; width: 16px; height: 16px; border: 1px solid var(--iv-border-strong); border-radius: 50%; font-size: 10px; font-weight: var(--iv-weight-medium); font-variant-numeric: tabular-nums; }
+.st[data-current] { color: var(--iv-text); font-weight: var(--iv-weight-medium); }
+.st[data-current] .st-dot { border-color: var(--iv-attention); color: var(--iv-attention); }
+.st[data-done] { color: var(--iv-text-muted); }
+.st[data-done] .st-dot { border-color: transparent; background: color-mix(in srgb, var(--iv-accent) 22%, transparent); color: var(--iv-accent); }
+.st-line { width: 16px; height: 1px; background: var(--iv-border-strong); }
 .step-tab { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 8px; border: 0; border-radius: var(--iv-radius-sm); background: transparent; color: var(--iv-text-faint); font-size: var(--iv-text-xs); font-weight: var(--iv-weight-medium); }
 .step-tab:hover { color: var(--iv-text-muted); }
 .step-tab[data-current] { background: var(--iv-bg-active); color: var(--iv-text); }
@@ -246,15 +257,18 @@ function renderTranscript() {
 /* 1. Stepper: one question at a time */
 function stepper() {
   const q = QUESTIONS[S.step], a = S.answers[S.step]
-  const tabs = QUESTIONS.map((x, i) => `<button class="step-tab" data-tab="${i}" ${i === S.step ? "data-current" : ""} ${isAnswered(i) && i !== S.step ? "data-done" : ""}>${isAnswered(i) && i !== S.step ? CHECK : ""}${esc(x.header)}</button>`).join("")
+  const tabs = QUESTIONS.map((x, i) => {
+    const done = isAnswered(i) && i !== S.step
+    return `${i ? '<span class="st-line" aria-hidden="true"></span>' : ""}<button class="st" data-tab="${i}" ${i === S.step ? 'data-current aria-current="step"' : ""} ${done ? "data-done" : ""}><span class="st-dot">${done ? CHECK : i + 1}</span>${esc(x.header)}</button>`
+  }).join("")
   const rows = [...q.options.map(([l, d], r) => ({ l, d, r })), { l: "Other", d: "", r: OTHER(q) }]
   const opts = rows.map(({ l, d, r }) => {
     const picked = a.picked.has(r)
     const body = r === OTHER(q) && (S.editing || a.other)
       ? `<span class="opt-label">Other</span>${S.editing && S.row === r ? `<input class="other-input" id="other" placeholder="Your answer" value="${esc(a.other)}">` : `<span class="opt-desc">${esc(a.other)}</span>`}`
       : `<span class="opt-label">${esc(l)}</span><span class="opt-desc">${esc(d || (r === OTHER(q) ? "Type your own answer" : ""))}</span>`
-    const lead = q.multi ? `<span class="check">${picked ? CHECK : ""}</span>` : `<span class="num kbd">${r + 1}</span>`
-    const tail = q.multi ? `<span class="iv-option-list__hint kbd">${r + 1}</span>` : ""
+    const lead = q.multi ? `<span class="check">${picked ? CHECK : ""}</span>` : `<span class="radio"></span>`
+    const tail = `<span class="iv-option-list__hint kbd">${r + 1}</span>`
     return `<div class="iv-option-list__option" role="${q.multi ? "checkbox" : "radio"}" aria-checked="${picked}" data-row="${r}" ${S.row === r ? "data-cursor" : ""} ${picked ? "data-picked" : ""}>${lead}${body}${tail}</div>`
   }).join("")
   const last = S.step === QUESTIONS.length - 1
@@ -264,7 +278,7 @@ function stepper() {
     ? `<div class="sheet-foot"><p class="iv-action-sheet__hint">${hint}</p><span class="faint kbd" style="font-size:var(--iv-text-xs)">${ticked ? `${ticked} chosen` : ""}</span><button class="iv-button" data-variant="primary" data-act="continue" ${ticked ? "" : "disabled"}>${last ? "Send" : "Continue"}</button></div>`
     : `<p class="iv-action-sheet__hint">${hint}</p>`
   return `<div class="iv-action-sheet" data-testid="question-sheet">
-    <div class="iv-action-sheet__head"><span class="iv-action-sheet__title">The agent asks</span><span class="faint kbd" style="font-weight:400;font-size:var(--iv-text-xs)">${S.step + 1} of ${QUESTIONS.length}</span><span class="steps">${tabs}</span></div>
+    <div class="iv-action-sheet__head"><span class="iv-action-sheet__title">The agent asks</span><span class="stepper">${tabs}</span></div>
     <div class="${S.stepAnim ? "step-in" : ""}">
       <div class="step-question">${esc(q.question)}</div>
       ${q.multi ? '<div class="step-sub">Choose one or more</div>' : ""}
