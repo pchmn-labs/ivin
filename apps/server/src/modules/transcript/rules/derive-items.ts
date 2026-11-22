@@ -35,13 +35,14 @@ export const applyEvent = (
         role: "user",
         text: event.text,
         images: event.images ?? [],
+        steer: event.steer ?? false,
       }
       return { state: { ...state, openMessage: null }, item }
     }
     case "assistant_text": {
       const item: MessageItem = state.openMessage
         ? { ...state.openMessage, text: `${state.openMessage.text}\n\n${event.text}` }
-        : { ...base, type: "message", role: "assistant", text: event.text, images: [] }
+        : { ...base, type: "message", role: "assistant", text: event.text, images: [], steer: false }
       return { state: { ...state, openMessage: item }, item }
     }
     case "thinking": {

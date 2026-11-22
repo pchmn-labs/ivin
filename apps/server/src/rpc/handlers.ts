@@ -37,6 +37,7 @@ import { listArchivedSessions } from "../modules/session/usecases/list-archived-
 import { restoreSession } from "../modules/session/usecases/restore-session.ts"
 import { answerApproval } from "../modules/session/usecases/answer-approval.ts"
 import { interruptSession } from "../modules/session/usecases/interrupt-session.ts"
+import { sendNow } from "../modules/session/usecases/send-now.ts"
 import { createSession } from "../modules/session/usecases/create-session.ts"
 import { listSessions } from "../modules/session/usecases/list-sessions.ts"
 import { pickBranch } from "../modules/session/usecases/pick-branch.ts"
@@ -165,6 +166,7 @@ export const handlers = Rpcs.toLayer(
         answerApproval(sessionId, requestId, allow),
       "session.pickBranch": ({ sessionId, name, remote }) => pickBranch(sessionId, name, remote),
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
+      "session.sendNow": ({ sessionId }) => sendNow(sessionId),
       "session.switchToDefaultBranch": ({ sessionId, localChanges }) =>
         switchToDefaultBranch(sessionId, localChanges),
       "session.fastForward": ({ sessionId, stash }) => fastForward(sessionId, stash),

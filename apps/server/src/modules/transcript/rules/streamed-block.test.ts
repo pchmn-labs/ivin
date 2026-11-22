@@ -34,6 +34,7 @@ const openMessage: ItemState = {
     role: "assistant",
     text: "a",
     images: [],
+    steer: false,
   },
 }
 

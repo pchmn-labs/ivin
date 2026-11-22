@@ -186,6 +186,12 @@ export const migrations: readonly Migration[] = [
     WHERE title_locked = 1;
     ALTER TABLE sessions DROP COLUMN title_locked`,
   },
+  {
+    version: 19,
+    sql: `
+    ALTER TABLE sessions ADD COLUMN pending_messages TEXT NOT NULL DEFAULT '[]';
+    ALTER TABLE sessions ADD COLUMN unread_messages TEXT NOT NULL DEFAULT '[]'`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

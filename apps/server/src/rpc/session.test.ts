@@ -252,7 +252,7 @@ test("sending a message stores the user message then the scripted events in orde
   ])
   expect(rows[0]!.id).toBe("msg-1")
   expect(JSON.parse(rows[1]!.payload).raw).toEqual({ from: "scripted" })
-  expect(sent).toEqual([{ sessionId, text: "go", images: [] }])
+  expect(sent).toEqual([{ sessionId, id: "msg-1", text: "go", images: [] }])
 })
 
 test("a tool call and its result come back as one item, in order after the user message", async () => {
@@ -648,10 +648,7 @@ test("a message sent while a turn is still running reaches the provider", async 
   const sent: ScriptedSend[] = []
   const status = await withServer(
     newDatabase(),
-    [
-      [running, said("Working")],
-      [said("Noted"), idle],
-    ],
+    [[running, said("Working")]],
     sent,
     (client) =>
       Effect.gen(function* () {
@@ -664,12 +661,12 @@ test("a message sent while a turn is still running reaches the provider", async 
           messageId: "m2",
           text: "also",
         })
-        return yield* until(statusOf(client, "/p", session.id), (s) => s === "idle")
+        return yield* statusOf(client, "/p", session.id)
       }),
   )
 
   expect(sent.map((s) => s.text)).toEqual(["go", "also"])
-  expect(status).toBe("idle")
+  expect(status).toBe("working")
 })
 
 test("watching a project's sessions streams each status and title change", async () => {

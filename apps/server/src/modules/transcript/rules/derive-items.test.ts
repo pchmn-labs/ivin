@@ -46,7 +46,14 @@ test("a user message is one message item named after its event", () => {
       role: "user",
       text: "hi",
       images: [],
+      steer: false,
     },
+  ])
+})
+
+test("a user message read while a turn ran is a steer", () => {
+  expect(derive(events({ type: "user_message", text: "also", steer: true }))).toMatchObject([
+    { type: "message", role: "user", steer: true },
   ])
 })
 
@@ -147,6 +154,7 @@ test("a usage event is a usage item at its own position and leaves the open mess
       role: "assistant",
       text: "one\n\ntwo",
       images: [],
+      steer: false,
     },
     {
       id: "e2",

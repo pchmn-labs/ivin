@@ -4,6 +4,7 @@ import type {
   RunOptions,
   Session,
   SessionStatus,
+  UnsentMessage,
 } from "@ivin/contracts/session"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
@@ -22,6 +23,8 @@ interface SessionRow {
   effort: string
   permission_mode: string
   relaunch_failure: string | null
+  pending_messages: string
+  unread_messages: string
   status: SessionStatus
   status_changed_at: number
   created_at: number
@@ -48,6 +51,8 @@ const toSession = (row: SessionRow): Session => ({
       ? null
       : // Stored before the agent's error was kept.
         { error: null, ...(JSON.parse(row.relaunch_failure) as Omit<RelaunchFailure, "error">) },
+  pendingMessages: JSON.parse(row.pending_messages) as UnsentMessage[],
+  unreadMessages: JSON.parse(row.unread_messages) as UnsentMessage[],
   status: row.status,
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
   createdAt: DateTime.makeUnsafe(row.created_at),
@@ -57,15 +62,29 @@ const toSession = (row: SessionRow): Session => ({
 })
 
 const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model,
-  effort, permission_mode, relaunch_failure, status,
+  effort, permission_mode, relaunch_failure, pending_messages, unread_messages, status,
   status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
   ) AS started,
   (SELECT COALESCE(MAX(number), 0) FROM images i WHERE i.session_id = sessions.id) AS last_image_number`
 
+const dropPending = `unread_messages = (
+    SELECT json_group_array(json(value)) FROM (
+      SELECT 0 AS list, key, value FROM json_each(unread_messages)
+      UNION ALL SELECT 1, key, value FROM json_each(pending_messages)
+      ORDER BY list, key
+    )
+  ), pending_messages = '[]'`
+
 export const layerSqliteSessionStore = Layer.effect(SessionStore)(
   Effect.gen(function* () {
     const db = yield* Database
+    const pendingOf = (id: string): UnsentMessage[] => {
+      const row = db.prepare("SELECT pending_messages FROM sessions WHERE id = ?").get(id) as
+        | { pending_messages: string }
+        | undefined
+      return row ? (JSON.parse(row.pending_messages) as UnsentMessage[]) : []
+    }
     return {
       insert: (session) =>
         Effect.sync(() => {
@@ -182,6 +201,32 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             id,
           )
         }),
+      addPendingMessage: (id, message) =>
+        Effect.sync(() => {
+          db.prepare(
+            "UPDATE sessions SET pending_messages = json_insert(pending_messages, '$[#]', json(?)) WHERE id = ?",
+          ).run(JSON.stringify(message), id)
+        }),
+      takePendingMessage: (id, messageId) =>
+        Effect.sync(() => {
+          const pending = pendingOf(id)
+          const taken = pending.find((message) => message.id === messageId) ?? null
+          if (taken === null) return null
+          db.prepare("UPDATE sessions SET pending_messages = ? WHERE id = ?").run(
+            JSON.stringify(pending.filter((message) => message !== taken)),
+            id,
+          )
+          return taken
+        }),
+      pendingMessages: (id) => Effect.sync(() => pendingOf(id)),
+      dropPendingMessages: (id) =>
+        Effect.sync(() => {
+          db.prepare(`UPDATE sessions SET ${dropPending} WHERE id = ?`).run(id)
+        }),
+      clearUnreadMessages: (id) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET unread_messages = '[]' WHERE id = ?").run(id)
+        }),
       setWorkingFolder: (id, workingFolder, branch) =>
         Effect.sync(() => {
           db.prepare(
@@ -205,6 +250,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           `UPDATE sessions SET status = 'idle', status_changed_at = last_activity_at
            WHERE status NOT IN ('idle', 'failed')`,
         ).run()
+        db.prepare(`UPDATE sessions SET ${dropPending} WHERE pending_messages <> '[]'`).run()
       }),
       touch: (id, at) =>
         Effect.sync(() => {
