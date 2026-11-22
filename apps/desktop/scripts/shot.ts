@@ -19,7 +19,9 @@ const app = await electron.launch({
 
 // A repository with a linked worktree, a second branch and an origin, so the working folder menu
 // and the branch picker have something to list.
+let repoDir = ""
 const makeRepo = (dir: string) => {
+  repoDir = dir
   const env = {
     ...process.env,
     GIT_AUTHOR_NAME: "ivin",
@@ -199,12 +201,35 @@ try {
   await window.waitForTimeout(300)
   await shoot("archived-sessions")
   await window.keyboard.press("Escape")
+  // One file of each git status the Files tree colours.
+  writeFileSync(join(repoDir, "src/orders/list.tsx"), "export const OrderList = () => null\n")
+  writeFileSync(join(repoDir, "src/orders/empty-page.tsx"), "")
+  writeFileSync(join(repoDir, "src/orders/order.ts"), "")
+  execFileSync("git", ["add", "src/orders/order.ts"], { cwd: repoDir })
   await sidebar.getByRole("tab", { name: "Files" }).click()
   await sidebar.getByRole("treeitem", { name: "src", exact: true }).click()
   await sidebar.getByRole("treeitem", { name: "orders", exact: true }).click()
-  await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).waitFor()
+  await sidebar.getByRole("treeitem", { name: "empty-page.tsx", exact: true }).waitFor()
   await window.waitForTimeout(300)
   await shoot("files-tab")
+  await sidebar.getByRole("button", { name: "Show ignored files" }).click()
+  await sidebar.getByRole("treeitem", { name: "dist", exact: true }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("files-ignored")
+  await sidebar.getByRole("button", { name: "Hide ignored files" }).click()
+  await sidebar.getByRole("textbox", { name: "Filter files by name" }).fill("tot")
+  await sidebar
+    .getByRole("treeitem", { name: "list.tsx", exact: true })
+    .waitFor({ state: "detached" })
+  await window.waitForTimeout(300)
+  await shoot("files-filter")
+  await sidebar.getByRole("textbox", { name: "Filter files by name" }).fill("")
+  await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).waitFor()
+  await window.keyboard.press(process.platform === "darwin" ? "Meta+P" : "Control+P")
+  await window.keyboard.type("ordtot")
+  await window.waitForTimeout(400)
+  await shoot("go-to-file")
+  await window.keyboard.press("Escape")
   await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).click()
   await sidebar.getByRole("treeitem", { name: "total.ts", exact: true }).click()
   await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").waitFor()
