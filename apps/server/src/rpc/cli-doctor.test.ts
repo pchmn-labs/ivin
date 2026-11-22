@@ -15,7 +15,47 @@ test("ivin doctor prints one passing line per check and exits 0 with a healthy a
     "✓ /home/.ivin/settings.json is valid or absent",
     "✓ /home/.ivin/keybindings.json is valid or absent",
     "✓ The scripted harness runs no program",
+    "✓ The scripted harness takes no skills",
   ])
+}, 10_000)
+
+test.each([
+  ["installed", "✓ Installed the ivin-customize skill at /home/.claude/skills/ivin-customize"],
+  ["updated", "✓ Updated the ivin-customize skill at /home/.claude/skills/ivin-customize"],
+  ["upToDate", "✓ The ivin-customize skill at /home/.claude/skills/ivin-customize is up to date"],
+  [
+    "notOurs",
+    "✓ /home/.claude/skills/ivin-customize is not ivin's: ivin left it as it is. Remove it to get ivin's ivin-customize skill at the next launch",
+  ],
+] as const)(
+  "ivin doctor reports a skill install that %s",
+  async (status, line) => {
+    const run = await withCliServer(
+      (socketPath) => runCli(["doctor"], { IVIN_SOCKET: socketPath }),
+      {
+        skill: { name: "ivin-customize", path: "/home/.claude/skills/ivin-customize", status },
+      },
+    )
+
+    expect(run.code).toBe(0)
+    expect(run.stdout.trim().split("\n").at(-1)).toBe(line)
+  },
+  10_000,
+)
+
+test("ivin doctor reports a failed skill install and exits 1", async () => {
+  const run = await withCliServer((socketPath) => runCli(["doctor"], { IVIN_SOCKET: socketPath }), {
+    skill: {
+      name: "ivin-customize",
+      path: "/home/.claude/skills/ivin-customize",
+      status: "failed",
+    },
+  })
+
+  expect(run.code).toBe(1)
+  expect(run.stdout).toContain(
+    "✗ Could not install the ivin-customize skill at /home/.claude/skills/ivin-customize; the error is in ~/.ivin/logs/ivin.log",
+  )
 }, 10_000)
 
 test("ivin doctor names a broken settings.json and keybindings.json, and exits 1", async () => {

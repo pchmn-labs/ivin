@@ -6,7 +6,7 @@ import type { Command } from "./command.ts"
 import { Server } from "./connection.ts"
 
 interface Check {
-  readonly check: "app" | "socket" | "settings" | "keybindings" | "harness"
+  readonly check: "app" | "socket" | "settings" | "keybindings" | "harness" | "skill"
   readonly ok: boolean
   readonly message: string
 }
@@ -59,12 +59,39 @@ const harnessCheck = ({ id, program }: Diagnosis["harness"]): Check => {
     : { check: "harness", ok: true, message: `${program.name} found at ${program.path}` }
 }
 
+const skillCheck = (harness: Diagnosis["harness"]["id"], skill: Diagnosis["skill"]): Check => {
+  if (skill === null)
+    return { check: "skill", ok: true, message: `The ${harness} harness takes no skills` }
+  const { name, path, status } = skill
+  switch (status) {
+    case "installed":
+      return { check: "skill", ok: true, message: `Installed the ${name} skill at ${path}` }
+    case "updated":
+      return { check: "skill", ok: true, message: `Updated the ${name} skill at ${path}` }
+    case "upToDate":
+      return { check: "skill", ok: true, message: `The ${name} skill at ${path} is up to date` }
+    case "notOurs":
+      return {
+        check: "skill",
+        ok: true,
+        message: `${path} is not ivin's: ivin left it as it is. Remove it to get ivin's ${name} skill at the next launch`,
+      }
+    case "failed":
+      return {
+        check: "skill",
+        ok: false,
+        message: `Could not install the ${name} skill at ${path}; the error is in ~/.ivin/logs/ivin.log`,
+      }
+  }
+}
+
 export const checksOf = (diagnosis: Diagnosis, socketPath: string): readonly Check[] => [
   { check: "app", ok: true, message: `ivin ${diagnosis.version} is running` },
   { check: "socket", ok: true, message: `Answering on ${socketPath}` },
   fileCheck("settings", diagnosis.settings, settingsProblem, "settings"),
   fileCheck("keybindings", diagnosis.keybindings, keybindingsProblem, "keybindings"),
   harnessCheck(diagnosis.harness),
+  skillCheck(diagnosis.harness.id, diagnosis.skill),
 ]
 
 export const doctor: Command = {
@@ -72,7 +99,7 @@ export const doctor: Command = {
   summary: "Check that ivin, its files and the agent's program are healthy",
   usage: "ivin doctor [--json]",
   description:
-    "Prints one line per check: the app's version, the socket, settings.json, keybindings.json and the program the agents run. Exits 1 when a check fails.",
+    "Prints one line per check: the app's version, the socket, settings.json, keybindings.json, the program the agents run and the install of ivin's skill for them. Exits 1 when a check fails.",
   options: {},
   maxArguments: 0,
   run: () =>

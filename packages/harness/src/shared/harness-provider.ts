@@ -54,6 +54,8 @@ export class HarnessProvider extends Context.Service<
     readonly id: Harness
     readonly runOptions: Effect.Effect<HarnessRunOptions>
     readonly program: Effect.Effect<HarnessProgram | null>
+    // The folder the harness reads the user's skills from; null for a harness that takes none.
+    readonly skillsFolder: string | null
     readonly start: (input: StartInput) => Effect.Effect<HarnessRun, HarnessError, Scope.Scope>
     readonly toolActivity: (call: ToolUse, result: ToolOutcome) => ToolActivity
     readonly toolKind: (name: string) => ToolKind

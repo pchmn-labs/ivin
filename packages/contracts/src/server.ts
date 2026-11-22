@@ -17,6 +17,14 @@ export const HarnessProgram = Schema.Struct({
 })
 export type HarnessProgram = typeof HarnessProgram.Type
 
+export const SkillInstall = Schema.Struct({
+  name: Schema.String,
+  path: Schema.String,
+  // `notOurs`: a folder of that name that ivin did not write, left as it is.
+  status: Schema.Literals(["installed", "updated", "upToDate", "notOurs", "failed"]),
+})
+export type SkillInstall = typeof SkillInstall.Type
+
 export const Diagnosis = Schema.Struct({
   version: Schema.String,
   settings: Schema.Struct({ path: Schema.String, problem: Schema.NullOr(SettingsFileProblem) }),
@@ -26,6 +34,8 @@ export const Diagnosis = Schema.Struct({
   }),
   // Null for a harness that runs no program.
   harness: Schema.Struct({ id: Harness, program: Schema.NullOr(HarnessProgram) }),
+  // Null for a harness that takes no skills.
+  skill: Schema.NullOr(SkillInstall),
 })
 export type Diagnosis = typeof Diagnosis.Type
 

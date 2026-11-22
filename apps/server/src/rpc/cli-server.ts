@@ -1,3 +1,4 @@
+import type { SkillInstall } from "@ivin/contracts/server"
 import { layerScripted } from "@ivin/harness"
 import { Effect, Layer } from "effect"
 import { execFile, execFileSync } from "node:child_process"
@@ -7,6 +8,7 @@ import { join } from "node:path"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerFsSettingsFile } from "../modules/setting/adapters/fs-settings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { SkillInstallation } from "../modules/skill/usecases/skill-installation.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
 import { layerServices } from "./handlers.ts"
@@ -51,9 +53,15 @@ export interface CliServerOptions {
   readonly ivinHome?: string
   readonly keybindings?: string | null
   readonly version?: string
+  readonly skill?: SkillInstall | null
 }
 
-const layerCliServer = ({ settings = null, keybindings = null, ivinHome }: CliServerOptions) =>
+const layerCliServer = ({
+  settings = null,
+  keybindings = null,
+  ivinHome,
+  skill = null,
+}: CliServerOptions) =>
   layerServices.pipe(
     Layer.provideMerge(
       Layer.mergeAll(
@@ -62,6 +70,7 @@ const layerCliServer = ({ settings = null, keybindings = null, ivinHome }: CliSe
         layerScripted([]),
         ivinHome === undefined ? layerSettingsFileOf([settings]) : layerFsSettingsFile(ivinHome),
         layerKeybindingsFileOf([keybindings]),
+        Layer.succeed(SkillInstallation)(skill),
       ),
     ),
   )
