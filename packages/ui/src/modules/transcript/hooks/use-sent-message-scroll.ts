@@ -20,6 +20,7 @@ export function useSentMessageScroll({
   const root = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLElement | null>(null)
   const sentId = useRef<string | undefined>(undefined)
+  const sentTop = useRef<number | undefined>(undefined)
   const scrolling = useRef(false)
   const room = useRef(0)
   const frame = useRef(0)
@@ -49,17 +50,27 @@ export function useSentMessageScroll({
     return id ? scroller.current?.querySelector(`[data-row-id="${CSS.escape(id)}"]`) : null
   }
 
+  const contentTop = (view: HTMLElement, element: Element) =>
+    view.scrollTop + element.getBoundingClientRect().top - view.getBoundingClientRect().top
+
+  // Virtuoso unmounts the message once it scrolls out of view, so its last known place stands in.
+  const sentRowTop = (view: HTMLElement) => {
+    const row = sentRow()
+    if (row) sentTop.current = contentTop(view, row)
+    return sentTop.current
+  }
+
   const fitRoom = useCallback(() => {
     const view = scroller.current
-    const row = sentRow()
     const end = footer()
-    if (scrolling.current || !view || !row || !end) return
+    if (scrolling.current || !view || !end) return
+    const top = sentRowTop(view)
+    if (top === undefined) return
     const held = hasRoomLeft()
-    setRoom(view.clientHeight - (end.getBoundingClientRect().top - row.getBoundingClientRect().top))
+    setRoom(view.clientHeight - (contentTop(view, end) - top))
     if (userScrolled.current) return
     // The turn's rows can shrink before the room grows back, and the browser then scrolls up to fit.
-    if (hasRoomLeft())
-      view.scrollTop += row.getBoundingClientRect().top - view.getBoundingClientRect().top
+    if (hasRoomLeft()) view.scrollTop = top
     // Virtuoso follows only from the end, and a row taller than the room leaves the view short of it.
     // The next frame lets it measure the shrunk room first, or it misses that the view reached the end.
     else if (held)
@@ -82,6 +93,7 @@ export function useSentMessageScroll({
     if (index <= lastIndex || !view) return
 
     sentId.current = turnMessageId
+    sentTop.current = undefined
     userScrolled.current = false
     cancelAnimationFrame(frame.current)
     scrolling.current = true

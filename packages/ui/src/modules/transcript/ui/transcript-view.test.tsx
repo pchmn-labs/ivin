@@ -208,6 +208,37 @@ test("a sent message stays at the top of the view when its tool calls fold as th
   expect(topInView("question 40")).toBeLessThan(30)
 })
 
+test("a sent message goes back to the top of the view when the view grows after hiding it", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+  const view = (height: number) => (
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" live />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>
+  )
+
+  const screen = await render(view(300))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+
+  server.pushItem(userMessage(40))
+  server.pushItem(message(41, Array.from({ length: 4 }, (_, i) => `line ${i}`).join("\n\n")))
+  await expect.element(page.getByText("line 3", { exact: true })).toBeVisible()
+  await frames()
+  await screen.rerender(view(80))
+  await vi.waitFor(() => expect(page.getByText("question 40", { exact: true }).query()).toBeNull())
+  await screen.rerender(view(300))
+  await vi.waitFor(() =>
+    expect(
+      page.getByText("question 40", { exact: true }).element().getBoundingClientRect().top -
+        scroller().getBoundingClientRect().top,
+    ).toBeLessThan(30),
+  )
+})
+
 test("once the answer is taller than the view, the transcript follows its end", async () => {
   const server = makeFakeServer()
   server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
