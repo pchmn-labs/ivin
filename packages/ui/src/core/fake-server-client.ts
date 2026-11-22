@@ -6,6 +6,7 @@ import {
   annotationKinds,
   type AnnotationTarget,
 } from "@ivin/contracts/annotation"
+import type { ShellCommandNotOurs, ShellFoldersRefused, ShellInstall } from "@ivin/contracts/cli"
 import {
   FileNotRead,
   FolderNotListed,
@@ -111,6 +112,14 @@ export interface FakeServer {
   readonly subViews: Map<string, TabSubViews>
   // Streams the user's settings to `setting.watch`, as after a change to the file.
   readonly setUserSettings: (state: UserSettings) => void
+  readonly shell: FakeShell
+}
+
+export interface FakeShell {
+  // What `cli.getShellInstall` returns.
+  installed: ShellInstall | null
+  // What the next `cli.installInShell` does: install there, or fail with this error.
+  nextInstall: ShellInstall | ShellFoldersRefused | ShellCommandNotOurs
 }
 
 export interface FakeCheckout extends CheckoutStatus {
@@ -186,6 +195,10 @@ export const makeFakeServer = (
   const keybindingChanges = Effect.runSync(PubSub.unbounded<UserKeybindings>())
   let userSettings: UserSettings = { settings: defaultSettings, problem: null }
   const settingChanges = Effect.runSync(PubSub.unbounded<UserSettings>())
+  const shell: FakeShell = {
+    installed: null,
+    nextInstall: { folder: "/usr/local/bin", path: "/usr/local/bin/ivin", onPath: true },
+  }
   let clock = 1_000
   let nextId = 1
   let hold: { readonly wait: Promise<boolean> } | null = null
@@ -332,6 +345,14 @@ export const makeFakeServer = (
           Stream.make(userKeybindings).pipe(Stream.concat(Stream.fromSubscription(subscription))),
         ),
       ),
+    "cli.getShellInstall": () => Effect.sync(() => shell.installed),
+    "cli.installInShell": () =>
+      Effect.suspend(() => {
+        const next = shell.nextInstall
+        if ("_tag" in next) return Effect.fail(next)
+        shell.installed = next
+        return Effect.succeed(next)
+      }),
     "setting.watch": () =>
       Stream.unwrap(
         Effect.map(PubSub.subscribe(settingChanges), (subscription) =>
@@ -967,6 +988,7 @@ export const makeFakeServer = (
       Effect.runSync(PubSub.publish(keybindingChanges, state))
     },
     failNextCall: (rpc) => void failing.add(rpc),
+    shell,
     folders,
     listedFolders,
     files,

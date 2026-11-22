@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./annotation": "./src/annotation.ts",
+    "./cli": "./src/cli.ts",
     "./file": "./src/file.ts",
     "./keybinding": "./src/keybinding.ts",
     "./log": "./src/log.ts",

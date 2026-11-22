@@ -6,6 +6,8 @@ import { layerAnnotationFeed } from "../modules/annotation/usecases/annotation-f
 import { listAnnotations } from "../modules/annotation/usecases/list-annotations.ts"
 import { removeAnnotation } from "../modules/annotation/usecases/remove-annotation.ts"
 import { watchAnnotations } from "../modules/annotation/usecases/watch-annotations.ts"
+import { getShellInstall } from "../modules/cli/usecases/get-shell-install.ts"
+import { installInShell } from "../modules/cli/usecases/install-in-shell.ts"
 import { layerFsFileReader } from "../modules/file/adapters/fs-file-reader.ts"
 import { layerFsFolderReader } from "../modules/file/adapters/fs-folder-reader.ts"
 import { listFolder } from "../modules/file/usecases/list-folder.ts"
@@ -117,6 +119,8 @@ export const handlers = Rpcs.toLayer(
       "annotation.remove": ({ id }) => removeAnnotation(id),
       "annotation.list": ({ target, kind }) => listAnnotations(target, kind),
       "annotation.watch": ({ target }) => watchAnnotations(target),
+      "cli.getShellInstall": () => getShellInstall,
+      "cli.installInShell": () => installInShell,
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
       "setting.watch": () => watchSettings,

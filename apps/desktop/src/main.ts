@@ -154,7 +154,7 @@ void app.whenReady().then(() => {
     return file ? net.fetch(pathToFileURL(file).toString()) : new Response(null, { status: 404 })
   })
   const cliFolder = join(app.getPath("userData"), "bin")
-  writeCliCommand(cliFolder, process.execPath, cliEntry)
+  const cliCommand = writeCliCommand(cliFolder, process.execPath, cliEntry)
   server = utilityProcess.fork(
     serverEntry,
     [
@@ -168,6 +168,8 @@ void app.whenReady().then(() => {
       imageFolder,
       "--skill",
       skillFolder,
+      "--cli-command",
+      cliCommand,
     ],
     {
       serviceName: "ivin-server",

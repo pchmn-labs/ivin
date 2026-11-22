@@ -6,8 +6,11 @@ import {
   layerScripted,
 } from "@ivin/harness"
 import { Cause, Effect, Fiber, Layer } from "effect"
+import { homedir } from "node:os"
+import { join } from "node:path"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
+import { layerFsShellCommand } from "./modules/cli/adapters/fs-shell-command.ts"
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
@@ -37,6 +40,7 @@ const {
     home: homePath,
     images: imagesPath,
     skill: skillPath,
+    "cli-command": cliCommandPath,
   },
 } = parseArgs({
   options: {
@@ -45,6 +49,7 @@ const {
     home: { type: "string" },
     images: { type: "string" },
     skill: { type: "string" },
+    "cli-command": { type: "string" },
   },
   strict: false,
 })
@@ -63,6 +68,15 @@ if (typeof imagesPath !== "string") fail("Missing --images <path>, the folder of
 const imageFolder = imagesPath as string
 if (typeof skillPath !== "string") fail("Missing --skill <path>, the folder of ivin's skill")
 const skillFolder = skillPath as string
+const layerShellCommand =
+  typeof cliCommandPath === "string"
+    ? layerFsShellCommand({
+        command: cliCommandPath,
+        home: homedir(),
+        folders: ["/usr/local/bin", join(homedir(), ".local", "bin")],
+        shell: process.env["SHELL"] || "/bin/zsh",
+      })
+    : Layer.empty
 const socketPath = process.env["IVIN_SOCKET"]
 if (socketPath === undefined) fail("Missing IVIN_SOCKET, the path of the CLI socket")
 
@@ -107,6 +121,7 @@ const startup = Effect.gen(function* () {
           layerLogger,
           layerFsKeybindingsFile(ivinHome),
           layerFsSettingsFile(ivinHome),
+          layerShellCommand,
         ),
       ),
     ),

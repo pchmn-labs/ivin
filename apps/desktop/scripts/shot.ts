@@ -223,6 +223,13 @@ try {
   await window.getByRole("navigation", { name: "Settings sections" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("settings")
+  await window
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Command line" })
+    .click()
+  await window.getByRole("heading", { name: "Command line" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("settings-command-line")
 } finally {
   await app.close()
 }

@@ -1,5 +1,4 @@
 import { useAtom } from "@effect/atom-react"
-import { settingSections, type SettingSection } from "@ivin/contracts/setting"
 import { useEffect, useRef, type KeyboardEvent } from "react"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
@@ -9,11 +8,16 @@ import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { settingsSectionAtom } from "../atoms/settings-page.ts"
 import { useOpenSettingsFile } from "../hooks/use-open-settings-file.ts"
 import { SETTINGS_FILE } from "../rules/setting-message.ts"
+import {
+  settingsPageSections,
+  type SettingsPageSectionKey,
+} from "../rules/settings-page-sections.ts"
 import "./settings-nav.css"
 
-const sectionIcons: Record<SettingSection["key"], IconName> = {
+const sectionIcons: Record<SettingsPageSectionKey, IconName> = {
   tabs: "app-window",
   worktrees: "worktree",
+  commandLine: "terminal",
 }
 
 const rowButtons = (list: HTMLElement) => [
@@ -37,7 +41,7 @@ export function SettingsNav({ onClose }: { onClose: () => void }) {
     if (index < 0) return
     event.preventDefault()
     const next = (index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length
-    select(settingSections[next]!.key)
+    select(settingsPageSections[next]!.key)
     buttons[next]!.focus()
   }
 
@@ -54,7 +58,7 @@ export function SettingsNav({ onClose }: { onClose: () => void }) {
         <h1 className="iv-settings-nav__title">Settings</h1>
       </div>
       <ul className="iv-settings-nav__list" ref={list} onKeyDown={onKeyDown}>
-        {settingSections.map((section) => (
+        {settingsPageSections.map((section) => (
           <li key={section.key}>
             <ListRow
               leading={<Icon name={sectionIcons[section.key]} size={14} />}

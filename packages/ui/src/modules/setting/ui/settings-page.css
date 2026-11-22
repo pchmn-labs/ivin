@@ -45,3 +45,15 @@
 .iv-settings-page__setting-text .iv-error-message {
   margin-top: var(--iv-space-1);
 }
+
+.iv-settings-page__setting-text > .iv-text + .iv-text,
+.iv-settings-page__state {
+  margin-top: var(--iv-space-1);
+}
+
+.iv-settings-page__state {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  color: var(--iv-text-muted);
+}

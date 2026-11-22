@@ -29,6 +29,7 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "composer.choosePermissionMode", title: "Choose the permission mode", pluginId: null },
   { id: "settings.open", title: "Open settings", pluginId: null },
   { id: "settings.close", title: "Close settings", pluginId: null },
+  { id: "cli.installInShell", title: "Install the ivin command in your shell", pluginId: null },
 ]
 
 export const commandsAtom = Atom.make<ReadonlyArray<Command>>(coreCommands).pipe(Atom.keepAlive)

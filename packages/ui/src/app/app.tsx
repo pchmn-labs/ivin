@@ -24,7 +24,11 @@ import { ResizeHandle } from "../core/components/resize-handle/resize-handle.tsx
 import { getVersionAtom } from "../modules/server/atoms/get-version.ts"
 import { useCommandHandler } from "../modules/command/hooks/use-command-handler.ts"
 import { KeybindingsFileProblem } from "../modules/keybinding/ui/keybindings-file-problem.tsx"
-import { settingsPageOpenAtom } from "../modules/setting/atoms/settings-page.ts"
+import { installInShellAtom } from "../modules/cli/atoms/install-in-shell.ts"
+import {
+  settingsPageOpenAtom,
+  settingsSectionAtom,
+} from "../modules/setting/atoms/settings-page.ts"
 import { SettingsButton } from "../modules/setting/ui/settings-button.tsx"
 import { SettingsNav } from "../modules/setting/ui/settings-nav.tsx"
 import { SettingsPage } from "../modules/setting/ui/settings-page.tsx"
@@ -57,11 +61,17 @@ export function App() {
   )
   const [settingsOpen, setSettingsOpen] = useAtom(settingsPageOpenAtom)
   const focusBeforeSettings = useRef<HTMLElement | null>(null)
-  useCommandHandler("settings.open", () => {
+  const openSettings = () => {
     if (registry.get(settingsPageOpenAtom)) return
     const focused = document.activeElement
     focusBeforeSettings.current = focused instanceof HTMLElement ? focused : null
     setSettingsOpen(true)
+  }
+  useCommandHandler("settings.open", openSettings)
+  useCommandHandler("cli.installInShell", () => {
+    registry.set(settingsSectionAtom, "commandLine")
+    openSettings()
+    registry.set(installInShellAtom, undefined)
   })
   const closeSettings = useCallback(() => setSettingsOpen(false), [setSettingsOpen])
   useCommandHandler("settings.close", closeSettings, settingsOpen)

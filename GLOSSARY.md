@@ -85,6 +85,10 @@ An action with an id and a title that the user, a keybinding, the CLI or a plugi
 The file `~/.ivin/logs/ivin.log`, one JSON line per raw error of the server or the UI, written for the agent debugging ivin. A plugin's errors are not in it.
 _Avoid_: error log, journal
 
+**CLI**:
+The `ivin` command, which reaches the running app over its socket. ivin puts it on its agents' `PATH`; a link in `/usr/local/bin` or `~/.local/bin` puts it in the user's shell too.
+_Avoid_: ivin binary
+
 **Keybinding**:
 A key mapped to a command, possibly limited to one area of the window.
 _Avoid_: hotkey
