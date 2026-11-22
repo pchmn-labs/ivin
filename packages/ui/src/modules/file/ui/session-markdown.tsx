@@ -1,40 +1,39 @@
 import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { MarkdownProps } from "@ivin/plugin-api/ui"
 import { Cause, Exit } from "effect"
-import { createContext, useContext, useState, type ComponentProps } from "react"
+import { createContext, useContext, useState, type ComponentProps, type MouseEvent } from "react"
 import { defaultUrlTransform, type ExtraProps } from "react-markdown"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
-import { Markdown, type MarkdownLinks } from "../../../core/components/markdown/markdown.tsx"
+import {
+  Markdown,
+  type MarkdownLinkRendering,
+} from "../../../core/components/markdown/markdown.tsx"
 import { openSessionsAtom } from "../../session/atoms/open-sessions.ts"
 import { openSubViewAtom } from "../../tab/atoms/open-sub-view.ts"
-import { openFileFailure, outsideFileFailure } from "../../tab/rules/sub-view-failure.ts"
+import { openFileFailure } from "../../tab/rules/sub-view-failure.ts"
 import { shownLinesOf } from "../atoms/shown-lines.ts"
-import { fileLink, hasFileScheme } from "../rules/file-link.ts"
+import { fileLink, hasFileScheme, outsideFileFailure } from "../rules/file-link.ts"
 import "./session-markdown.css"
 
 // Answers true when it handled the link, so the browser does not follow it.
 const OpenLinkContext = createContext<(href: string) => boolean>(() => false)
 
-function SessionLink({
-  href = "",
-  node: _node,
-  onClick,
-  ...rest
-}: ComponentProps<"a"> & ExtraProps) {
+function SessionLink({ href = "", node: _node, ...rest }: ComponentProps<"a"> & ExtraProps) {
   const openLink = useContext(OpenLinkContext)
+  const follow = (event: MouseEvent) => {
+    if (openLink(href)) event.preventDefault()
+  }
   return (
     <a
       {...rest}
       href={href}
-      onClick={(event) => {
-        onClick?.(event)
-        if (openLink(href)) event.preventDefault()
-      }}
+      onClick={follow}
+      onAuxClick={(event) => event.button === 1 && follow(event)}
     />
   )
 }
 
-const links: MarkdownLinks = {
+const linkRendering: MarkdownLinkRendering = {
   component: SessionLink,
   urlTransform: (url) => (hasFileScheme(url) ? url : defaultUrlTransform(url)),
 }
@@ -64,16 +63,15 @@ function LinkedMarkdown({ text, sessionId }: { text: string; sessionId: string }
     }
     const openFile = async () => {
       setFailure(null)
-      registry.set(
-        shownLinesOf(sessionId, workingFolder, link.path),
-        link.lines && { ...link.lines, request: ++lastRequest },
-      )
+      const shownLines = shownLinesOf(sessionId, workingFolder, link.path)
+      registry.set(shownLines, link.lines && { ...link.lines, request: ++lastRequest })
       const exit = await open({
         sessionId,
         workingFolder,
         subView: { kind: "file", path: link.path },
       })
       if (Exit.isSuccess(exit)) return
+      registry.set(shownLines, undefined)
       const { text, retryable } = openFileFailure(Cause.squash(exit.cause), link.path)
       setFailure({ text, ...(retryable && { retry: () => void openFile() }) })
     }
@@ -83,7 +81,7 @@ function LinkedMarkdown({ text, sessionId }: { text: string; sessionId: string }
 
   return (
     <OpenLinkContext.Provider value={openLink}>
-      <Markdown text={text} links={links} />
+      <Markdown text={text} linkRendering={linkRendering} />
       {failure && (
         <div className="iv-session-markdown__failure">
           <ErrorMessage message={failure.text} {...(failure.retry && { onRetry: failure.retry })} />

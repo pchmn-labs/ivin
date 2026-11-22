@@ -24,6 +24,18 @@ test("an absolute path or a file URL inside the working folder names the same fi
   })
 })
 
+test("a file URL on localhost, or a query after the path, names the same file", () => {
+  expect(fileLink("file://localhost/Users/me/repo/src/main.ts", folder)).toEqual({
+    kind: "file",
+    path: "src/main.ts",
+  })
+  expect(fileLink("src/main.ts?plain=1#L3", folder)).toEqual({
+    kind: "file",
+    path: "src/main.ts",
+    lines: { start: 3, end: 3 },
+  })
+})
+
 test("a line or a range after the path is the lines to show", () => {
   const lines = (start: number, end = start) => ({
     kind: "file",
@@ -80,5 +92,6 @@ test("a file URL or a name followed by a line has a file scheme; a web or script
   expect(hasFileScheme("main.ts:42#L1")).toBe(true)
   expect(hasFileScheme("javascript:alert(1)")).toBe(false)
   expect(hasFileScheme("https://github.com")).toBe(false)
+  expect(hasFileScheme("http://localhost:3000")).toBe(false)
   expect(hasFileScheme("src/main.ts")).toBe(false)
 })

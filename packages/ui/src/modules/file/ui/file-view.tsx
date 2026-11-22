@@ -30,7 +30,6 @@ export function FileView({
   const [scrollTop] = useState(() => registry.get(scroll))
   const shownLinesAtom = shownLinesOf(sessionId, workingFolder, path)
   const shownLines = useAtomValue(shownLinesAtom)
-  // Shown once: the file opened again from its tab or the tree keeps its own scroll.
   useEffect(() => () => registry.set(shownLinesAtom, undefined), [registry, shownLinesAtom])
 
   if (AsyncResult.isInitial(result)) return <div className="iv-file-view" />

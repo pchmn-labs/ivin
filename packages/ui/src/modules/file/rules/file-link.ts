@@ -10,8 +10,21 @@ export type FileLink =
 
 const NONE: FileLink = { kind: "none" }
 const SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:/
+const FILE_URL = /^file:\/\/(?:localhost)?(?=\/)/
+const NAME_AND_LINE = /^[^:/]+:\d+(?::\d+|-\d+)?$/
 const LINE_SUFFIX = /:(\d+)(?::\d+|-(\d+))?$/
 const LINE_FRAGMENT = /^L(\d+)(?:C\d+)?(?:-L?(\d+)(?:C\d+)?)?$/
+
+const splitHref = (href: string) => {
+  const [beforeHash = "", fragment = ""] = href.split(/#(.*)/s)
+  return { target: beforeHash.split("?")[0]!, fragment }
+}
+
+// What reads as a scheme to a URL parser but names a file: `file:///…`, `Makefile:12`.
+export const hasFileScheme = (href: string) => {
+  const { target } = splitHref(href)
+  return FILE_URL.test(target) || NAME_AND_LINE.test(target)
+}
 
 const range = (start: string, end: string | undefined): LineRange => {
   const [a, b] = [Number(start), Number(end ?? start)]
@@ -36,19 +49,11 @@ const decoded = (text: string) => {
   }
 }
 
-const isLineAfterName = (target: string) =>
-  LINE_SUFFIX.test(`:${target.slice(target.indexOf(":") + 1)}`)
-
-// What reads as a scheme to a URL parser but names a file: `file://…`, `Makefile:12`.
-export const hasFileScheme = (href: string) =>
-  href.startsWith("file://") || (SCHEME.test(href) && isLineAfterName(href.split("#")[0]!))
-
 export const fileLink = (href: string, workingFolder: string): FileLink => {
-  const hash = href.indexOf("#")
-  let target = hash < 0 ? href : href.slice(0, hash)
-  const fragment = hash < 0 ? "" : href.slice(hash + 1)
-  if (target.startsWith("file://")) target = target.slice("file://".length)
-  else if (SCHEME.test(target) && !isLineAfterName(target)) return NONE
+  let { target, fragment } = splitHref(href)
+  const fileUrl = FILE_URL.exec(target)
+  if (fileUrl) target = target.slice(fileUrl[0].length)
+  else if (SCHEME.test(target) && !NAME_AND_LINE.test(target)) return NONE
 
   const suffix = LINE_SUFFIX.exec(target)
   const fromFragment = LINE_FRAGMENT.exec(fragment)
@@ -69,3 +74,6 @@ export const fileLink = (href: string, workingFolder: string): FileLink => {
   const relative = absolute.slice(folder.length + 1)
   return lines ? { kind: "file", path: relative, lines } : { kind: "file", path: relative }
 }
+
+export const outsideFileFailure = (path: string): string =>
+  `${path} is outside the session's working folder, so it is not opened.`
