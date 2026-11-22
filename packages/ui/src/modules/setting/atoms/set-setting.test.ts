@@ -21,7 +21,6 @@ test("a change is written to the file, and the file's new value shows", async ()
   await vi.waitFor(() =>
     expect(registry.get(shownSettingOf(PATH))).toEqual({
       value: false,
-      saving: false,
       failure: null,
     }),
   )
@@ -39,7 +38,6 @@ test("a failed write keeps the user's choice with a message, and a retry saves i
   await vi.waitFor(() =>
     expect(registry.get(shownSettingOf(PATH))).toEqual({
       value: false,
-      saving: false,
       failure: "The setting was not saved.",
     }),
   )
@@ -47,7 +45,6 @@ test("a failed write keeps the user's choice with a message, and a retry saves i
   await vi.waitFor(() =>
     expect(registry.get(shownSettingOf(PATH))).toEqual({
       value: false,
-      saving: false,
       failure: null,
     }),
   )

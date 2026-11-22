@@ -39,7 +39,6 @@ function ProjectButton({ project, selected }: { project: Project; selected: bool
   )
 }
 
-// `actions` sit above Open folder, `children` below it.
 export function ProjectRail({ actions, children }: { actions?: ReactNode; children?: ReactNode }) {
   const { projects, selectedPath } = useAtomValue(projectsAtom.value)
   const { openFolder } = useOpenFolder()

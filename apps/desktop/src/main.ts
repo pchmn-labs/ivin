@@ -134,12 +134,10 @@ ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
       if (error.code !== "EEXIST") throw error
     })
   } catch (error) {
-    console.error(error)
-    return false
+    return String(error)
   }
   const failure = await shell.openPath(file)
-  if (failure !== "") console.error(`could not open ${file}: ${failure}`)
-  return failure === ""
+  return failure === "" ? null : `could not open ${file}: ${failure}`
 })
 
 void app.whenReady().then(() => {

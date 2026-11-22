@@ -62,7 +62,7 @@ No modules and no layers; one file per concern, kebab-case.
 | `apps/desktop` | Electron main and preload, packaging |
 | `apps/plugin-host` | the plugin host process: loads server halves, implements `ctx` over RPC |
 | `apps/cli` | the `ivin` binary, one file per command |
-| `packages/contracts` | Effect `Schema` only, and the pure functions their checks call, one file per subject |
+| `packages/contracts` | Effect `Schema` only, the pure functions their checks call, and each setting's label and description beside the `Settings` schema, one file per subject |
 | `packages/state` | atom families, optimistic writes, stream bridging |
 | `packages/plugin-api` | entry points `server.ts` and `ui.ts`: types and runtime shims |
 

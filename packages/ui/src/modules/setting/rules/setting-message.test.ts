@@ -18,6 +18,9 @@ test("an invalid setting is named by its key and the type it takes", () => {
   expect(settingsProblemMessage({ reason: "invalidSetting", setting: "tabs" })).toBe(
     "tabs in ~/.ivin/settings.json takes an object of settings.",
   )
+  expect(settingsProblemMessage({ reason: "invalidSetting", setting: null })).toBe(
+    "~/.ivin/settings.json holds a setting of the wrong type.",
+  )
 })
 
 test("a save refused because the file is invalid says to fix the file first", () => {

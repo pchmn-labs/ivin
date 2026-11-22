@@ -18,7 +18,8 @@ const takes = (path: string) => {
 export const settingsProblemMessage = ({ reason, setting }: SettingsFileProblem): string => {
   if (reason === "notJson") return `${SETTINGS_FILE} is not valid JSON.`
   if (reason === "notAnObject") return `${SETTINGS_FILE} does not hold an object.`
-  return `${setting} in ${SETTINGS_FILE} takes ${takes(setting ?? "")}.`
+  if (setting === null) return `${SETTINGS_FILE} holds a setting of the wrong type.`
+  return `${setting} in ${SETTINGS_FILE} takes ${takes(setting)}.`
 }
 
 const isFileInvalid = (error: unknown): error is SettingsFileInvalid =>
@@ -29,5 +30,5 @@ const isFileInvalid = (error: unknown): error is SettingsFileInvalid =>
 
 export const saveFailureMessage = (error: unknown): string =>
   isFileInvalid(error)
-    ? `Not saved: ${SETTINGS_FILE} ${error.reason === "notAnObject" ? "does not hold an object" : "is not valid JSON"}. Fix it, then try again.`
+    ? `Not saved: ${settingsProblemMessage({ reason: error.reason, setting: null })} Fix it, then try again.`
     : "The setting was not saved."

@@ -1,4 +1,4 @@
 import "../../../core/desktop-bridge.ts"
 
-export const openSettingsFile = (): Promise<boolean> =>
-  window.ivin.openSettingsFile().catch(() => false)
+export const openSettingsFile = (): Promise<string | null> =>
+  window.ivin.openSettingsFile().catch((error: unknown) => String(error))

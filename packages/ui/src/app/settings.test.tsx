@@ -28,7 +28,7 @@ const mountApp = async () => {
   return server
 }
 
-const openSettingsFile = vi.fn<() => Promise<boolean>>()
+const openSettingsFile = vi.fn<() => Promise<string | null>>()
 afterEach(() => openSettingsFile.mockReset())
 Object.defineProperty(window, "ivin", {
   configurable: true,
@@ -109,7 +109,7 @@ test("a broken settings.json shows what is wrong and what to do, with the switch
   await expect.element(stopAgent()).toBeDisabled()
   await expect.element(stopAgent()).toBeChecked()
 
-  openSettingsFile.mockResolvedValue(true)
+  openSettingsFile.mockResolvedValue(null)
   await alert.getByRole("button", { name: "Open settings.json" }).click()
   expect(openSettingsFile).toHaveBeenCalledOnce()
 
@@ -135,16 +135,17 @@ test("a failed write shows its message next to the switch, keeps the choice, and
 })
 
 test("Open settings.json opens the file, and says so when it could not", async () => {
-  await mountApp()
+  const server = await mountApp()
   await page.getByRole("button", { name: "Settings" }).click()
   const open = sections().getByRole("button", { name: "Open settings.json" })
 
-  openSettingsFile.mockResolvedValue(false)
+  openSettingsFile.mockResolvedValue("could not open settings.json: no application")
   await open.click()
   const alert = page.getByRole("alert")
   await expect.element(alert.getByText("~/.ivin/settings.json did not open.")).toBeVisible()
+  expect(server.errorReports.map((report) => report.action)).toContain("settings.openFile")
 
-  openSettingsFile.mockResolvedValue(true)
+  openSettingsFile.mockResolvedValue(null)
   await alert.getByRole("button", { name: "Retry" }).click()
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
   expect(openSettingsFile).toHaveBeenCalledTimes(2)

@@ -14,5 +14,5 @@ ipcRenderer.on(RPC_PORT_REPLY, (event) => {
 
 contextBridge.exposeInMainWorld("ivin", {
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke(PICK_FOLDER),
-  openSettingsFile: (): Promise<boolean> => ipcRenderer.invoke(OPEN_SETTINGS_FILE),
+  openSettingsFile: (): Promise<string | null> => ipcRenderer.invoke(OPEN_SETTINGS_FILE),
 })

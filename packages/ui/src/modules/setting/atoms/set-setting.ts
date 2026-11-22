@@ -19,15 +19,13 @@ export const setSettingOf = Atom.family((path: SettingPath) =>
       const watched = yield* Atom.get(watchedSettingsAtom)
       const fileVersion = AsyncResult.isSuccess(watched) ? watched.value.version : 0
       const choice = { value, fileVersion, failure: null }
-      yield* Atom.set(choiceOf(path), { ...choice, state: "saving" })
+      yield* Atom.set(choiceOf(path), choice)
       yield* client["setting.set"]({ path, value }).pipe(
-        Effect.andThen(Atom.set(choiceOf(path), { ...choice, state: "saved" })),
         Effect.catchCause((cause) =>
           Cause.hasInterruptsOnly(cause)
             ? Effect.void
             : Atom.set(choiceOf(path), {
                 ...choice,
-                state: "failed",
                 failure: saveFailureMessage(Cause.squash(cause)),
               }),
         ),
