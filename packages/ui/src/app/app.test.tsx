@@ -217,6 +217,8 @@ test("the plus after the tabs starts a session, and arrow keys walk the tabs", a
   await vi.waitFor(() => expect(server.sessions.size).toBe(3))
 
   await openSessions().getByRole("tab").first().click()
+  // A click hands the focus to the composer, so the arrow keys start from a focused tab.
+  ;(openSessions().getByRole("tab").first().element() as HTMLElement).focus()
   await userEvent.keyboard("{ArrowRight}")
   await expect
     .element(openSessions().getByRole("tab").nth(1))
