@@ -34,6 +34,7 @@ import { subViewsOf } from "../modules/tab/atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../modules/tab/atoms/open-sub-view.ts"
 import { openDiffFailure, openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
+import { settingsAtom } from "../modules/setting/atoms/settings.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
@@ -157,6 +158,7 @@ const host: UiHost = {
   },
   useOpenDiff: () => useOpenSubView("diff"),
   useDiffOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "diff"),
+  useSettings: () => useAtomValue(settingsAtom),
   components: hostComponents,
 }
 

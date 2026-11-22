@@ -3,7 +3,11 @@ import { expect, test } from "vitest"
 import { checkSetting, settingPaths, valueAt } from "./setting-path.ts"
 
 test("the known paths are the dotted paths of the settings schema's leaves", () => {
-  expect(settingPaths).toEqual(["tabs.stopAgentOnClose", "worktrees.removeOnTabClose"])
+  expect(settingPaths).toEqual([
+    "tabs.stopAgentOnClose",
+    "worktrees.removeOnTabClose",
+    "files.folderIcons",
+  ])
 })
 
 test("a value of the setting's type is accepted, whatever path holds it", () => {

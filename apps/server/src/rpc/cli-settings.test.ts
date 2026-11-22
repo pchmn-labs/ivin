@@ -66,6 +66,7 @@ test("ivin settings set changes only that value in the file, and the app applies
   expect(run.applied).toEqual({
     tabs: { stopAgentOnClose: false },
     worktrees: { removeOnTabClose: true },
+    files: { folderIcons: true },
   })
 }, 10_000)
 
@@ -74,7 +75,9 @@ test("an unknown setting exits 1 with the known ones, and the file is untouched"
 
   expect(run.code).toBe(1)
   expect(run.stderr).toContain('No setting is named "tabs.nope"')
-  expect(run.stderr).toContain("tabs.stopAgentOnClose, worktrees.removeOnTabClose")
+  expect(run.stderr).toContain(
+    "tabs.stopAgentOnClose, worktrees.removeOnTabClose, files.folderIcons",
+  )
   expect(run.file).toBe(text)
 }, 10_000)
 
@@ -117,7 +120,9 @@ test("ivin settings get prints every setting, or the one at a path", async () =>
   const unknown = await settings(["get", "nope"])
 
   expect(all.code).toBe(0)
-  expect(all.stdout).toBe("tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\n")
+  expect(all.stdout).toBe(
+    "tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\n",
+  )
   expect(one.stdout).toBe("true\n")
   expect(section.stdout).toBe("tabs.stopAgentOnClose = true\n")
   expect(unknown.code).toBe(1)
@@ -132,7 +137,11 @@ test("--json prints the values as JSON", async () => {
   expect(JSON.parse(all.stdout)).toEqual({
     ok: true,
     path: null,
-    value: { tabs: { stopAgentOnClose: false }, worktrees: { removeOnTabClose: true } },
+    value: {
+      tabs: { stopAgentOnClose: false },
+      worktrees: { removeOnTabClose: true },
+      files: { folderIcons: true },
+    },
   })
   expect(JSON.parse(one.stdout)).toEqual({ ok: true, path: "tabs.stopAgentOnClose", value: true })
   expect(JSON.parse(set.stdout)).toEqual({ ok: true, path: "tabs.stopAgentOnClose", value: false })

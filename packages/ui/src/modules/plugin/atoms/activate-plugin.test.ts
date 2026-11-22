@@ -6,7 +6,7 @@ import { activatePlugin, type UiPluginEntry } from "./activate-plugin.ts"
 import { commandsAtom } from "../../command/atoms/commands.ts"
 import { runCommand } from "../../command/atoms/run-command.ts"
 import { defaultKeybindingsAtom } from "../../keybinding/atoms/keybindings.ts"
-import { contributionsAtom, editorExtensionsAtom } from "./contributions.ts"
+import { contributionsAtom, editorExtensionsAtom, fileIconsAtom } from "./contributions.ts"
 
 const plugin = (id: string): UiPluginEntry => ({
   manifest: { id },
@@ -72,4 +72,41 @@ test("a plugin's editor extensions reach the file editor while it is active, and
 
   deactivate()
   expect(registry.get(editorExtensionsAtom)).toEqual([])
+})
+
+test("a plugin's file icons leave with it, and one it adds once turned off is never added", () => {
+  const registry = AtomRegistry.make()
+  let addLater = () => undefined as void
+  const deactivate = activatePlugin(
+    registry,
+    {
+      manifest: { id: "icons" },
+      activate: defineUi((ctx) => {
+        ctx.fileIcons.add(() => "now")
+        addLater = () => ctx.fileIcons.add(() => "later")
+      }),
+    },
+    () => undefined,
+  )
+  expect(
+    registry.get(fileIconsAtom).map((icon) => icon({ name: "a", folder: false, open: false })),
+  ).toEqual(["now"])
+
+  deactivate()
+  addLater()
+  expect(registry.get(fileIconsAtom)).toEqual([])
+})
+
+test("a plugin's file URL is served from its own folder", () => {
+  const registry = AtomRegistry.make()
+  let url = ""
+  activatePlugin(
+    registry,
+    {
+      manifest: { id: "file-icons" },
+      activate: defineUi((ctx) => void (url = ctx.fileUrl("icons/a.svg"))),
+    },
+    () => undefined,
+  )
+  expect(url).toBe("ivin-plugin://file-icons/icons/a.svg")
 })

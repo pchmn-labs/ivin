@@ -3,6 +3,7 @@ import type { Annotation } from "@ivin/contracts/annotation"
 import type { Change, FolderEntry, GitStatusEntry } from "@ivin/contracts/file"
 import type { OpenProjects } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
+import type { Settings } from "@ivin/contracts/setting"
 import type { Tab } from "@ivin/contracts/tab"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import type { HostComponents, MenuItem } from "./components.ts"
@@ -94,6 +95,8 @@ export interface UiHost {
   ) => Promise<ActionFailure | undefined>
   // The file whose diff the session's tab has selected beside its chat, or null.
   readonly useDiffOnScreen: (sessionId: string) => string | null
+  // The user's ~/.ivin/settings.json over the defaults, kept up to date with the file.
+  readonly useSettings: () => Settings
   readonly components: HostComponents
 }
 

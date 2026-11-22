@@ -25,5 +25,5 @@ Two candidates were tried in a spike each, against the `Tree` written on Virtuos
 ## Consequences
 
 - The plugin still hands the `Tree` its rows and owns which folders are open, so `file.listFolder` and its states stay in the `files` plugin. The `Tree` keeps the focus and the selection.
-- A `fileIcons` contribution needs nothing more from the library: the `Tree` draws each row's icon from one function, which a contribution's function can replace. It comes with the first plugin that gives icons.
+- A `fileIcons` contribution needs nothing more from the library: the `Tree` draws each row's icon from the first contribution that gives one, else its own. The built-in `file-icons` plugin gives them from Gruvbox Material Icons.
 - The anchor a Shift move extends the selection from is set through `getDataRef()`, which the library marks internal. An upgrade of headless-tree checks it still holds.

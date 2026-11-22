@@ -17,6 +17,7 @@ import type {
 } from "@ivin/contracts/file"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
+import type { Settings } from "@ivin/contracts/setting"
 import type { Tab } from "@ivin/contracts/tab"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
@@ -42,6 +43,7 @@ export type {
   PrAnnotationData,
   Project,
   Session,
+  Settings,
   Tab,
   TranscriptItem,
 }
@@ -109,6 +111,15 @@ export interface KeybindingOptions {
   readonly when?: string
 }
 
+export interface FileIconRow {
+  readonly name: string
+  readonly folder: boolean
+  readonly open: boolean
+}
+
+// Null leaves the row to the next `fileIcons` contribution, then to the `Tree`'s own icon.
+export type FileIcon = (row: FileIconRow) => ReactNode | null
+
 export interface UiContext {
   readonly pluginId: string
   readonly slots: {
@@ -129,6 +140,12 @@ export interface UiContext {
   readonly editorExtensions: {
     add: (extension: EditorExtension) => void
   }
+  // The icon of each row of the Files tab's tree; an `<img>` is drawn at `--iv-tree-icon-size`.
+  readonly fileIcons: {
+    add: (icon: FileIcon) => void
+  }
+  // The URL of a file of the plugin's folder, for an `<img>`; `path` is relative to that folder.
+  readonly fileUrl: (path: string) => string
   readonly sidebar: {
     // Opens the sidebar on this plugin's `sidebar.panel` contribution of that name.
     showPanel: (name?: string) => void
@@ -168,5 +185,6 @@ export const useFileOnScreen = (sessionId: string) => useHost().useFileOnScreen(
 export const useChanges = (sessionId: string) => useHost().useChanges(sessionId)
 export const useOpenDiff = () => useHost().useOpenDiff()
 export const useDiffOnScreen = (sessionId: string) => useHost().useDiffOnScreen(sessionId)
+export const useSettings = () => useHost().useSettings()
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"

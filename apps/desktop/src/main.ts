@@ -18,6 +18,7 @@ import { OPEN_SETTINGS_FILE, PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } fro
 import { writeCliCommand } from "./cli-command.ts"
 import { linkTarget } from "./link-target.ts"
 import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
+import { PLUGIN_SCHEME, pluginFile } from "./plugin-protocol.ts"
 
 const devUrl = process.env["IVIN_DEV_URL"]
 const openInBackground = process.env["IVIN_BACKGROUND"] === "1"
@@ -37,6 +38,9 @@ const skillFolder = app.isPackaged
 const rendererEntry = app.isPackaged
   ? join(app.getAppPath(), "renderer/index.html")
   : join(import.meta.dirname, "../../../packages/ui/dist/index.html")
+const pluginsFolder = app.isPackaged
+  ? join(process.resourcesPath, "plugins")
+  : join(import.meta.dirname, "../../../plugins")
 const appPage = devUrl ?? pathToFileURL(rendererEntry).toString()
 
 process.on("uncaughtException", (error) => {
@@ -46,9 +50,10 @@ process.on("uncaughtException", (error) => {
 
 let server: UtilityProcess
 
-// Registered before ready: the window loads a user's sent images straight from their files.
+// Registered before ready: the window loads sent images and plugins' files straight from disk.
 protocol.registerSchemesAsPrivileged([
   { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true } },
+  { scheme: PLUGIN_SCHEME, privileges: { standard: true, secure: true } },
 ])
 
 const openOutside = (url: string) => {
@@ -151,6 +156,10 @@ void app.whenReady().then(() => {
   const imageFolder = join(app.getPath("userData"), "images")
   protocol.handle(IMAGE_SCHEME, (request) => {
     const file = imageFile(imageFolder, request.url)
+    return file ? net.fetch(pathToFileURL(file).toString()) : new Response(null, { status: 404 })
+  })
+  protocol.handle(PLUGIN_SCHEME, async (request) => {
+    const file = await pluginFile(pluginsFolder, request.url)
     return file ? net.fetch(pathToFileURL(file).toString()) : new Response(null, { status: 404 })
   })
   const cliFolder = join(app.getPath("userData"), "bin")

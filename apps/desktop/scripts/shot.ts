@@ -31,7 +31,15 @@ const makeRepo = (dir: string) => {
   git("init", "--quiet", "-b", "main")
   writeFileSync(join(dir, "README.md"), "hello")
   writeFileSync(join(dir, ".gitignore"), "dist/\n")
-  for (const file of ["src/orders/list.tsx", "src/orders/total.ts", "src/main.ts", "dist/out.js"]) {
+  for (const file of [
+    "src/orders/list.tsx",
+    "src/orders/total.ts",
+    "src/orders/total.test.ts",
+    "src/main.ts",
+    "dist/out.js",
+    "package.json",
+    "tsconfig.json",
+  ]) {
     mkdirSync(join(dir, dirname(file)), { recursive: true })
     writeFileSync(join(dir, file), "")
   }
@@ -219,6 +227,11 @@ try {
   await sidebar.getByRole("treeitem", { name: "src", exact: true }).click()
   await sidebar.getByRole("treeitem", { name: "orders", exact: true }).click()
   await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).waitFor()
+  await window.waitForFunction(() =>
+    Array.from(document.querySelectorAll<HTMLImageElement>(".iv-tree__icon img")).every(
+      (img) => img.complete && img.naturalWidth > 0,
+    ),
+  )
   await window.waitForTimeout(300)
   await shoot("files-tab")
   await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).click()

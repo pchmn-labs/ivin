@@ -17,6 +17,9 @@ extraResources:
     to: cli
   - from: ../server/skills
     to: skills
+  - from: ../../plugins
+    to: plugins
+    filter: ["**/*", "!**/*.ts", "!**/*.tsx"]
 # Worker threads cannot load from the asar; `webp-encoder.ts` points them here.
 asarUnpack:
   - server/webp-worker.js
