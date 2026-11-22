@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en" data-theme="forest-dark">
+<head>
+<meta charset="utf-8" />
+<title>#146 — Collapse all folders</title>
+<link rel="stylesheet" href="../../packages/ui/src/core/theme/tokens.css" />
+<link rel="stylesheet" href="../../packages/ui/src/core/theme/base.css" />
+<style>
+body { overflow: hidden; }
+button { color: inherit; font: inherit; }
+svg { flex: none; display: block; }
+.mono { font-family: var(--iv-font-mono); }
+.faint { color: var(--iv-text-faint); }
+.spacer { flex: 1; }
+:focus-visible { outline: 2px solid var(--iv-focus-ring); outline-offset: 2px; }
+
+/* Window shell, as shipped */
+.app { display: grid; grid-template-columns: var(--iv-card-width) 1fr; height: 100vh; }
+.card { display: flex; flex-direction: column; margin: 8px 0 8px 8px; border: 1px solid var(--iv-border); border-radius: var(--iv-radius-card); background: var(--iv-bg-card); overflow: hidden; min-height: 0; }
+.card-top { display: flex; align-items: center; gap: 2px; height: 40px; padding: 0 8px 0 var(--iv-traffic-lights-width); flex: none; }
+.card-body { display: flex; flex: 1; min-height: 0; }
+.rail { display: flex; flex-direction: column; align-items: center; gap: 8px; width: var(--iv-rail-width); padding: 4px 0 10px; border-right: 1px solid var(--iv-border); flex: none; }
+.rail-btn { display: grid; place-items: center; width: var(--iv-rail-button-size); height: var(--iv-rail-button-size); border: 0; border-radius: var(--iv-radius-rail-button); background: transparent; }
+.rail-btn[data-selected] { background: var(--iv-bg-raised); box-shadow: 0 0 0 1px var(--iv-border), var(--iv-shadow-raised); }
+.creature { width: 20px; height: 20px; border-radius: 4px; background: color-mix(in srgb, var(--iv-accent) 60%, transparent); }
+.column { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; }
+.list-head { display: flex; align-items: center; gap: 8px; height: var(--iv-list-head-height); padding: 0 8px 0 12px; flex: none; }
+.list-head b { flex: 1; min-width: 0; font-size: var(--iv-text-lg); font-weight: var(--iv-weight-semibold); }
+.icon-btn { display: inline-grid; place-items: center; width: var(--iv-control-sm); height: var(--iv-control-sm); padding: 0; border: 0; border-radius: var(--iv-radius-md); background: transparent; color: var(--iv-text-muted); cursor: default; transition: background-color var(--iv-duration-fast) ease-out, color var(--iv-duration-fast) ease-out, opacity var(--iv-duration-fast) ease-out, transform var(--iv-duration-press) var(--iv-ease-out); }
+.icon-btn:hover { background: var(--iv-bg-hover); color: var(--iv-text); }
+.icon-btn:active { transform: scale(0.96); }
+.icon-btn:disabled { opacity: var(--iv-opacity-disabled); pointer-events: none; }
+.tabs { display: flex; align-items: center; gap: var(--iv-space-1); padding: 0 var(--iv-space-2); border-bottom: 1px solid var(--iv-border); flex: none; }
+.tab-u { display: inline-flex; align-items: center; height: 32px; padding: 0 var(--iv-space-3); border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--iv-text-muted); font-weight: var(--iv-weight-medium); cursor: default; transition: color var(--iv-duration-fast) var(--iv-ease-out); }
+.tab-u:hover { color: var(--iv-text); }
+.tab-u[data-active] { border-bottom-color: var(--iv-accent); color: var(--iv-text); }
+.panel { display: flex; flex-direction: column; gap: var(--iv-space-2); flex: 1; min-height: 0; padding: var(--iv-space-2) var(--iv-space-2) var(--iv-space-3); }
+.folder-row { display: flex; align-items: center; gap: var(--iv-space-1); min-height: var(--iv-control-sm); color: var(--iv-text-faint); }
+.folder-row .label { flex: 1; min-width: 0; font-size: var(--iv-text-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Tree, as shipped */
+.tree { flex: 1; min-height: 0; overflow-y: auto; outline: none; }
+.row { display: flex; align-items: center; gap: var(--iv-space-1); height: var(--iv-tree-row-height); padding: 0 var(--iv-space-2) 0 var(--iv-space-1); border-radius: var(--iv-radius-sm); color: var(--iv-text); font-size: var(--iv-text-md); white-space: nowrap; cursor: default; }
+.row:hover { background: var(--iv-bg-hover); }
+.row[aria-selected="true"] { background: var(--iv-bg-active); }
+.tree:focus-visible .row[data-active] { outline: 2px solid var(--iv-focus-ring); outline-offset: -2px; }
+.indent { flex: none; width: var(--iv-tree-indent); }
+.chev { display: inline-grid; flex: none; place-items: center; width: var(--iv-tree-indent); color: var(--iv-text-faint); transition: transform var(--iv-duration-fast) var(--iv-ease-out); }
+.row[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.ico { display: inline-grid; flex: none; place-items: center; color: var(--iv-text-faint); }
+.name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+
+/* Tooltip, as shipped: 12px text, 4px corners */
+[data-tip] { position: relative; }
+[data-tip]::after { content: attr(data-tip); position: absolute; top: calc(100% + 6px); right: 0; z-index: 10; padding: 4px 8px; border-radius: var(--iv-radius-sm); background: var(--iv-bg-raised); box-shadow: 0 0 0 1px var(--iv-border), var(--iv-shadow-raised); color: var(--iv-text); font-family: var(--iv-font-sans, inherit); font-size: 12px; line-height: 16px; white-space: nowrap; opacity: 0; transform: scale(0.97); transform-origin: top right; pointer-events: none; transition: opacity 120ms cubic-bezier(0.22, 1, 0.36, 1), transform 120ms cubic-bezier(0.22, 1, 0.36, 1); }
+[data-tip]:hover::after { opacity: 1; transform: none; transition-delay: 500ms; }
+[data-tip]:focus-visible::after { opacity: 1; transform: none; }
+
+/* Main area, the chat behind */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.titlebar { display: flex; align-items: center; gap: 4px; height: 40px; margin-top: 8px; padding: 0 12px; flex: none; }
+.stab { display: flex; align-items: center; gap: 8px; width: var(--iv-tab-width); height: var(--iv-tab-height); padding: 0 var(--iv-tab-padding); border-radius: var(--iv-radius-tab); background: var(--iv-bg-raised); box-shadow: 0 0 0 1px var(--iv-border); color: var(--iv-text); font-size: var(--iv-text-sm); font-weight: var(--iv-weight-medium); }
+.transcript { flex: 1; overflow: hidden; }
+.tcol { max-width: var(--iv-content-width); margin: 0 auto; padding: var(--iv-space-4) var(--iv-space-6); font-size: 14px; line-height: 24px; color: var(--iv-text-prose); }
+.tcol p { margin: 0 0 12px; }
+.bubble { margin-bottom: 16px; padding: 10px 12px; border-radius: var(--iv-radius-card) var(--iv-radius-card) var(--iv-radius-sm) var(--iv-radius-card); background: var(--iv-bubble); }
+.code { font-family: var(--iv-font-mono); font-size: 0.92em; padding: 1px 4px; border-radius: var(--iv-radius-sm); background: var(--iv-bg-active); }
+
+/* Variant 2 — Tab row: the button lives in the tab row, shown while the panel is in use */
+.v-tabrow .tabs .collapse { margin-left: auto; opacity: 0; transition: opacity 120ms ease-out, background-color var(--iv-duration-fast) ease-out, color var(--iv-duration-fast) ease-out; }
+.v-tabrow .column:hover .tabs .collapse,
+.v-tabrow .column:focus-within .tabs .collapse { opacity: 1; }
+.v-tabrow .tabs .collapse:disabled { opacity: 0; }
+.v-tabrow .column:hover .tabs .collapse:disabled { opacity: var(--iv-opacity-disabled); }
+
+/* Variant 3 — Open count: a pill that only exists while folders are open */
+.open-pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 6px 0 8px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--iv-text) 7%, transparent); color: var(--iv-text-muted); font-size: var(--iv-text-xs); font-variant-numeric: tabular-nums; cursor: default; white-space: nowrap; transition: background-color var(--iv-duration-fast) ease-out, color var(--iv-duration-fast) ease-out, transform var(--iv-duration-press) var(--iv-ease-out); animation: pill-in 160ms var(--iv-ease-out); }
+.open-pill:hover { background: color-mix(in srgb, var(--iv-text) 12%, transparent); color: var(--iv-text); }
+.open-pill:active { transform: scale(0.97); }
+@keyframes pill-in { from { opacity: 0; transform: translateX(4px); } }
+@media (prefers-reduced-motion: reduce) { .open-pill { animation: none; } }
+
+/* Picker — harness chrome, verbatim from PICKER.md */
+.proto-picker { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 2147483647; display: flex; align-items: center; gap: 2px; padding: 4px; border-radius: 999px; background: rgba(10, 10, 10, 0.82); -webkit-backdrop-filter: blur(12px) saturate(1.4); backdrop-filter: blur(12px) saturate(1.4); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset, 0 8px 24px rgba(0, 0, 0, 0.24), 0 2px 6px rgba(0, 0, 0, 0.12); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; line-height: 1; -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none; }
+.proto-picker-highlight { position: absolute; top: 4px; left: 0; height: 28px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+.proto-picker[data-ready] .proto-picker-highlight { transition: transform 250ms cubic-bezier(0.23, 1, 0.32, 1), width 250ms cubic-bezier(0.23, 1, 0.32, 1); }
+@media (prefers-reduced-motion: reduce) { .proto-picker[data-ready] .proto-picker-highlight { transition: none; } }
+.proto-picker-item { position: relative; display: flex; align-items: center; height: 28px; padding: 0 12px; border: 0; border-radius: 999px; background: transparent; color: rgba(255, 255, 255, 0.55); font: inherit; cursor: pointer; transition: color 150ms ease-out, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); }
+@media (hover: hover) and (pointer: fine) { .proto-picker-item:hover { color: rgba(255, 255, 255, 0.85); } }
+.proto-picker-item:active { transform: scale(0.97); }
+.proto-picker-item:focus-visible { outline: 2px solid rgba(255, 255, 255, 0.4); outline-offset: 2px; }
+.proto-picker-item[data-active] { color: #fff; }
+</style>
+</head>
+<body>
+<div id="stage"></div>
+
+<nav class="proto-picker" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+  <button class="proto-picker-item" data-active aria-current="true">Folder row</button>
+  <button class="proto-picker-item">Tab row</button>
+  <button class="proto-picker-item">Open count</button>
+</nav>
+
+<script>
+const icon = (d, size = 14) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="${d}"/></svg>`
+const P = {
+  caret: "M181.66,133.66l-80,80a8,8,0,0,1-11.32-11.32L164.69,128,90.34,53.66a8,8,0,0,1,11.32-11.32l80,80A8,8,0,0,1,181.66,133.66Z",
+  folder: "M216,72H131.31L104,44.69A15.86,15.86,0,0,0,92.69,40H40A16,16,0,0,0,24,56V200.62A15.4,15.4,0,0,0,39.38,216H216.89A15.13,15.13,0,0,0,232,200.89V88A16,16,0,0,0,216,72ZM40,56H92.69l16,16H40ZM216,200H40V88H216Z",
+  file: "M213.66,82.34l-56-56A8,8,0,0,0,152,24H56A16,16,0,0,0,40,40V216a16,16,0,0,0,16,16H200a16,16,0,0,0,16-16V88A8,8,0,0,0,213.66,82.34ZM160,51.31,188.69,80H160ZM200,216H56V40h88V88a8,8,0,0,0,8,8h48V216Z",
+  collapse: "M224,128a8,8,0,0,1-8,8H40a8,8,0,0,1,0-16H216A8,8,0,0,1,224,128ZM122.34,101.66a8,8,0,0,0,11.32,0l32-32a8,8,0,0,0-11.32-11.32L136,76.69V16a8,8,0,0,0-16,0V76.69L101.66,58.34A8,8,0,0,0,90.34,69.66Zm11.32,52.68a8,8,0,0,0-11.32,0l-32,32a8,8,0,0,0,11.32,11.32L120,179.31V240a8,8,0,0,0,16,0V179.31l18.34,18.35a8,8,0,0,0,11.32-11.32Z",
+}
+
+const files = [
+  { name: ".github", children: [{ name: "workflows", children: [{ name: "ci.yml" }] }] },
+  { name: "docs", children: [{ name: "checkout.md" }, { name: "deploy.md" }] },
+  { name: "public", children: [{ name: "favicon.svg" }, { name: "logo.png" }] },
+  { name: "src", children: [
+    { name: "cart", children: [{ name: "cart-drawer.tsx" }, { name: "cart-store.ts" }, { name: "cart-store.test.ts" }] },
+    { name: "checkout", children: [{ name: "address-form.tsx" }, { name: "payment-step.tsx" }, { name: "summary.tsx" }] },
+    { name: "lib", children: [{ name: "currency.ts" }, { name: "fetch-json.ts" }] },
+    { name: "app.tsx" }, { name: "main.tsx" }, { name: "routes.ts" },
+  ] },
+  { name: ".gitignore" }, { name: "package.json" }, { name: "README.md" }, { name: "tsconfig.json" }, { name: "vite.config.ts" },
+]
+const startOpen = ["src", "src/cart", "src/checkout"]
+
+function app(variant) {
+  const open = new Set(startOpen)
+  let selected = "src/cart/cart-store.ts"
+  const root = document.createElement("div")
+  root.className = `app v-${variant}`
+
+  const collapseBtn = (extra = "") =>
+    `<button class="icon-btn collapse ${extra}" aria-label="Collapse all folders" data-tip="Collapse all folders">${icon(P.collapse)}</button>`
+
+  const folderRowEnd = () => {
+    if (variant === "folderrow") return collapseBtn()
+    if (variant === "opencount" && open.size > 0)
+      return `<button class="open-pill collapse" aria-label="Collapse all ${open.size} open folders" data-tip="Collapse all folders">${open.size} open ${icon(P.collapse, 12)}</button>`
+    return ""
+  }
+
+  root.innerHTML = `
+    <aside class="card">
+      <div class="card-top"><span class="spacer"></span></div>
+      <div class="card-body">
+        <div class="rail"><button class="rail-btn" data-selected><span class="creature"></span></button></div>
+        <div class="column">
+          <div class="list-head"><b>shop</b></div>
+          <div class="tabs" role="tablist" aria-label="Sidebar">
+            <button class="tab-u" role="tab">Sessions</button>
+            <button class="tab-u" role="tab" data-active aria-selected="true">Files</button>
+            ${variant === "tabrow" ? collapseBtn() : ""}
+          </div>
+          <div class="panel">
+            <div class="folder-row">${icon(P.folder, 12)}<span class="label mono" title="/Users/paul/dev/shop">shop</span><span class="end"></span></div>
+            <div class="tree" role="tree" aria-label="Files" tabindex="0"></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="titlebar"><div class="stab">Free shipping over 50 €</div></div>
+      <div class="transcript"><div class="tcol">
+        <div class="bubble">Add a free-shipping threshold to the cart drawer: show how much is left to reach 50 €.</div>
+        <p>I read <span class="code">src/cart/cart-store.ts</span> and <span class="code">src/cart/cart-drawer.tsx</span>. The store already keeps the subtotal, so the drawer can work out what is left from it.</p>
+        <p>I'll add <span class="code">remainingForFreeShipping</span> to the store and a progress line under the subtotal, using <span class="code">formatCurrency</span> from <span class="code">src/lib/currency.ts</span>.</p>
+      </div></div>
+    </main>`
+
+  const tree = root.querySelector(".tree")
+  const end = root.querySelector(".folder-row .end")
+
+  const rowsOf = (list, base = "", depth = 0) =>
+    list.flatMap((node) => {
+      const id = base + node.name
+      const row = { id, name: node.name, depth, folder: !!node.children }
+      return node.children && open.has(id) ? [row, ...rowsOf(node.children, id + "/", depth + 1)] : [row]
+    })
+
+  const render = () => {
+    tree.innerHTML = rowsOf(files)
+      .map((r) => `<div class="row" role="treeitem" data-id="${r.id}" aria-level="${r.depth + 1}" aria-selected="${r.id === selected}" ${r.folder ? `aria-expanded="${open.has(r.id)}"` : ""}>${'<span class="indent"></span>'.repeat(r.depth)}<span class="chev">${r.folder ? icon(P.caret, 12) : ""}</span><span class="ico">${icon(r.folder ? P.folder : P.file)}</span><span class="name">${r.name}</span></div>`)
+      .join("")
+    const pill = end.querySelector(".open-pill")
+    if (variant === "opencount" && pill && open.size > 0) {
+      pill.innerHTML = `${open.size} open ${icon(P.collapse, 12)}`
+      pill.setAttribute("aria-label", `Collapse all ${open.size} open folders`)
+    } else end.innerHTML = folderRowEnd()
+    root.querySelectorAll(".collapse").forEach((b) => {
+      if (b.tagName === "BUTTON" && b.classList.contains("icon-btn")) b.disabled = open.size === 0
+      b.onclick = () => { open.clear(); render() }
+    })
+  }
+
+  tree.addEventListener("click", (e) => {
+    const row = e.target.closest(".row")
+    if (!row) return
+    const id = row.dataset.id
+    selected = id
+    if (row.hasAttribute("aria-expanded")) open.has(id) ? open.delete(id) : open.add(id)
+    render()
+  })
+  render()
+  return root
+}
+
+const variants = [() => app("folderrow"), () => app("tabrow"), () => app("opencount")]
+
+const stage = document.getElementById("stage")
+const picker = document.querySelector(".proto-picker")
+const highlight = picker.querySelector(".proto-picker-highlight")
+const items = [...picker.querySelectorAll(".proto-picker-item:not(.proto-picker-replay)")]
+let current = 0
+
+function moveHighlight() {
+  const el = items[current]
+  highlight.style.width = el.offsetWidth + "px"
+  highlight.style.transform = `translateX(${el.offsetLeft}px)`
+}
+function mount(i) {
+  stage.innerHTML = ""
+  requestAnimationFrame(() => stage.replaceChildren(variants[i]()))
+}
+function setActive(i) {
+  if (i < 0 || i >= variants.length) return
+  current = i
+  items.forEach((el, j) => {
+    el.toggleAttribute("data-active", j === i)
+    if (j === i) el.setAttribute("aria-current", "true")
+    else el.removeAttribute("aria-current")
+  })
+  moveHighlight()
+  const url = new URL(location)
+  url.searchParams.set("v", i + 1)
+  history.replaceState(null, "", url)
+  mount(i)
+}
+items.forEach((el, i) => el.addEventListener("click", () => setActive(i)))
+window.addEventListener("resize", moveHighlight)
+document.addEventListener("keydown", (e) => {
+  if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return
+  if (e.metaKey || e.ctrlKey || e.altKey) return
+  const num = parseInt(e.key, 10)
+  if (num >= 1 && num <= variants.length) setActive(num - 1)
+  else if (e.key === "ArrowRight") setActive((current + 1) % variants.length)
+  else if (e.key === "ArrowLeft") setActive((current - 1 + variants.length) % variants.length)
+})
+const requested = parseInt(new URLSearchParams(location.search).get("v"), 10)
+setActive(requested >= 1 && requested <= variants.length ? requested - 1 : 0)
+requestAnimationFrame(() => requestAnimationFrame(() => picker.setAttribute("data-ready", "")))
+</script>
+</body>
+</html>
