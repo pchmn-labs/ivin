@@ -201,6 +201,8 @@ export function MessageEditor({
       const element = field.current
       if (!element) return
       element.focus()
+      // An inert field refuses the focus; moving the selection would then drop the user's.
+      if (document.activeElement !== element) return
       const end = document.createRange()
       end.selectNodeContents(element)
       end.collapse(false)

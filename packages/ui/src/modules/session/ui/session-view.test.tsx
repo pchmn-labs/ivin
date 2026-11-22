@@ -169,18 +169,32 @@ test("opening a session that waits on an approval leaves the focus to the approv
   await expect.element(page.getByRole("textbox", { name: "Message" })).not.toHaveFocus()
 })
 
-test("opening a session from a tab reached by the arrow keys keeps the focus on the tab", async () => {
-  const tablist = document.createElement("div")
-  tablist.setAttribute("role", "tablist")
+const focusedTab = async (by: "keyboard" | "click") => {
   const tab = document.createElement("button")
   tab.setAttribute("role", "tab")
-  tablist.append(tab)
-  document.body.append(tablist)
-  tab.focus()
+  tab.textContent = "Other session"
+  document.body.append(tab)
+  if (by === "click") await page.getByRole("tab", { name: "Other session" }).click()
+  else {
+    tab.focus()
+    await userEvent.keyboard("{ArrowRight}")
+  }
+  return tab
+}
+
+test("opening a session from a tab reached by the keyboard keeps the focus on the tab", async () => {
+  const tab = await focusedTab("keyboard")
   await mountSession("idle")
   await expect.element(page.getByTestId("composer-session-status")).toBeInTheDocument()
   expect(document.activeElement).toBe(tab)
-  tablist.remove()
+  tab.remove()
+})
+
+test("opening a session from a clicked tab puts the focus in its composer", async () => {
+  const tab = await focusedTab("click")
+  await mountSession("idle")
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toHaveFocus()
+  tab.remove()
 })
 
 test("the composer announces the status and follows the server", async () => {

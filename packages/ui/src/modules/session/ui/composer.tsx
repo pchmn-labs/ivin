@@ -78,13 +78,13 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const serverHarness = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
   const offered = session && serverHarness?.id === session.harness ? serverHarness.runOptions : null
 
-  const known = session !== undefined
+  const sessionLoaded = session !== undefined
   useEffect(() => {
-    // The approval sheet takes the focus, and a tab moved to by the arrow keys keeps it.
-    if (!known || session.status === "waiting") return
-    if (document.activeElement?.closest('[role="tablist"]')) return
+    // The approval sheet takes the focus, and a tab reached by the keyboard keeps it.
+    if (!sessionLoaded || session.status === "waiting") return
+    if (document.activeElement?.matches('[role="tab"]:focus-visible')) return
     editor.current?.focus()
-  }, [known])
+  }, [sessionLoaded])
 
   useEffect(() => {
     if (relaunchFailure === null) return
