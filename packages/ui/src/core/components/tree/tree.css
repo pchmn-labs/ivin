@@ -4,12 +4,18 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  outline: none;
 }
 
 .iv-tree__list {
   flex: 1;
   min-height: 0;
+  overflow-y: auto;
+}
+
+.iv-tree__rows {
+  padding-top: var(--iv-tree-before);
+  padding-bottom: var(--iv-tree-after);
+  outline: none;
 }
 
 .iv-tree__row {
@@ -29,11 +35,11 @@
   background: var(--iv-bg-hover);
 }
 
-.iv-tree__row[data-active] {
+.iv-tree__row[aria-selected="true"] {
   background: var(--iv-bg-active);
 }
 
-.iv-tree:focus-visible .iv-tree__row[data-active] {
+.iv-tree__rows:focus-visible .iv-tree__row[data-active] {
   outline: 2px solid var(--iv-focus-ring);
   outline-offset: -2px;
 }

@@ -1,9 +1,29 @@
-import { useState } from "react"
+import { RegistryProvider } from "@effect/atom-react"
+import { useState, type ReactNode } from "react"
 import { expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { TreeRow } from "@ivin/plugin-api/ui"
+import { useKeyboardHandler } from "../../../modules/keybinding/hooks/use-keyboard-handler.ts"
+import { makeFakeServer } from "../../fake-server-client.ts"
+import { serverClientLayerAtom } from "../../server-client.ts"
 import { Tree } from "./tree.tsx"
+
+// The tree's keys are commands, run by the window's keyboard handler.
+function WithKeys({ children }: { children: ReactNode }) {
+  const [server] = useState(() => makeFakeServer())
+  return (
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <KeyboardHandler />
+      {children}
+    </RegistryProvider>
+  )
+}
+
+function KeyboardHandler() {
+  useKeyboardHandler()
+  return null
+}
 
 interface Node {
   readonly name: string
@@ -36,20 +56,22 @@ const visible = (list: ReadonlyArray<Node>, open: ReadonlySet<string>, base = ""
 function Harness({ onOpen }: { onOpen?: (id: string) => void }) {
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
   return (
-    <div style={{ display: "flex", height: 300 }}>
-      <Tree
-        label="Files"
-        rows={visible(nodes, open)}
-        {...(onOpen && { onOpen })}
-        onToggle={(id) =>
-          setOpen((current) => {
-            const next = new Set(current)
-            if (!next.delete(id)) next.add(id)
-            return next
-          })
-        }
-      />
-    </div>
+    <WithKeys>
+      <div style={{ display: "flex", height: 300 }}>
+        <Tree
+          label="Files"
+          rows={visible(nodes, open)}
+          {...(onOpen && { onOpen })}
+          onToggle={(id) =>
+            setOpen((current) => {
+              const next = new Set(current)
+              if (!next.delete(id)) next.add(id)
+              return next
+            })
+          }
+        />
+      </div>
+    </WithKeys>
   )
 }
 
@@ -140,4 +162,16 @@ test("a click, Enter or Space on a file opens it; on a folder it does not", asyn
   await page.getByRole("treeitem", { name: "docs" }).click()
   await userEvent.keyboard("{ArrowDown}{Enter}{ }")
   expect(opened).toEqual(["README.md", "docs/guide.md", "docs/guide.md"])
+})
+
+test("the rows carry their level, and the active row shows a focus ring while the tree has the keyboard focus", async () => {
+  await render(<Harness />)
+  await expect.element(tree()).toHaveAttribute("aria-multiselectable", "true")
+  await item("src").click()
+  await expect.element(item("lib")).toHaveAttribute("aria-level", "2")
+  await expect.element(item("src")).toHaveAttribute("aria-level", "1")
+  expect(getComputedStyle(item("src").element()).outlineStyle).toBe("none")
+
+  await userEvent.keyboard("{ArrowDown}")
+  expect(getComputedStyle(item("lib").element()).outlineStyle).toBe("solid")
 })

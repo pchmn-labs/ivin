@@ -5,6 +5,7 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowsInLineVertical,
   ArrowsLeftRight,
   ArrowsOut,
   ArrowUp,
@@ -86,6 +87,7 @@ const icons = {
   gear: Gear,
   "brackets-curly": BracketsCurly,
   "app-window": AppWindow,
+  "collapse-all": ArrowsInLineVertical,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {
