@@ -78,6 +78,7 @@ export const linkCommand = (folder: string, command: string) => {
 }
 
 const MARK = "__IVIN_PATH__"
+export const LOGIN_SHELL_TIMEOUT_MS = 5_000
 
 export const readLoginShellPath = (shell: string, timeoutMs: number) =>
   Effect.callback<ReadonlyArray<string> | null>((resume) => {
@@ -114,5 +115,5 @@ export const layerFsShellCommand = (options: {
         Effect.tapError((error) => logError("cli.installInShell", error)),
         Effect.mapError(refusalOf),
       ),
-    shellPath: readLoginShellPath(options.shell, 5_000),
+    shellPath: readLoginShellPath(options.shell, LOGIN_SHELL_TIMEOUT_MS),
   })

@@ -10,7 +10,11 @@ import { homedir } from "node:os"
 import { dirname, join } from "node:path"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
-import { layerFsShellCommand, readLoginShellPath } from "./modules/cli/adapters/fs-shell-command.ts"
+import {
+  LOGIN_SHELL_TIMEOUT_MS,
+  layerFsShellCommand,
+  readLoginShellPath,
+} from "./modules/cli/adapters/fs-shell-command.ts"
 import { agentPath } from "./modules/cli/rules/agent-path.ts"
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
@@ -98,6 +102,19 @@ if (!(harnessId in layerHarnesses)) {
 }
 const layerHarness = layerHarnesses[harnessId as keyof typeof layerHarnesses]
 
+const adoptLoginShellPath = Effect.gen(function* () {
+  const shellFolders = yield* readLoginShellPath(loginShell, LOGIN_SHELL_TIMEOUT_MS)
+  if (shellFolders === null) {
+    return yield* Effect.logWarning(
+      `could not read the PATH of ${loginShell}; agents keep the app's`,
+    )
+  }
+  const cliFolder = typeof cliCommandPath === "string" ? dirname(cliCommandPath) : null
+  yield* Effect.sync(() => {
+    process.env["PATH"] = agentPath(process.env["PATH"] ?? "", shellFolders, cliFolder)
+  })
+})
+
 // Ports main posts before the database is ready wait here.
 let serve: ((port: MainPort) => void) | undefined
 const waiting: MainPort[] = []
@@ -114,12 +131,7 @@ parentPort.on("message", ({ data, ports: [port] }) => {
 // Stores, feeds and runs are built once here: every port, and so every window reload, shares them.
 const startup = Effect.gen(function* () {
   // Before any layer is built, since agents inherit the server's PATH.
-  const shellPath = yield* readLoginShellPath(loginShell, 5_000)
-  process.env["PATH"] = agentPath(
-    process.env["PATH"] ?? "",
-    shellPath,
-    typeof cliCommandPath === "string" ? dirname(cliCommandPath) : null,
-  )
+  if (harnessId === "claude") yield* adoptLoginShellPath
   const context = yield* Layer.build(
     Layer.mergeAll(layerServices, layerFsSkillInstallation(skillFolder)).pipe(
       Layer.provideMerge(
