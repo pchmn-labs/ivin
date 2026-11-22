@@ -9,6 +9,7 @@ import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
 import { isBinary } from "../rules/binary-content.ts"
 import { isWithin, relativeNames } from "../rules/folder-path.ts"
+import { contentVersion } from "./content-version.ts"
 import { FileReader } from "./file-reader.ts"
 import { FolderReader } from "./folder-reader.ts"
 
@@ -32,5 +33,9 @@ export const readFile = (sessionId: string, path: string) =>
     if (size > FILE_SIZE_LIMIT) return { kind: "too_large", size } satisfies FileContent
     const bytes = yield* reader.read(file).pipe(Effect.mapError(toError))
     if (isBinary(bytes)) return { kind: "binary" } satisfies FileContent
-    return { kind: "text", text: new TextDecoder().decode(bytes) } satisfies FileContent
+    return {
+      kind: "text",
+      text: new TextDecoder().decode(bytes),
+      version: yield* contentVersion(bytes),
+    } satisfies FileContent
   })

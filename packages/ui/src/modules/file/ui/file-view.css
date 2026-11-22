@@ -11,3 +11,34 @@
   padding: var(--iv-space-6);
   text-align: center;
 }
+
+.iv-file-view__changed {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--iv-space-2);
+  padding: var(--iv-space-1) var(--iv-space-2) var(--iv-space-1) var(--iv-space-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--iv-danger) 40%, transparent);
+  background: var(--iv-danger-subtle);
+  color: var(--iv-text);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
+}
+
+.iv-file-view__changed-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--iv-danger);
+}
+
+.iv-file-view__changed-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.iv-file-view__failure {
+  flex: none;
+  padding: var(--iv-space-2) var(--iv-space-3);
+  border-bottom: 1px solid var(--iv-border);
+}

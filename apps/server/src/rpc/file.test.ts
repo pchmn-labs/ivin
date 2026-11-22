@@ -6,6 +6,9 @@ import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
 import {
   chmodSync,
+  readdirSync,
+  readFileSync,
+  statSync,
   mkdirSync,
   mkdtempSync,
   realpathSync,
@@ -205,8 +208,8 @@ test("reads a text file, as UTF-8", async () => {
   write(join(project, "empty.txt"))
 
   expect(await readIn(project, "src/main.ts", "empty.txt")).toEqual([
-    { kind: "text", text: "const café = 1\n" },
-    { kind: "text", text: "" },
+    { kind: "text", text: "const café = 1\n", version: expect.any(String) },
+    { kind: "text", text: "", version: expect.any(String) },
   ])
 })
 
@@ -244,7 +247,9 @@ test("a file that cannot be read is reported as unreadable", async () => {
   const result = await readIn(project, "locked.txt")
   chmodSync(join(project, "locked.txt"), 0o644)
   expect(result).toEqual(
-    process.getuid?.() === 0 ? [{ kind: "text", text: "secret" }] : ["FileNotRead:unreadable"],
+    process.getuid?.() === 0
+      ? [{ kind: "text", text: "secret", version: expect.any(String) }]
+      : ["FileNotRead:unreadable"],
   )
 })
 
@@ -287,4 +292,184 @@ test("reading in a deleted working folder, and for an unknown session, fails", a
       ),
     ),
   ).toBe("SessionNotFound")
+})
+
+// Reads `path` in a new session of `projectPath`, then runs `use` with the session's id and the
+// version the read returned.
+const editIn = <A, E>(
+  projectPath: string,
+  path: string,
+  use: (client: Client, sessionId: string, version: string) => Effect.Effect<A, E>,
+) =>
+  withServer((client) =>
+    Effect.gen(function* () {
+      const { id } = yield* client["session.create"]({ projectPath })
+      const read = yield* client["file.readFile"]({ sessionId: id, path })
+      if (read.kind !== "text") throw new Error(`${path} is not text`)
+      return yield* use(client, id, read.version)
+    }),
+  )
+
+const tagOf = (error: { _tag: string }) => Effect.succeed(error._tag)
+
+test("writes a file it read, and the next read returns the new text and version", async () => {
+  write(join(project, "src/main.ts"), "const a = 1\n")
+  chmodSync(join(project, "src/main.ts"), 0o755)
+
+  const [written, read] = await editIn(project, "src/main.ts", (client, sessionId, version) =>
+    Effect.gen(function* () {
+      const written = yield* client["file.writeFile"]({
+        sessionId,
+        path: "src/main.ts",
+        text: "const café = 2\n",
+        expectedVersion: version,
+      })
+      const read = yield* client["file.readFile"]({ sessionId, path: "src/main.ts" })
+      return [written, read] as const
+    }),
+  )
+
+  expect(readFileSync(join(project, "src/main.ts"), "utf8")).toBe("const café = 2\n")
+  expect(read).toEqual({ kind: "text", text: "const café = 2\n", version: written.version })
+  expect(statSync(join(project, "src/main.ts")).mode & 0o777).toBe(0o755)
+  expect(readdirSync(join(project, "src"))).toEqual(["main.ts"])
+})
+
+test("refuses to write a file that changed on disk since it was read, and leaves it as it is", async () => {
+  write(join(project, "notes.md"), "first\n")
+
+  const result = await editIn(project, "notes.md", (client, sessionId, version) => {
+    writeFileSync(join(project, "notes.md"), "the agent's\n")
+    return client["file.writeFile"]({
+      sessionId,
+      path: "notes.md",
+      text: "mine\n",
+      expectedVersion: version,
+    }).pipe(Effect.catch(tagOf))
+  })
+
+  expect(result).toBe("FileChangedOnDisk")
+  expect(readFileSync(join(project, "notes.md"), "utf8")).toBe("the agent's\n")
+})
+
+test("a file deleted since it was read has changed on disk too", async () => {
+  write(join(project, "notes.md"), "first\n")
+
+  const result = await editIn(project, "notes.md", (client, sessionId, version) => {
+    rmSync(join(project, "notes.md"))
+    return client["file.writeFile"]({
+      sessionId,
+      path: "notes.md",
+      text: "mine\n",
+      expectedVersion: version,
+    }).pipe(Effect.catch(tagOf))
+  })
+
+  expect(result).toBe("FileChangedOnDisk")
+})
+
+test("a forced write replaces what changed on disk, and writes a deleted file again", async () => {
+  write(join(project, "notes.md"), "first\n")
+  write(join(project, "gone.md"), "first\n")
+
+  await editIn(project, "notes.md", (client, sessionId) => {
+    writeFileSync(join(project, "notes.md"), "the agent's\n")
+    rmSync(join(project, "gone.md"))
+    return Effect.forEach(["notes.md", "gone.md"], (path) =>
+      client["file.writeFile"]({ sessionId, path, text: "mine\n", expectedVersion: null }),
+    )
+  })
+
+  expect(readFileSync(join(project, "notes.md"), "utf8")).toBe("mine\n")
+  expect(readFileSync(join(project, "gone.md"), "utf8")).toBe("mine\n")
+})
+
+test("writing through a symlink inside the working folder writes its target and keeps the link", async () => {
+  write(join(project, "real.md"), "first\n")
+  symlinkSync(join(project, "real.md"), join(project, "link.md"))
+
+  await editIn(project, "link.md", (client, sessionId, version) =>
+    client["file.writeFile"]({
+      sessionId,
+      path: "link.md",
+      text: "mine\n",
+      expectedVersion: version,
+    }),
+  )
+
+  expect(readFileSync(join(project, "real.md"), "utf8")).toBe("mine\n")
+  expect(statSync(join(project, "link.md")).isFile()).toBe(true)
+  expect(realpathSync(join(project, "link.md"))).toBe(join(project, "real.md"))
+})
+
+test("refuses to write outside the working folder, through .., an absolute path or a symlink", async () => {
+  write(join(root, "secret/key.pem"), "key")
+  write(join(project, "a.md"))
+  symlinkSync(join(root, "secret"), join(project, "escape"))
+  symlinkSync(join(root, "secret/key.pem"), join(project, "link.pem"))
+
+  const results = await editIn(project, "a.md", (client, sessionId) =>
+    Effect.forEach(
+      [
+        "../secret/key.pem",
+        join(root, "secret/key.pem"),
+        "escape/key.pem",
+        "escape/new.pem",
+        "link.pem",
+      ],
+      (path) =>
+        client["file.writeFile"]({ sessionId, path, text: "x", expectedVersion: null }).pipe(
+          Effect.catch(tagOf),
+        ),
+    ),
+  )
+
+  expect(results).toEqual(Array(5).fill("PathOutsideWorkingFolder"))
+  expect(readFileSync(join(root, "secret/key.pem"), "utf8")).toBe("key")
+  expect(readdirSync(join(root, "secret"))).toEqual(["key.pem"])
+})
+
+test("a file in a folder that cannot be written is reported as not written", async () => {
+  write(join(project, "locked/a.md"), "first\n")
+  chmodSync(join(project, "locked"), 0o555)
+
+  const result = await editIn(project, "locked/a.md", (client, sessionId, version) =>
+    client["file.writeFile"]({
+      sessionId,
+      path: "locked/a.md",
+      text: "mine\n",
+      expectedVersion: version,
+    }).pipe(
+      Effect.map(() => "written"),
+      Effect.catch((error) =>
+        Effect.succeed(
+          error._tag === "FileNotWritten" ? `FileNotWritten:${error.reason}` : error._tag,
+        ),
+      ),
+    ),
+  )
+  chmodSync(join(project, "locked"), 0o755)
+
+  expect(result).toBe(process.getuid?.() === 0 ? "written" : "FileNotWritten:unwritable")
+})
+
+test("writing in a folder that does not exist is reported as not written", async () => {
+  write(join(project, "a.md"))
+
+  const result = await editIn(project, "a.md", (client, sessionId) =>
+    client["file.writeFile"]({
+      sessionId,
+      path: "nowhere/a.md",
+      text: "x",
+      expectedVersion: null,
+    }).pipe(
+      Effect.catch((error) =>
+        Effect.succeed(
+          error._tag === "FileNotWritten" ? `FileNotWritten:${error.reason}` : error._tag,
+        ),
+      ),
+    ),
+  )
+
+  expect(result).toBe("FileNotWritten:missing")
 })

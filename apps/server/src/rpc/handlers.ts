@@ -9,9 +9,11 @@ import { watchAnnotations } from "../modules/annotation/usecases/watch-annotatio
 import { getShellInstall } from "../modules/cli/usecases/get-shell-install.ts"
 import { installInShell } from "../modules/cli/usecases/install-in-shell.ts"
 import { layerFsFileReader } from "../modules/file/adapters/fs-file-reader.ts"
+import { layerFsFileWriter } from "../modules/file/adapters/fs-file-writer.ts"
 import { layerFsFolderReader } from "../modules/file/adapters/fs-folder-reader.ts"
 import { listFolder } from "../modules/file/usecases/list-folder.ts"
 import { readFile } from "../modules/file/usecases/read-file.ts"
+import { writeFile } from "../modules/file/usecases/write-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
@@ -80,6 +82,7 @@ export const layerServices = Layer.mergeAll(layerWorktreeCleanup, layerImageComp
       layerGitCli,
       layerFsFolderReader,
       layerFsFileReader,
+      layerFsFileWriter,
       layerSqliteProjectStore,
       layerSqliteSessionStore,
       layerSqliteTabStore,
@@ -176,6 +179,8 @@ export const handlers = Rpcs.toLayer(
       "worktree.listBranches": ({ projectPath }) => listBranches(projectPath),
       "file.listFolder": ({ sessionId, path }) => listFolder(sessionId, path),
       "file.readFile": ({ sessionId, path }) => readFile(sessionId, path),
+      "file.writeFile": ({ sessionId, path, text, expectedVersion }) =>
+        writeFile(sessionId, path, text, expectedVersion),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

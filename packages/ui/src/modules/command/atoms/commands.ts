@@ -21,6 +21,7 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "session.showArchived", title: "Show archived sessions", pluginId: null },
   { id: "session.delete", title: "Delete session", pluginId: null },
   { id: "tab.closeFile", title: "Close file", pluginId: null },
+  { id: "file.save", title: "Save file", pluginId: null },
   { id: "tab.toggleFullWidth", title: "Toggle full width", pluginId: null },
   { id: "tab.nextCardTab", title: "Next tab of the files card", pluginId: null },
   { id: "tab.previousCardTab", title: "Previous tab of the files card", pluginId: null },

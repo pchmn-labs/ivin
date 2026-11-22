@@ -1,13 +1,20 @@
-import { RegistryContext, useAtomRefresh, useAtomValue } from "@effect/atom-react"
+import { RegistryContext, useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Cause } from "effect"
 import { useContext, useEffect, useState } from "react"
 import { AsyncResult } from "effect/reactivity"
+import { Button } from "../../../core/components/button/button.tsx"
 import { CodeView } from "../../../core/components/code-view/code-view.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
+import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
+import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
+import { editorExtensionsAtom } from "../../plugin/atoms/contributions.ts"
 import { fileContentOf } from "../atoms/read-file.ts"
+import { fileEditOf } from "../atoms/file-edit.ts"
 import { fileScrollOf } from "../atoms/file-scroll.ts"
 import { shownLinesOf } from "../atoms/shown-lines.ts"
+import { writeFileAtom } from "../atoms/write-file.ts"
+import { noEdit, shownText, withRead, withTyped } from "../rules/file-edit.ts"
 import { fileName } from "../rules/file-name.ts"
 import { fileReading, fileReadingFailure } from "../rules/file-reading.ts"
 import "./file-view.css"
@@ -31,6 +38,20 @@ export function FileView({
   const shownLinesAtom = shownLinesOf(sessionId, workingFolder, path)
   const shownLines = useAtomValue(shownLinesAtom)
   useEffect(() => () => registry.set(shownLinesAtom, undefined), [registry, shownLinesAtom])
+  const editAtom = fileEditOf(sessionId, workingFolder, path)
+  const edit = useAtomValue(editAtom)
+  const extensions = useAtomValue(editorExtensionsAtom)
+  const write = useAtomSet(writeFileAtom)
+  const save = (force = false) => write({ sessionId, workingFolder, path, force })
+
+  const read =
+    AsyncResult.isSuccess(result) && !result.waiting && result.value.kind === "text"
+      ? result.value
+      : null
+  useEffect(() => {
+    if (read !== null) registry.set(editAtom, withRead(registry.get(editAtom), read))
+  }, [read, registry, editAtom])
+  useCommandHandler("file.save", () => save(), AsyncResult.isSuccess(result))
 
   if (AsyncResult.isInitial(result)) return <div className="iv-file-view" />
   const reading = AsyncResult.isSuccess(result)
@@ -38,13 +59,47 @@ export function FileView({
     : fileReadingFailure(Cause.squash(result.cause), path)
 
   if (reading.kind === "text") {
+    const name = fileName(path)
     return (
       <div className="iv-file-view">
+        {edit.changedOnDisk && (
+          <div className="iv-file-view__changed" role="alert">
+            <span className="iv-file-view__changed-icon">
+              <Icon name="circle-alert" size={14} />
+            </span>
+            <span className="iv-file-view__changed-text">
+              {name} changed on disk while you had unsaved edits.
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                registry.set(editAtom, noEdit)
+                retry()
+              }}
+            >
+              Reload from disk
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => save(true)}>
+              Overwrite
+            </Button>
+          </div>
+        )}
+        {edit.failure !== null && (
+          <div className="iv-file-view__failure">
+            <ErrorMessage
+              message={edit.failure.text}
+              {...(edit.failure.retryable && { onRetry: () => save() })}
+            />
+          </div>
+        )}
         <CodeView
-          text={reading.text}
-          fileName={fileName(path)}
+          text={shownText(edit) ?? reading.text}
+          fileName={name}
           scrollTop={scrollTop}
           onScroll={(top) => registry.set(scroll, top)}
+          onChange={(text) => registry.set(editAtom, withTyped(registry.get(editAtom), text))}
+          extensions={extensions}
           {...(shownLines && { shownLines })}
         />
       </div>

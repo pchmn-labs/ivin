@@ -3,7 +3,7 @@ import { errorTag } from "../../../shared/rules/error-tag.ts"
 import { fileName } from "./file-name.ts"
 
 export type FileReading =
-  | { readonly kind: "text"; readonly text: string }
+  | { readonly kind: "text"; readonly text: string; readonly version: string }
   | { readonly kind: "message"; readonly text: string; readonly retryable: boolean }
 
 const message = (text: string, retryable = false): FileReading => ({
