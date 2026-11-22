@@ -7,10 +7,11 @@ import {
 } from "@ivin/harness"
 import { Cause, Effect, Fiber, Layer } from "effect"
 import { homedir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
-import { layerFsShellCommand } from "./modules/cli/adapters/fs-shell-command.ts"
+import { layerFsShellCommand, readLoginShellPath } from "./modules/cli/adapters/fs-shell-command.ts"
+import { agentPath } from "./modules/cli/rules/agent-path.ts"
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
@@ -68,13 +69,14 @@ if (typeof imagesPath !== "string") fail("Missing --images <path>, the folder of
 const imageFolder = imagesPath as string
 if (typeof skillPath !== "string") fail("Missing --skill <path>, the folder of ivin's skill")
 const skillFolder = skillPath as string
+const loginShell = process.env["SHELL"] || "/bin/zsh"
 const layerShellCommand =
   typeof cliCommandPath === "string"
     ? layerFsShellCommand({
         command: cliCommandPath,
         home: homedir(),
         folders: ["/usr/local/bin", join(homedir(), ".local", "bin")],
-        shell: process.env["SHELL"] || "/bin/zsh",
+        shell: loginShell,
       })
     : Layer.empty
 const socketPath = process.env["IVIN_SOCKET"]
@@ -111,6 +113,13 @@ parentPort.on("message", ({ data, ports: [port] }) => {
 
 // Stores, feeds and runs are built once here: every port, and so every window reload, shares them.
 const startup = Effect.gen(function* () {
+  // Before any layer is built, since agents inherit the server's PATH.
+  const shellPath = yield* readLoginShellPath(loginShell, 5_000)
+  process.env["PATH"] = agentPath(
+    process.env["PATH"] ?? "",
+    shellPath,
+    typeof cliCommandPath === "string" ? dirname(cliCommandPath) : null,
+  )
   const context = yield* Layer.build(
     Layer.mergeAll(layerServices, layerFsSkillInstallation(skillFolder)).pipe(
       Layer.provideMerge(
