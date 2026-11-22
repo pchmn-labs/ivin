@@ -26,3 +26,4 @@ apps/server/src/
 
 - `rules/`: called directly.
 - Everything else: through the `rpc/` handlers, with an in-memory SQLite and the scripted `HarnessProvider` from `@ivin/harness`. No test spawns a real agent.
+- A test file that spawns real processes (`git`) sets its own timeout with `vi.setConfig({ testTimeout })`, from its slowest test's duration with room for the parallel suite. The global 1000ms default stays, so a slow test elsewhere still fails.
