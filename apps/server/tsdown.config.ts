@@ -1,4 +1,15 @@
+import { createRequire } from "node:module"
+import { dirname, join } from "node:path"
 import type { PackUserConfig } from "vite-plus/pack"
+
+// Rolldown's native binding for this machine, which the server bundle cannot hold.
+const platformTag =
+  process.platform === "linux" ? `linux-${process.arch}-gnu` : `${process.platform}-${process.arch}`
+const fromRolldown = createRequire(createRequire(import.meta.url).resolve("rolldown"))
+const rolldownBinding = join(
+  dirname(fromRolldown.resolve(`@rolldown/binding-${platformTag}/package.json`)),
+  `rolldown-binding.${platformTag}.node`,
+)
 
 export default {
   entry: { main: "src/main.ts", "webp-worker": "src/modules/transcript/adapters/webp-worker.ts" },
@@ -9,11 +20,21 @@ export default {
   clean: true,
   fixedExtension: false,
   deps: {
-    alwaysBundle: [/^effect/, /^@ivin\//, /^@jsquash\//, /^jsonc-parser/],
+    alwaysBundle: [
+      /^effect/,
+      /^@ivin\//,
+      /^@jsquash\//,
+      /^jsonc-parser/,
+      /^rolldown/,
+      /^@rolldown\/pluginutils/,
+      /^@oxc-project\//,
+    ],
+    neverBundle: [/^@rolldown\/binding-/],
     onlyBundle: false,
   },
-  // `webp-codec.ts` reads these from `dist/wasm`.
+  // `webp-codec.ts` reads these from `dist/wasm`, and `fs-user-plugins.ts` the binding from `dist/native`.
   copy: [
+    { from: rolldownBinding, to: "dist/native", rename: "rolldown-binding.node" },
     {
       from: [
         "node_modules/@jsquash/png/codec/pkg/squoosh_png_bg.wasm",

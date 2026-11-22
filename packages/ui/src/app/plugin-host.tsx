@@ -7,6 +7,7 @@ import {
   useEffect,
   useEffectEvent,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -38,6 +39,8 @@ import { settingsAtom } from "../modules/setting/atoms/settings.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
+import { importPluginBundle, type ImportBundle } from "../modules/plugin/adapters/plugin-bundle.ts"
+import { useUserPlugins } from "../modules/plugin/hooks/use-user-plugins.ts"
 import { useKeyboardHandler } from "../modules/keybinding/hooks/use-keyboard-handler.ts"
 
 const NO_PROJECT = ""
@@ -164,24 +167,56 @@ const host: UiHost = {
 
 export function PluginsProvider({
   plugins,
+  importBundle = importPluginBundle,
   children,
 }: {
   plugins: ReadonlyArray<UiPluginEntry>
+  importBundle?: ImportBundle
   children: ReactNode
 }) {
   const registry = useContext(RegistryContext)
   useKeyboardHandler()
+  const userPlugins = useUserPlugins(importBundle)
+  // A user plugin replaces the built-in plugin with its id.
+  const all = useMemo(() => {
+    const userIds = new Set(userPlugins.plugins.map((plugin) => plugin.manifest.id))
+    return [...plugins.filter((plugin) => !userIds.has(plugin.manifest.id)), ...userPlugins.plugins]
+  }, [plugins, userPlugins.plugins])
+  const { dropFailedPlugin } = userPlugins
+  const deactivations = useRef(new Map<UiPluginEntry, () => void>())
   // Children wait for activation so a virtual list never measures rows that have no contributions yet.
   const [active, setActive] = useState(false)
   useEffect(() => {
-    const deactivations = plugins.map((plugin) =>
-      activatePlugin(registry, plugin, (tab) => showSidebarTab(registry, tab, { focus: true })),
-    )
-    setActive(true)
-    return () => {
-      deactivations.forEach((deactivate) => deactivate())
-      setActive(false)
+    const current = deactivations.current
+    for (const [plugin, deactivate] of current) {
+      if (all.includes(plugin)) continue
+      deactivate()
+      current.delete(plugin)
     }
-  }, [registry, plugins])
+    for (const plugin of all) {
+      if (current.has(plugin)) continue
+      const onFailure = userPlugins.plugins.includes(plugin)
+        ? (error: unknown) => dropFailedPlugin(plugin.manifest.id, error)
+        : undefined
+      current.set(
+        plugin,
+        activatePlugin(
+          registry,
+          plugin,
+          (tab) => showSidebarTab(registry, tab, { focus: true }),
+          onFailure,
+        ),
+      )
+    }
+    setActive(true)
+  }, [registry, all, userPlugins.plugins, dropFailedPlugin])
+  useEffect(
+    () => () => {
+      deactivations.current.forEach((deactivate) => deactivate())
+      deactivations.current.clear()
+      setActive(false)
+    },
+    [registry],
+  )
   return active ? <UiHostProvider host={host}>{children}</UiHostProvider> : null
 }

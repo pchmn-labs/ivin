@@ -3,6 +3,7 @@ import { CliRpcs } from "./cli.ts"
 import { FileRpcs } from "./file.ts"
 import { KeybindingRpcs } from "./keybinding.ts"
 import { LogRpcs } from "./log.ts"
+import { PluginRpcs } from "./plugin.ts"
 import { ProjectRpcs } from "./project.ts"
 import { ServerRpcs } from "./server.ts"
 import { SessionRpcs } from "./session.ts"
@@ -17,6 +18,7 @@ export const Rpcs = ServerRpcs.merge(
   FileRpcs,
   KeybindingRpcs,
   LogRpcs,
+  PluginRpcs,
   ProjectRpcs,
   SessionRpcs,
   SettingRpcs,

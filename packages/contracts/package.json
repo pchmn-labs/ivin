@@ -9,6 +9,7 @@
     "./file": "./src/file.ts",
     "./keybinding": "./src/keybinding.ts",
     "./log": "./src/log.ts",
+    "./plugin": "./src/plugin.ts",
     "./project": "./src/project.ts",
     "./rpcs": "./src/rpcs.ts",
     "./server": "./src/server.ts",

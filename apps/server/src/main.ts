@@ -18,6 +18,7 @@ import {
 import { agentPath } from "./modules/cli/rules/agent-path.ts"
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
+import { layerFsUserPlugins } from "./modules/plugin/adapters/fs-user-plugins.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
 import { layerFsSkillInstallation } from "./modules/skill/adapters/fs-skill-install.ts"
 import { layerServices } from "./rpc/handlers.ts"
@@ -141,6 +142,7 @@ const startup = Effect.gen(function* () {
           layerLogger,
           layerFsKeybindingsFile(ivinHome),
           layerFsSettingsFile(ivinHome),
+          layerFsUserPlugins(ivinHome),
           layerShellCommand,
         ),
       ),
