@@ -52,9 +52,9 @@ export function ProjectRail({ actions, children }: { actions?: ReactNode; childr
           selected={project.path === selectedPath}
         />
       ))}
+      <IconButton icon="plus" label="Open folder…" size="sm" onClick={openFolder} />
       <span className="iv-project-rail__spacer" />
       {actions}
-      <IconButton icon="plus" label="Open folder…" size="sm" onClick={openFolder} />
       {children}
     </nav>
   )
