@@ -11,10 +11,6 @@
   background: var(--iv-bg-card);
 }
 
-.iv-sub-view-card[data-on-session] {
-  background: var(--iv-bg);
-}
-
 .iv-sub-view-card__row {
   display: flex;
   flex: none;
@@ -141,4 +137,8 @@
   flex: none;
   padding: var(--iv-space-2) var(--iv-space-3) 0;
   background: inherit;
+}
+
+.iv-sub-view-card[data-on-session] .iv-sub-view-card__failure {
+  background: var(--iv-bg);
 }
