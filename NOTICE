@@ -1,7 +1,10 @@
 ivin includes third-party material under the licences below.
 
-Material Icon Theme 5.40.0
-https://github.com/material-extensions/vscode-material-icon-theme
-Copyright (c) 2025 Material Extensions
+Gruvbox Material Icons 4.7.0, commit e0b2995f75a7dee359d6c55a8014c37d13622061
+https://github.com/navernoedenis/gruvbox-material-icons
+Copyright (c) 2025 navernoedenis
 MIT License, in plugins/file-icons/theme/LICENSE
-Used in plugins/file-icons/icons/ and plugins/file-icons/theme/material-icons.json, unchanged.
+A fork of Material Icon Theme, https://github.com/material-extensions/vscode-material-icon-theme
+Copyright (c) 2025 Material Extensions
+MIT License, in plugins/file-icons/theme/LICENSE-material-icon-theme
+Used in plugins/file-icons/icons/ and plugins/file-icons/theme/material-icons.json, as its build makes them.
