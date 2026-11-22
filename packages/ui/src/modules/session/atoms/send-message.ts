@@ -27,7 +27,9 @@ export const sendMessageAtom = serverRuntime.fn<{
     const session = yield* sessions.get(sessionId)
     const working = session?.status === "working" || session?.status === "waiting"
 
-    const changePending = (change: (pending: Session["pendingMessages"]) => Session["pendingMessages"]) =>
+    const changePending = (
+      change: (pending: Session["pendingMessages"]) => Session["pendingMessages"],
+    ) =>
       Effect.gen(function* () {
         const current = yield* sessions.get(sessionId)
         if (current) {
@@ -69,7 +71,9 @@ export const sendMessageAtom = serverRuntime.fn<{
               .upsert([answer])
               .pipe(
                 Effect.andThen(
-                  answer.pendingMessages.some((m) => m.id === messageId) ? removeShown : Effect.void,
+                  answer.pendingMessages.some((m) => m.id === messageId)
+                    ? removeShown
+                    : Effect.void,
                 ),
               ),
         }

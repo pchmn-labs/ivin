@@ -46,6 +46,7 @@ import { setRunOptionsAtom } from "../atoms/set-run-options.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { sendMessageFailure, setRunOptionsFailure } from "../rules/failure-message.ts"
 import { statusLabel } from "../rules/status-label.ts"
+import { sendNowAtom } from "../atoms/send-now.ts"
 import { sendMessageAtom } from "../atoms/send-message.ts"
 import "./composer.css"
 
@@ -63,6 +64,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const choice = useAtomValue(workingFolderChoiceOf(sessionId))
   const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
   const interrupt = useAtomSet(interruptSessionAtom)
+  const sendNow = useAtomSet(sendNowAtom)
   const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
   const running = isRunning(session?.status)
   const preparing = session?.status === "preparing_worktree"
@@ -195,6 +197,37 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     (relaunchFailure &&
       RUN_OPTIONS.find((option) => session?.[option] !== relaunchFailure.previous[option])) ??
     "model"
+  const pending = session?.pendingMessages ?? []
+  const pendingSheet = pending.length > 0 && (
+    <div className="iv-composer__pending-sheet">
+      <ActionSheet
+        icon="clock"
+        title={
+          pending.length === 1
+            ? "Sent to the agent"
+            : `${pending.length} messages sent to the agent`
+        }
+        data-testid="composer-pending"
+      >
+        <ul className="iv-composer__pending">
+          {pending.map((message) => (
+            <li key={message.id} className="iv-composer__pending-message" title={message.text}>
+              {message.text}
+            </li>
+          ))}
+        </ul>
+        <div className="iv-composer__sheet-row">
+          <span className="iv-composer__sheet-hint">
+            Read once the agent's current tool call or turn ends. Stop puts{" "}
+            {pending.length === 1 ? "it" : "them"} back here.
+          </span>
+          <Button variant="ghost" size="sm" onClick={() => sendNow({ projectPath, sessionId })}>
+            Send now
+          </Button>
+        </div>
+      </ActionSheet>
+    </div>
+  )
   const relaunchSheet = session && relaunchFailure && (
     <ActionSheet
       tone="danger"
@@ -249,6 +282,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     <div className="iv-composer" ref={root} data-keybinding-area="composer">
       {alert}
       {session && <Slot slot="composer.above" props={{ session, isEmptyComposer }} />}
+      {pendingSheet}
       {relaunchSheet}
       <div
         className="iv-composer__surface"

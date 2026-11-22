@@ -254,15 +254,21 @@ test("a message sent mid-turn waits, and the turn reads it where the script says
 })
 
 test("messages still waiting when a turn ends are read, then start the next turn", async () => {
-  const events = await run([[running, asked, idle], [running, text("next"), idle]], [], (provider) =>
-    Effect.gen(function* () {
-      const harness = yield* startS1(provider)
-      yield* harness.send({ id: "m1", text: "go", images: [] })
-      yield* harness.send({ id: "m2", text: "also", images: [] })
-      yield* harness.send({ id: "m3", text: "and", images: [] })
-      yield* harness.respond({ requestId: "r1", allow: true })
-      return yield* Stream.runCollect(Stream.take(harness.events, 8))
-    }),
+  const events = await run(
+    [
+      [running, asked, idle],
+      [running, text("next"), idle],
+    ],
+    [],
+    (provider) =>
+      Effect.gen(function* () {
+        const harness = yield* startS1(provider)
+        yield* harness.send({ id: "m1", text: "go", images: [] })
+        yield* harness.send({ id: "m2", text: "also", images: [] })
+        yield* harness.send({ id: "m3", text: "and", images: [] })
+        yield* harness.respond({ requestId: "r1", allow: true })
+        return yield* Stream.runCollect(Stream.take(harness.events, 8))
+      }),
   )
 
   expect(events).toEqual([
@@ -278,14 +284,20 @@ test("messages still waiting when a turn ends are read, then start the next turn
 })
 
 test("an interrupt ends the turn, and a waiting message starts the next one", async () => {
-  const events = await run([[running, asked], [running, text("next"), idle]], [], (provider) =>
-    Effect.gen(function* () {
-      const harness = yield* startS1(provider)
-      yield* harness.send({ id: "m1", text: "go", images: [] })
-      yield* harness.send({ id: "m2", text: "also", images: [] })
-      yield* harness.interrupt
-      return yield* Stream.runCollect(Stream.take(harness.events, 7))
-    }),
+  const events = await run(
+    [
+      [running, asked],
+      [running, text("next"), idle],
+    ],
+    [],
+    (provider) =>
+      Effect.gen(function* () {
+        const harness = yield* startS1(provider)
+        yield* harness.send({ id: "m1", text: "go", images: [] })
+        yield* harness.send({ id: "m2", text: "also", images: [] })
+        yield* harness.interrupt
+        return yield* Stream.runCollect(Stream.take(harness.events, 7))
+      }),
   )
 
   expect(events.map((e) => e.type)).toEqual([

@@ -17,6 +17,7 @@ import {
   CaretRight,
   Check,
   CircleNotch,
+  Clock,
   Copy,
   DotsThree,
   File,
@@ -92,6 +93,7 @@ const icons = {
   "collapse-all": ArrowsInLineVertical,
   eye: Eye,
   "eye-slash": EyeSlash,
+  clock: Clock,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {

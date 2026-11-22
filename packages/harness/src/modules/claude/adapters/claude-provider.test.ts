@@ -22,7 +22,11 @@ real(
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
           providerSessionId: null,
         })
-        yield* harness.send({ id: crypto.randomUUID(), text: "Reply with exactly: pong", images: [] })
+        yield* harness.send({
+          id: crypto.randomUUID(),
+          text: "Reply with exactly: pong",
+          images: [],
+        })
         return yield* Stream.runCollect(
           Stream.takeUntil(harness.events, (o) => o.type === "status" && o.status === "idle"),
         )

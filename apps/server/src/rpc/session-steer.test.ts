@@ -97,9 +97,7 @@ const messages = (client: Client, sessionId: string) =>
   items(client, sessionId).pipe(
     Effect.map((all) =>
       all.flatMap((item) =>
-        item.type === "message" && item.role === "user"
-          ? [{ id: item.id, steer: item.steer }]
-          : [],
+        item.type === "message" && item.role === "user" ? [{ id: item.id, steer: item.steer }] : [],
       ),
     ),
   )
@@ -210,7 +208,10 @@ test("stopping the turn puts its pending messages back as unread, and the agent 
 test("the next message clears the unread messages", async () => {
   const unread = await withServer(
     newDatabase(),
-    [[running, asked], [running, said("ok"), idle]],
+    [
+      [running, asked],
+      [running, said("ok"), idle],
+    ],
     (client) =>
       Effect.gen(function* () {
         const id = yield* startWithSteers(client, ["m2"])
@@ -255,13 +256,7 @@ test("sending now stops the turn, and the pending messages start the next one", 
   expect(outcome.session.unreadMessages).toEqual([])
   expect(
     outcome.all.map((i) => (i.type === "message" ? `${i.role}:${i.text}:${i.steer}` : i.type)),
-  ).toEqual([
-    "user:go:false",
-    "approval",
-    "interruption",
-    "user:m2:false",
-    "assistant:Next:false",
-  ])
+  ).toEqual(["user:go:false", "approval", "interruption", "user:m2:false", "assistant:Next:false"])
 })
 
 test("pending messages left by a previous server are unread after a restart", async () => {

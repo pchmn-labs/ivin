@@ -42,7 +42,14 @@ export const applyEvent = (
     case "assistant_text": {
       const item: MessageItem = state.openMessage
         ? { ...state.openMessage, text: `${state.openMessage.text}\n\n${event.text}` }
-        : { ...base, type: "message", role: "assistant", text: event.text, images: [], steer: false }
+        : {
+            ...base,
+            type: "message",
+            role: "assistant",
+            text: event.text,
+            images: [],
+            steer: false,
+          }
       return { state: { ...state, openMessage: item }, item }
     }
     case "thinking": {

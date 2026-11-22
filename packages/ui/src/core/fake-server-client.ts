@@ -635,7 +635,11 @@ export const makeFakeServer = (
           type: "interruption",
         })
         readMessages(session, false)
-        return saveSession({ ...sessions.get(sessionId)!, status: "working", lastActivityAt: tick() })
+        return saveSession({
+          ...sessions.get(sessionId)!,
+          status: "working",
+          lastActivityAt: tick(),
+        })
       }),
     "session.list": ({ projectPath }: { projectPath: string }) =>
       Effect.sync(() => [...sessions.values()].filter((s) => s.projectPath === projectPath)),

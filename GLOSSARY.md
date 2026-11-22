@@ -46,10 +46,14 @@ _Avoid_: attachment, placeholder
 The read model derived from a transcript's events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled.
 
 **Turn**:
-A user message and everything the agent does in answer to it, up to the next user message. Its **work** runs from its first item to its last tool call; its **answer** is the agent's text after that call, once the turn has ended. While the turn runs, that text is still part of its work.
+A user message that the agent reads while idle, and everything the agent does in answer to it, up to the next such message. The steers it reads on its way belong to it. Its **work** runs from its first item to its last tool call; its **answer** is the agent's text after that call, once the turn has ended. While the turn runs, that text is still part of its work.
 
 **Step**:
-One sentence the agent writes in a turn's work and the tool calls that follow it, up to its next sentence. In a running turn, the last sentence heads a step before it has any calls.
+One sentence the agent writes in a turn's work and the tool calls that follow it, up to its next sentence. A steer heads a step too, with the agent's next sentence under it. In a running turn, the last sentence heads a step before it has any calls.
+
+**Steer**:
+A user message the agent reads while a turn runs, when a tool call ends: it joins that turn instead of starting one. A message sent while the agent works is **pending** until the agent reads it. If the turn ends first, the message starts the next turn instead; if the user stops the turn, it goes back to the composer unread.
+_Avoid_: queued message, interjection
 
 **Approval**:
 An agent's request to run a tool that the user allows or denies, together with that decision. It is open until decided, and the session waits meanwhile.

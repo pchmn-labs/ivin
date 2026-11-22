@@ -66,7 +66,13 @@ function StepView({
       data-testid="turn-step"
       data-failed={step.failed > 0 || undefined}
       data-current={current || undefined}
+      data-steer={step.steer ? true : undefined}
     >
+      {step.steer && (
+        <div className="iv-turn__steer" data-testid="turn-steer">
+          <Slot slot="transcript.message" props={{ item: step.steer, sessionId }} />
+        </div>
+      )}
       {step.sentence && (
         <div className="iv-turn__sentence">
           <Slot slot="transcript.message" props={{ item: step.sentence, sessionId }} />

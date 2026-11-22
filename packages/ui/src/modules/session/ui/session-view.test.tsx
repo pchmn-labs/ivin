@@ -949,3 +949,36 @@ test("stopping the agent before it read the messages sent while it worked puts t
 
   await vi.waitFor(() => expect(composerText()).toBe("also check the logs\n\nand the config"))
 })
+
+test("messages sent while the agent works wait in a sheet on the composer, and Send now starts a turn with them", async () => {
+  const server = await mountSession("working")
+  await page.getByRole("textbox").fill("also check the logs")
+  await userEvent.keyboard("{Enter}")
+  await page.getByRole("textbox").fill("and the config")
+  await userEvent.keyboard("{Enter}")
+
+  const sheet = page.getByTestId("composer-pending")
+  await expect.element(sheet.getByText("2 messages sent to the agent")).toBeVisible()
+  await expect.element(sheet.getByText("also check the logs")).toBeVisible()
+  await expect.element(sheet.getByText("and the config")).toBeVisible()
+
+  await sheet.getByRole("button", { name: "Send now" }).click()
+
+  await expect.element(sheet).not.toBeInTheDocument()
+  await expect.element(page.getByText("also check the logs")).toBeVisible()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toEqual([]))
+})
+
+test("the sheet names a single waiting message, and leaves once the agent reads it", async () => {
+  const server = await mountSession("working")
+  await page.getByRole("textbox").fill("also check the logs")
+  await userEvent.keyboard("{Enter}")
+
+  const sheet = page.getByTestId("composer-pending")
+  await expect.element(sheet.getByText("Sent to the agent")).toBeVisible()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toHaveLength(1))
+  server.readPendingMessages("s1")
+
+  await expect.element(sheet).not.toBeInTheDocument()
+  await expect.element(page.getByTestId("turn-steer")).toHaveTextContent("also check the logs")
+})

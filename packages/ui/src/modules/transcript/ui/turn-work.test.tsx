@@ -504,3 +504,31 @@ test("while the turn runs, a step of 6 calls the user unfolds also stops at 5 ro
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight)
   await vi.waitFor(() => expect(atListEnd(list)).toBe(true))
 })
+
+test("a steer heads its own step in the running turn, above the agent's reply, and the turn keeps its clock", async () => {
+  const { user, text, call } = items(Date.now() - 20_000)
+  const steer = (id: string, words: string): TranscriptItem =>
+    ({ ...user(id, words), steer: true }) as TranscriptItem
+  await mount(
+    [
+      user("u1", "fix it"),
+      text("t1", "Looking at the code"),
+      call("c1", "read"),
+      steer("s1", "leave the e2e tests alone"),
+      text("t2", "Understood, unit tests only"),
+      call("c2", "command", "running"),
+    ],
+    true,
+  )
+
+  await expect.element(turnLine()).toHaveAttribute("aria-expanded", "true")
+  expect(turnLine().element().textContent).toMatch(/^Working for [12]\ds$/)
+  const bubble = page.getByTestId("turn-steer")
+  await expect.element(bubble).toHaveTextContent("leave the e2e tests alone")
+  const steps = page.getByTestId("turn-step")
+  await expect.element(steps).toHaveLength(2)
+  expect(steps.nth(1).element().hasAttribute("data-steer")).toBe(true)
+  expect(steps.nth(1).element().textContent).toMatch(
+    /^leave the e2e tests alone.*Understood, unit tests only/,
+  )
+})

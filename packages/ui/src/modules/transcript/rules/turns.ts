@@ -13,7 +13,7 @@ export type TranscriptRow =
       readonly turnIds: ReadonlyArray<string>
     }
 
-const isSteer = (item: TranscriptItem): item is MessageItem =>
+const isSteer = (item: TranscriptItem) =>
   item.type === "message" && item.role === "user" && item.steer
 const isWork = (item: TranscriptItem) =>
   item.type === "tool_call" || item.type === "approval" || isSteer(item)
@@ -109,7 +109,8 @@ export const turnWork = (
   }> = []
   for (const item of work) {
     const last = steps.at(-1)
-    if (isSteer(item)) steps.push({ id: item.id, steer: item, sentence: null, children: [] })
+    if (item.type === "message" && isSteer(item))
+      steps.push({ id: item.id, steer: item, sentence: null, children: [] })
     else if (isAssistantText(item) && last?.steer && !last.sentence && last.children.length === 0)
       last.sentence = item
     else if (isAssistantText(item))

@@ -1,4 +1,5 @@
 import type { HarnessOutput } from "@ivin/contracts/transcript"
+import { scriptedRead, type ScriptedElement } from "./scripted-provider.ts"
 
 export const demoAnswer = "The scripted answer: this project has 3 files and every test passes."
 
@@ -128,8 +129,30 @@ export const demoApprovalScript: readonly (readonly HarnessOutput[])[] = [
   demoApprovalTurn,
 ]
 
-export const demoShotScript: readonly (readonly HarnessOutput[])[] = [
+// Reads the message sent while it waits on the approval, then waits on a second one.
+const demoSteerTurn: readonly ScriptedElement[] = [
+  ...demoApprovalTurn.slice(0, 5),
+  scriptedRead,
+  { type: "assistant_text", text: "Understood, I'll leave the e2e tests out of it.", raw: null },
+  {
+    type: "tool_call",
+    toolCallId: "demo-tool-3",
+    name: "Bash",
+    input: { command: "pnpm test src/orders" },
+    raw: null,
+  },
+  {
+    type: "approval_request",
+    requestId: "demo-approval-2",
+    toolCallId: "demo-tool-3",
+    name: "Bash",
+    input: { command: "pnpm test src/orders" },
+    raw: null,
+  },
+]
+
+export const demoShotScript: readonly (readonly ScriptedElement[])[] = [
   demoTurn,
   demoWorkTurn,
-  demoApprovalTurn,
+  demoSteerTurn,
 ]

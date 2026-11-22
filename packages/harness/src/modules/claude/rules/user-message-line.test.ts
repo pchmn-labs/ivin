@@ -35,11 +35,9 @@ test("each image block follows the text up to its marker", () => {
 
 test("an image whose marker is missing comes first, and a message of images alone has no text block", () => {
   expect(content(userMessageLine({ id: "m1", text: "", images: [png] }))).toEqual([block(png)])
-  expect(content(userMessageLine({ id: "m1", text: "see [Image #2]", images: [png, webp] }))).toEqual([
-    block(png),
-    { type: "text", text: "see [Image #2]" },
-    block(webp),
-  ])
+  expect(
+    content(userMessageLine({ id: "m1", text: "see [Image #2]", images: [png, webp] })),
+  ).toEqual([block(png), { type: "text", text: "see [Image #2]" }, block(webp)])
 })
 
 test("a marker with no image stays text", () => {

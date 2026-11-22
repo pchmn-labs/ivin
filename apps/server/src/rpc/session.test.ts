@@ -646,23 +646,19 @@ test("a harness that cannot take a message stores the message and an error, and 
 
 test("a message sent while a turn is still running reaches the provider", async () => {
   const sent: ScriptedSend[] = []
-  const status = await withServer(
-    newDatabase(),
-    [[running, said("Working")]],
-    sent,
-    (client) =>
-      Effect.gen(function* () {
-        const session = yield* client["session.create"]({ projectPath: "/p" })
-        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-        yield* until(endOfTranscript(client, session.id), (p) => p.items.length === 2)
-        expect(yield* statusOf(client, "/p", session.id)).toBe("working")
-        yield* client["session.sendMessage"]({
-          sessionId: session.id,
-          messageId: "m2",
-          text: "also",
-        })
-        return yield* statusOf(client, "/p", session.id)
-      }),
+  const status = await withServer(newDatabase(), [[running, said("Working")]], sent, (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p" })
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      yield* until(endOfTranscript(client, session.id), (p) => p.items.length === 2)
+      expect(yield* statusOf(client, "/p", session.id)).toBe("working")
+      yield* client["session.sendMessage"]({
+        sessionId: session.id,
+        messageId: "m2",
+        text: "also",
+      })
+      return yield* statusOf(client, "/p", session.id)
+    }),
   )
 
   expect(sent.map((s) => s.text)).toEqual(["go", "also"])
