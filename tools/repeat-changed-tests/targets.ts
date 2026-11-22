@@ -10,9 +10,14 @@ type TestRange = { start: number; end: number; name: string | undefined }
 export const changedLines = (diff: string): Map<string, ChangedLines> => {
   const files = new Map<string, ChangedLines>()
   let current: ChangedLines | undefined
+  let inHeader = false
   for (const line of diff.split("\n")) {
-    if (line.startsWith("diff --git ")) current = undefined
-    const target = /^\+\+\+ b\/(.+)$/.exec(line)
+    if (line.startsWith("diff --git ")) {
+      current = undefined
+      inHeader = true
+      continue
+    }
+    const target = inHeader ? /^\+\+\+ b\/(.+)$/.exec(line) : null
     if (target?.[1] !== undefined) {
       current = { added: [], removedAfter: [] }
       files.set(target[1], current)
@@ -20,6 +25,7 @@ export const changedLines = (diff: string): Map<string, ChangedLines> => {
     }
     const hunk = /^@@ -\S+ \+(\d+)(?:,(\d+))? @@/.exec(line)
     if (current === undefined || hunk === null) continue
+    inHeader = false
     const start = Number(hunk[1])
     const count = hunk[2] === undefined ? 1 : Number(hunk[2])
     // A pure removal reports the new-side line it follows as its start.
@@ -45,7 +51,9 @@ const namePattern = (call: ts.CallExpression) => {
   const escaped = escapeRegExp(arg.text)
   // A test.each(…)(name) fills %s or $field placeholders with each case's values.
   if (!ts.isCallExpression(call.expression)) return escaped
-  return escaped.replace(/%[sdifjo#$]/g, ".*").replace(/\\\$[\w.]+/g, ".*")
+  return escaped
+    .replace(/%%|%[sdifjoc#$]/g, (p) => (p === "%%" ? "%" : ".*"))
+    .replace(/\\\$[\w.]+/g, ".*")
 }
 
 const testRanges = (path: string, source: string): TestRange[] => {
@@ -89,7 +97,8 @@ const fileTarget = ({ path, source, added, removedAfter }: ChangedFile): FileTar
   }
   for (const line of removedAfter) {
     const range = enclosing(line)
-    if (range !== undefined && line + 1 <= range.end) touched.add(range)
+    if (range === undefined || line + 1 > range.end) return [{ path, testNames: [] }]
+    touched.add(range)
   }
   if (touched.size === 0) return []
   const names = [...touched].flatMap((range) => (range.name === undefined ? [] : [range.name]))
@@ -97,4 +106,4 @@ const fileTarget = ({ path, source, added, removedAfter }: ChangedFile): FileTar
 }
 
 export const repeatTargets = (files: ChangedFile[]): FileTarget[] =>
-  files.filter((file) => !file.path.endsWith(".perf.test.tsx")).flatMap(fileTarget)
+  files.filter((file) => !/\.perf\.test\.tsx?$/.test(file.path)).flatMap(fileTarget)

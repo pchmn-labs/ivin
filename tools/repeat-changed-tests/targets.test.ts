@@ -35,6 +35,13 @@ describe("repeatTargets", () => {
     expect(targets([11])).toEqual(tests("group > nested"))
   })
 
+  test("a test.each name keeps a literal %% as one percent sign", () => {
+    const each = `test.each([1])("100%% of %i", () => {})\n`
+    expect(
+      repeatTargets([{ path: "b.test.ts", source: each, added: [1], removedAfter: [] }]),
+    ).toEqual([{ path: "b.test.ts", testNames: ["100% of .*"] }])
+  })
+
   test("a test.each name matches any value in place of its placeholders", () => {
     expect(targets([16])).toEqual(tests("each .*"))
   })
@@ -87,8 +94,8 @@ describe("repeatTargets", () => {
     expect(targets([], [6])).toEqual(tests("first"))
   })
 
-  test("lines removed between two tests target nothing", () => {
-    expect(targets([], [7])).toEqual([])
+  test("lines removed outside any test repeat the whole file", () => {
+    expect(targets([], [7])).toEqual(wholeFile)
   })
 })
 
@@ -129,6 +136,16 @@ new file mode 100644
 -  b
 `
     expect(changedLines(diff)).toEqual(new Map([["a.test.ts", { added: [], removedAfter: [6] }]]))
+  })
+
+  test("an added line that looks like a file header stays in its file", () => {
+    const diff = `diff --git a/a.test.ts b/a.test.ts
+--- a/a.test.ts
++++ b/a.test.ts
+@@ -1,0 +2 @@
++++ b/x
+`
+    expect(changedLines(diff)).toEqual(new Map([["a.test.ts", { added: [2], removedAfter: [] }]]))
   })
 
   test("a deleted file is left out", () => {
