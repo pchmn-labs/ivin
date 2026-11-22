@@ -7,7 +7,7 @@ import {
 } from "@ivin/harness"
 import { Cause, Effect, Fiber, Layer } from "effect"
 import { homedir } from "node:os"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
 import {
@@ -109,9 +109,8 @@ const adoptLoginShellPath = Effect.gen(function* () {
       `could not read the PATH of ${loginShell}; agents keep the app's`,
     )
   }
-  const cliFolder = typeof cliCommandPath === "string" ? dirname(cliCommandPath) : null
   yield* Effect.sync(() => {
-    process.env["PATH"] = agentPath(process.env["PATH"] ?? "", shellFolders, cliFolder)
+    process.env["PATH"] = agentPath(process.env["PATH"] ?? "", shellFolders)
   })
 })
 

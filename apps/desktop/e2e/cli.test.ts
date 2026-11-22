@@ -102,6 +102,7 @@ test("a launch leaves an ivin-customize skill the user made as it is, and ivin d
   const app = await launchPackagedApp(userDataDir, { fakeClaudeBin: makeFakeClaudeBin() })
   try {
     await app.firstWindow()
+    await expect.poll(() => existsSync(join(userDataDir, ".ivin/run/ivin.sock"))).toBe(true)
     const doctor = await runIvin(userDataDir, ["doctor"])
 
     expect(doctor.output).toContain(`✓ ${skillFolder} is not ivin's: ivin left it as it is.`)

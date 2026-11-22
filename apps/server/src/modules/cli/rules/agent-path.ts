@@ -1,11 +1,9 @@
-export const agentPath = (
-  appPath: string,
-  shellFolders: ReadonlyArray<string> | null,
-  cliFolder: string | null,
-): string => {
+export const agentPath = (appPath: string, shellFolders: ReadonlyArray<string> | null): string => {
   if (shellFolders === null) return appPath
-  const folders = [cliFolder, ...shellFolders, ...appPath.split(":")].filter(
-    (folder): folder is string => folder !== null && folder !== "",
-  )
-  return [...new Set(folders)].join(":")
+  const shell = shellFolders.filter((folder) => folder !== "")
+  const app = appPath.split(":").filter((folder) => folder !== "")
+  const firstShared = app.findIndex((folder) => shell.includes(folder))
+  // What was put before the shell's folders (ivin's command, a test's fake agent) keeps its place.
+  const leading = firstShared === -1 ? app : app.slice(0, firstShared)
+  return [...new Set([...leading, ...shell, ...app])].join(":")
 }
