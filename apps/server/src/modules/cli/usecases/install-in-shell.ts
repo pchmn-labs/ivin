@@ -1,8 +1,7 @@
 import { ShellCommandNotOurs, ShellFoldersRefused } from "@ivin/contracts/cli"
 import { Effect } from "effect"
 import { shellInstallPlan } from "../rules/shell-install-plan.ts"
-import { inspectShellFolders, shellInstallIn } from "./get-shell-install.ts"
-import { requireShellCommand } from "./shell-command.ts"
+import { inspectShellFolders, requireShellCommand, shellInstallIn } from "./shell-command.ts"
 
 export const installInShell = Effect.gen(function* () {
   const shell = yield* requireShellCommand

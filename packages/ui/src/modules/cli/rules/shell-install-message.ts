@@ -4,6 +4,7 @@ import type {
   ShellFoldersRefused,
   ShellInstall,
 } from "@ivin/contracts/cli"
+import { errorTag } from "../../../shared/rules/error-tag.ts"
 
 const refusalText: Record<FolderRefusal, string> = {
   permissionDenied: "ivin is not allowed to write there",
@@ -12,20 +13,19 @@ const refusalText: Record<FolderRefusal, string> = {
   unknown: "ivin could not write there",
 }
 
-const tagOf = (error: unknown) =>
-  typeof error === "object" && error !== null && "_tag" in error ? error._tag : null
-
 export const installFailureMessage = (error: unknown): string => {
-  if (tagOf(error) === "ShellFoldersRefused") {
+  if (errorTag(error) === "ShellFoldersRefused") {
     const { folders } = error as ShellFoldersRefused
     return `Not installed. ${folders.map((f) => `${f.path}: ${refusalText[f.reason]}.`).join(" ")}`
   }
-  if (tagOf(error) === "ShellCommandNotOurs") {
+  if (errorTag(error) === "ShellCommandNotOurs") {
     const { path } = error as ShellCommandNotOurs
     return `Not installed: ${path} already exists and is not ivin's. Remove it, then try again.`
   }
   return "ivin was not installed in your shell."
 }
+
+export const CHECK_FAILURE = "ivin could not check whether the command is installed."
 
 export const pathHint = ({ folder, onPath }: ShellInstall): string | null =>
   onPath === false

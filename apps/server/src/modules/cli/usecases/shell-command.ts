@@ -1,6 +1,6 @@
-import type { FolderRefusal } from "@ivin/contracts/cli"
+import type { FolderRefusal, ShellInstall } from "@ivin/contracts/cli"
 import { Context, Effect, Layer, Ref } from "effect"
-import type { ShellFolder } from "../rules/shell-install-plan.ts"
+import { commandPathIn, isFolderOnPath, type ShellFolder } from "../rules/shell-install-plan.ts"
 
 export interface ShellCommandService {
   // The `ivin` script the desktop app writes; the link points at it.
@@ -25,6 +25,16 @@ export const requireShellCommand = Effect.gen(function* () {
   const service = yield* ShellCommand
   return service ?? (yield* Effect.die(new Error("no ivin command to install")))
 })
+
+export const inspectShellFolders = (shell: ShellCommandService) =>
+  Effect.forEach(shell.folders, shell.inspect, { concurrency: "unbounded" })
+
+export const shellInstallIn = (shell: ShellCommandService, folder: string) =>
+  Effect.map(shell.shellPath, (entries): ShellInstall => ({
+    folder,
+    path: commandPathIn(folder),
+    onPath: entries === null ? null : isFolderOnPath(folder, entries, shell.home),
+  }))
 
 // Folders held in memory; a link fails with a folder's refusal, else replaces its entry.
 export const layerShellCommandOf = (options: {

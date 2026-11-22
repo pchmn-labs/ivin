@@ -4,13 +4,13 @@ import { Button } from "../../../core/components/button/button.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
-import { shellInstallAtom } from "../../cli/atoms/get-shell-install.ts"
+import { getShellInstallAtom } from "../../cli/atoms/get-shell-install.ts"
 import { installInShellAtom, shellInstallStateAtom } from "../../cli/atoms/install-in-shell.ts"
-import { pathHint } from "../../cli/rules/shell-install-message.ts"
+import { CHECK_FAILURE, pathHint } from "../../cli/rules/shell-install-message.ts"
 
 function InstallState() {
   const state = useAtomValue(shellInstallStateAtom)
-  const refresh = useAtomRefresh(shellInstallAtom)
+  const refresh = useAtomRefresh(getShellInstallAtom)
   if (state.installing) {
     return (
       <Text size="sm" tone="muted">
@@ -36,12 +36,7 @@ function InstallState() {
     )
   }
   if (state.checkFailed) {
-    return (
-      <ErrorMessage
-        message="ivin could not check whether the command is installed."
-        onRetry={refresh}
-      />
-    )
+    return <ErrorMessage message={CHECK_FAILURE} onRetry={refresh} />
   }
   if (state.checking) return null
   return (
