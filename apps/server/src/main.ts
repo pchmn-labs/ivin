@@ -10,7 +10,12 @@ import { homedir } from "node:os"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
 import pkg from "../package.json" with { type: "json" }
-import { layerFsShellCommand } from "./modules/cli/adapters/fs-shell-command.ts"
+import {
+  LOGIN_SHELL_TIMEOUT_MS,
+  layerFsShellCommand,
+  readLoginShellPath,
+} from "./modules/cli/adapters/fs-shell-command.ts"
+import { agentPath } from "./modules/cli/rules/agent-path.ts"
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
@@ -68,13 +73,14 @@ if (typeof imagesPath !== "string") fail("Missing --images <path>, the folder of
 const imageFolder = imagesPath as string
 if (typeof skillPath !== "string") fail("Missing --skill <path>, the folder of ivin's skill")
 const skillFolder = skillPath as string
+const loginShell = process.env["SHELL"] || "/bin/zsh"
 const layerShellCommand =
   typeof cliCommandPath === "string"
     ? layerFsShellCommand({
         command: cliCommandPath,
         home: homedir(),
         folders: ["/usr/local/bin", join(homedir(), ".local", "bin")],
-        shell: process.env["SHELL"] || "/bin/zsh",
+        shell: loginShell,
       })
     : Layer.empty
 const socketPath = process.env["IVIN_SOCKET"]
@@ -96,6 +102,18 @@ if (!(harnessId in layerHarnesses)) {
 }
 const layerHarness = layerHarnesses[harnessId as keyof typeof layerHarnesses]
 
+const adoptLoginShellPath = Effect.gen(function* () {
+  const shellFolders = yield* readLoginShellPath(loginShell, LOGIN_SHELL_TIMEOUT_MS)
+  if (shellFolders === null) {
+    return yield* Effect.logWarning(
+      `could not read the PATH of ${loginShell}; agents keep the app's`,
+    )
+  }
+  yield* Effect.sync(() => {
+    process.env["PATH"] = agentPath(process.env["PATH"] ?? "", shellFolders)
+  })
+})
+
 // Ports main posts before the database is ready wait here.
 let serve: ((port: MainPort) => void) | undefined
 const waiting: MainPort[] = []
@@ -111,6 +129,8 @@ parentPort.on("message", ({ data, ports: [port] }) => {
 
 // Stores, feeds and runs are built once here: every port, and so every window reload, shares them.
 const startup = Effect.gen(function* () {
+  // Before any layer is built, since agents inherit the server's PATH.
+  if (harnessId === "claude") yield* adoptLoginShellPath
   const context = yield* Layer.build(
     Layer.mergeAll(layerServices, layerFsSkillInstallation(skillFolder)).pipe(
       Layer.provideMerge(

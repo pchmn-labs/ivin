@@ -105,5 +105,10 @@ const fileTarget = ({ path, source, added, removedAfter }: ChangedFile): FileTar
   return [{ path, testNames: names.length === touched.size ? names : [] }]
 }
 
+// Playwright runs the packaged app's tests in their own CI job, not Vitest.
+const isPackagedAppTest = (path: string) => path.startsWith("apps/desktop/e2e/")
+
 export const repeatTargets = (files: ChangedFile[]): FileTarget[] =>
-  files.filter((file) => !/\.perf\.test\.tsx?$/.test(file.path)).flatMap(fileTarget)
+  files
+    .filter((file) => !/\.perf\.test\.tsx?$/.test(file.path) && !isPackagedAppTest(file.path))
+    .flatMap(fileTarget)
