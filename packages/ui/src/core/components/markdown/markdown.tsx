@@ -15,7 +15,7 @@ interface BlockProps {
   readonly linkRendering: MarkdownLinkRendering | undefined
 }
 
-function CodeBlock({ node: _node, ...props }: ComponentProps<"pre"> & { node?: unknown }) {
+function MarkdownCode({ node: _node, ...props }: ComponentProps<"pre"> & { node?: unknown }) {
   const pre = useRef<HTMLPreElement>(null)
   return (
     <div className="iv-markdown__code">
@@ -27,8 +27,8 @@ function CodeBlock({ node: _node, ...props }: ComponentProps<"pre"> & { node?: u
 
 const Block = memo(function Block({ source, linkRendering }: BlockProps) {
   const components: Components = linkRendering
-    ? { pre: CodeBlock, a: linkRendering.component }
-    : { pre: CodeBlock }
+    ? { pre: MarkdownCode, a: linkRendering.component }
+    : { pre: MarkdownCode }
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}

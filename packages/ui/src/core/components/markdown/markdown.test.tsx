@@ -16,12 +16,14 @@ test("a table keeps each word of a narrow column on one line", async () => {
   const long = "word ".repeat(80)
   await render(
     <div style={{ width: 600 }}>
-      <Markdown text={`| # | Variant | Cost |\n|---|---|---|\n| 1 | Floating | ${long} |\n`} />
+      <Markdown
+        text={`| # | Variant | Cost |\n|---|---|---|\n| 1 | \`list.test.ts\` | ${long} |\n`}
+      />
     </div>,
   )
-  const cell = page.getByRole("cell", { name: "Floating" })
+  const cell = page.getByRole("cell", { name: "list.test.ts" })
   await expect.element(cell).toBeVisible()
   const range = document.createRange()
-  range.selectNodeContents(cell.element())
+  range.selectNodeContents(cell.element().querySelector("code")!.firstChild!)
   expect(range.getClientRects()).toHaveLength(1)
 })

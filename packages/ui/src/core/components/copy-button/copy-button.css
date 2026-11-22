@@ -5,6 +5,7 @@
   border-radius: var(--iv-radius-sm);
   background: var(--iv-bg-subtle);
   opacity: 0;
+  pointer-events: none;
   transition: opacity var(--iv-duration-fast) var(--iv-ease-out);
 }
 
@@ -12,4 +13,5 @@
 :focus-within > .iv-copy-button,
 .iv-copy-button[data-copied] {
   opacity: 1;
+  pointer-events: auto;
 }
