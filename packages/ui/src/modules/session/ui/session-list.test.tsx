@@ -142,3 +142,24 @@ test("a claude session's row draws the Claude mark", async () => {
     page.getByTestId("session-item").element().querySelector(".iv-harness-mark--claude"),
   ).not.toBeNull()
 })
+
+test("a branch name too long for the row keeps its gap after the worktree icon", async () => {
+  const branchName = "ci/176-repeat-the-tests-a-pull-request-adds-twenty-times-before-it-merges"
+  const server = await setup(["One"])
+  server.sessions.set("s1", {
+    ...server.sessions.get("s1")!,
+    workingFolder: "/p/.worktrees/ci-long",
+    inWorktree: true,
+    branch: branchName,
+  })
+  server.setStatus("s1", "idle")
+  await expect
+    .element(page.getByTestId("session-location"))
+    .toHaveTextContent(`Worktree${branchName}`)
+
+  const location = page.getByTestId("session-location").element() as HTMLElement
+  location.parentElement!.style.width = "160px"
+  const icon = location.querySelector("svg")!.getBoundingClientRect()
+  const branch = location.querySelector(".iv-session-location__branch")!.getBoundingClientRect()
+  expect(branch.left - icon.right).toBeGreaterThanOrEqual(4)
+})
