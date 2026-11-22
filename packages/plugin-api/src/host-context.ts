@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react"
 import type { Annotation } from "@ivin/contracts/annotation"
-import type { FolderEntry, GitStatusEntry } from "@ivin/contracts/file"
+import type { Change, FolderEntry, GitStatusEntry } from "@ivin/contracts/file"
 import type { OpenProjects } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Tab } from "@ivin/contracts/tab"
@@ -26,6 +26,18 @@ export type FileListing =
     }
   | { readonly kind: "deleted" }
   | { readonly kind: "failed"; readonly failure: ActionFailure }
+
+// `deleted`: the session's working folder no longer exists.
+export type ChangeListing =
+  | { readonly kind: "loading" }
+  | { readonly kind: "listed"; readonly changes: ReadonlyArray<Change> }
+  | { readonly kind: "not_repository" }
+  | { readonly kind: "deleted" }
+  | {
+      readonly kind: "failed"
+      readonly failure: ActionFailure
+      readonly gitMessage: string | null
+    }
 
 export interface UiHost {
   readonly useSession: (sessionId: string) => Session | undefined
@@ -70,6 +82,18 @@ export interface UiHost {
   readonly useGitStatus: (sessionId: string) => ReadonlyArray<GitStatusEntry>
   // The file the session's tab has selected beside its chat, or null.
   readonly useFileOnScreen: (sessionId: string) => string | null
+  // The working folder's uncommitted changes, kept up to date with the disk.
+  readonly useChanges: (sessionId: string) => {
+    readonly listing: ChangeListing
+    readonly retry: () => void
+  }
+  // Opens the uncommitted diff of a file beside the session's chat, or selects it if open.
+  readonly useOpenDiff: () => (
+    sessionId: string,
+    path: string,
+  ) => Promise<ActionFailure | undefined>
+  // The file whose diff the session's tab has selected beside its chat, or null.
+  readonly useDiffOnScreen: (sessionId: string) => string | null
   readonly components: HostComponents
 }
 

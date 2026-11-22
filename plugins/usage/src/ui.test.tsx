@@ -57,6 +57,9 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
     useFolderChanges: () => undefined,
     useGitStatus: () => [],
     useFileOnScreen: () => null,
+    useChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
+    useOpenDiff: () => async () => undefined,
+    useDiffOnScreen: () => null,
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }

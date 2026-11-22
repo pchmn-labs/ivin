@@ -38,6 +38,16 @@
   color: var(--iv-text);
 }
 
+.iv-tabs__badge {
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-tabs__badge:empty {
+  display: none;
+}
+
 .iv-tabs__panel {
   display: flex;
   flex: 1;

@@ -10,6 +10,7 @@ export interface Contribution {
   readonly replaces: string | undefined
   readonly tool: string | undefined
   readonly title: string | undefined
+  readonly badge: unknown
 }
 
 export const contributionsAtom = Atom.make<ReadonlyArray<Contribution>>([]).pipe(Atom.keepAlive)

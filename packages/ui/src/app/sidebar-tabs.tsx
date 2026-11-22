@@ -6,7 +6,7 @@ import { contributionsAtom } from "../modules/plugin/atoms/contributions.ts"
 import { visibleContributions } from "../modules/plugin/rules/visible-contributions.ts"
 import { SessionList } from "../modules/session/ui/session-list.tsx"
 import { SESSIONS_TAB, panelFocusRequestAtom, showSidebarTab, sidebarTabAtom } from "./sidebar.ts"
-import { SlotContribution } from "./slot-renderer.tsx"
+import { ContributionBadge, SlotContribution } from "./slot-renderer.tsx"
 import "./sidebar-tabs.css"
 
 // In this order: the selected session row, a tree, then what the panel offers first.
@@ -34,7 +34,11 @@ export function SidebarTabs({ project }: { project: Project }) {
       aria-label="Sidebar"
       tabs={[
         { value: SESSIONS_TAB, label: "Sessions" },
-        ...panels.map((c) => ({ value: c.id, label: c.title ?? c.pluginId })),
+        ...panels.map((c) => ({
+          value: c.id,
+          label: c.title ?? c.pluginId,
+          ...(c.badge !== undefined && { badge: <ContributionBadge contribution={c} /> }),
+        })),
       ]}
       value={panel?.id ?? SESSIONS_TAB}
       onValueChange={(tab) => showSidebarTab(registry, tab)}

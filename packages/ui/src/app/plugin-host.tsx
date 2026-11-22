@@ -1,4 +1,4 @@
-import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { RegistryContext, useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Cause, Effect, Exit } from "effect"
 import { AsyncResult, AtomRegistry } from "effect/reactivity"
 import {
@@ -11,7 +11,8 @@ import {
   type ReactNode,
 } from "react"
 import type { GitStatusEntry } from "@ivin/contracts/file"
-import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
+import type { SubView } from "@ivin/contracts/tab"
+import { UiHostProvider, type ChangeListing, type UiHost } from "@ivin/plugin-api/ui"
 import { sessionAnnotationsOf } from "../modules/annotation/atoms/list-annotations.ts"
 import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
@@ -24,12 +25,14 @@ import { openTabAtom } from "../modules/tab/atoms/open-tab.ts"
 import { selectedSessionIdAtom } from "../modules/tab/atoms/selected-session-id.ts"
 import { folderKey, listFolderOf } from "../modules/file/atoms/list-folder.ts"
 import { gitStatusOf } from "../modules/file/atoms/git-status.ts"
+import { changesOf } from "../modules/file/atoms/list-changes.ts"
+import { changeListingFailure } from "../modules/file/rules/change-listing.ts"
 import { listFilesOf } from "../modules/file/atoms/list-files.ts"
 import { folderChangesOf } from "../modules/file/atoms/watch-folder.ts"
 import { fileListingFailure, folderListingFailure } from "../modules/file/rules/folder-listing.ts"
 import { subViewsOf } from "../modules/tab/atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../modules/tab/atoms/open-sub-view.ts"
-import { openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
+import { openDiffFailure, openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
@@ -39,7 +42,32 @@ import { useKeyboardHandler } from "../modules/keybinding/hooks/use-keyboard-han
 const NO_PROJECT = ""
 const NO_CHANGES: ReadonlyArray<GitStatusEntry> = []
 
+const LOADING: ChangeListing = { kind: "loading" }
+
 const useProjectPath = () => useAtomValue(selectedProjectAtom)?.path ?? NO_PROJECT
+
+const useOpenSubView = (kind: SubView["kind"]) => {
+  const sessions = useAtomValue(openSessionsAtom)
+  const open = useAtomSet(openSubViewAtom, { mode: "promiseExit" })
+  const failure = kind === "file" ? openFileFailure : openDiffFailure
+  return async (sessionId: string, path: string) => {
+    const session = sessions.find((s) => s.id === sessionId)
+    if (session === undefined) return failure({ _tag: "SessionNotFound" }, path)
+    const exit = await open({
+      sessionId,
+      workingFolder: session.workingFolder,
+      subView: { kind, path },
+    })
+    return Exit.isFailure(exit) ? failure(Cause.squash(exit.cause), path) : undefined
+  }
+}
+
+const useSubViewOnScreen = (sessionId: string, kind: SubView["kind"]) => {
+  const workingFolder =
+    useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.workingFolder ?? ""
+  const { selected, sessionTabSelected } = useAtomValue(subViewsOf(sessionId, workingFolder).value)
+  return sessionTabSelected || selected?.kind !== kind ? null : selected.path
+}
 
 const host: UiHost = {
   useSessions: () => useAtomValue(openSessionsAtom),
@@ -83,20 +111,7 @@ const host: UiHost = {
       [registry],
     )
   },
-  useOpenFile: () => {
-    const sessions = useAtomValue(openSessionsAtom)
-    const open = useAtomSet(openSubViewAtom, { mode: "promiseExit" })
-    return async (sessionId, path) => {
-      const session = sessions.find((s) => s.id === sessionId)
-      if (session === undefined) return openFileFailure({ _tag: "SessionNotFound" }, path)
-      const exit = await open({
-        sessionId,
-        workingFolder: session.workingFolder,
-        subView: { kind: "file", path },
-      })
-      return Exit.isFailure(exit) ? openFileFailure(Cause.squash(exit.cause), path) : undefined
-    }
-  },
+  useOpenFile: () => useOpenSubView("file"),
   useListFiles: () => {
     const registry = useContext(RegistryContext)
     return useCallback(
@@ -128,12 +143,20 @@ const host: UiHost = {
     const result = useAtomValue(gitStatusOf(sessionId))
     return AsyncResult.isSuccess(result) ? result.value : NO_CHANGES
   },
-  useFileOnScreen: (sessionId) => {
-    const workingFolder =
-      useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.workingFolder ?? ""
-    const views = useAtomValue(subViewsOf(sessionId, workingFolder).value)
-    return views.sessionTabSelected ? null : (views.selected?.path ?? null)
+  useFileOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "file"),
+  useChanges: (sessionId) => {
+    const atom = changesOf(sessionId)
+    const result = useAtomValue(atom)
+    const retry = useAtomRefresh(atom)
+    const listing: ChangeListing = AsyncResult.isSuccess(result)
+      ? result.value
+      : AsyncResult.isFailure(result)
+        ? changeListingFailure(Cause.squash(result.cause))
+        : LOADING
+    return { listing, retry }
   },
+  useOpenDiff: () => useOpenSubView("diff"),
+  useDiffOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "diff"),
   components: hostComponents,
 }
 

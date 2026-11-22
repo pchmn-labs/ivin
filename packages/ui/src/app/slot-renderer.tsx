@@ -5,7 +5,7 @@ import { contributionsAtom, type Contribution } from "../modules/plugin/atoms/co
 import { visibleContributions } from "../modules/plugin/rules/visible-contributions.ts"
 
 class ContributionBoundary extends Component<
-  { pluginId: string; children: ReactNode },
+  { pluginId: string; children: ReactNode; quiet?: boolean },
   { failed: boolean }
 > {
   override state = { failed: false }
@@ -20,6 +20,7 @@ class ContributionBoundary extends Component<
 
   override render() {
     if (!this.state.failed) return this.props.children
+    if (this.props.quiet) return null
     const { pluginId } = this.props
     return (
       <p role="alert">
@@ -40,6 +41,17 @@ export function SlotContribution<S extends SlotName>({
   return (
     <ContributionBoundary pluginId={contribution.pluginId}>
       <Component {...props} />
+    </ContributionBoundary>
+  )
+}
+
+// A contribution's badge renders nothing when it fails; its slot shows the failure.
+export function ContributionBadge({ contribution }: { contribution: Contribution }) {
+  const Badge = contribution.badge as ComponentType | undefined
+  if (Badge === undefined) return undefined
+  return (
+    <ContributionBoundary pluginId={contribution.pluginId} quiet>
+      <Badge />
     </ContributionBoundary>
   )
 }

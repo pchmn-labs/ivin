@@ -218,3 +218,61 @@
   outline: 1px solid var(--iv-border-strong);
   background: transparent;
 }
+
+.iv-code-view .iv-diff-numbers .cm-gutterElement {
+  min-width: 3ch;
+  padding: 0 var(--iv-space-2) 0 var(--iv-space-3);
+  text-align: right;
+  opacity: 0.7;
+}
+
+.iv-code-view .iv-diff-signs .cm-gutterElement {
+  width: var(--iv-space-4);
+  text-align: center;
+}
+
+.iv-code-view .cm-gutterElement.iv-diff-line--added,
+.iv-code-view .cm-line.iv-diff-line--added {
+  background: var(--iv-diff-added);
+}
+
+.iv-code-view .cm-gutterElement.iv-diff-line--deleted,
+.iv-code-view .cm-line.iv-diff-line--deleted {
+  background: var(--iv-diff-deleted);
+}
+
+.iv-code-view .iv-diff-signs .iv-diff-line--added {
+  color: var(--iv-git-added);
+}
+
+.iv-code-view .iv-diff-signs .iv-diff-line--deleted {
+  color: var(--iv-git-deleted);
+}
+
+.iv-code-view .iv-diff-change--added {
+  border-radius: 2px;
+  background: var(--iv-diff-added-change);
+}
+
+.iv-code-view .iv-diff-change--deleted {
+  border-radius: 2px;
+  background: var(--iv-diff-deleted-change);
+}
+
+.iv-code-view .cm-gutterElement.iv-diff-hunk-gutter {
+  box-sizing: border-box;
+  border-block: 1px solid var(--iv-border);
+  background: var(--iv-bg-subtle);
+}
+
+.iv-code-view .iv-diff-hunk {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 28px;
+  padding: 0 var(--iv-space-3);
+  border-block: 1px solid var(--iv-border);
+  background: var(--iv-bg-subtle);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}

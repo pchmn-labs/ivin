@@ -18,6 +18,8 @@ import { layerSharedFolderWatch } from "../modules/file/usecases/shared-folder-w
 import { watchFolder } from "../modules/file/usecases/watch-folder.ts"
 import { listFolder } from "../modules/file/usecases/list-folder.ts"
 import { readFile } from "../modules/file/usecases/read-file.ts"
+import { listChanges } from "../modules/file/usecases/list-changes.ts"
+import { readDiff } from "../modules/file/usecases/read-diff.ts"
 import { writeFile } from "../modules/file/usecases/write-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
@@ -190,6 +192,8 @@ export const handlers = Rpcs.toLayer(
       "file.readFile": ({ sessionId, path }) => readFile(sessionId, path),
       "file.listFiles": ({ sessionId }) => listFiles(sessionId),
       "file.gitStatus": ({ sessionId }) => readGitStatus(sessionId),
+      "file.listChanges": ({ sessionId }) => listChanges(sessionId),
+      "file.readDiff": ({ sessionId, path }) => readDiff(sessionId, path),
       "file.watch": ({ sessionId }) => watchFolder(sessionId),
       "file.writeFile": ({ sessionId, path, text, expectedVersion }) =>
         writeFile(sessionId, path, text, expectedVersion),

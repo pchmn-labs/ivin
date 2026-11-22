@@ -1,0 +1,13 @@
+{
+  "name": "@ivin/plugin-changes",
+  "version": "0.0.0",
+  "private": true,
+  "peerDependencies": {
+    "@ivin/plugin-api": "^0"
+  },
+  "ivin": {
+    "id": "changes",
+    "name": "Changes",
+    "ui": "src/ui.tsx"
+  }
+}

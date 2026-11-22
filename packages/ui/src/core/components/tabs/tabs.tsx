@@ -4,7 +4,13 @@ import { Icon, type IconName } from "../icon/icon.tsx"
 import "./tabs.css"
 
 export interface TabsProps {
-  readonly tabs: ReadonlyArray<{ value: string; label: string; icon?: IconName }>
+  readonly tabs: ReadonlyArray<{
+    value: string
+    label: string
+    icon?: IconName
+    // After the label, in faint tabular figures, such as a count.
+    badge?: ReactNode
+  }>
   readonly value: string
   readonly onValueChange: (value: string) => void
   readonly children?: ReactNode
@@ -23,6 +29,7 @@ export function Tabs({ tabs, value, onValueChange, children, "aria-label": ariaL
           <BaseTabs.Tab key={tab.value} value={tab.value} className="iv-tabs__tab">
             {tab.icon === undefined ? null : <Icon name={tab.icon} size={14} />}
             {tab.label}
+            {tab.badge === undefined ? null : <span className="iv-tabs__badge">{tab.badge}</span>}
           </BaseTabs.Tab>
         ))}
       </BaseTabs.List>

@@ -112,6 +112,12 @@
   text-overflow: ellipsis;
 }
 
+.iv-sub-view-card__kind {
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  font-weight: var(--iv-weight-regular);
+}
+
 .iv-sub-view-card__close {
   display: inline-grid;
   place-items: center;

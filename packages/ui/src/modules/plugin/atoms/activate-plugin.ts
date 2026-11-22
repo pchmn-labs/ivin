@@ -49,6 +49,7 @@ export const activatePlugin = (
             replaces: options?.replaces,
             tool: options?.tool,
             title: options?.title,
+            badge: options?.badge,
           },
         ])
       },

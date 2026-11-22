@@ -1,6 +1,6 @@
 import { createElement } from "react"
 import type { ComponentType, ReactElement, ReactNode } from "react"
-import type { GitFileStatus } from "@ivin/contracts/file"
+import type { ChangeStatus, GitFileStatus } from "@ivin/contracts/file"
 import type { Session } from "@ivin/contracts/session"
 import type { ImageRef } from "@ivin/contracts/transcript"
 import { useHost } from "./host-context.ts"
@@ -49,6 +49,7 @@ export type IconName =
   | "eye"
   | "eye-slash"
   | "clock"
+  | "diff"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"
@@ -309,6 +310,28 @@ export interface TreeProps {
   readonly "data-testid"?: string
 }
 
+export interface ChangeListItem {
+  readonly id: string
+  readonly name: string
+  // The folder that holds it, "" at the top of the working folder.
+  readonly folder: string
+  readonly status: ChangeStatus
+  readonly added: number | null
+  readonly deleted: number | null
+  // Shown on hover, such as where a renamed file comes from.
+  readonly title?: string
+}
+
+// Rows of changed files, one tab stop: Up and Down move between rows, Enter or a click opens one.
+export interface ChangeListProps {
+  readonly label: string
+  readonly items: ReadonlyArray<ChangeListItem>
+  readonly selectedId: string | null
+  readonly onOpen: (id: string) => void
+  // The row's Open file button, which shows on hover, focus or selection; none for a deleted file.
+  readonly onOpenFile?: (id: string) => void
+}
+
 export interface SearchFieldProps {
   readonly label: string
   readonly value: string
@@ -369,6 +392,7 @@ export interface HostComponents {
   readonly MessageImages: ComponentType<MessageImagesProps>
   readonly MessageText: ComponentType<MessageTextProps>
   readonly Tree: ComponentType<TreeProps>
+  readonly ChangeList: ComponentType<ChangeListProps>
   readonly SearchField: ComponentType<SearchFieldProps>
   readonly QuickPick: ComponentType<QuickPickProps>
 }
@@ -395,6 +419,7 @@ export const ActionSheet = hostComponent((c) => c.ActionSheet)
 export const OptionList = hostComponent((c) => c.OptionList)
 export const ErrorMessage = hostComponent((c) => c.ErrorMessage)
 export const ListRow = hostComponent((c) => c.ListRow)
+export const ChangeList = hostComponent((c) => c.ChangeList)
 export const ListSection = hostComponent((c) => c.ListSection)
 export const SessionMark = hostComponent((c) => c.SessionMark)
 export const RelativeTime = hostComponent((c) => c.RelativeTime)

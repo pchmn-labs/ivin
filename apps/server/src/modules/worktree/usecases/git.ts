@@ -1,4 +1,4 @@
-import type { GitStatusEntry } from "@ivin/contracts/file"
+import type { Change, GitStatusEntry } from "@ivin/contracts/file"
 import { Context, Data, type Effect } from "effect"
 import type { Divergence } from "../rules/checkout-sync.ts"
 import type { Branches, WorktreeEntry } from "../rules/git-output.ts"
@@ -61,5 +61,13 @@ export class Git extends Context.Service<
     readonly gitDir: (folder: string) => Effect.Effect<string | null>
     // Not ignored, untracked included and tracked-but-deleted left out, relative to `folder`; null outside a repository.
     readonly listFiles: (folder: string) => Effect.Effect<ReadonlyArray<string> | null>
+    // Against HEAD, untracked files included, relative to `folder`; null outside a repository.
+    readonly listChanges: (folder: string) => Effect.Effect<ReadonlyArray<Change> | null, GitError>
+    // The unified diff of one of those changes; null when it is longer than `limit` bytes.
+    readonly diffOf: (
+      folder: string,
+      change: Change,
+      limit: number,
+    ) => Effect.Effect<string | null, GitError>
   }
 >()("ivin/server/Git") {}

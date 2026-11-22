@@ -1,5 +1,7 @@
 import approvalsPackage from "../../../../plugins/approvals/package.json"
 import * as approvals from "../../../../plugins/approvals/src/ui.tsx"
+import changesPackage from "../../../../plugins/changes/package.json"
+import * as changes from "../../../../plugins/changes/src/ui.tsx"
 import filesPackage from "../../../../plugins/files/package.json"
 import * as files from "../../../../plugins/files/src/ui.tsx"
 import inactiveSessionsPackage from "../../../../plugins/inactive-sessions/package.json"
@@ -17,6 +19,7 @@ import type { UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
 export const builtinPlugins: ReadonlyArray<UiPluginEntry> = [
   { manifest: approvalsPackage.ivin, activate: approvals.activate },
   { manifest: filesPackage.ivin, activate: files.activate },
+  { manifest: changesPackage.ivin, activate: changes.activate },
   { manifest: inactiveSessionsPackage.ivin, activate: inactiveSessions.activate },
   { manifest: messagesPackage.ivin, activate: messages.activate },
   { manifest: toolCallsPackage.ivin, activate: toolCalls.activate },

@@ -1,0 +1,133 @@
+.iv-change-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.iv-change-list__row {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding-right: var(--iv-space-1);
+  border-radius: var(--iv-radius-sm);
+  transition: background-color var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-change-list__row:hover {
+  background: var(--iv-bg-hover);
+}
+
+.iv-change-list__row[data-selected] {
+  background: var(--iv-bg-active);
+}
+
+.iv-change-list__main {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--iv-space-2);
+  min-width: 0;
+  height: 100%;
+  padding: 0 var(--iv-space-1) 0 var(--iv-space-2);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: var(--iv-text);
+  font: inherit;
+  font-size: var(--iv-text-sm);
+  text-align: left;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.iv-change-list__main:focus-visible {
+  outline: 2px solid var(--iv-focus-ring);
+  outline-offset: -2px;
+}
+
+.iv-change-list__letter {
+  flex: none;
+  width: 14px;
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  text-align: center;
+}
+
+.iv-change-list__name {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Cut from the left, so the folder nearest the file stays in view. */
+.iv-change-list__folder {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--iv-text-faint);
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  text-align: left;
+  text-overflow: ellipsis;
+  direction: rtl;
+}
+
+.iv-change-list__counts {
+  display: inline-flex;
+  flex: none;
+  gap: var(--iv-space-1);
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-change-list__added {
+  color: var(--iv-git-added);
+}
+
+.iv-change-list__deleted {
+  color: var(--iv-git-deleted);
+}
+
+.iv-change-list__action {
+  display: none;
+  flex: none;
+}
+
+.iv-change-list__row:hover .iv-change-list__action,
+.iv-change-list__row:focus-within .iv-change-list__action,
+.iv-change-list__row[data-selected] .iv-change-list__action {
+  display: inline-flex;
+}
+
+.iv-change-list__row:hover .iv-change-list__counts,
+.iv-change-list__row:focus-within .iv-change-list__counts,
+.iv-change-list__row[data-selected] .iv-change-list__counts {
+  display: none;
+}
+
+.iv-change-list__row[data-status="modified"] .iv-change-list__letter,
+.iv-change-list__row[data-status="renamed"] .iv-change-list__letter {
+  color: var(--iv-git-modified);
+}
+
+.iv-change-list__row[data-status="added"] .iv-change-list__letter {
+  color: var(--iv-git-added);
+}
+
+.iv-change-list__row[data-status="untracked"] .iv-change-list__letter {
+  color: var(--iv-git-untracked);
+}
+
+.iv-change-list__row[data-status="deleted"] .iv-change-list__letter {
+  color: var(--iv-git-deleted);
+}
+
+.iv-change-list__row[data-status="deleted"] .iv-change-list__name {
+  color: var(--iv-text-muted);
+  text-decoration: line-through;
+}

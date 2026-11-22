@@ -17,8 +17,11 @@ export const ProjectTabs = Schema.Struct({
 })
 export type ProjectTabs = typeof ProjectTabs.Type
 
-// A file of the session's working folder, `path` relative to it. Diffs come later.
-export const SubView = Schema.Struct({ kind: Schema.Literal("file"), path: Schema.String })
+// A file of the session's working folder, or its uncommitted diff; `path` relative to it.
+export const SubView = Schema.Struct({
+  kind: Schema.Literals(["file", "diff"]),
+  path: Schema.String,
+})
 export type SubView = typeof SubView.Type
 
 // In the order they were opened; `selected` is null only when there are none.

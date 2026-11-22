@@ -23,6 +23,12 @@
   --iv-git-conflicted: var(--iv-danger);
   --iv-git-ignored: color-mix(in srgb, var(--iv-text-faint) 70%, transparent);
 
+  /* Opaque, so a diff's gutter keeps its line's colour while the lines scroll sideways under it. */
+  --iv-diff-added: color-mix(in srgb, var(--iv-git-added) 10%, var(--iv-bg-card));
+  --iv-diff-deleted: color-mix(in srgb, var(--iv-git-deleted) 10%, var(--iv-bg-card));
+  --iv-diff-added-change: color-mix(in srgb, var(--iv-git-added) 22%, transparent);
+  --iv-diff-deleted-change: color-mix(in srgb, var(--iv-git-deleted) 22%, transparent);
+
   --iv-font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
   --iv-font-mono: ui-monospace, "SF Mono", Menlo, monospace;

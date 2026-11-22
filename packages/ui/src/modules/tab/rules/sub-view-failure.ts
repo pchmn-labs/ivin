@@ -10,6 +10,11 @@ export const openFileFailure = (error: unknown, path: string): ActionFailure =>
         retryable: true,
       }
 
+export const openDiffFailure = (error: unknown, path: string): ActionFailure =>
+  errorTag(error) === "SessionNotFound"
+    ? { text: "This session no longer exists, so its diffs cannot be opened.", retryable: false }
+    : { text: `The diff of ${fileName(path)} could not be opened. Retry.`, retryable: true }
+
 export const closeFileFailure = (path: string): string =>
   `${fileName(path)} could not be closed. Retry.`
 

@@ -13,6 +13,7 @@ import { fileEditOf, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
 import { writeFileAtom } from "../../file/atoms/write-file.ts"
 import { noEdit } from "../../file/rules/file-edit.ts"
 import { fileName } from "../../file/rules/file-name.ts"
+import { DiffView } from "../../file/ui/diff-view.tsx"
 import { FileView } from "../../file/ui/file-view.tsx"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { closeSubViewAtom } from "../atoms/close-sub-view.ts"
@@ -88,14 +89,17 @@ export function SubViewCard({
         message: closeFileFailure(subView.path),
         retry: () => void closeNow(subView),
       })
-    registry.set(fileEditOf(sessionId, workingFolder, subView.path), noEdit)
+    if (subView.kind === "file")
+      registry.set(fileEditOf(sessionId, workingFolder, subView.path), noEdit)
     // The focused close button is gone with its tab.
     if (hadFocus)
       card.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
   }
 
+  const isUnsaved = (subView: SubView) => subView.kind === "file" && unsaved.includes(subView.path)
+
   const closeFile = async (subView: SubView) => {
-    if (!unsaved.includes(subView.path)) return closeNow(subView)
+    if (!isUnsaved(subView)) return closeNow(subView)
     setClosing(subView)
     setConfirming(true)
   }
@@ -179,8 +183,9 @@ export function SubViewCard({
           )}
           {subViews.map((subView) => {
             const isSelected = !onSession && sameSubView(subView, selected)
-            const isUnsaved = unsaved.includes(subView.path)
+            const unsavedEdits = isUnsaved(subView)
             const name = fileName(subView.path)
+            const isDiff = subView.kind === "diff"
             const unsavedId = `${cardId}-${subViewKey(subView)}-unsaved`
             const closeThis = () => closeFile(subView)
             return (
@@ -189,7 +194,7 @@ export function SubViewCard({
                 className="iv-sub-view-card__item"
                 role="presentation"
                 data-selected={isSelected || undefined}
-                data-unsaved={isUnsaved || undefined}
+                data-unsaved={unsavedEdits || undefined}
                 onMouseDown={stopMiddleClickScroll}
                 onAuxClick={(event) => {
                   if (event.button !== 1) return
@@ -204,15 +209,21 @@ export function SubViewCard({
                   aria-selected={isSelected}
                   tabIndex={isSelected ? 0 : -1}
                   title={subView.path}
-                  aria-describedby={isUnsaved ? unsavedId : undefined}
+                  aria-describedby={unsavedEdits ? unsavedId : undefined}
                   onClick={() => open({ sessionId, workingFolder, subView })}
                 >
                   <span className="iv-sub-view-card__icon" aria-hidden>
-                    <Icon name="file" size={14} />
+                    <Icon name={isDiff ? "diff" : "file"} size={14} />
                   </span>
                   <span className="iv-sub-view-card__name">{name}</span>
+                  {isDiff && (
+                    <>
+                      {" "}
+                      <span className="iv-sub-view-card__kind">diff</span>
+                    </>
+                  )}
                 </button>
-                {isUnsaved && (
+                {unsavedEdits && (
                   <span id={unsavedId} className="iv-visually-hidden">
                     Unsaved edits
                   </span>
@@ -220,7 +231,7 @@ export function SubViewCard({
                 <button
                   type="button"
                   className="iv-sub-view-card__close"
-                  aria-label={`Close ${name}`}
+                  aria-label={`Close ${isDiff ? `the diff of ${name}` : name}`}
                   onClick={() => void closeThis()}
                 >
                   <span className="iv-sub-view-card__unsaved" aria-hidden />
@@ -282,14 +293,30 @@ export function SubViewCard({
         <div
           className="iv-sub-view-card__body"
           role="tabpanel"
-          aria-label={fileName(selected.path)}
+          aria-label={
+            selected.kind === "diff"
+              ? `Diff of ${fileName(selected.path)}`
+              : fileName(selected.path)
+          }
         >
-          <FileView
-            key={subViewKey(selected)}
-            sessionId={sessionId}
-            workingFolder={workingFolder}
-            path={selected.path}
-          />
+          {selected.kind === "diff" ? (
+            <DiffView
+              key={subViewKey(selected)}
+              sessionId={sessionId}
+              workingFolder={workingFolder}
+              path={selected.path}
+              onOpenFile={() =>
+                open({ sessionId, workingFolder, subView: { kind: "file", path: selected.path } })
+              }
+            />
+          ) : (
+            <FileView
+              key={subViewKey(selected)}
+              sessionId={sessionId}
+              workingFolder={workingFolder}
+              path={selected.path}
+            />
+          )}
         </div>
       )}
     </section>
