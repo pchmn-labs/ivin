@@ -24,6 +24,8 @@ const setup = async () => {
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,
@@ -109,4 +111,38 @@ test("a message's images show as references at once and reach the server with th
 
   send.release()
   await vi.waitFor(() => expect(server.sentMessages.at(-1)?.images).toEqual([image]))
+})
+
+test("a message sent while the session works is pending at once, and joins the transcript once the agent reads it", async () => {
+  const { registry, server, sessions, transcript } = await setup()
+  server.setStatus("s1", "working")
+  await vi.waitFor(() => expect(registry.get(sessions.item("s1"))?.status).toBe("working"))
+  const send = server.holdNextSend()
+
+  registry.set(sendMessageAtom, { projectPath: project, sessionId: "s1", text: "also" })
+  await vi.waitFor(() =>
+    expect(registry.get(sessions.item("s1"))?.pendingMessages).toMatchObject([{ text: "also" }]),
+  )
+  expect(registry.get(transcript.list.ids)).toEqual([])
+
+  send.release()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toHaveLength(1))
+  server.readPendingMessages("s1")
+  await vi.waitFor(() => expect(registry.get(transcript.list.ids)).toHaveLength(1))
+  const [id] = registry.get(transcript.list.ids)
+  expect(registry.get(transcript.list.item(id!))).toMatchObject({ text: "also", steer: true })
+  await vi.waitFor(() => expect(registry.get(sessions.item("s1"))?.pendingMessages).toEqual([]))
+})
+
+test("a pending message the server rejects leaves the pending list", async () => {
+  const { registry, server, sessions } = await setup()
+  server.setStatus("s1", "waiting")
+  await vi.waitFor(() => expect(registry.get(sessions.item("s1"))?.status).toBe("waiting"))
+  const send = server.holdNextSend()
+
+  registry.set(sendMessageAtom, { projectPath: project, sessionId: "s1", text: "oops" })
+  await vi.waitFor(() => expect(registry.get(sessions.item("s1"))?.pendingMessages).toHaveLength(1))
+
+  send.fail()
+  await vi.waitFor(() => expect(registry.get(sessions.item("s1"))?.pendingMessages).toEqual([]))
 })

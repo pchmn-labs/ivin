@@ -72,6 +72,8 @@ export interface FakeServer {
   // Marks the first turn after a change of run options as failed, as the server would.
   readonly failRelaunch: (sessionId: string, failure: RelaunchFailure) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
+  // The agent takes the session's pending messages into its running turn, as steers.
+  readonly readPendingMessages: (sessionId: string) => void
   readonly sentMessages: ReadonlyArray<{
     readonly text: string
     readonly images?: ReadonlyArray<ImageData>
@@ -298,6 +300,20 @@ export const makeFakeServer = (
     Effect.runSync(PubSub.publish(pubsub, { type: "upsert", item }))
   }
 
+  const readMessages = (session: Session, steer: boolean) => {
+    for (const message of session.pendingMessages) {
+      publish({
+        ...message,
+        sessionId: session.id,
+        position: itemsOf(session.id).length,
+        at: 0,
+        type: "message",
+        role: "user",
+        steer,
+      })
+    }
+    saveSession({ ...sessions.get(session.id)!, pendingMessages: [] })
+  }
   const saveSession = (changed: Session) => {
     const before = sessions.get(changed.id)
     const session =
@@ -500,6 +516,8 @@ export const makeFakeServer = (
           effort: runOptions.effort.default,
           permissionMode: runOptions.permissionMode.default,
           relaunchFailure: null,
+          pendingMessages: [],
+          unreadMessages: [],
           title: "New session",
           status: "idle",
           statusChangedAt: at,
@@ -596,7 +614,28 @@ export const makeFakeServer = (
           at: 0,
           type: "interruption",
         })
-        return saveSession({ ...sessions.get(sessionId)!, status: "idle", lastActivityAt: tick() })
+        const session = sessions.get(sessionId)!
+        return saveSession({
+          ...session,
+          status: "idle",
+          pendingMessages: [],
+          unreadMessages: [...session.unreadMessages, ...session.pendingMessages],
+          lastActivityAt: tick(),
+        })
+      }),
+    "session.sendNow": ({ sessionId }: { sessionId: string }) =>
+      Effect.sync(() => {
+        const session = sessions.get(sessionId)!
+        if (session.pendingMessages.length === 0) return session
+        publish({
+          id: `interruption-${nextId++}`,
+          sessionId,
+          position: itemsOf(sessionId).length,
+          at: 0,
+          type: "interruption",
+        })
+        readMessages(session, false)
+        return saveSession({ ...sessions.get(sessionId)!, status: "working", lastActivityAt: tick() })
       }),
     "session.list": ({ projectPath }: { projectPath: string }) =>
       Effect.sync(() => [...sessions.values()].filter((s) => s.projectPath === projectPath)),
@@ -649,6 +688,18 @@ export const makeFakeServer = (
           const items = itemsOf(input.sessionId)
           const isFirstMessage = !session.started
           const sent = input.images ?? []
+          const unsent = {
+            id: input.messageId,
+            text: input.text,
+            images: sent.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
+          }
+          if (session.status === "working" || session.status === "waiting") {
+            return saveSession({
+              ...session,
+              pendingMessages: [...session.pendingMessages, unsent],
+              unreadMessages: [],
+            })
+          }
           publish({
             id: input.messageId,
             sessionId: input.sessionId,
@@ -658,6 +709,7 @@ export const makeFakeServer = (
             role: "user",
             text: input.text,
             images: sent.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
+            steer: false,
           })
           const choice = isFirstMessage ? input.workingFolder : undefined
           const worktree =
@@ -679,6 +731,7 @@ export const makeFakeServer = (
             started: true,
             workingFolderDeleted: false,
             relaunchFailure: null,
+            unreadMessages: [],
             status: "working",
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
@@ -1050,6 +1103,7 @@ export const makeFakeServer = (
     failRelaunch: (sessionId, failure) =>
       void saveSession({ ...sessions.get(sessionId)!, relaunchFailure: failure }),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
+    readPendingMessages: (sessionId) => readMessages(sessions.get(sessionId)!, true),
     holdNextSend: () => {
       let settle!: (ok: boolean) => void
       hold = { wait: new Promise<boolean>((resolve) => (settle = resolve)) }

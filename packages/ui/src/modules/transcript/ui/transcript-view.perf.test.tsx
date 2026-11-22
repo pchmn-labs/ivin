@@ -58,6 +58,7 @@ const transcript = (turns: number) => {
         ? `Here is what turn ${turn} looks like [Image #${image.number}], fix the spacing`
         : `Question ${turn}: why does the list jump when a row grows?`,
       images: image ? [image] : [],
+      steer: false,
     })
     for (let call = 0; call < 4; call++) {
       if (call === 0 || call === 2) {
@@ -67,6 +68,7 @@ const transcript = (turns: number) => {
           role: "assistant",
           text: call === 0 ? "Looking at the code first." : "Now changing it.",
           images: [],
+          steer: false,
         })
       }
       items.push({
@@ -88,6 +90,7 @@ const transcript = (turns: number) => {
       role: "assistant",
       text: answer(turn),
       images: [],
+      steer: false,
     })
   }
   return { items, images }
@@ -216,6 +219,7 @@ test(
       role: "user",
       text: "Explain the whole change, with code",
       images: [],
+      steer: false,
     }
     const server = await mount([...items, lastTurn], { live: true })
     await expect.element(page.getByText("Explain the whole change, with code")).toBeVisible()

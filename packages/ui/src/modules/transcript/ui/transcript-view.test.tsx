@@ -20,6 +20,7 @@ const message = (position: number, text = `message ${position}`): TranscriptItem
   role: "assistant",
   text,
   images: [],
+  steer: false,
 })
 
 const userMessage = (position: number): TranscriptItem => ({
@@ -31,6 +32,7 @@ const userMessage = (position: number): TranscriptItem => ({
   role: "user",
   text: `question ${position}`,
   images: [],
+  steer: false,
 })
 
 const toolCall = (position: number): TranscriptItem => ({
@@ -74,6 +76,8 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,
@@ -125,6 +129,7 @@ test("a transcript of 200 images loads only the images of the rows on screen", a
       role: "user" as const,
       text: `shot ${i} [Image #${i + 1}]`,
       images: [{ id: `img-${i + 1}`, number: i + 1, mediaType: "image/png" as const }],
+      steer: false,
     })),
   )
 

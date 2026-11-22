@@ -41,6 +41,8 @@ const makeServer = () => {
       effort: "high",
       permissionMode: "manual",
       relaunchFailure: null,
+      pendingMessages: [],
+      unreadMessages: [],
       status: "idle",
       statusChangedAt: at,
       createdAt: at,
@@ -278,6 +280,7 @@ const answer = (text: string) => ({
   role: "assistant" as const,
   text,
   images: [],
+  steer: false,
 })
 const transcriptLink = (name: string) => page.getByRole("link", { name, exact: true })
 const longMain = Array.from({ length: 2000 }, (_, n) => `line ${n + 1}`).join("\n")

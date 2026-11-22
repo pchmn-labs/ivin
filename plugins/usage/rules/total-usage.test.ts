@@ -31,6 +31,7 @@ test("the total sums input and output tokens and the cost of every usage item", 
       role: "user",
       text: "hi",
       images: [],
+      steer: false,
     },
     usage(2, 300, 40, 0.0023),
   ])

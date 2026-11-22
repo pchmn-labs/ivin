@@ -24,6 +24,7 @@ const items = (origin = 0) => {
       role: "user",
       text,
       images: [],
+      steer: false,
     }),
     text: (id: string, text = id): TranscriptItem => ({
       ...base(id),
@@ -31,6 +32,7 @@ const items = (origin = 0) => {
       role: "assistant",
       text,
       images: [],
+      steer: false,
     }),
     call: (
       id: string,

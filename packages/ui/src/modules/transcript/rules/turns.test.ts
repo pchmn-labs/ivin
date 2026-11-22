@@ -20,6 +20,7 @@ const user = (id: string): TranscriptItem => ({
   role: "user",
   text: id,
   images: [],
+  steer: false,
 })
 const text = (id: string): TranscriptItem => ({
   ...base(id),
@@ -27,6 +28,7 @@ const text = (id: string): TranscriptItem => ({
   role: "assistant",
   text: id,
   images: [],
+  steer: false,
 })
 const call = (
   id: string,

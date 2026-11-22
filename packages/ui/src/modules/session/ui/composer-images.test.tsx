@@ -32,6 +32,8 @@ const addSession = (server: FakeServer, id: string, lastImageNumber = 0) => {
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,
@@ -176,6 +178,7 @@ const seedTranscript = (server: FakeServer) => {
     role: "user",
     text,
     images: numbers.map((number) => ({ id: `img-${number}`, number, mediaType: "image/png" })),
+    steer: false,
   })
   server.seedItems("s1", [
     message("m1", 0, "the card overflows [Image #1]", [1]),
@@ -244,6 +247,7 @@ test("the full-screen view draws the images of its strip only as they scroll int
       role: "user",
       text: numbers.map((n) => `[Image #${n}]`).join(" "),
       images: numbers.map((number) => ({ id: `img-${number}`, number, mediaType: "image/png" })),
+      steer: false,
     },
   ])
   await render(view(server, "s1"))
