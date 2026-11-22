@@ -137,7 +137,14 @@ export function App() {
                 />
               </div>
               <div className="iv-app__card-body">
-                <ProjectRail actions={<SettingsButton />}>{version}</ProjectRail>
+                <ProjectRail
+                  footer={
+                    <>
+                      <SettingsButton />
+                      {version}
+                    </>
+                  }
+                />
                 <ProjectColumn project={current}>
                   <SidebarTabs project={current} />
                 </ProjectColumn>
