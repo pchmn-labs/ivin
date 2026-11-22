@@ -418,7 +418,7 @@ Commands default to `$IVIN_SESSION_ID`, so an agent annotates its own session wi
 
 Shipped so far:
 
-- `ivin doctor`, one line per check (the app's version, the socket, `settings.json`, `keybindings.json`, the program the harness runs, found on the server's `PATH`), exit 1 when one fails.
+- `ivin doctor`, one line per check (the app's version, the socket, `settings.json`, `keybindings.json`, the program the harness runs, found on the server's `PATH`, and the install of the `ivin-customize` skill), exit 1 when one fails.
 - `ivin session annotate --kind <kind> --data <json> [--ns <ns>] [--session <id>]`: `ns` defaults to `cli`, the session to `$IVIN_SESSION_ID`; with neither, or with invalid JSON or data that does not fit a defined kind, it exits 2. `--json` prints the stored annotation.
 - `ivin link <url> --as <relation> [--session <id>]`: writes a `pr` or an `issue` annotation in the `cli` namespace, with the same session default; the URL decides which. It must be a GitHub pull request or issue (`…/<owner>/<repo>/pull/<n>`, `…/issues/<n>`) or a GitLab merge request or issue (`…/<group>/<project>/-/merge_requests/<n>`, `…/-/issues/<n>`) on any host; what follows the number is dropped and the path lowercased, so `…/pull/1/files` links the same pull request as `…/pull/1`. Another URL, or a relation the kind does not take, exits 2.
 - `ivin settings get [path]`: the settings in use, one `path = value` line each, or the value at a dotted path; `--json` prints `{ path, value }`.
@@ -431,7 +431,13 @@ Shipped so far:
 
 ### Skills and docs for agents
 
-The app ships two skills, installed into supported harnesses on first run: `ivin-customize` (files, CLI, themes) and `ivin-plugin` (plugin format, API reference, slot list, the edit → `plugin check` → reload → `plugin logs` loop). `@ivin/plugin-api` types are the API reference; each built-in plugin is a worked example.
+The app ships two skills, installed into supported harnesses at launch: `ivin-customize` (files, CLI, themes) and `ivin-plugin` (plugin format, API reference, slot list, the edit → `plugin check` → reload → `plugin logs` loop). `@ivin/plugin-api` types are the API reference; each built-in plugin is a worked example.
+
+Shipped so far: `ivin-customize` (the CLI, when to link a pull request or an issue, the settings file), kept in `apps/server/skills/` and shipped as `Resources/skills/`. `ivin-plugin` waits for the plugin host.
+
+- **Where.** The harness names the folder it reads the user's skills from (`skillsFolder` on the `HarnessProvider` port): Claude's is `$CLAUDE_CONFIG_DIR/skills`, else `~/.claude/skills`. A harness with none gets no skill.
+- **When.** At each launch, before serving, the server copies the skill there when its folder is absent, or when ivin wrote it (a `.installed-by-ivin` marker file holding a hash of the skill's files) and the bundled skill's hash differs. A folder of that name without the marker is the user's and is left as it is. The copy goes to a hidden folder beside it, then is renamed into place, so a crash never leaves a half-written skill; the next launch removes what a crash left.
+- **Report.** The result (installed, updated, up to date, not ivin's, or failed, with the folder) is logged, a failure's raw error in `ivin.log`, and shown by `ivin doctor`; only a failure fails its check.
 
 ### MCP, later
 

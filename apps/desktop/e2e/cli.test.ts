@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test"
 import { execFile } from "node:child_process"
-import { lstatSync, mkdirSync, existsSync, writeFileSync } from "node:fs"
+import { lstatSync, mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { launchPackagedApp, makeFakeClaudeBin, makeTempDir } from "./launch-app.ts"
+import { claudeConfigDir, launchPackagedApp, makeFakeClaudeBin, makeTempDir } from "./launch-app.ts"
 import { sendMessage, startSession } from "./session-helpers.ts"
 
 const runIvin = (userDataDir: string, args: string[]) =>
@@ -56,4 +56,58 @@ test("the socket is its owner's only, replaces a stale one, and is gone once the
   const closed = await runIvin(userDataDir, ["doctor"])
   expect(closed.code).toBe(3)
   expect(closed.output).toContain("ivin is not running")
+})
+
+const skillFolderOf = (userDataDir: string) =>
+  join(claudeConfigDir(userDataDir), "skills/ivin-customize")
+
+test("the first launch installs the ivin-customize skill into Claude, and the next one replaces an older one", async () => {
+  const userDataDir = makeTempDir("user-data")
+  const skillFolder = skillFolderOf(userDataDir)
+  const fakeClaudeBin = makeFakeClaudeBin()
+
+  let app = await launchPackagedApp(userDataDir, { fakeClaudeBin })
+  try {
+    await app.firstWindow()
+    await expect.poll(() => existsSync(join(skillFolder, "SKILL.md"))).toBe(true)
+    expect(readFileSync(join(skillFolder, "SKILL.md"), "utf8")).toContain("name: ivin-customize")
+    const doctor = await runIvin(userDataDir, ["doctor"])
+    expect(doctor.output).toContain(`✓ Installed the ivin-customize skill at ${skillFolder}`)
+  } finally {
+    await app.close()
+  }
+
+  writeFileSync(join(skillFolder, "SKILL.md"), "an older skill")
+  writeFileSync(join(skillFolder, ".installed-by-ivin"), "older\n")
+  app = await launchPackagedApp(userDataDir, { fakeClaudeBin })
+  try {
+    await app.firstWindow()
+    await expect
+      .poll(() => readFileSync(join(skillFolder, "SKILL.md"), "utf8"))
+      .toContain("name: ivin-customize")
+    expect((await runIvin(userDataDir, ["doctor"])).output).toContain(
+      `✓ Updated the ivin-customize skill at ${skillFolder}`,
+    )
+  } finally {
+    await app.close()
+  }
+})
+
+test("a launch leaves an ivin-customize skill the user made as it is, and ivin doctor says so", async () => {
+  const userDataDir = makeTempDir("user-data")
+  const skillFolder = skillFolderOf(userDataDir)
+  mkdirSync(skillFolder, { recursive: true })
+  writeFileSync(join(skillFolder, "SKILL.md"), "my own skill")
+
+  const app = await launchPackagedApp(userDataDir, { fakeClaudeBin: makeFakeClaudeBin() })
+  try {
+    await app.firstWindow()
+    const doctor = await runIvin(userDataDir, ["doctor"])
+
+    expect(doctor.output).toContain(`✓ ${skillFolder} is not ivin's: ivin left it as it is.`)
+    expect(readFileSync(join(skillFolder, "SKILL.md"), "utf8")).toBe("my own skill")
+    expect(existsSync(join(skillFolder, ".installed-by-ivin"))).toBe(false)
+  } finally {
+    await app.close()
+  }
 })

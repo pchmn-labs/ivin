@@ -85,6 +85,7 @@ export const layerScripted = (
       id: "scripted",
       runOptions: Effect.succeed(runOptions),
       program: Effect.succeed(null),
+      skillsFolder: null,
       // Scripts replay recorded Claude output.
       toolActivity,
       toolKind,

@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
+import { homedir } from "node:os"
 import { randomUUID } from "node:crypto"
 import { createInterface } from "node:readline"
 import type { HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
@@ -13,6 +14,7 @@ import { findOnPath } from "./find-on-path.ts"
 import { listClaudeModels } from "./list-models.ts"
 import { decodeClaudeLine } from "../rules/decode-claude-line.ts"
 import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
+import { claudeSkillsFolder } from "../rules/skills-folder.ts"
 import { toolActivity } from "../rules/tool-activity.ts"
 import { toolKind } from "../rules/tool-kind.ts"
 import { userMessageLine } from "../rules/user-message-line.ts"
@@ -78,6 +80,7 @@ export const layerClaudeWith = (
       id: "claude",
       runOptions: listedRunOptions(listTimeout),
       program: Effect.sync(() => ({ name: "claude", path: findOnPath("claude") })),
+      skillsFolder: claudeSkillsFolder(process.env, homedir()),
       toolActivity,
       toolKind,
       start: ({ sessionId, cwd, options, providerSessionId }) =>

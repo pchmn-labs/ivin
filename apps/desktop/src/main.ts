@@ -30,6 +30,9 @@ const serverEntry = app.isPackaged
 const cliEntry = app.isPackaged
   ? join(process.resourcesPath, "cli/ivin.js")
   : join(import.meta.dirname, "../../cli/dist/ivin.js")
+const skillFolder = app.isPackaged
+  ? join(process.resourcesPath, "skills/ivin-customize")
+  : join(import.meta.dirname, "../../server/skills/ivin-customize")
 const rendererEntry = app.isPackaged
   ? join(app.getAppPath(), "renderer/index.html")
   : join(import.meta.dirname, "../../../packages/ui/dist/index.html")
@@ -144,6 +147,8 @@ void app.whenReady().then(() => {
       ivinHome,
       "--images",
       imageFolder,
+      "--skill",
+      skillFolder,
     ],
     {
       serviceName: "ivin-server",

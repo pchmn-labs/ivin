@@ -29,6 +29,8 @@ export const makeFakeClaudeBin = (): string => {
   return dir
 }
 
+export const claudeConfigDir = (userDataDir: string) => join(userDataDir, "claude")
+
 export const launchPackagedApp = (
   userDataDir: string,
   options: {
@@ -48,6 +50,8 @@ export const launchPackagedApp = (
           IVIN_HOME: join(userDataDir, ".ivin"),
           IVIN_BACKGROUND: "1",
           IVIN_HARNESS: "claude",
+          // ivin installs its skill there: never in the real ~/.claude.
+          CLAUDE_CONFIG_DIR: claudeConfigDir(userDataDir),
           PATH: `${options.fakeClaudeBin}${delimiter}${process.env["PATH"] ?? ""}`,
         }
       : {
