@@ -15,19 +15,3 @@ export const closeTabs = (bar: ProjectTabs, sessionIds: ReadonlySet<string>): Pr
           : current.selectedSessionId,
     }
   }, bar)
-
-// Puts back a tab whose close failed, where it was and selected if it was.
-export const reopenTab = (
-  bar: ProjectTabs,
-  before: ProjectTabs,
-  sessionId: string,
-): ProjectTabs => {
-  const tab = before.tabs.find((each) => each.sessionId === sessionId)
-  if (!tab || bar.tabs.some((each) => each.sessionId === sessionId)) return bar
-  const at = Math.min(before.tabs.indexOf(tab), bar.tabs.length)
-  return {
-    ...bar,
-    tabs: [...bar.tabs.slice(0, at), tab, ...bar.tabs.slice(at)],
-    selectedSessionId: before.selectedSessionId === sessionId ? sessionId : bar.selectedSessionId,
-  }
-}

@@ -1,6 +1,5 @@
 import { Effect } from "effect"
 import { Atom } from "effect/reactivity"
-import { optimistic } from "@ivin/state/optimistic"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 import { closingTab } from "../../tab/atoms/close-tab.ts"
 import { archivedSessionsOf } from "./list-archived-sessions.ts"
@@ -16,17 +15,24 @@ export const archiveSessionAtom = serverRuntime.fn<{
       const client = yield* ServerClient
       const sessions = sessionsOf(projectPath)
       const before = yield* sessions.get(sessionId)
-      yield* optimistic<unknown>({
-        apply: sessions.remove(sessionId),
-        rollback: before ? sessions.upsert([before]) : Effect.void,
-      })(
-        closingTab(
-          projectPath,
-          sessionId,
-        )(
-          client["session.archive"]({ sessionId }).pipe(
-            Effect.andThen(client["tab.list"]({ projectPath })),
-          ),
+      // The server may have archived the session before it failed.
+      const putBack = client["session.list"]({ projectPath }).pipe(
+        Effect.map((listed) => listed.filter((session) => session.id === sessionId)),
+        Effect.orElseSucceed(() => (before ? [before] : [])),
+        Effect.flatMap((kept) => sessions.upsert(kept)),
+      )
+      const archive = client["session.archive"]({ sessionId }).pipe(
+        Effect.andThen(client["tab.list"]({ projectPath })),
+      )
+      yield* Atom.update(sessions.archiving, (ids) => [...ids, sessionId])
+      yield* sessions.remove(sessionId)
+      yield* closingTab(
+        projectPath,
+        sessionId,
+      )(archive).pipe(
+        Effect.onError(() => putBack),
+        Effect.ensuring(
+          Atom.update(sessions.archiving, (ids) => ids.filter((id) => id !== sessionId)),
         ),
       )
       yield* Atom.refresh(archivedSessionsOf(projectPath))

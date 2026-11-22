@@ -87,6 +87,20 @@ test("the answer to a first close does not bring back a tab closed after it", as
   expect(ids()).toEqual(["session-3"])
 })
 
+test("opening another tab while a close waits does not show the closed tab again", async () => {
+  const { registry, server, tabs, ids } = await setup()
+  const close = server.holdNextCall("tab.close")
+  registry.set(closeTabAtom, { projectPath: project, sessionId: "session-3" })
+
+  registry.set(openTabAtom, { sessionId: "session-1" })
+  await vi.waitFor(() => expect(registry.get(tabs).selectedSessionId).toBe("session-1"))
+  expect(ids()).toEqual(["session-1", "session-2"])
+
+  close.release()
+  await vi.waitFor(() => expect(server.tabOrder(project)).toEqual(["session-1", "session-2"]))
+  expect(ids()).toEqual(["session-1", "session-2"])
+})
+
 test("a reorder shows at once and is kept once the server answers", async () => {
   const { registry, server, tabs, ids } = await setup()
   const reorder = server.holdNextReorder()
