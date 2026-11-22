@@ -4,11 +4,12 @@ Reasons: [ADR-0001](../adr/0001-code-grouped-by-subject-and-layered-by-test.md).
 
 ```
 plugins/<id>/
-  plugin.json
-  server.ts             optional: the server half, activate(ctx)
-  ui.tsx                optional: the UI half, activate(ctx)
-  rules/                optional: the plugin's pure logic, read by both halves
+  package.json          the manifest under its `ivin` key; `peerDependencies["@ivin/plugin-api"]` is the API version
   README.md             what it does, for the next agent that edits it
+  src/
+    server.ts           optional: the server half, activate(ctx)
+    ui.tsx              optional: the UI half, activate(ctx)
+    rules/              optional: the plugin's pure logic, read by both halves
 ```
 
 | Layer | Test of membership |

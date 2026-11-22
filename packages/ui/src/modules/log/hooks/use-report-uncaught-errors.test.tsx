@@ -67,7 +67,7 @@ test("an error thrown by a plugin is not reported", async () => {
     new ErrorEvent("error", {
       error: new Error("plugin bug"),
       message: "plugin bug",
-      filename: "http://localhost/plugins/usage/ui.tsx",
+      filename: "http://localhost/plugins/usage/src/ui.tsx",
     }),
   )
 

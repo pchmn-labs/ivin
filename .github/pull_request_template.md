@@ -12,7 +12,7 @@
 
 <!-- Tells the reviewer how slowly to read. Be most careful before writing that a revert undoes it and little breaks: you are grading your own change. -->
 
-**Undone by a revert:** <!-- Yes, or no and why. No: a SQLite schema or the shape of what is written to it; the format of a file the user edits in `~/.ivin` or `<repo>/.ivin`; deleting a worktree, a branch or a session; anything sent outside the machine. The plugin API is free to break while `apiVersion` is 0 (docs/architecture.md, API stability). -->
+**Undone by a revert:** <!-- Yes, or no and why. No: a SQLite schema or the shape of what is written to it; the format of a file the user edits in `~/.ivin` or `<repo>/.ivin`; deleting a worktree, a branch or a session; anything sent outside the machine. The plugin API is free to break while `@ivin/plugin-api` is at 0.x (docs/architecture.md, API stability). -->
 
 **What breaks if it is wrong:** <!-- What, and for whom. -->
 
