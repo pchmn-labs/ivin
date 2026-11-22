@@ -149,7 +149,7 @@ export function TurnWork({
   rowId: string
   live: boolean
 }) {
-  const work = useAtomValue(transcriptOf(sessionId).work(rowId))
+  const work = useAtomValue(transcriptOf(sessionId).work(live)(rowId))
   const [folds, setFolds] = useAtom(foldsOf(sessionId))
   if (work === null) return null
   const toggle = (key: string, open: boolean) => setFolds(new Map(folds).set(key, !open))

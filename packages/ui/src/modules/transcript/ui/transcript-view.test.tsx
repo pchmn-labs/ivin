@@ -151,19 +151,22 @@ test("a transcript of 200 images loads only the images of the rows on screen", a
   expect(new Set(loadedImages()).size).toBeLessThan(200)
 })
 
+// The seeded history is a turn that has ended; the session runs from the message the test sends.
+const sessionView = (server: ReturnType<typeof makeFakeServer>, height: number, live: boolean) => (
+  <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+    <div style={{ position: "relative", height }}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <TranscriptView sessionId="s1" live={live} />
+      </PluginsProvider>
+    </div>
+  </RegistryProvider>
+)
+
 test("a sent message scrolls up to the top of the view, and stays there while the answer is short", async () => {
   const server = makeFakeServer()
   server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
 
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ position: "relative", height: 300 }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" live />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>,
-  )
+  const screen = await render(sessionView(server, 300, false))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
 
   const topInView = (text: string) =>
@@ -171,6 +174,7 @@ test("a sent message scrolls up to the top of the view, and stays there while th
     scroller().getBoundingClientRect().top
 
   server.pushItem(userMessage(40))
+  await screen.rerender(sessionView(server, 300, true))
   await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
   server.pushItem(message(41))
   await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
@@ -211,20 +215,13 @@ test("a sent message stays at the top of the view when its tool calls fold as th
 test("a sent message goes back to the top of the view when the view grows after hiding it", async () => {
   const server = makeFakeServer()
   server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
-  const view = (height: number) => (
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ position: "relative", height }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" live />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>
-  )
+  const view = (height: number) => sessionView(server, height, true)
 
-  const screen = await render(view(300))
+  const screen = await render(sessionView(server, 300, false))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
 
   server.pushItem(userMessage(40))
+  await screen.rerender(view(300))
   server.pushItem(message(41, Array.from({ length: 4 }, (_, i) => `line ${i}`).join("\n\n")))
   await expect.element(page.getByText("line 3", { exact: true })).toBeVisible()
   await frames()
@@ -243,19 +240,12 @@ test("once the answer is taller than the view, the transcript follows its end", 
   const server = makeFakeServer()
   server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
 
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ position: "relative", height: 300 }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" live />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>,
-  )
+  const screen = await render(sessionView(server, 300, false))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
   const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
 
   server.pushItem(userMessage(40))
+  await screen.rerender(sessionView(server, 300, true))
   await frames()
   server.pushItem(message(41, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n")))
   await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))

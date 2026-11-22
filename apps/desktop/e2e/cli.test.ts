@@ -24,7 +24,8 @@ test("a session's agent runs ivin doctor, which passes every check", async () =>
     const window = await startSession(app)
     await sendMessage(window, "run: ivin doctor; echo exit=$?")
 
-    const answer = window.getByTestId("transcript-item").filter({ hasText: /exit=\d/ })
+    // The fake agent works until interrupted, so its text heads the running turn's last step.
+    const answer = window.getByTestId("turn-step").filter({ hasText: /exit=\d/ })
     await expect(answer).toContainText("✓ ivin 0.0.0 is running")
     await expect(answer).toContainText("settings.json is valid or absent")
     await expect(answer).toContainText("claude found at")

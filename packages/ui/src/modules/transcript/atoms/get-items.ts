@@ -6,7 +6,7 @@ import { makeEntityList, type EntityWriter } from "@ivin/state/entity-list"
 import { strongFamily } from "@ivin/state/strong-family"
 import { foldDeltas } from "../rules/fold-deltas.ts"
 import { stableRows } from "../rules/stable-rows.ts"
-import { transcriptRows, turnWork, type TranscriptRow } from "../rules/turns.ts"
+import { shownRows, transcriptRows, turnWork, type TranscriptRow } from "../rules/turns.ts"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 
 export const PAGE_SIZE = 50
@@ -93,17 +93,20 @@ export const transcriptOf = strongFamily((sessionId: string) => {
     const { rows: list, prepended } = get(rows)
     return { ...get(paging), rows: list, prepended }
   })
-  const work = Atom.family((rowId: string) =>
-    Atom.readable((get) => {
-      const row = get(rows).rows.find((r) => r.id === rowId)
-      if (row?.type !== "work") return null
-      const items = (ids: ReadonlyArray<string>) =>
-        ids.flatMap((id) => {
-          const item = get(list.item(id))
-          return item ? [item] : []
-        })
-      return turnWork(rowId, items(row.itemIds), items(row.turnIds))
-    }),
+  // `live`: the session's agent is working.
+  const work = Atom.family((live: boolean) =>
+    Atom.family((rowId: string) =>
+      Atom.readable((get) => {
+        const row = shownRows(get(rows).rows, live).find((r) => r.id === rowId)
+        if (row?.type !== "work") return null
+        const items = (ids: ReadonlyArray<string>) =>
+          ids.flatMap((id) => {
+            const item = get(list.item(id))
+            return item ? [item] : []
+          })
+        return turnWork(rowId, items(row.itemIds), items(row.turnIds))
+      }),
+    ),
   )
   return { list, paging, view, work }
 })

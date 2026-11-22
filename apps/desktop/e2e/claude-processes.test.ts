@@ -16,9 +16,7 @@ test("quitting the app stops the claude process it started", async () => {
   try {
     const window = await startSession(app)
     await sendMessage(window, "Hello")
-    await expect(
-      window.getByTestId("transcript-item").filter({ hasText: "echo: Hello" }),
-    ).toHaveCount(1)
+    await expect(window.getByTestId("turn-step").filter({ hasText: "echo: Hello" })).toHaveCount(1)
 
     const claudes = () =>
       descendantsOf(appProcess.pid!).filter((proc) => proc.command.includes(fakeClaudeCommand))

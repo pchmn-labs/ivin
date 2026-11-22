@@ -5,6 +5,7 @@ import {
   duration,
   lastTurnMessageId,
   pinnedCalls,
+  runningTurnRows,
   stepOpenByDefault,
   transcriptRows,
   turnWork,
@@ -72,6 +73,45 @@ test("a turn's work up to its last tool call is one row, and its answer stays a 
     { type: "item", id: "u2" },
     { type: "work", id: "work:u2", itemIds: [], turnIds: ["u2"] },
   ])
+})
+
+test("while the last turn runs, its text after the last tool call heads a step, not the answer", () => {
+  const rows = runningTurnRows(
+    transcriptRows([
+      user("u1"),
+      call("c0"),
+      text("a1"),
+      user("u2"),
+      text("t1"),
+      call("c1"),
+      text("t2"),
+    ]),
+  )
+
+  expect(rows).toEqual([
+    { type: "item", id: "u1" },
+    { type: "work", id: "work:u1", itemIds: ["c0"], turnIds: ["u1", "c0", "a1"] },
+    { type: "item", id: "a1" },
+    { type: "item", id: "u2" },
+    {
+      type: "work",
+      id: "work:u2",
+      itemIds: ["t1", "c1", "t2"],
+      turnIds: ["u2", "t1", "c1", "t2"],
+    },
+  ])
+})
+
+test("a running turn with no tool call yet has its text in its work row", () => {
+  expect(runningTurnRows(transcriptRows([user("u1"), text("t1")]))).toEqual([
+    { type: "item", id: "u1" },
+    { type: "work", id: "work:u1", itemIds: ["t1"], turnIds: ["u1", "t1"] },
+  ])
+})
+
+test("a transcript with no work row is left as it is while running", () => {
+  const rows = transcriptRows([text("a1")])
+  expect(runningTurnRows(rows)).toBe(rows)
 })
 
 test("an earlier turn with no tool call has no work row", () => {
