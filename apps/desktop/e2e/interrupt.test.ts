@@ -9,14 +9,15 @@ test("Escape stops a running session, and a message sent while it runs reaches t
   try {
     const window = await startSession(app)
     const items = window.getByTestId("transcript-item")
+    const transcript = window.getByTestId("transcript")
     const status = window.getByTestId("composer-session-status")
 
     await sendMessage(window, "First")
     await expect(status).toHaveText("Working")
-    await expect(items.filter({ hasText: "echo: First" })).toHaveCount(1)
+    await expect(transcript.getByText("echo: First")).toHaveCount(1)
 
     await sendMessage(window, "Second")
-    await expect(items.filter({ hasText: "echo: Second" })).toHaveCount(1)
+    await expect(transcript.getByText("echo: Second")).toHaveCount(1)
 
     await window.getByRole("textbox", { name: "Message" }).press("Escape")
     await expect(items.filter({ hasText: "Interrupted" })).toHaveCount(1)
