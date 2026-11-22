@@ -45,6 +45,17 @@ export const transcriptRows = (items: ReadonlyArray<TranscriptItem>): Transcript
   return rows
 }
 
+// Every row after the last work row belongs to the last turn.
+export const runningTurnRows = (
+  rows: ReadonlyArray<TranscriptRow>,
+): ReadonlyArray<TranscriptRow> => {
+  const index = rows.findLastIndex((row) => row.type === "work")
+  const work = rows[index]
+  if (work?.type !== "work" || index === rows.length - 1) return rows
+  const after = rows.slice(index + 1).map((row) => row.id)
+  return [...rows.slice(0, index), { ...work, itemIds: [...work.itemIds, ...after] }]
+}
+
 // A turn cut by paging starts with an item folded into its work row, so it has no message row.
 export const lastTurnMessageId = (rows: ReadonlyArray<TranscriptRow>): string | undefined => {
   const work = rows.findLast((row) => row.type === "work")

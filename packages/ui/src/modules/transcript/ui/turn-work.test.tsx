@@ -111,6 +111,71 @@ test("a turn that has just started shows its line with no timeline under it", as
   expect(document.querySelector(".iv-turn__timeline")).toBeNull()
 })
 
+test("while the turn runs, a sentence streamed after the last call heads a step and never shows as the answer", async () => {
+  const { user, text, call } = items(Date.now())
+  const server = await mount([user("u1", "fix it"), text("t1", "Looking"), call("c1")], true)
+  await expect.element(page.getByText("tool-c1")).toBeVisible()
+  const outsideTurn: string[] = []
+  const observer = new MutationObserver(() => {
+    for (const row of document.querySelectorAll("[data-row-id]")) {
+      if (row.textContent?.includes("Running")) outsideTurn.push(row.getAttribute("data-row-id")!)
+    }
+  })
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+
+  const sentence = text("t2", "Running the tests")
+  server.pushChange({
+    type: "delta",
+    sessionId: "s1",
+    itemId: sentence.id,
+    position: sentence.position,
+    kind: "message",
+    text: "Running",
+  })
+  await expect.element(page.getByText("Running", { exact: true })).toBeVisible()
+  server.pushItem(sentence)
+  await expect.element(page.getByText("Running the tests")).toBeVisible()
+  const steps = page.getByTestId("turn-step")
+  await expect.element(steps.nth(1)).toHaveTextContent("Running the tests")
+  expect(steps.nth(1).element().hasAttribute("data-current")).toBe(true)
+  expect(steps.nth(1).element().querySelector('[data-testid="step-summary"]')).toBeNull()
+  await expect
+    .element(page.getByTestId("step-summary").nth(0))
+    .toHaveAttribute("aria-expanded", "false")
+
+  server.pushItem(call("c2", "command", "running"))
+  await expect.element(page.getByText("tool-c2")).toBeVisible()
+  await vi.waitFor(() => {
+    const step = steps.nth(1).element()
+    expect(step.textContent).toContain("tool-c2")
+  })
+  observer.disconnect()
+  expect(outsideTurn).toEqual([])
+})
+
+test("when the turn ends, the text after its last call leaves the timeline and becomes the answer", async () => {
+  const { user, text, call } = items()
+  const server = makeFakeServer()
+  server.seedItems("s1", [user("u1", "fix it"), call("c1"), text("a", "Fixed it")])
+  const view = (live: boolean) => (
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ height: 600 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" live={live} />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>
+  )
+  const screen = await render(view(true))
+  await expect.element(page.getByTestId("turn-step").nth(1)).toHaveTextContent("Fixed it")
+
+  await screen.rerender(view(false))
+  await expect.element(turnLine()).toHaveAttribute("aria-expanded", "false")
+  await expect.element(turnLine()).toHaveTextContent("Worked for 2s · 1 tool call")
+  await expect.element(page.getByText("Fixed it")).toBeVisible()
+  expect(page.getByText("Fixed it").element().closest('[data-testid="turn"]')).toBeNull()
+})
+
 test("a finished turn folds its work behind one line, and shows the user's message and the answer", async () => {
   const { user, text, call } = items()
   await mount([

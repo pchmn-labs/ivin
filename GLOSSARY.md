@@ -46,10 +46,10 @@ _Avoid_: attachment, placeholder
 The read model derived from a transcript's events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled.
 
 **Turn**:
-A user message and everything the agent does in answer to it, up to the next user message. Its **work** runs from its first item to its last tool call; its **answer** is the agent's text after that call.
+A user message and everything the agent does in answer to it, up to the next user message. Its **work** runs from its first item to its last tool call; its **answer** is the agent's text after that call, once the turn has ended. While the turn runs, that text is still part of its work.
 
 **Step**:
-One sentence the agent writes in a turn's work and the tool calls that follow it, up to its next sentence.
+One sentence the agent writes in a turn's work and the tool calls that follow it, up to its next sentence. In a running turn, the last sentence heads a step before it has any calls.
 
 **Approval**:
 An agent's request to run a tool that the user allows or denies, together with that decision. It is open until decided, and the session waits meanwhile.

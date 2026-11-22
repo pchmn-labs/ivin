@@ -4,7 +4,7 @@ import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
 import { Text } from "../../../core/components/text/text.tsx"
-import type { TranscriptRow as RowData } from "../rules/turns.ts"
+import { runningTurnRows, type TranscriptRow as RowData } from "../rules/turns.ts"
 import { useLoadBefore } from "../hooks/use-load-before.ts"
 import { useSentMessageScroll } from "../hooks/use-sent-message-scroll.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
@@ -20,7 +20,10 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
   const { loaded, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
   const loadItemsBefore = useAtomSet(loadItemsBeforeAtom)
   const shown = useMemo(
-    () => (live ? rows : rows.filter((row) => row.type === "item" || row.itemIds.length > 0)),
+    () =>
+      live
+        ? runningTurnRows(rows)
+        : rows.filter((row) => row.type === "item" || row.itemIds.length > 0),
     [rows, live],
   )
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
