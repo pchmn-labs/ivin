@@ -32,6 +32,25 @@ jobs:
       - run: pnpm --filter @ivin/ui exec playwright install --with-deps chromium
       - run: pnpm test
 
+  repeat-changed-tests:
+    name: Changed tests, 20 runs each
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+        with:
+          cache: true
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @ivin/ui exec playwright install --with-deps chromium
+      - run: pnpm test:repeat-changed origin/${{ github.base_ref }}
+
   e2e:
     name: Packaged app on ${{ matrix.os }}
     strategy:
