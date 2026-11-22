@@ -26,6 +26,37 @@ export const UserSettings = Schema.Struct({
 })
 export type UserSettings = typeof UserSettings.Type
 
+export class SettingPathUnknown extends Schema.TaggedError<SettingPathUnknown>()(
+  "SettingPathUnknown",
+  { path: Schema.String, knownPaths: Schema.Array(Schema.String) },
+) {}
+
+export class SettingValueInvalid extends Schema.TaggedError<SettingValueInvalid>()(
+  "SettingValueInvalid",
+  { path: Schema.String, expected: Schema.Literals(["boolean", "number", "string"]) },
+) {}
+
+export class SettingsFileInvalid extends Schema.TaggedError<SettingsFileInvalid>()(
+  "SettingsFileInvalid",
+  {
+    path: Schema.String,
+    reason: Schema.Literals(["notJson", "notAnObject"]),
+    // The first parse error, such as "CommaExpected"; lines and columns start at 1.
+    parseError: Schema.NullOr(
+      Schema.Struct({ code: Schema.String, line: Schema.Number, column: Schema.Number }),
+    ),
+  },
+) {}
+
 export const SettingRpcs = RpcGroup.make(
   Rpc.make("setting.watch", { success: UserSettings, stream: true }),
+  Rpc.make("setting.get", {
+    payload: { path: Schema.NullOr(Schema.String) },
+    success: Schema.Json,
+    error: SettingPathUnknown,
+  }),
+  Rpc.make("setting.set", {
+    payload: { path: Schema.String, value: Schema.Json },
+    error: Schema.Union([SettingPathUnknown, SettingValueInvalid, SettingsFileInvalid]),
+  }),
 )
