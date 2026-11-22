@@ -92,7 +92,7 @@ code { font-family: var(--iv-font-mono); font-size: var(--iv-text-mono); padding
 .tool .status { color: var(--iv-text-muted); font-size: var(--iv-text-sm); }
 
 /* 1. Docked sheet: pending above the composer; a read steer is a small bubble heading its step */
-.v-sheet .steer-bubble { display: inline-block; max-width: 100%; margin-bottom: 4px; padding: 4px 10px; border-radius: 10px 10px 4px 10px; background: var(--iv-bubble); color: var(--iv-text); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); white-space: pre-wrap; }
+.v-sheet .steer-bubble { display: inline-block; max-width: 100%; margin-bottom: 4px; padding: 4px 10px; border-radius: 10px 10px 10px 4px; background: var(--iv-bubble); color: var(--iv-text); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); white-space: pre-wrap; }
 .v-sheet .iv-turn__step[data-steer]:not([data-current])::before { border-color: color-mix(in srgb, var(--iv-text) 40%, var(--iv-bg)); background: var(--iv-bubble); }
 .pending-list { display: flex; flex-direction: column; gap: 2px; margin: 0 0 var(--iv-space-2); }
 .pending-item { padding: 4px var(--iv-space-1); color: var(--iv-text); font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -156,7 +156,6 @@ code { font-family: var(--iv-font-mono); font-size: var(--iv-text-mono); padding
 
 <div class="harness" aria-label="Harness">
   <button id="play" aria-pressed="true" title="Let the agent run (P)">Agent running</button>
-  <button id="answer" title="The agent writes its answer with no tool call left (F)">Finish turn</button>
 </div>
 
 <nav class="proto-picker" data-position="top" aria-label="Prototype variants">
@@ -262,17 +261,6 @@ function tick() {
   render({ follow: true })
 }
 
-// With no tool call left, the agent answers and its waiting messages start the next turn.
-function answerNow() {
-  if (!working()) return
-  finish("answered")
-  if (!state.pending.length) return
-  setTimeout(() => {
-    const messages = state.pending
-    state.pending = []
-    startTurn(messages)
-  }, 900)
-}
 function finish(outcome) {
   const t = turn()
   const running = t.steps.at(-1)?.calls.at(-1)
@@ -359,12 +347,12 @@ function composerView() {
   const above = document.getElementById("above")
   const tray = document.getElementById("tray")
   const n = state.pending.length
-  above.innerHTML = variant === 0 && n ? `<div class="iv-action-sheet" role="status">
+  above.innerHTML = variant === 0 && n && working() ? `<div class="iv-action-sheet" role="status">
       <div class="iv-action-sheet__head">${svg(P.clock)}<span>${n === 1 ? "Sent to the agent" : `${n} messages sent to the agent`}</span></div>
       <div class="pending-list">${state.pending.map((m) => `<div class="pending-item" title="${esc(m.text)}">${esc(m.text)}</div>`).join("")}</div>
-      <div class="sheet-row"><span class="sheet-hint">The agent reads ${n === 1 ? "it" : "them"} after its current tool call, or once it finishes this turn. Stop puts ${n === 1 ? "it" : "them"} back here.</span><button class="iv-button" data-act="now" title="Stops this turn and sends your messages">Send now</button></div>
+      <div class="sheet-row"><span class="sheet-hint">The agent reads ${n === 1 ? "it" : "them"} when its current tool call ends. Stop puts ${n === 1 ? "it" : "them"} back here.</span><button class="iv-button" data-act="now" title="Stops this turn and sends your messages">Send now</button></div>
     </div>` : ""
-  tray.innerHTML = variant === 2 && n ? `<div class="tray" role="status">${state.pending.map((m, i) => `<div class="tray-row" title="${esc(m.text)}">${svg(P.clock, 12)}<span class="text">${esc(m.text)}</span>${i === n - 1 ? `<span class="faint" style="font-size:var(--iv-text-xs)">Waits for the current tool call</span><button class="iv-button" data-act="now" title="Stops this turn and sends your messages">Send now</button>` : ""}</div>`).join("")}</div>` : ""
+  tray.innerHTML = variant === 2 && n && working() ? `<div class="tray" role="status">${state.pending.map((m, i) => `<div class="tray-row" title="${esc(m.text)}">${svg(P.clock, 12)}<span class="text">${esc(m.text)}</span>${i === n - 1 ? `<span class="faint" style="font-size:var(--iv-text-xs)">Waits for the current tool call</span><button class="iv-button" data-act="now" title="Stops this turn and sends your messages">Send now</button>` : ""}</div>`).join("")}</div>` : ""
   const field = document.getElementById("field")
   const action = document.getElementById("action")
   const empty = field.value.trim() === ""
@@ -408,7 +396,6 @@ function start() {
 const playBtn = document.getElementById("play")
 function togglePlay() { playing = !playing; playBtn.setAttribute("aria-pressed", playing); playBtn.textContent = playing ? "Agent running" : "Agent paused"; start() }
 playBtn.addEventListener("click", togglePlay)
-document.getElementById("answer").addEventListener("click", answerNow)
 
 function mount() {
   seed()
@@ -454,7 +441,6 @@ document.addEventListener("keydown", (e) => {
   else if (e.key === "ArrowLeft") setActive((variant - 1 + items.length) % items.length)
   else if (e.key === "r" || e.key === "R") mount()
   else if (e.key === "p" || e.key === "P") togglePlay()
-  else if (e.key === "f" || e.key === "F") answerNow()
 })
 const requested = parseInt(new URLSearchParams(location.search).get("v"), 10)
 setActive(requested >= 1 && requested <= items.length ? requested - 1 : 0)
