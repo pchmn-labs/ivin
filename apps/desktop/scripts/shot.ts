@@ -261,7 +261,10 @@ try {
   writeFileSync(join(repo, "src/main.ts"), 'import { total } from "./orders/total.ts"\n')
   writeFileSync(join(repo, "NOTES.md"), "- empty page\n")
   await sidebar.getByRole("tab", { name: /^Changes/ }).click()
-  await sidebar.getByRole("list", { name: "Branch changes" }).getByText("empty-page.ts").waitFor()
+  await sidebar
+    .getByRole("list", { name: "Committed changes" })
+    .getByText("empty-page.ts")
+    .waitFor()
   await sidebar.getByRole("list", { name: "Uncommitted changes" }).getByText("NOTES.md").waitFor()
   await window.waitForTimeout(300)
   await shoot("changes-tab")
