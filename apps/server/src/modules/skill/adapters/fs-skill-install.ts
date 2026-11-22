@@ -3,18 +3,18 @@ import { HarnessProvider } from "@ivin/harness"
 import { Effect, Layer } from "effect"
 import { createHash } from "node:crypto"
 import {
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs"
 import { basename, dirname, join, relative } from "node:path"
 import { logError } from "../../log/usecases/log-error.ts"
-import { skillInstallAction } from "../rules/skill-install-action.ts"
+import { skillInstallStatus } from "../rules/skill-install-status.ts"
 import { SkillInstallation } from "../usecases/skill-installation.ts"
 
 export const SKILL_MARKER = ".installed-by-ivin"
@@ -23,13 +23,6 @@ interface SkillFile {
   readonly path: string
   readonly content: Uint8Array
 }
-
-const statuses = {
-  install: "installed",
-  update: "updated",
-  keep: "upToDate",
-  leave: "notOurs",
-} as const
 
 const filesOf = (folder: string): SkillFile[] =>
   readdirSync(folder, { recursive: true, withFileTypes: true })
@@ -48,6 +41,8 @@ const versionOf = (files: readonly SkillFile[]) => {
 }
 
 const markerOf = (folder: string) => {
+  // A link of the skill's name is the user's, even one to a skill ivin wrote.
+  if (lstatSync(folder, { throwIfNoEntry: false })?.isSymbolicLink()) return null
   try {
     return readFileSync(join(folder, SKILL_MARKER), "utf8").trim()
   } catch {
@@ -55,9 +50,16 @@ const markerOf = (folder: string) => {
   }
 }
 
-const exists = (path: string) => statSync(path, { throwIfNoEntry: false }) !== undefined
+const exists = (path: string) => lstatSync(path, { throwIfNoEntry: false }) !== undefined
 
-// Copies the bundled skill folder `source` into `skillsFolder`, unless a folder of its name there is not ivin's.
+const removeLeftovers = (skillsFolder: string, prefix: string) => {
+  for (const entry of readdirSync(skillsFolder)) {
+    if (join(skillsFolder, entry).startsWith(prefix)) {
+      rmSync(join(skillsFolder, entry), { recursive: true, force: true })
+    }
+  }
+}
+
 export const installSkill = (
   source: string,
   skillsFolder: string,
@@ -69,15 +71,14 @@ export const installSkill = (
   try {
     const files = filesOf(source)
     const version = versionOf(files)
-    const action = skillInstallAction({ exists: exists(path), marker: markerOf(path) }, version)
-    if (action === "keep" || action === "leave") return { name, path, status: statuses[action] }
+    if (exists(skillsFolder)) removeLeftovers(skillsFolder, stagingPrefix)
+    const status = skillInstallStatus(
+      { exists: exists(path), markerVersion: markerOf(path) },
+      version,
+    )
+    if (status === "upToDate" || status === "notOurs") return { name, path, status }
 
     mkdirSync(skillsFolder, { recursive: true })
-    for (const entry of readdirSync(skillsFolder)) {
-      if (join(skillsFolder, entry).startsWith(stagingPrefix)) {
-        rmSync(join(skillsFolder, entry), { recursive: true, force: true })
-      }
-    }
     // Written beside the skill, then renamed, so a crash never leaves a half-written skill.
     staging = mkdtempSync(stagingPrefix)
     for (const file of files) {
@@ -85,15 +86,24 @@ export const installSkill = (
       writeFileSync(join(staging, file.path), file.content)
     }
     writeFileSync(join(staging, SKILL_MARKER), `${version}\n`)
-    if (action === "update") {
+    if (status === "updated") {
       const previous = `${staging}-previous`
       renameSync(path, previous)
-      renameSync(staging, path)
-      rmSync(previous, { recursive: true, force: true })
+      try {
+        renameSync(staging, path)
+      } catch (cause) {
+        renameSync(previous, path)
+        throw cause
+      }
+      try {
+        rmSync(previous, { recursive: true, force: true })
+      } catch {
+        // The skill is already in place; the next launch removes what is left.
+      }
     } else {
       renameSync(staging, path)
     }
-    return { name, path, status: statuses[action] }
+    return { name, path, status }
   } catch (cause) {
     if (staging !== null) rmSync(staging, { recursive: true, force: true })
     return { name, path, status: "failed", cause }

@@ -58,6 +58,9 @@ _Avoid_: permission, permission prompt
 **Annotation**:
 Typed, namespaced metadata attached to a session or a project, written by plugins, the CLI or the agent.
 
+**Skill**:
+A folder of instructions an agent reads when its task calls for it, in the harness's user skills folder. ivin ships its own, `ivin-customize`, and installs it there; a skill of the same name that ivin did not write is left as it is.
+
 **Tab**:
 Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Beside its session, a tab shows its sub-views; in **full width** they cover the main area, and a Session tab in their row shows the session's chat. A session with no tab is **inactive**, listed under "Inactive sessions" in the sidebar.
 

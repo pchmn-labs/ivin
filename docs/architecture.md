@@ -431,7 +431,7 @@ Shipped so far:
 
 ### Skills and docs for agents
 
-The app ships two skills, installed into supported harnesses on first run: `ivin-customize` (files, CLI, themes) and `ivin-plugin` (plugin format, API reference, slot list, the edit → `plugin check` → reload → `plugin logs` loop). `@ivin/plugin-api` types are the API reference; each built-in plugin is a worked example.
+The app ships two skills, installed into supported harnesses at launch: `ivin-customize` (files, CLI, themes) and `ivin-plugin` (plugin format, API reference, slot list, the edit → `plugin check` → reload → `plugin logs` loop). `@ivin/plugin-api` types are the API reference; each built-in plugin is a worked example.
 
 Shipped so far: `ivin-customize` (the CLI, when to link a pull request or an issue, the settings file), kept in `apps/server/skills/` and shipped as `Resources/skills/`. `ivin-plugin` waits for the plugin host.
 

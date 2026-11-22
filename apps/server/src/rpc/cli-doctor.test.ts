@@ -1,5 +1,7 @@
-import { beforeAll, expect, test } from "vitest"
+import { beforeAll, expect, test, vi } from "vitest"
 import { buildCli, runCli, tempSocketPath, withCliServer } from "./cli-server.ts"
+
+vi.setConfig({ testTimeout: 10_000 })
 
 beforeAll(buildCli, 60_000)
 
@@ -17,7 +19,7 @@ test("ivin doctor prints one passing line per check and exits 0 with a healthy a
     "✓ The scripted harness runs no program",
     "✓ The scripted harness takes no skills",
   ])
-}, 10_000)
+})
 
 test.each([
   ["installed", "✓ Installed the ivin-customize skill at /home/.claude/skills/ivin-customize"],
@@ -27,21 +29,14 @@ test.each([
     "notOurs",
     "✓ /home/.claude/skills/ivin-customize is not ivin's: ivin left it as it is. Remove it to get ivin's ivin-customize skill at the next launch",
   ],
-] as const)(
-  "ivin doctor reports a skill install that %s",
-  async (status, line) => {
-    const run = await withCliServer(
-      (socketPath) => runCli(["doctor"], { IVIN_SOCKET: socketPath }),
-      {
-        skill: { name: "ivin-customize", path: "/home/.claude/skills/ivin-customize", status },
-      },
-    )
+] as const)("ivin doctor reports a skill install that %s", async (status, line) => {
+  const run = await withCliServer((socketPath) => runCli(["doctor"], { IVIN_SOCKET: socketPath }), {
+    skill: { name: "ivin-customize", path: "/home/.claude/skills/ivin-customize", status },
+  })
 
-    expect(run.code).toBe(0)
-    expect(run.stdout.trim().split("\n").at(-1)).toBe(line)
-  },
-  10_000,
-)
+  expect(run.code).toBe(0)
+  expect(run.stdout.trim().split("\n").at(-1)).toBe(line)
+})
 
 test("ivin doctor reports a failed skill install and exits 1", async () => {
   const run = await withCliServer((socketPath) => runCli(["doctor"], { IVIN_SOCKET: socketPath }), {
@@ -56,7 +51,7 @@ test("ivin doctor reports a failed skill install and exits 1", async () => {
   expect(run.stdout).toContain(
     "✗ Could not install the ivin-customize skill at /home/.claude/skills/ivin-customize; the error is in ~/.ivin/logs/ivin.log",
   )
-}, 10_000)
+})
 
 test("ivin doctor names a broken settings.json and keybindings.json, and exits 1", async () => {
   const run = await withCliServer((socketPath) => runCli(["doctor"], { IVIN_SOCKET: socketPath }), {
@@ -69,7 +64,7 @@ test("ivin doctor names a broken settings.json and keybindings.json, and exits 1
     `✗ /home/.ivin/settings.json has an invalid value for "tabs.stopAgentOnClose"`,
   )
   expect(run.stdout).toContain("✗ /home/.ivin/keybindings.json is not valid JSON")
-}, 10_000)
+})
 
 test("ivin doctor --json prints the checks as JSON", async () => {
   const run = await withCliServer(
@@ -86,7 +81,7 @@ test("ivin doctor --json prints the checks as JSON", async () => {
     message:
       "/home/.ivin/keybindings.json does not hold a list; ivin uses the last valid keybindings until it is fixed",
   })
-}, 10_000)
+})
 
 test("with the app closed, ivin says it is not running and exits 3", async () => {
   const socketPath = tempSocketPath()
@@ -99,14 +94,14 @@ test("with the app closed, ivin says it is not running and exits 3", async () =>
   )
   expect(json.code).toBe(3)
   expect(JSON.parse(json.stdout)).toMatchObject({ ok: false, error: { reason: "notRunning" } })
-}, 10_000)
+})
 
 test("an agent whose app serves no socket is told so instead of reaching another ivin", async () => {
   const run = await runCli(["doctor"], { IVIN_SOCKET: "" })
 
   expect(run.code).toBe(3)
   expect(run.stderr).toContain("The ivin that started this agent serves no socket")
-}, 10_000)
+})
 
 test("ivin --help and ivin doctor --help describe the commands and their options", async () => {
   const main = await runCli(["--help"])
@@ -119,7 +114,7 @@ test("ivin --help and ivin doctor --help describe the commands and their options
   expect(doctor.stdout).toContain("Usage: ivin doctor [--json]")
   expect(doctor.stdout).toMatch(/--json +Print the result as JSON/)
   expect((await runCli(["doctor", "-h"])).stdout).toBe(doctor.stdout)
-}, 10_000)
+})
 
 test.each([[["frob"]], [["doctor", "--frob"]], [["doctor", "extra"]], [[]]])(
   "invalid usage %j exits 2 with a message",
@@ -129,5 +124,4 @@ test.each([[["frob"]], [["doctor", "--frob"]], [["doctor", "extra"]], [[]]])(
     expect(run.code).toBe(2)
     expect(run.stderr).toContain("Usage: ivin")
   },
-  10_000,
 )

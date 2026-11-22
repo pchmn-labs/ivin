@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs"
 import { tmpdir } from "node:os"
@@ -94,4 +95,28 @@ test("an install a crash cut short leaves no folder behind once the next one run
 
   expect(installSkill(bundledSkill({ "SKILL.md": "v1" }), skills).status).toBe("installed")
   expect(readdirSync(skills)).toEqual(["ivin-customize"])
+})
+
+test("a folder an update cut short is removed at the next launch, even when the skill is current", () => {
+  const skills = tempFolder()
+  const source = bundledSkill({ "SKILL.md": "v1" })
+  installSkill(source, skills)
+  mkdirSync(join(skills, ".ivin-customize-abc123-previous"))
+
+  expect(installSkill(source, skills).status).toBe("upToDate")
+  expect(readdirSync(skills)).toEqual(["ivin-customize"])
+})
+
+test("a link of the skill's name is the user's, whether broken or pointing at a skill ivin wrote", () => {
+  const skills = tempFolder()
+  const source = bundledSkill({ "SKILL.md": "v2" })
+  const elsewhere = tempFolder()
+  installSkill(bundledSkill({ "SKILL.md": "v1" }), elsewhere)
+  symlinkSync(join(elsewhere, "ivin-customize"), join(skills, "ivin-customize"))
+  const broken = tempFolder()
+  symlinkSync(join(broken, "missing"), join(broken, "ivin-customize"))
+
+  expect(installSkill(source, skills).status).toBe("notOurs")
+  expect(readFileSync(join(skills, "ivin-customize", "SKILL.md"), "utf8")).toBe("v1")
+  expect(installSkill(source, broken).status).toBe("notOurs")
 })
