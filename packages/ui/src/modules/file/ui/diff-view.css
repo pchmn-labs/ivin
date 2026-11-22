@@ -1,0 +1,52 @@
+.iv-diff-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.iv-diff-view__head {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--iv-space-2);
+  height: 32px;
+  padding: 0 var(--iv-space-2) 0 var(--iv-space-3);
+  border-bottom: 1px solid var(--iv-border);
+  font-size: var(--iv-text-sm);
+}
+
+.iv-diff-view__path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--iv-font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv-diff-view__counts {
+  flex: none;
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-diff-view__added {
+  color: var(--iv-git-added);
+}
+
+.iv-diff-view__deleted {
+  color: var(--iv-git-deleted);
+}
+
+.iv-diff-view__message {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--iv-space-3);
+  padding: var(--iv-space-6);
+  text-align: center;
+}

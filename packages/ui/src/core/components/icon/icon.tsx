@@ -25,6 +25,7 @@ import {
   FolderOpen,
   Gear,
   GitBranch,
+  GitDiff,
   GitFork,
   MagnifyingGlass,
   NotePencil,
@@ -94,6 +95,7 @@ const icons = {
   eye: Eye,
   "eye-slash": EyeSlash,
   clock: Clock,
+  diff: GitDiff,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {

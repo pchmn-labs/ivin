@@ -10,6 +10,9 @@ import type { ShellCommandNotOurs, ShellFoldersRefused, ShellInstall } from "@iv
 import {
   FileChangedOnDisk,
   FileNotRead,
+  GitFailed,
+  type ChangeList,
+  type FileDiff,
   FileNotWritten,
   FolderNotListed,
   type FileContent,
@@ -113,6 +116,11 @@ export interface FakeServer {
   readonly listedFolders: ReadonlyArray<string>
   // What `file.gitStatus` returns, by working folder.
   readonly gitStatus: Map<string, ReadonlyArray<GitStatusEntry>>
+  // What `file.listChanges` returns, by working folder; a `gitMessage` makes it fail as git would.
+  // None listed when missing here.
+  readonly changes: Map<string, ChangeList | { readonly gitMessage: string }>
+  // What `file.readDiff` returns, by absolute path; `unchanged` when missing here.
+  readonly diffs: Map<string, FileDiff>
   // `file.listFiles` lists the files of `folders` that git does not ignore; this many times so far.
   readonly fileListings: () => number
   // Streams paths changed on disk to `file.watch` for that working folder; change `folders` first.
@@ -228,6 +236,8 @@ export const makeFakeServer = (
   const errorReports: Array<ErrorReport> = []
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
   const gitStatus = new Map<string, ReadonlyArray<GitStatusEntry>>()
+  const changes = new Map<string, ChangeList | { readonly gitMessage: string }>()
+  const diffs = new Map<string, FileDiff>()
   let fileListings = 0
   const diskChanges = Effect.runSync(
     PubSub.unbounded<{ readonly workingFolder: string; readonly change: FolderChange }>(),
@@ -813,6 +823,23 @@ export const makeFakeServer = (
         if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
         return Effect.succeed(gitStatus.get(session.workingFolder) ?? [])
       }),
+    "file.listChanges": ({ sessionId }: { sessionId: string }) =>
+      Effect.suspend((): Effect.Effect<ChangeList, SessionNotFound | GitFailed> => {
+        const session = sessions.get(sessionId)
+        if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
+        const listed = changes.get(session.workingFolder) ?? { kind: "listed", changes: [] }
+        return "gitMessage" in listed
+          ? Effect.fail(new GitFailed({ sessionId, gitMessage: listed.gitMessage }))
+          : Effect.succeed(listed)
+      }),
+    "file.readDiff": ({ sessionId, path }: { sessionId: string; path: string }) =>
+      Effect.suspend((): Effect.Effect<FileDiff, SessionNotFound> => {
+        const session = sessions.get(sessionId)
+        if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
+        return Effect.succeed(
+          diffs.get(`${session.workingFolder}/${path}`) ?? { kind: "unchanged" },
+        )
+      }),
     "file.watch": ({ sessionId }: { sessionId: string }) =>
       Stream.unwrap(
         Effect.suspend(() => {
@@ -1139,6 +1166,8 @@ export const makeFakeServer = (
     folders,
     listedFolders,
     gitStatus,
+    changes,
+    diffs,
     fileListings: () => fileListings,
     changeOnDisk: (workingFolder, paths) =>
       Effect.runSync(PubSub.publish(diskChanges, { workingFolder, change: { paths } })),

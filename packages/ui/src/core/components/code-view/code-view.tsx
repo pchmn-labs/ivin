@@ -19,6 +19,7 @@ import {
   lineNumbers,
 } from "@codemirror/view"
 import { useEffect, useRef } from "react"
+import { type DiffLayout, diffExtensions } from "./diff.ts"
 import { highlightStyle } from "./highlight-style.ts"
 import { languageNameOf } from "./language-name.ts"
 import { loadLanguage } from "./languages.ts"
@@ -96,8 +97,13 @@ export interface CodeViewProps {
   // Makes the text editable, and receives it after each edit.
   readonly onChange?: (text: string) => void
   readonly extensions?: Extension
+  // Shows `text` as a diff: each side's line numbers, the added and deleted lines, the hunks.
+  readonly diff?: DiffLayout
   readonly "data-testid"?: string
 }
+
+const gutterOf = (diff: DiffLayout | undefined): Extension =>
+  diff === undefined ? [lineNumbers(), highlightActiveLineGutter()] : diffExtensions(diff)
 
 export function CodeView({
   text,
@@ -107,6 +113,7 @@ export function CodeView({
   shownLines,
   onChange,
   extensions = noExtensions,
+  diff,
   "data-testid": testId,
 }: CodeViewProps) {
   const host = useRef<HTMLDivElement>(null)
@@ -114,6 +121,8 @@ export function CodeView({
   const language = useRef(new Compartment())
   const wrapping = useRef(new Compartment())
   const added = useRef(new Compartment())
+  const gutters = useRef(new Compartment())
+  const shownDiff = useRef(diff)
   const lineBreak = useRef(lineBreakOf(text))
   const latestOnScroll = useRef(onScroll)
   const latestOnChange = useRef(onChange)
@@ -129,8 +138,7 @@ export function CodeView({
       state: EditorState.create({
         doc: text,
         extensions: [
-          lineNumbers(),
-          highlightActiveLineGutter(),
+          gutters.current.of(gutterOf(diff)),
           highlightSpecialChars(),
           drawSelection(),
           highlightActiveLine(),
@@ -168,14 +176,20 @@ export function CodeView({
     const editor = view.current!
     lineBreak.current = lineBreakOf(text)
     const current = textOf(editor.state, lineBreak.current)
+    // A diff's decorations are built for its text, so both change in one transaction.
+    const newDiff = diff !== shownDiff.current
+    shownDiff.current = diff
     // An edit the view reported comes back as `text`; only another text replaces the document.
-    if (current !== text) {
+    if (current !== text || newDiff) {
       editor.dispatch({
-        changes: { from: 0, to: editor.state.doc.length, insert: text },
+        ...(current !== text && {
+          changes: { from: 0, to: editor.state.doc.length, insert: text },
+        }),
+        ...(newDiff && { effects: gutters.current.reconfigure(gutterOf(diff)) }),
         annotations: [replacedText.of(true), Transaction.addToHistory.of(false)],
       })
     }
-  }, [text])
+  }, [text, diff])
 
   useEffect(() => {
     view.current!.dispatch({ effects: added.current.reconfigure(extensions) })

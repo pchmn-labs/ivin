@@ -48,6 +48,9 @@ const mountSection = async (
     useFolderChanges: () => undefined,
     useGitStatus: () => [],
     useFileOnScreen: () => null,
+    useChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
+    useOpenDiff: () => async () => undefined,
+    useDiffOnScreen: () => null,
     useSessionActions: (session) => ({
       items: [{ label: "Archive", onSelect: () => void archived.push(session.id) }],
       failure: session.title === "Failed" ? "The session was not archived." : null,

@@ -8,16 +8,30 @@ import type {
   IssueAnnotationData,
   PrAnnotationData,
 } from "@ivin/contracts/annotation"
-import type { FolderEntry, GitFileStatus, GitStatusEntry } from "@ivin/contracts/file"
+import type {
+  Change,
+  ChangeStatus,
+  FolderEntry,
+  GitFileStatus,
+  GitStatusEntry,
+} from "@ivin/contracts/file"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Tab } from "@ivin/contracts/tab"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
-import type { ActionFailure, FileListing, FolderListing, UiHost } from "./host-context.ts"
+import type {
+  ActionFailure,
+  ChangeListing,
+  FileListing,
+  FolderListing,
+  UiHost,
+} from "./host-context.ts"
 
 export type {
   Annotation,
+  Change,
+  ChangeStatus,
   EditorExtension,
   AnnotationTarget,
   FolderEntry,
@@ -78,6 +92,8 @@ export interface SlotOptions {
   readonly tool?: string
   // The tab's name, for a `sidebar.panel` contribution.
   readonly title?: string
+  // Shown after a `sidebar.panel` tab's name, such as a count; it renders nothing to show none.
+  readonly badge?: ComponentType
 }
 
 export interface CommandOptions {
@@ -123,7 +139,7 @@ export type UiPlugin = (ctx: UiContext) => void
 
 export const defineUi = (activate: UiPlugin): UiPlugin => activate
 
-export type { ActionFailure, FileListing, FolderListing, UiHost }
+export type { ActionFailure, ChangeListing, FileListing, FolderListing, UiHost }
 export * from "./components.ts"
 
 export const UiHostProvider = ({ host, children }: { host: UiHost; children?: ReactNode }) =>
@@ -149,5 +165,8 @@ export const useFolderChanges = (
 ) => useHost().useFolderChanges(sessionId, onChange)
 export const useGitStatus = (sessionId: string) => useHost().useGitStatus(sessionId)
 export const useFileOnScreen = (sessionId: string) => useHost().useFileOnScreen(sessionId)
+export const useChanges = (sessionId: string) => useHost().useChanges(sessionId)
+export const useOpenDiff = () => useHost().useOpenDiff()
+export const useDiffOnScreen = (sessionId: string) => useHost().useDiffOnScreen(sessionId)
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"
