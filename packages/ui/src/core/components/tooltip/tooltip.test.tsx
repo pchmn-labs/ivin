@@ -3,7 +3,9 @@ import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { Tooltip } from "./tooltip.tsx"
 
-const longText = Array.from({ length: 10 }, (_, i) => `line ${i + 1} ${"word ".repeat(20)}`).join("\n")
+const longText = Array.from({ length: 10 }, (_, i) => `line ${i + 1} ${"word ".repeat(20)}`).join(
+  "\n",
+)
 
 async function shownLines(mono: boolean) {
   await render(
