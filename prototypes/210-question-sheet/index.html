@@ -89,6 +89,9 @@ code { font-family: var(--iv-font-mono); font-size: var(--iv-text-mono); padding
 .step-in { animation: step-in var(--iv-duration-fast) var(--iv-ease-out) both; }
 .num { display: inline-grid; place-items: center; flex: none; width: 18px; height: 18px; border-radius: var(--iv-radius-sm); background: var(--iv-bg-hover); color: var(--iv-text-muted); font-size: var(--iv-text-xs); font-weight: var(--iv-weight-medium); }
 .iv-option-list__option[data-picked] .num { background: var(--iv-accent); color: var(--iv-accent-contrast); }
+.check { display: grid; place-items: center; flex: none; width: 16px; height: 16px; margin: 1px; border: 1.5px solid var(--iv-text-faint); border-radius: 4px; color: var(--iv-accent-contrast); }
+.iv-option-list__option[data-picked] .check { border-color: var(--iv-accent); background: var(--iv-accent); }
+.step-sub { margin: -6px 0 var(--iv-space-2) var(--iv-space-1); color: var(--iv-text-faint); font-size: var(--iv-text-xs); }
 .opt-label { flex: none; font-weight: var(--iv-weight-medium); }
 .opt-desc { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--iv-text-muted); font-size: var(--iv-text-sm); }
 
@@ -250,17 +253,24 @@ function stepper() {
     const body = r === OTHER(q) && (S.editing || a.other)
       ? `<span class="opt-label">Other</span>${S.editing && S.row === r ? `<input class="other-input" id="other" placeholder="Your answer" value="${esc(a.other)}">` : `<span class="opt-desc">${esc(a.other)}</span>`}`
       : `<span class="opt-label">${esc(l)}</span><span class="opt-desc">${esc(d || (r === OTHER(q) ? "Type your own answer" : ""))}</span>`
-    return `<div class="iv-option-list__option" role="${q.multi ? "checkbox" : "radio"}" aria-checked="${picked}" data-row="${r}" ${S.row === r ? "data-cursor" : ""} ${picked ? "data-picked" : ""}><span class="num kbd">${picked && q.multi ? CHECK : r + 1}</span>${body}</div>`
+    const lead = q.multi ? `<span class="check">${picked ? CHECK : ""}</span>` : `<span class="num kbd">${r + 1}</span>`
+    const tail = q.multi ? `<span class="iv-option-list__hint kbd">${r + 1}</span>` : ""
+    return `<div class="iv-option-list__option" role="${q.multi ? "checkbox" : "radio"}" aria-checked="${picked}" data-row="${r}" ${S.row === r ? "data-cursor" : ""} ${picked ? "data-picked" : ""}>${lead}${body}${tail}</div>`
   }).join("")
   const last = S.step === QUESTIONS.length - 1
-  const hint = q.multi ? `↑↓ to move, Space to tick, Enter to ${last ? "send" : "go on"}, Esc to decline` : `↑↓ or 1–${rows.length} to choose, Enter to ${last ? "send" : "go on"}, ←→ between questions, Esc to decline`
+  const hint = q.multi ? `↑↓ to move, Space or 1–${rows.length} to tick, Enter to ${last ? "send" : "go on"}, Esc to decline` : `↑↓ or 1–${rows.length} to choose, Enter to ${last ? "send" : "go on"}, ←→ between questions, Esc to decline`
+  const ticked = choicesOf(S.step).length
+  const foot = q.multi
+    ? `<div class="sheet-foot"><p class="iv-action-sheet__hint">${hint}</p><span class="faint kbd" style="font-size:var(--iv-text-xs)">${ticked ? `${ticked} chosen` : ""}</span><button class="iv-button" data-variant="primary" data-act="continue" ${ticked ? "" : "disabled"}>${last ? "Send" : "Continue"}</button></div>`
+    : `<p class="iv-action-sheet__hint">${hint}</p>`
   return `<div class="iv-action-sheet" data-testid="question-sheet">
     <div class="iv-action-sheet__head"><span class="iv-action-sheet__title">The agent asks</span><span class="faint kbd" style="font-weight:400;font-size:var(--iv-text-xs)">${S.step + 1} of ${QUESTIONS.length}</span><span class="steps">${tabs}</span></div>
     <div class="${S.stepAnim ? "step-in" : ""}">
-      <div class="step-question">${esc(q.question)}${q.multi ? ' <span class="faint" style="font-size:var(--iv-text-xs)">Several answers</span>' : ""}</div>
+      <div class="step-question">${esc(q.question)}</div>
+      ${q.multi ? '<div class="step-sub">Choose one or more</div>' : ""}
       <div class="iv-option-list" role="${q.multi ? "group" : "radiogroup"}">${opts}</div>
     </div>
-    <p class="iv-action-sheet__hint">${hint}</p></div>`
+    ${foot}</div>`
 }
 function stepperKey(e) {
   const q = QUESTIONS[S.step], n = q.options.length + 1
@@ -406,6 +416,7 @@ document.addEventListener("keydown", (e) => {
 document.getElementById("above").addEventListener("click", (e) => {
   const act = e.target.closest("[data-act]")?.dataset.act
   if (act === "send") return submit()
+  if (act === "continue") { stepperKey({ key: "Enter" }); return render() }
   if (act === "decline") return decline()
   const tab = e.target.closest("[data-tab]")
   if (tab) { S.step = +tab.dataset.tab; S.row = 0; S.stepAnim = true; S.editing = false; return render() }
