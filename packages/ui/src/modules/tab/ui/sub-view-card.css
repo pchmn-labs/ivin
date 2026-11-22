@@ -83,7 +83,8 @@
 }
 
 .iv-sub-view-card__tab--session {
-  padding-right: var(--iv-space-3);
+  /* The harness mark draws about 1px inside its box, so its ink sits 12px from the edge. */
+  padding: 0 var(--iv-space-3) 0 calc(var(--iv-space-3) - 1px);
 }
 
 .iv-sub-view-card__tab:focus-visible,
