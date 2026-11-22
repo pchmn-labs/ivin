@@ -14,6 +14,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     slots: { add: (_slot, component) => void (Message = component as typeof Message) },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    editorExtensions: { add: () => undefined },
     sidebar: { showPanel: () => undefined },
   }
   activate(ctx)

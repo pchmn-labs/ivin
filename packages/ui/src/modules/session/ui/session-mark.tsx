@@ -11,14 +11,11 @@ export function SessionMark({ status, harness }: SessionMarkProps) {
       <span className="iv-session-mark__overlay" aria-hidden="true">
         {status === "waiting" && (
           <svg viewBox="0 0 12 12">
-            <circle cx="6" cy="6" r="6" fill="currentColor" />
             <path
-              d="M6 3.1v3.6"
-              className="iv-session-mark__glyph"
-              strokeWidth="1.6"
-              strokeLinecap="round"
+              fillRule="evenodd"
+              fill="currentColor"
+              d="M0 6a6 6 0 1 0 12 0a6 6 0 1 0-12 0ZM5.2 3.1a.8.8 0 0 1 1.6 0v3.6a.8.8 0 0 1-1.6 0ZM5.05 8.9a.95.95 0 1 0 1.9 0a.95.95 0 1 0-1.9 0Z"
             />
-            <circle cx="6" cy="8.9" r=".95" className="iv-session-mark__glyph-fill" />
           </svg>
         )}
       </span>

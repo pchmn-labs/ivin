@@ -1,9 +1,12 @@
-import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useState, type DragEvent, type KeyboardEvent } from "react"
+import { RegistryContext, useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { Exit } from "effect"
+import { useContext, useState, type DragEvent, type KeyboardEvent } from "react"
 import { Button } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { ContextMenu } from "../../../core/components/menu/menu.tsx"
+import { discardSessionEditsAtom, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
+import { fileName } from "../../file/rules/file-name.ts"
 import { settingsAtom } from "../../setting/atoms/settings.ts"
 import { isRunning } from "../../session/rules/is-running.ts"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
@@ -42,16 +45,42 @@ function TabItem({
 }) {
   const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
   const openTab = useAtomSet(openTabAtom)
-  const closeTab = useAtomSet(closeTabAtom)
+  const closeTab = useAtomSet(closeTabAtom, { mode: "promiseExit" })
   const { tabs: settings } = useAtomValue(settingsAtom)
   const [confirming, setConfirming] = useState(false)
+  // Read when the user closes, kept while the prompt fades out.
+  const [unsaved, setUnsaved] = useState<ReadonlyArray<string>>([])
+  const discardEdits = useAtomSet(discardSessionEditsAtom)
+  const registry = useContext(RegistryContext)
   const actions = useSessionActions(session)
   if (!session) return null
 
+  const stopsAgent = settings.stopAgentOnClose && isRunning(session.status)
   const requestClose = () => {
-    if (settings.stopAgentOnClose && isRunning(session.status)) setConfirming(true)
-    else closeTab({ sessionId })
+    const paths = registry.get(unsavedPathsOf(sessionId, session.workingFolder))
+    setUnsaved(paths)
+    if (stopsAgent || paths.length > 0) setConfirming(true)
+    else void closeTab({ sessionId })
   }
+  const unsavedNames = unsaved.map(fileName)
+  const unsavedText =
+    unsavedNames.length === 1
+      ? `${unsavedNames[0]} has unsaved edits, which are lost.`
+      : `${unsavedNames.length} files have unsaved edits, which are lost: ${unsavedNames.join(", ")}.`
+  const prompt =
+    unsaved.length === 0
+      ? {
+          title: "Close the tab and stop its agent?",
+          description: `The agent of “${session.title}” is still running. The session stays under Inactive sessions.`,
+          confirm: "Stop and close",
+        }
+      : {
+          title: `Close “${session.title}” without saving its files?`,
+          description: stopsAgent
+            ? `${unsavedText} Its agent is still running and stops too.`
+            : unsavedText,
+          confirm: "Close without saving",
+        }
 
   const placementAt = (event: DragEvent<HTMLDivElement>): Placement => {
     const box = event.currentTarget.getBoundingClientRect()
@@ -118,8 +147,8 @@ function TabItem({
       <Dialog
         open={confirming}
         onOpenChange={setConfirming}
-        title="Close the tab and stop its agent?"
-        description={`The agent of “${session.title}” is still running. The session stays under Inactive sessions.`}
+        title={prompt.title}
+        description={prompt.description}
         actions={
           <>
             <Button variant="secondary" onClick={() => setConfirming(false)}>
@@ -129,10 +158,12 @@ function TabItem({
               variant="danger"
               onClick={() => {
                 setConfirming(false)
-                closeTab({ sessionId })
+                void closeTab({ sessionId }).then(
+                  (exit) => Exit.isSuccess(exit) && discardEdits(sessionId),
+                )
               }}
             >
-              Stop and close
+              {prompt.confirm}
             </Button>
           </>
         }

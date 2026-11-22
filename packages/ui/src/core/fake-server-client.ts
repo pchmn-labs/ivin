@@ -8,7 +8,9 @@ import {
 } from "@ivin/contracts/annotation"
 import type { ShellCommandNotOurs, ShellFoldersRefused, ShellInstall } from "@ivin/contracts/cli"
 import {
+  FileChangedOnDisk,
   FileNotRead,
+  FileNotWritten,
   FolderNotListed,
   type FileContent,
   type FileList,
@@ -113,8 +115,11 @@ export interface FakeServer {
   readonly fileListings: () => number
   // Streams paths changed on disk to `file.watch` for that working folder; change `folders` first.
   readonly changeOnDisk: (workingFolder: string, paths: ReadonlyArray<string>) => void
-  // What `file.readFile` reads, by absolute path; a path missing here has no file.
-  readonly files: Map<string, FileContent | "unreadable">
+  // What `file.readFile` reads, by absolute path; a path missing here has no file. A text's
+  // version is the text itself.
+  readonly files: Map<string, FakeFile>
+  // Makes the writes of `file.writeFile` fail as a file that cannot be written.
+  unwritable: boolean
   // Makes the next file.readFile wait until `release` is called.
   readonly holdNextRead: () => { readonly release: () => void }
   // Each session's sub-views, as `tab.listSubViews` returns them.
@@ -123,6 +128,11 @@ export interface FakeServer {
   readonly setUserSettings: (state: UserSettings) => void
   readonly shell: FakeShell
 }
+
+export type FakeFile =
+  | { readonly kind: "text"; readonly text: string }
+  | Exclude<FileContent, { kind: "text" }>
+  | "unreadable"
 
 export interface FakeShell {
   // What `cli.getShellInstall` returns.
@@ -229,7 +239,7 @@ export const makeFakeServer = (
           : filesUnder(`${folder}/${entry.name}`, `${prefix}${entry.name}/`),
       )
   const listedFolders: Array<string> = []
-  const files = new Map<string, FileContent | "unreadable">()
+  const files = new Map<string, FakeFile>()
   let holdRead: Promise<void> | null = null
   const subViews = new Map<string, TabSubViews>()
   const subViewsOf = (sessionId: string): TabSubViews =>
@@ -771,9 +781,38 @@ export const makeFakeServer = (
               return Effect.fail(new FileNotRead({ sessionId, path, reason: "missing" }))
             if (file === "unreadable")
               return Effect.fail(new FileNotRead({ sessionId, path, reason: "unreadable" }))
-            return Effect.succeed(file)
+            return Effect.succeed(file.kind === "text" ? { ...file, version: file.text } : file)
           },
         ),
+      ),
+    "file.writeFile": ({
+      sessionId,
+      path,
+      text,
+      expectedVersion,
+    }: {
+      sessionId: string
+      path: string
+      text: string
+      expectedVersion: string | null
+    }) =>
+      Effect.suspend(
+        (): Effect.Effect<
+          { version: string },
+          SessionNotFound | FileChangedOnDisk | FileNotWritten
+        > => {
+          const session = sessions.get(sessionId)
+          if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
+          const at = `${session.workingFolder}/${path}`
+          const file = files.get(at)
+          const onDisk = file !== undefined && file !== "unreadable" && file.kind === "text"
+          if (expectedVersion !== null && (!onDisk || file.text !== expectedVersion))
+            return Effect.fail(new FileChangedOnDisk({ sessionId, path }))
+          if (fake.unwritable)
+            return Effect.fail(new FileNotWritten({ sessionId, path, reason: "unwritable" }))
+          files.set(at, { kind: "text", text })
+          return Effect.succeed({ version: text })
+        },
       ),
     "tab.listSubViews": ({ sessionId }: { sessionId: string }) =>
       withSession(sessionId, () => subViewsOf(sessionId)),
@@ -988,7 +1027,7 @@ export const makeFakeServer = (
     ]),
   )
 
-  return {
+  const fake: FakeServer = {
     layer: Layer.succeed(ServerClient)(failingClient as unknown as ServerClient["Service"]),
     sessions,
     errorReports,
@@ -1046,6 +1085,7 @@ export const makeFakeServer = (
     changeOnDisk: (workingFolder, paths) =>
       Effect.runSync(PubSub.publish(diskChanges, { workingFolder, change: { paths } })),
     files,
+    unwritable: false,
     holdNextRead: () => {
       let release!: () => void
       holdRead = new Promise<void>((resolve) => (release = resolve))
@@ -1053,4 +1093,5 @@ export const makeFakeServer = (
     },
     subViews,
   }
+  return fake
 }

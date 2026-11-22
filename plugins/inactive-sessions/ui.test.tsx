@@ -23,6 +23,7 @@ const mountSection = async (
     },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    editorExtensions: { add: () => undefined },
     sidebar: { showPanel: () => undefined },
   }
   activate(ctx)

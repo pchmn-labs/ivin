@@ -1,4 +1,10 @@
-import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
+import {
+  RegistryContext,
+  useAtom,
+  useAtomMount,
+  useAtomSet,
+  useAtomValue,
+} from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { useCallback, useContext, useEffect, useRef } from "react"
 import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
@@ -13,6 +19,7 @@ import { archivedViewOpenAtom } from "../modules/session/atoms/archived-view.ts"
 import { SessionActionDialog } from "../modules/session/ui/session-action-dialog.tsx"
 import { StartSessionError } from "../modules/session/ui/start-session-error.tsx"
 import { TabView } from "../modules/tab/ui/tab-view.tsx"
+import { tabTranscriptsAtom } from "../modules/transcript/atoms/tab-transcripts.ts"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
 import { MainTopBar } from "./main-top-bar.tsx"
@@ -48,6 +55,7 @@ export function App() {
 
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [setSidebarOpen])
   useRecordSessionVisits()
+  useAtomMount(tabTranscriptsAtom)
   useReportUncaughtErrors()
   useCommandHandler("sidebar.toggle", toggleSidebar, projectPath !== null)
   const setArchivedOpen = useAtomSet(archivedViewOpenAtom)

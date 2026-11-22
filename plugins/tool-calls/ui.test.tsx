@@ -14,6 +14,7 @@ const mount = async (item: ToolCallItem) => {
     slots: { add: (_slot, component) => void (ToolCall = component as typeof ToolCall) },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    editorExtensions: { add: () => undefined },
     sidebar: { showPanel: () => undefined },
   }
   activate(ctx)

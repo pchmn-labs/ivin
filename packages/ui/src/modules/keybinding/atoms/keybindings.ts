@@ -18,6 +18,7 @@ export const coreKeybindings: ReadonlyArray<DefaultKeybinding> = [
   { key: "mod+backspace", command: "session.delete", when: "archivedSessions", pluginId: null },
   // Not mod+w: Electron's default menu closes the window on it.
   { key: "mod+shift+w", command: "tab.closeFile", when: null, pluginId: null },
+  { key: "mod+s", command: "file.save", when: null, pluginId: null },
   { key: "mod+shift+enter", command: "tab.toggleFullWidth", when: null, pluginId: null },
   { key: "mod+alt+arrowright", command: "tab.nextCardTab", when: null, pluginId: null },
   { key: "mod+alt+arrowleft", command: "tab.previousCardTab", when: null, pluginId: null },

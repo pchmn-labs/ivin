@@ -34,6 +34,7 @@ const mountStatus = async (items: ReadonlyArray<TranscriptItem>) => {
     },
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
+    editorExtensions: { add: () => undefined },
     sidebar: { showPanel: () => undefined },
   }
   activate(ctx)

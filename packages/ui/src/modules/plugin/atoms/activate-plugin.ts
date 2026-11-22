@@ -3,7 +3,7 @@ import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
 import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
 import { addCommandHandler } from "../../command/atoms/run-command.ts"
 import { defaultKeybindingsAtom } from "../../keybinding/atoms/keybindings.ts"
-import { contributionsAtom } from "./contributions.ts"
+import { contributionsAtom, editorContributionsAtom } from "./contributions.ts"
 
 export interface UiPluginEntry {
   readonly manifest: { readonly id: string }
@@ -28,6 +28,7 @@ export const activatePlugin = (
     removeFrom(commandsAtom)
     removeFrom(commandHandlersAtom)
     removeFrom(defaultKeybindingsAtom)
+    removeFrom(editorContributionsAtom)
   }
 
   const ctx: UiContext = {
@@ -65,6 +66,13 @@ export const activatePlugin = (
         registry.set(defaultKeybindingsAtom, [
           ...registry.get(defaultKeybindingsAtom),
           { key, command, when: when ?? null, pluginId },
+        ]),
+    },
+    editorExtensions: {
+      add: (extension) =>
+        registry.set(editorContributionsAtom, [
+          ...registry.get(editorContributionsAtom),
+          { pluginId, extension },
         ]),
     },
     sidebar: {
