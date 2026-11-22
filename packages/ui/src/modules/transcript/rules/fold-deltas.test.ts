@@ -27,6 +27,7 @@ test("deltas for an unknown item create it at the delta's position", () => {
       role: "assistant",
       text: "Hello",
       images: [],
+      steer: false,
     },
   ])
 })

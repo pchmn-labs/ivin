@@ -93,6 +93,12 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     )
   }, [relaunchFailureKey])
 
+  const unreadText = (session?.unreadMessages ?? []).map((message) => message.text).join("\n\n")
+  useEffect(() => {
+    if (unreadText === "") return
+    setDraft((current) => (current.text === "" ? { ...current, text: unreadText } : current))
+  }, [unreadText])
+
   const changeRunOptions = (options: Partial<RunOptions>) => {
     setOptionsFailure(null)
     void setRunOptions({ projectPath, sessionId, options }).then((exit) => {

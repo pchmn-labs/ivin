@@ -227,3 +227,52 @@ test("a last turn cut by paging has no message", () => {
   expect(lastTurnMessageId(transcriptRows([text("t1"), call("c1"), text("a1")]))).toBeUndefined()
   expect(lastTurnMessageId(transcriptRows([text("a1")]))).toBeUndefined()
 })
+
+const steer = (id: string): TranscriptItem => ({ ...user(id), steer: true }) as TranscriptItem
+
+test("a steer stays in the running turn's work, and only a message that starts a turn opens a new one", () => {
+  const rows = transcriptRows([
+    user("u1"),
+    call("c1"),
+    steer("s1"),
+    steer("s2"),
+    text("answer"),
+    user("u2"),
+  ])
+
+  expect(rows).toEqual([
+    { type: "item", id: "u1" },
+    {
+      type: "work",
+      id: "work:u1",
+      itemIds: ["c1", "s1", "s2"],
+      turnIds: ["u1", "c1", "s1", "s2", "answer"],
+    },
+    { type: "item", id: "answer" },
+    { type: "item", id: "u2" },
+    { type: "work", id: "work:u2", itemIds: [], turnIds: ["u2"] },
+  ])
+  expect(lastTurnMessageId(rows.slice(0, 3))).toBe("u1")
+})
+
+test("a steer opens a step, and the sentence the agent writes next heads that step", () => {
+  const items = [user("u"), call("c0"), steer("s1"), text("t1"), call("c1"), steer("s2")]
+  const work = turnWork("w", items.slice(1), items)
+
+  expect(
+    work.steps.map((step) => [step.id, step.steer?.id ?? null, step.sentence?.id ?? null]),
+  ).toEqual([
+    ["w:start", null, null],
+    ["s1", "s1", "t1"],
+    ["s2", "s2", null],
+  ])
+  expect(work.calls).toBe(2)
+})
+
+test("a turn whose steers come after its last call still times every item", () => {
+  const items = [user("u"), call("c"), steer("s"), text("a")]
+  const work = turnWork("w", items.slice(1, 3), items)
+
+  expect(work.endAt - work.startAt).toBe(3000)
+  expect(work.outcome).toBe("answered")
+})

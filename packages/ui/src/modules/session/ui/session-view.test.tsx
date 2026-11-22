@@ -934,3 +934,18 @@ test("a model change the server did not take goes back, says so above the compos
   await vi.waitFor(() => expect(server.sessions.get("s1")?.model).toBe("opus"))
   await expect.element(alert).not.toBeInTheDocument()
 })
+
+test("stopping the agent before it read the messages sent while it worked puts them back in the empty composer", async () => {
+  const server = await mountSession("working")
+  await page.getByRole("textbox").fill("also check the logs")
+  await userEvent.keyboard("{Enter}")
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toHaveLength(1))
+  await page.getByRole("textbox").fill("and the config")
+  await userEvent.keyboard("{Enter}")
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toHaveLength(2))
+  await vi.waitFor(() => expect(composerText()).toBe(""))
+
+  await page.getByRole("button", { name: "Interrupt" }).click()
+
+  await vi.waitFor(() => expect(composerText()).toBe("also check the logs\n\nand the config"))
+})
