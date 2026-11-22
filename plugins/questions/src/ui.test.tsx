@@ -1,3 +1,4 @@
+import { defaultSettings } from "../../../packages/contracts/src/setting.ts"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
@@ -31,6 +32,8 @@ const mount = async (
     commands: { register: () => undefined },
     keybindings: { add: () => undefined },
     editorExtensions: { add: () => undefined },
+    fileIcons: { add: () => undefined },
+    fileUrl: (path) => path,
     sidebar: { showPanel: () => undefined },
   }
   activate(ctx)
@@ -53,6 +56,10 @@ const mount = async (
     useFolderChanges: () => undefined,
     useGitStatus: () => [],
     useFileOnScreen: () => null,
+    useChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
+    useOpenDiff: () => async () => undefined,
+    useDiffOnScreen: () => null,
+    useSettings: () => defaultSettings,
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }
