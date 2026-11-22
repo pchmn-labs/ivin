@@ -101,10 +101,78 @@
   content: "";
   position: absolute;
   top: 20px;
-  bottom: -8px;
+  /* Stops 5px above the next ring: the 10px between steps, its 8px top, less 5px. */
+  bottom: -13px;
   left: 6.5px;
   width: 1px;
   background: var(--iv-border-strong);
+}
+
+/* The dots stand alone for the line from the turn line's icon to the next ring. */
+.iv-turn__timeline:has(> .iv-turn__earlier)::before {
+  display: none;
+}
+
+/* The padding puts the dots as far from the turn line's spinner as from the next ring. */
+.iv-turn__earlier {
+  position: relative;
+  padding: 5px 0 2px 22px;
+}
+
+.iv-turn__earlier::before {
+  content: "";
+  position: absolute;
+  /* Centred on the label, which the padding pushes 1.5px below the row's middle. */
+  top: calc(50% + 1.5px - 7.5px);
+  left: 6px;
+  width: 2px;
+  height: 15px;
+  background: radial-gradient(circle, var(--iv-text-faint) 0.9px, transparent 1.15px) 0 0 / 2px 5px
+    repeat-y;
+}
+
+.iv-turn__earlier + .iv-turn__step {
+  margin-top: 6px;
+}
+
+.iv-turn__earlier-line {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  width: 100%;
+  min-height: 22px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--iv-text-faint);
+  font: inherit;
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
+  text-align: left;
+  white-space: nowrap;
+  cursor: default;
+  user-select: none;
+}
+
+.iv-turn__earlier-line:hover {
+  color: var(--iv-text-muted);
+}
+
+.iv-turn__earlier-line .iv-turn__chevron {
+  display: inline-flex;
+  transition:
+    opacity var(--iv-duration-fast) ease-out,
+    rotate var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-turn__earlier-line:hover .iv-turn__chevron,
+.iv-turn__earlier-line:focus-visible .iv-turn__chevron,
+.iv-turn__earlier-line[aria-expanded="true"] .iv-turn__chevron {
+  opacity: 1;
+}
+
+.iv-turn__earlier-line[aria-expanded="true"] .iv-turn__chevron {
+  rotate: -90deg;
 }
 
 .iv-turn__sentence {
@@ -195,6 +263,15 @@
 .iv-turn__calls {
   margin-bottom: var(--iv-space-1);
   padding-left: 18px;
+}
+
+/* Five 28px call rows, and the 6px above them where the first branch starts. */
+.iv-turn__calls[data-scroll] {
+  max-height: calc(5 * 28px + 6px);
+  margin-top: -6px;
+  padding-top: 6px;
+  overflow-y: auto;
+  mask-image: linear-gradient(to bottom, transparent, var(--iv-bg) 14px);
 }
 
 .iv-turn__call {
