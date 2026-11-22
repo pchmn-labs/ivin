@@ -9,7 +9,7 @@ Design phase: there is no code to run yet. The design is in [docs/architecture.m
 ## What it will be
 
 - **Electron, React and TypeScript**, with a server process written with Effect.
-- **Everything is a plugin**, the built-in features included: a plugin is a folder with a `package.json`, a `server.ts` and a `ui.tsx`, compiled on load and reloaded on change.
+- **Everything is a plugin**, the built-in features included: a plugin is a folder with a `package.json`, and a `server.ts` and a `ui.tsx` under `src/`, compiled on load and reloaded on change.
 - **Files and a CLI first**: settings, themes and keybindings live in watched files, session annotations in the app's database, and every `ivin` command is something the UI can do too.
 - **A broken plugin does not take the app down**: plugins run in their own process, and a safe mode starts the app without them.
 

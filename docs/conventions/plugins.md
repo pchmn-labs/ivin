@@ -4,7 +4,7 @@ Reasons: [ADR-0001](../adr/0001-code-grouped-by-subject-and-layered-by-test.md).
 
 ```
 plugins/<id>/
-  package.json          the manifest under its `ivin` key; `peerDependencies["@ivin/plugin-api"]` is the API version
+  package.json          the manifest under its `ivin` key
   README.md             what it does, for the next agent that edits it
   src/
     server.ts           optional: the server half, activate(ctx)

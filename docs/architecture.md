@@ -244,7 +244,7 @@ interface HarnessRun {
 
 ```json
 {
-  "name": "@pchmn/ivin-plugin-prs",
+  "name": "ivin-plugin-prs",
   "version": "0.1.0",
   "peerDependencies": { "@ivin/plugin-api": "^0" },
   "ivin": {
@@ -383,7 +383,7 @@ Plugins declare no dependency on each other: that would bring load order, cascad
 
 ### API stability
 
-The plugin API version a plugin is built for is the range of `peerDependencies["@ivin/plugin-api"]` in its `package.json`. It stays at `^0` until the fork is replaced (milestone 4): the API breaks freely while fork features are ported, and built-in plugins are fixed in the same commit. `@ivin/plugin-api` 1.0.0 is published at the switch; from then on the host refuses a plugin built for a newer major and warns on an older one. Built-in plugins pin the current version, so any breaking change shows up in our own code first.
+The plugin API version a plugin is built for is the range of `peerDependencies["@ivin/plugin-api"]` in its `package.json`. It stays at `^0` until the fork is replaced (milestone 4): the API breaks freely while fork features are ported, and built-in plugins are fixed in the same commit. `@ivin/plugin-api` 1.0.0 is published at the switch; from then on the host refuses a plugin built for a newer major and warns on an older one. Built-in plugins declare the current major, so any breaking change shows up in our own code first.
 
 ## Agent-facing surface
 
