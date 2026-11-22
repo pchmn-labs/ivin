@@ -9,6 +9,7 @@
     "format:check": "vp fmt --check -c .oxfmtrc.json",
     "typecheck": "vp run --filter './apps/*' --filter './packages/*' typecheck && tsc --noEmit",
     "test": "vp test run",
+    "test:repeat-changed": "node tools/repeat-changed-tests/main.ts",
     "build": "vp run --filter './apps/*' --filter './packages/*' build",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "dev": "vp run --filter @ivin/server --filter @ivin/cli build && vp run --parallel --filter @ivin/ui --filter @ivin/desktop dev",
