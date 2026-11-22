@@ -6,6 +6,7 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
 import { layerFsSettingsFile } from "../modules/setting/adapters/fs-settings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { SkillInstallation } from "../modules/skill/usecases/skill-installation.ts"
@@ -49,7 +50,7 @@ export const tempSocketPath = () => join(mkdtempSync(join(tmpdir(), "ivin-")), "
 
 export interface CliServerOptions {
   readonly settings?: string | null
-  // A real folder for settings.json, watched as the app does; `settings` is then ignored.
+  // A real folder for settings.json, watched as the app does, and for plugins; `settings` is then ignored.
   readonly ivinHome?: string
   readonly keybindings?: string | null
   readonly version?: string
@@ -71,6 +72,7 @@ const layerCliServer = ({
         ivinHome === undefined ? layerSettingsFileOf([settings]) : layerFsSettingsFile(ivinHome),
         layerKeybindingsFileOf([keybindings]),
         Layer.succeed(SkillInstallation)(skill),
+        ivinHome === undefined ? Layer.empty : layerFsUserPlugins(ivinHome),
       ),
     ),
   )

@@ -23,6 +23,7 @@ import {
 } from "@ivin/contracts/file"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
+import type { UserPlugin } from "@ivin/contracts/plugin"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type {
   Harness,
@@ -66,6 +67,9 @@ export interface FakeServer {
   readonly layer: Layer.Layer<ServerClient>
   readonly sessions: Map<string, Session>
   readonly errorReports: Array<ErrorReport>
+  // What `plugin.list` answers: the user's plugins, compiled or failed.
+  readonly userPlugins: Array<UserPlugin>
+  readonly pluginFailures: Array<{ readonly id: string; readonly reason: string }>
   // Adds an item to a transcript as the server would, and streams it to watchers.
   readonly pushItem: (item: TranscriptItem) => void
   // Streams any change (a delta, say) to watchers without storing it.
@@ -239,6 +243,8 @@ export const makeFakeServer = (
   let holdReorder: { readonly wait: Promise<boolean> } | null = null
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
+  const userPlugins: Array<UserPlugin> = []
+  const pluginFailures: Array<{ readonly id: string; readonly reason: string }> = []
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
   const gitStatus = new Map<string, ReadonlyArray<GitStatusEntry>>()
   const changes = new Map<string, ChangeList | { readonly gitMessage: string }>()
@@ -403,6 +409,11 @@ export const makeFakeServer = (
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
     "server.getHarness": () => Effect.succeed({ id: harness, runOptions }),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
+    "plugin.list": () => Effect.sync(() => [...userPlugins]),
+    "plugin.reportFailure": (failure: { id: string; reason: string }) =>
+      Effect.sync(() => void pluginFailures.push(failure)),
+    "plugin.readLog": ({ id }: { id: string }) =>
+      Effect.sync(() => pluginFailures.filter((f) => f.id === id).map((f) => f.reason)),
     "keybinding.watch": () =>
       Stream.unwrap(
         Effect.map(PubSub.subscribe(keybindingChanges), (subscription) =>
@@ -1132,6 +1143,8 @@ export const makeFakeServer = (
     layer: Layer.succeed(ServerClient)(failingClient as unknown as ServerClient["Service"]),
     sessions,
     errorReports,
+    userPlugins,
+    pluginFailures,
     sentMessages,
     pickedFolders,
     worktrees,

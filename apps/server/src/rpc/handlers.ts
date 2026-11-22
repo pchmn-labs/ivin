@@ -23,6 +23,9 @@ import { readDiff } from "../modules/file/usecases/read-diff.ts"
 import { writeFile } from "../modules/file/usecases/write-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
+import { listPlugins } from "../modules/plugin/usecases/list-plugins.ts"
+import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
+import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
 import { layerSqliteProjectStore } from "../modules/project/adapters/sqlite-project-store.ts"
 import { closeProject } from "../modules/project/usecases/close-project.ts"
@@ -136,6 +139,9 @@ export const handlers = Rpcs.toLayer(
       "cli.installInShell": () => installInShell,
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
+      "plugin.list": () => listPlugins,
+      "plugin.reportFailure": ({ id, reason }) => reportPluginFailure(id, reason),
+      "plugin.readLog": ({ id }) => readPluginLog(id),
       "setting.watch": () => watchSettings,
       "setting.get": ({ path }) => getSetting(path),
       "setting.set": ({ path, value }) => setSetting(path, value),

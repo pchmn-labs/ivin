@@ -19,6 +19,7 @@ import { writeCliCommand } from "./cli-command.ts"
 import { linkTarget } from "./link-target.ts"
 import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
 import { PLUGIN_SCHEME, pluginFile } from "./plugin-protocol.ts"
+import { PLUGIN_BUNDLE_SCHEME, pluginBundleFile } from "./plugin-bundle-protocol.ts"
 
 const devUrl = process.env["IVIN_DEV_URL"]
 const openInBackground = process.env["IVIN_BACKGROUND"] === "1"
@@ -54,6 +55,11 @@ let server: UtilityProcess
 protocol.registerSchemesAsPrivileged([
   { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true } },
   { scheme: PLUGIN_SCHEME, privileges: { standard: true, secure: true } },
+  // A module script is fetched with CORS, from the window's own origin.
+  {
+    scheme: PLUGIN_BUNDLE_SCHEME,
+    privileges: { standard: true, secure: true, corsEnabled: true, supportFetchAPI: true },
+  },
 ])
 
 const openOutside = (url: string) => {
@@ -161,6 +167,16 @@ void app.whenReady().then(() => {
   protocol.handle(PLUGIN_SCHEME, async (request) => {
     const file = await pluginFile(pluginsFolder, request.url)
     return file ? net.fetch(pathToFileURL(file).toString()) : new Response(null, { status: 404 })
+  })
+  const bundleFolder = join(ivinHome, "cache", "plugins")
+  protocol.handle(PLUGIN_BUNDLE_SCHEME, async (request) => {
+    const file = pluginBundleFile(bundleFolder, request.url)
+    if (!file) return new Response(null, { status: 404 })
+    const response = await net.fetch(pathToFileURL(file).toString())
+    return new Response(response.body, {
+      status: response.status,
+      headers: { "content-type": "text/javascript", "access-control-allow-origin": "*" },
+    })
   })
   const cliFolder = join(app.getPath("userData"), "bin")
   const cliCommand = writeCliCommand(cliFolder, process.execPath, cliEntry)

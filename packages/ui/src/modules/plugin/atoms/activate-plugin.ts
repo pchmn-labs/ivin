@@ -19,6 +19,7 @@ export const activatePlugin = (
   registry: AtomRegistry.AtomRegistry,
   { manifest, activate }: UiPluginEntry,
   showSidebarPanel: (contributionId: string) => void,
+  onFailure?: (error: unknown) => void,
 ): (() => void) => {
   const pluginId = manifest.id
   const removeFrom = <T extends { readonly pluginId: string | null }>(
@@ -105,6 +106,7 @@ export const activatePlugin = (
   } catch (error) {
     console.error(`plugin ${pluginId} failed to activate`, error)
     removeOwn()
+    onFailure?.(error)
   }
   return removeOwn
 }
