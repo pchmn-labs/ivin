@@ -1,7 +1,16 @@
 import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { Cause, Effect, Exit } from "effect"
-import { AtomRegistry } from "effect/reactivity"
-import { useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { AsyncResult, AtomRegistry } from "effect/reactivity"
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react"
+import type { GitStatusEntry } from "@ivin/contracts/file"
 import { UiHostProvider, type UiHost } from "@ivin/plugin-api/ui"
 import { sessionAnnotationsOf } from "../modules/annotation/atoms/list-annotations.ts"
 import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
@@ -14,7 +23,11 @@ import { tabsOf } from "../modules/tab/atoms/list-tabs.ts"
 import { openTabAtom } from "../modules/tab/atoms/open-tab.ts"
 import { selectedSessionIdAtom } from "../modules/tab/atoms/selected-session-id.ts"
 import { folderKey, listFolderOf } from "../modules/file/atoms/list-folder.ts"
-import { folderListingFailure } from "../modules/file/rules/folder-listing.ts"
+import { gitStatusOf } from "../modules/file/atoms/git-status.ts"
+import { listFilesOf } from "../modules/file/atoms/list-files.ts"
+import { folderChangesOf } from "../modules/file/atoms/watch-folder.ts"
+import { fileListingFailure, folderListingFailure } from "../modules/file/rules/folder-listing.ts"
+import { subViewsOf } from "../modules/tab/atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../modules/tab/atoms/open-sub-view.ts"
 import { openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
@@ -24,6 +37,7 @@ import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/acti
 import { useKeyboardHandler } from "../modules/keybinding/hooks/use-keyboard-handler.ts"
 
 const NO_PROJECT = ""
+const NO_CHANGES: ReadonlyArray<GitStatusEntry> = []
 
 const useProjectPath = () => useAtomValue(selectedProjectAtom)?.path ?? NO_PROJECT
 
@@ -82,6 +96,43 @@ const host: UiHost = {
       })
       return Exit.isFailure(exit) ? openFileFailure(Cause.squash(exit.cause), path) : undefined
     }
+  },
+  useListFiles: () => {
+    const registry = useContext(RegistryContext)
+    return useCallback(
+      async (sessionId) => {
+        const atom = listFilesOf(sessionId)
+        registry.set(atom, { sessionId })
+        const exit = await Effect.runPromiseExit(
+          AtomRegistry.getResult(registry, atom, { suspendOnWaiting: true }),
+        )
+        return Exit.isSuccess(exit)
+          ? { kind: "listed", ...exit.value }
+          : fileListingFailure(Cause.squash(exit.cause))
+      },
+      [registry],
+    )
+  },
+  useFolderChanges: (sessionId, onChange) => {
+    const registry = useContext(RegistryContext)
+    const changed = useEffectEvent((paths: ReadonlyArray<string>) => onChange(paths))
+    useEffect(
+      () =>
+        registry.subscribe(folderChangesOf(sessionId), (result) => {
+          if (AsyncResult.isSuccess(result)) changed(result.value.paths)
+        }),
+      [registry, sessionId],
+    )
+  },
+  useGitStatus: (sessionId) => {
+    const result = useAtomValue(gitStatusOf(sessionId))
+    return AsyncResult.isSuccess(result) ? result.value : NO_CHANGES
+  },
+  useFileOnScreen: (sessionId) => {
+    const workingFolder =
+      useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.workingFolder ?? ""
+    const views = useAtomValue(subViewsOf(sessionId, workingFolder).value)
+    return views.sessionTabSelected ? null : (views.selected?.path ?? null)
   },
   components: hostComponents,
 }

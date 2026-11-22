@@ -12,7 +12,7 @@ const project = "/dev/shop"
 const readme = `${project}/README.md`
 
 const folder = (...names: string[]): ReadonlyArray<FolderEntry> =>
-  names.map((name) => ({ name, kind: "file" }))
+  names.map((name) => ({ name, kind: "file", ignored: false }))
 
 const makeServer = () => {
   const server = makeFakeServer({

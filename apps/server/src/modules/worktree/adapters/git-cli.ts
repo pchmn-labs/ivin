@@ -1,3 +1,4 @@
+import { parseGitStatus } from "../../file/rules/git-status.ts"
 import { Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
 import { realpathSync } from "node:fs"
@@ -130,4 +131,35 @@ export const layerGitCli = Layer.succeed(Git)({
           // check-ignore exits 1 when nothing is ignored, and 128 outside a repository.
           Effect.orElseSucceed(() => new Set<string>()),
         ),
+  statusOf: (folder) =>
+    Effect.gen(function* () {
+      const prefix = yield* git(folder, ["rev-parse", "--show-prefix"])
+      // No optional locks: a status that rewrote the index would fire the watcher that asked for it.
+      const output = yield* git(folder, [
+        "--no-optional-locks",
+        "status",
+        "--porcelain=v1",
+        "-z",
+        "--untracked-files=all",
+        "--",
+        ".",
+      ])
+      return parseGitStatus(output, prefix.trim())
+    }).pipe(Effect.orElseSucceed(() => [])),
+  gitDir: (folder) =>
+    orNull(git(folder, ["rev-parse", "--absolute-git-dir"])).pipe(
+      Effect.map((out) => out?.trim() || null),
+    ),
+  listFiles: (folder) =>
+    Effect.gen(function* () {
+      const listed = yield* git(folder, [
+        "ls-files",
+        "-z",
+        "--cached",
+        "--others",
+        "--exclude-standard",
+      ])
+      const deleted = new Set((yield* git(folder, ["ls-files", "-z", "--deleted"])).split("\0"))
+      return listed.split("\0").filter((path) => path !== "" && !deleted.has(path))
+    }).pipe(Effect.orElseSucceed(() => null)),
 })

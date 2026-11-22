@@ -1,5 +1,6 @@
 import { createElement } from "react"
 import type { ComponentType, ReactElement, ReactNode } from "react"
+import type { GitFileStatus } from "@ivin/contracts/file"
 import type { Session } from "@ivin/contracts/session"
 import type { ImageRef } from "@ivin/contracts/transcript"
 import { useHost } from "./host-context.ts"
@@ -45,6 +46,8 @@ export type IconName =
   | "brackets-curly"
   | "app-window"
   | "collapse-all"
+  | "eye"
+  | "eye-slash"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"
@@ -72,6 +75,7 @@ export interface IconButtonProps {
   readonly onClick?: () => void
   readonly disabled?: boolean
   readonly "aria-expanded"?: boolean
+  readonly "aria-pressed"?: boolean
   readonly "data-testid"?: string
 }
 
@@ -278,12 +282,17 @@ export interface MessageTextProps {
   readonly images: ReadonlyArray<ImageRef>
 }
 
+export type TreeRowStatus = GitFileStatus | "ignored"
+
 export interface TreeRow {
   readonly id: string
   readonly name: string
   readonly depth: number
   // Null for a row that holds nothing, such as a file.
   readonly expanded: boolean | null
+  readonly status?: TreeRowStatus
+  // The part of the name to highlight, as [start, end).
+  readonly match?: readonly [number, number]
 }
 
 // A virtualised tree with VS Code's explorer keys and selection; it shows the rows given, so opening a row is the
@@ -294,7 +303,44 @@ export interface TreeProps {
   readonly onToggle: (id: string) => void
   // A click, Enter or Space on a row that holds nothing.
   readonly onOpen?: (id: string) => void
+  // Selects this row and scrolls it into view each time it changes, once it is among the rows.
+  readonly revealId?: string | null
   readonly "data-testid"?: string
+}
+
+export interface SearchFieldProps {
+  readonly label: string
+  readonly value: string
+  readonly onChange: (value: string) => void
+  readonly placeholder?: string
+  // Escape empties a field that holds text; this runs on Escape in an empty one.
+  readonly onEscape?: () => void
+}
+
+export interface QuickPickItem {
+  readonly id: string
+  readonly label: string
+  // Positions of the label's characters to highlight.
+  readonly match?: ReadonlyArray<number>
+  // Faint mono text after the label, such as a folder.
+  readonly detail?: string
+  readonly status?: GitFileStatus
+}
+
+// A search field over a list of choices, in a popup at the top of the window; ↑ ↓ move, Enter picks, Escape closes.
+export interface QuickPickProps {
+  readonly open: boolean
+  readonly onOpenChange: (open: boolean) => void
+  readonly label: string
+  readonly placeholder: string
+  readonly query: string
+  readonly onQueryChange: (query: string) => void
+  readonly items: ReadonlyArray<QuickPickItem>
+  readonly onPick: (id: string) => void
+  // What shows in place of the list: no match, loading or a failure.
+  readonly message?: ReactNode
+  // Faint text at the right of the footer, such as a count.
+  readonly footer?: string
 }
 
 export interface HostComponents {
@@ -322,6 +368,8 @@ export interface HostComponents {
   readonly MessageImages: ComponentType<MessageImagesProps>
   readonly MessageText: ComponentType<MessageTextProps>
   readonly Tree: ComponentType<TreeProps>
+  readonly SearchField: ComponentType<SearchFieldProps>
+  readonly QuickPick: ComponentType<QuickPickProps>
 }
 
 const hostComponent =
@@ -353,3 +401,5 @@ export const MessageImages = hostComponent((c) => c.MessageImages)
 export const MessageText = hostComponent((c) => c.MessageText)
 export const ProjectMark = hostComponent((c) => c.ProjectMark)
 export const Tree = hostComponent((c) => c.Tree)
+export const SearchField = hostComponent((c) => c.SearchField)
+export const QuickPick = hostComponent((c) => c.QuickPick)

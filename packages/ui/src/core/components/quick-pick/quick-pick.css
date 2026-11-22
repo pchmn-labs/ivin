@@ -1,0 +1,145 @@
+.iv-quick-pick__backdrop {
+  position: fixed;
+  inset: 0;
+}
+
+.iv-quick-pick {
+  position: fixed;
+  top: var(--iv-space-10);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - var(--iv-space-8)));
+  overflow: hidden;
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+  box-shadow: var(--iv-shadow-overlay);
+  translate: -50% 0;
+  transform-origin: top center;
+  transition:
+    opacity var(--iv-duration-fast) var(--iv-ease-out),
+    scale var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-quick-pick[data-starting-style],
+.iv-quick-pick[data-ending-style] {
+  opacity: 0;
+  scale: 0.98;
+}
+
+.iv-quick-pick__field {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  height: var(--iv-space-10);
+  padding: 0 var(--iv-space-3);
+  border-bottom: 1px solid var(--iv-border);
+  color: var(--iv-text-faint);
+}
+
+.iv-quick-pick__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--iv-text);
+  font-size: var(--iv-text-lg);
+}
+
+.iv-quick-pick__input::placeholder {
+  color: var(--iv-text-faint);
+}
+
+.iv-quick-pick__list {
+  max-height: 320px;
+  padding: var(--iv-space-1);
+  overflow-y: auto;
+}
+
+.iv-quick-pick__option {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  height: var(--iv-control-md);
+  padding: 0 var(--iv-space-2);
+  border-radius: var(--iv-radius-sm);
+  color: var(--iv-text-faint);
+  white-space: nowrap;
+  cursor: default;
+}
+
+.iv-quick-pick__option[aria-selected="true"] {
+  background: var(--iv-bg-active);
+}
+
+.iv-quick-pick__label {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  color: var(--iv-text);
+  text-overflow: ellipsis;
+}
+
+.iv-quick-pick__match {
+  background: none;
+  color: var(--iv-accent);
+  font-weight: var(--iv-weight-semibold);
+}
+
+.iv-quick-pick__detail {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-sm);
+  text-overflow: ellipsis;
+}
+
+.iv-quick-pick__status {
+  flex: none;
+  margin-left: auto;
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+}
+
+.iv-quick-pick__option[data-status="modified"] .iv-quick-pick__status {
+  color: var(--iv-git-modified);
+}
+
+.iv-quick-pick__option[data-status="added"] .iv-quick-pick__status {
+  color: var(--iv-git-added);
+}
+
+.iv-quick-pick__option[data-status="untracked"] .iv-quick-pick__status {
+  color: var(--iv-git-untracked);
+}
+
+.iv-quick-pick__option[data-status="deleted"] .iv-quick-pick__status {
+  color: var(--iv-git-deleted);
+}
+
+.iv-quick-pick__option[data-status="conflicted"] .iv-quick-pick__status {
+  color: var(--iv-git-conflicted);
+}
+
+.iv-quick-pick__message {
+  padding: var(--iv-space-4) var(--iv-space-3);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-sm);
+}
+
+.iv-quick-pick__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--iv-space-3);
+  padding: 6px var(--iv-space-3);
+  border-top: 1px solid var(--iv-border);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}
+
+.iv-quick-pick__count {
+  font-variant-numeric: tabular-nums;
+}

@@ -1,7 +1,7 @@
-import { FILE_SIZE_LIMIT } from "@ivin/contracts/file"
+import { FILE_LIST_LIMIT, FILE_SIZE_LIMIT } from "@ivin/contracts/file"
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { layerScripted } from "@ivin/harness"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, type Scope, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
 import {
@@ -52,10 +52,25 @@ beforeEach(() => {
 
 afterEach(() => rmSync(root, { recursive: true, force: true }))
 
+const git = (cwd: string, ...args: string[]) =>
+  execFileSync(
+    "git",
+    [
+      "-c",
+      "user.name=ivin",
+      "-c",
+      "user.email=ivin@example.com",
+      "-c",
+      "commit.gpgsign=false",
+      ...args,
+    ],
+    { cwd, env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" } },
+  )
+
 const makeClient = () => RpcTest.makeClient(Rpcs)
 type Client = Effect.Success<ReturnType<typeof makeClient>>
 
-const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E>) => {
+const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E, Scope.Scope>) => {
   const db = new DatabaseSync(":memory:")
   Effect.runSync(runMigrations(db))
   return Effect.runPromise(
@@ -84,7 +99,11 @@ const listIn = (projectPath: string, ...paths: string[]) =>
       const { id } = yield* client["session.create"]({ projectPath })
       return yield* Effect.forEach(paths, (path) =>
         client["file.listFolder"]({ sessionId: id, path }).pipe(
-          Effect.map((entries) => entries.map((e) => `${e.name}${e.kind === "folder" ? "/" : ""}`)),
+          Effect.map((entries) =>
+            entries.map(
+              (e) => `${e.name}${e.kind === "folder" ? "/" : ""}${e.ignored ? " (ignored)" : ""}`,
+            ),
+          ),
           Effect.catch((error) => Effect.succeed(error._tag)),
         ),
       )
@@ -105,18 +124,21 @@ test("lists one level of the working folder, folders first, then a folder inside
   ])
 })
 
-test("leaves out what git ignores, at every level, and the .git folder", async () => {
+test("lists what git ignores, flagged, at every level, and leaves out the .git folder", async () => {
   write(join(project, ".gitignore"), "dist/\n*.log\n")
   write(join(project, "dist/bundle.js"))
+  write(join(project, "dist/lib/deep.js"))
   write(join(project, "debug.log"))
   write(join(project, "src/.gitignore"), "generated.ts\n")
   write(join(project, "src/generated.ts"))
   write(join(project, "src/main.ts"))
   write(join(project, "src/trace.log"))
 
-  expect(await listIn(project, "", "src")).toEqual([
-    ["src/", ".gitignore"],
-    [".gitignore", "main.ts"],
+  expect(await listIn(project, "", "src", "dist", "dist/lib")).toEqual([
+    ["dist/ (ignored)", "src/", ".gitignore", "debug.log (ignored)"],
+    [".gitignore", "generated.ts (ignored)", "main.ts", "trace.log (ignored)"],
+    ["lib/ (ignored)", "bundle.js (ignored)"],
+    ["deep.js (ignored)"],
   ])
 })
 
@@ -292,6 +314,254 @@ test("reading in a deleted working folder, and for an unknown session, fails", a
       ),
     ),
   ).toBe("SessionNotFound")
+})
+
+// Runs `call` in a new session of `projectPath`, and the error's tag when it fails.
+const callIn = <A>(
+  projectPath: string,
+  call: (client: Client, sessionId: string) => Effect.Effect<A, { readonly _tag: string }>,
+) =>
+  withServer((client) =>
+    Effect.gen(function* () {
+      const { id } = yield* client["session.create"]({ projectPath })
+      return yield* call(client, id).pipe(Effect.catch((error) => Effect.succeed(error._tag)))
+    }),
+  )
+
+const statusIn = (projectPath: string) =>
+  callIn(projectPath, (client, sessionId) => client["file.gitStatus"]({ sessionId }))
+
+const commitAll = () => {
+  git(project, "add", "--all")
+  git(project, "commit", "--quiet", "-m", "initial")
+}
+
+test("git status reports a modified, an added, an untracked and a deleted file", async () => {
+  write(join(project, "modified.ts"), "a")
+  write(join(project, "deleted.ts"), "a")
+  write(join(project, "src/kept.ts"), "a")
+  commitAll()
+  write(join(project, "modified.ts"), "b")
+  rmSync(join(project, "deleted.ts"))
+  write(join(project, "added.ts"), "a")
+  git(project, "add", "added.ts")
+  write(join(project, "src/untracked.ts"), "a")
+
+  expect(await statusIn(project)).toEqual(
+    expect.arrayContaining([
+      { path: "modified.ts", status: "modified" },
+      { path: "deleted.ts", status: "deleted" },
+      { path: "added.ts", status: "added" },
+      { path: "src/untracked.ts", status: "untracked" },
+    ]),
+  )
+  expect(await statusIn(project)).toHaveLength(4)
+})
+
+test("git status of a subfolder holds only its files, with paths relative to it", async () => {
+  write(join(project, "apps/web/a.ts"), "a")
+  write(join(project, "root.ts"), "a")
+  commitAll()
+  write(join(project, "apps/web/a.ts"), "b")
+  write(join(project, "apps/web/src/new.ts"), "a")
+  write(join(project, "root.ts"), "b")
+
+  expect(await statusIn(join(project, "apps/web"))).toEqual([
+    { path: "a.ts", status: "modified" },
+    { path: "src/new.ts", status: "untracked" },
+  ])
+})
+
+test("git status is empty outside a git repository, and fails for a deleted folder or an unknown session", async () => {
+  const plain = join(root, "plain")
+  write(join(plain, "a.ts"))
+
+  expect(await statusIn(plain)).toEqual([])
+  expect(
+    await withServer((client) =>
+      client["file.gitStatus"]({ sessionId: "nope" }).pipe(
+        Effect.catch((error) => Effect.succeed(error._tag)),
+      ),
+    ),
+  ).toBe("SessionNotFound")
+})
+
+const filesIn = (projectPath: string) =>
+  callIn(projectPath, (client, sessionId) => client["file.listFiles"]({ sessionId }))
+
+test("lists the files git does not ignore, untracked included and deleted left out, sorted", async () => {
+  write(join(project, ".gitignore"), "node_modules/\n*.log\n")
+  write(join(project, "src/lib/deep.ts"))
+  write(join(project, "src/main.ts"))
+  write(join(project, "deleted.ts"))
+  write(join(project, "b.ts"))
+  commitAll()
+  rmSync(join(project, "deleted.ts"))
+  write(join(project, "untracked.ts"))
+  write(join(project, "node_modules/pkg/index.js"))
+  write(join(project, "debug.log"))
+
+  expect(await filesIn(project)).toEqual({
+    paths: [".gitignore", "b.ts", "src/lib/deep.ts", "src/main.ts", "untracked.ts"],
+    truncated: false,
+  })
+})
+
+test("lists a subfolder's files relative to it", async () => {
+  write(join(project, "apps/web/src/a.ts"))
+  write(join(project, "root.ts"))
+
+  expect(await filesIn(join(project, "apps/web"))).toEqual({
+    paths: ["src/a.ts"],
+    truncated: false,
+  })
+})
+
+test("outside a git repository, walks the folder without the .git folder", async () => {
+  const plain = join(root, "plain")
+  write(join(plain, "notes.log"))
+  write(join(plain, "dist/out.js"))
+  write(join(plain, ".git/config"))
+
+  expect(await filesIn(plain)).toEqual({ paths: ["dist/out.js", "notes.log"], truncated: false })
+})
+
+test("outside a git repository, the walk stops at the limit and says so", async () => {
+  const plain = join(root, "plain")
+  mkdirSync(plain)
+  for (let index = 0; index <= FILE_LIST_LIMIT; index++) writeFileSync(join(plain, `${index}`), "")
+
+  const list = await filesIn(plain)
+  expect(list).toMatchObject({ truncated: true })
+  expect((list as { paths: ReadonlyArray<string> }).paths).toHaveLength(FILE_LIST_LIMIT)
+}, 30_000)
+
+test("listing files fails for a deleted working folder and an unknown session", async () => {
+  const gone = join(root, "gone")
+  mkdirSync(gone)
+
+  expect(
+    await callIn(gone, (client, sessionId) =>
+      Effect.sync(() => rmSync(gone, { recursive: true })).pipe(
+        Effect.andThen(client["file.listFiles"]({ sessionId })),
+      ),
+    ),
+  ).toBe("WorkingFolderDeleted")
+  expect(
+    await withServer((client) =>
+      client["file.listFiles"]({ sessionId: "nope" }).pipe(
+        Effect.catch((error) => Effect.succeed(error._tag)),
+      ),
+    ),
+  ).toBe("SessionNotFound")
+})
+
+// Opens the watch of a new session of `projectPath`, and runs `use` once the OS watcher reports
+// events: it has no ready signal, and a change made right after it opens can be lost.
+const watchIn = <A, E>(
+  projectPath: string,
+  use: (
+    next: Effect.Effect<ReadonlyArray<ReadonlyArray<string>>, unknown>,
+    first: ReadonlyArray<ReadonlyArray<string>>,
+  ) => Effect.Effect<A, E>,
+  probe: (index: number) => void = (index) => write(join(projectPath, `.probe-${index}`)),
+) =>
+  withServer((client) =>
+    Effect.gen(function* () {
+      const { id } = yield* client["session.create"]({ projectPath })
+      const pull = yield* Stream.toPull(client["file.watch"]({ sessionId: id }))
+      const next = pull.pipe(
+        Effect.map((changes) => changes.map((change) => change.paths)),
+        Effect.timeout("10 seconds"),
+      )
+      const probes = Effect.gen(function* () {
+        for (let index = 0; ; index++) {
+          probe(index)
+          yield* Effect.sleep("100 millis")
+        }
+      })
+      return yield* use(next, yield* Effect.race(next, probes))
+    }),
+  )
+
+// Pulls batches until one holds `path`, and every path seen on the way.
+const pullUntil = (
+  next: Effect.Effect<ReadonlyArray<ReadonlyArray<string>>, unknown>,
+  path: string,
+) =>
+  Effect.gen(function* () {
+    const seen: string[] = []
+    while (!seen.includes(path)) seen.push(...(yield* next).flat())
+    return seen
+  })
+
+test("a created file and a deleted file reach the watch, with their paths", async () => {
+  write(join(project, "src/old.ts"))
+  commitAll()
+
+  const seen = await watchIn(project, (next) =>
+    Effect.gen(function* () {
+      write(join(project, "src/new.ts"))
+      const created = yield* pullUntil(next, "src/new.ts")
+      rmSync(join(project, "src/old.ts"))
+      const deleted = yield* pullUntil(next, "src/old.ts")
+      return { created, deleted }
+    }),
+  )
+
+  expect(seen.created).toContain("src/new.ts")
+  expect(seen.deleted).toContain("src/old.ts")
+})
+
+test("a change in an ignored folder does not reach the watch", async () => {
+  write(join(project, ".gitignore"), "dist/\n")
+  commitAll()
+
+  const seen = await watchIn(project, (next) =>
+    Effect.gen(function* () {
+      write(join(project, "dist/bundle.js"))
+      write(join(project, "dist/lib/deep.js"))
+      write(join(project, "visible.ts"))
+      return yield* pullUntil(next, "visible.ts")
+    }),
+  )
+
+  expect(seen.filter((path) => path.startsWith("dist"))).toEqual([])
+})
+
+test("a change to git's index reaches the watch as a change with no path", async () => {
+  write(join(project, "a.ts"))
+  git(project, "add", "a.ts")
+
+  const first = await watchIn(
+    project,
+    (_next, first) => Effect.succeed(first),
+    // Staging and unstaging change only git's index, never a path.
+    (index) =>
+      index % 2 === 0
+        ? git(project, "rm", "--cached", "--quiet", "a.ts")
+        : git(project, "add", "a.ts"),
+  )
+
+  expect(first).toEqual([[]])
+})
+
+test("staging in a linked worktree reaches the watch as a change with no path", async () => {
+  write(join(project, "a.ts"))
+  commitAll()
+  const linked = join(root, "linked")
+  git(project, "worktree", "add", "--quiet", "-b", "feature", linked)
+
+  const first = await watchIn(
+    linked,
+    (_next, first) => Effect.succeed(first),
+    (index) =>
+      index % 2 === 0
+        ? git(linked, "rm", "--cached", "--quiet", "a.ts")
+        : git(linked, "add", "a.ts"),
+  )
+
+  expect(first).toEqual([[]])
 })
 
 // Reads `path` in a new session of `projectPath`, then runs `use` with the session's id and the

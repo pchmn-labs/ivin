@@ -194,6 +194,7 @@ export function App() {
             <TabView projectPath={projectPath} />
           </main>
           <SessionActionDialog />
+          <Slot slot="window.overlay" props={{}} />
         </div>
       )}
       {settingsOpen && (

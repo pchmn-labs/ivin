@@ -207,9 +207,7 @@ test("a sent message stays at the top of the view when its tool calls fold as th
   server.pushItem(message(45))
   await expect.element(page.getByText("message 45", { exact: true })).toBeVisible()
   await screen.rerender(view(false))
-  await frames()
-  await frames()
-  expect(topInView("question 40")).toBeLessThan(30)
+  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
 })
 
 test("a sent message goes back to the top of the view when the view grows after hiding it", async () => {

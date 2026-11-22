@@ -6,7 +6,7 @@ import {
 } from "@headless-tree/core"
 import { useTree } from "@headless-tree/react/react-compiler"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import type { TreeProps, TreeRow } from "@ivin/plugin-api/ui"
+import type { TreeProps, TreeRow, TreeRowStatus } from "@ivin/plugin-api/ui"
 import {
   useEffect,
   useId,
@@ -30,6 +30,43 @@ const OVERSCAN = 8
 const ROOT = "\0root"
 // Keys typed closer together than this make one name to jump to.
 const TYPE_AHEAD_MS = 800
+
+const FILE_STATUS: Record<TreeRowStatus, { readonly label: string; readonly letter: string }> = {
+  modified: { label: "Modified", letter: "M" },
+  added: { label: "Added", letter: "A" },
+  untracked: { label: "Untracked", letter: "U" },
+  deleted: { label: "Deleted", letter: "D" },
+  conflicted: { label: "Conflicted", letter: "C" },
+  ignored: { label: "Ignored by git", letter: "" },
+}
+
+const statusLabel = (row: TreeRow) => {
+  if (row.status === undefined) return undefined
+  if (row.expanded === null || row.status === "ignored") return FILE_STATUS[row.status].label
+  return row.status === "conflicted" ? "Has conflicts" : "Has changes"
+}
+
+function StatusMark({ row }: { row: TreeRow }) {
+  if (row.status === undefined || row.status === "ignored") return null
+  if (row.expanded !== null) return <span className="iv-tree__dot" aria-hidden />
+  return (
+    <span className="iv-tree__letter" aria-hidden>
+      {FILE_STATUS[row.status].letter}
+    </span>
+  )
+}
+
+function Name({ row }: { row: TreeRow }) {
+  if (row.match === undefined) return <span className="iv-tree__name">{row.name}</span>
+  const [start, end] = row.match
+  return (
+    <span className="iv-tree__name">
+      {row.name.slice(0, start)}
+      <mark className="iv-tree__match">{row.name.slice(start, end)}</mark>
+      {row.name.slice(end)}
+    </span>
+  )
+}
 
 interface Structure {
   readonly byId: ReadonlyMap<string, TreeRow>
@@ -60,11 +97,19 @@ const structureOf = (rows: ReadonlyArray<TreeRow>): Structure => {
 
 // The rows stay out of the tab order: the tree takes the focus and names its active row, so the
 // focus survives a row scrolled out of the virtualised list.
-export function Tree({ label, rows, onToggle, onOpen, "data-testid": testId }: TreeProps) {
+export function Tree({
+  label,
+  rows,
+  onToggle,
+  onOpen,
+  revealId = null,
+  "data-testid": testId,
+}: TreeProps) {
   const domId = useId()
   const scroller = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLDivElement>(null)
   const typed = useRef({ text: "", at: 0 })
+  const revealed = useRef<string | null>(null)
   // Every row's folder seen so far, to find where the focus goes when its row is hidden.
   const knownParents = useRef(new Map<string, string>())
   const [hasFocus, setHasFocus] = useState(false)
@@ -102,6 +147,17 @@ export function Tree({ label, rows, onToggle, onOpen, "data-testid": testId }: T
     tree.getItemInstance(focusedId).setFocused()
     anchorAt(focusedId)
   }, [tree, structure])
+
+  useEffect(() => {
+    if (revealId === null) revealed.current = null
+    if (revealId === null || revealed.current === revealId || !structure.byId.has(revealId)) return
+    revealed.current = revealId
+    const item = tree.getItemInstance(revealId)
+    item.setFocused()
+    tree.setSelectedItems([revealId])
+    anchorAt(revealId)
+    virtualizer.scrollToIndex(item.getItemMeta().index)
+  }, [tree, structure, revealId])
 
   const items = tree.getItems()
   const found = items.indexOf(tree.getFocusedItem())
@@ -265,6 +321,8 @@ export function Tree({ label, rows, onToggle, onOpen, "data-testid": testId }: T
                 id={rowDomId(index)}
                 className="iv-tree__row"
                 data-active={(engaged && index === focusedIndex) || undefined}
+                data-status={row.status}
+                aria-description={statusLabel(row)}
                 onClick={(event) => onRowClick(event, item)}
               >
                 {Array.from({ length: row.depth }, (_, level) => (
@@ -276,7 +334,8 @@ export function Tree({ label, rows, onToggle, onOpen, "data-testid": testId }: T
                 <span className="iv-tree__icon" aria-hidden>
                   <Icon name={row.expanded === null ? "file" : "folder"} size={14} />
                 </span>
-                <span className="iv-tree__name">{row.name}</span>
+                <Name row={row} />
+                <StatusMark row={row} />
               </div>
             )
           })}

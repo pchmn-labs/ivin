@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react"
 import type { Annotation } from "@ivin/contracts/annotation"
-import type { FolderEntry } from "@ivin/contracts/file"
+import type { FolderEntry, GitStatusEntry } from "@ivin/contracts/file"
 import type { OpenProjects } from "@ivin/contracts/project"
 import type { Session } from "@ivin/contracts/session"
 import type { Tab } from "@ivin/contracts/tab"
@@ -15,6 +15,15 @@ export interface ActionFailure {
 // `deleted`: the session's working folder no longer exists.
 export type FolderListing =
   | { readonly kind: "listed"; readonly entries: ReadonlyArray<FolderEntry> }
+  | { readonly kind: "deleted" }
+  | { readonly kind: "failed"; readonly failure: ActionFailure }
+
+export type FileListing =
+  | {
+      readonly kind: "listed"
+      readonly paths: ReadonlyArray<string>
+      readonly truncated: boolean
+    }
   | { readonly kind: "deleted" }
   | { readonly kind: "failed"; readonly failure: ActionFailure }
 
@@ -50,6 +59,17 @@ export interface UiHost {
     sessionId: string,
     path: string,
   ) => Promise<ActionFailure | undefined>
+  // Every file of the session's working folder that git does not ignore; `paths` as above.
+  readonly useListFiles: () => (sessionId: string) => Promise<FileListing>
+  // Runs `onChange` with the paths changed on disk while mounted; none when only git's state changed.
+  readonly useFolderChanges: (
+    sessionId: string,
+    onChange: (paths: ReadonlyArray<string>) => void,
+  ) => void
+  // The changed files of the working folder, kept up to date with the disk.
+  readonly useGitStatus: (sessionId: string) => ReadonlyArray<GitStatusEntry>
+  // The file the session's tab has selected beside its chat, or null.
+  readonly useFileOnScreen: (sessionId: string) => string | null
   readonly components: HostComponents
 }
 
