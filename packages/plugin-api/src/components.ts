@@ -48,6 +48,7 @@ export type IconName =
   | "collapse-all"
   | "eye"
   | "eye-slash"
+  | "clock"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"

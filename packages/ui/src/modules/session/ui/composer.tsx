@@ -21,6 +21,7 @@ import { type ImageRefusal, imageRefusal, refusalMessage } from "../rules/image-
 import { DraftImages } from "./draft-images.tsx"
 import { type MessageEditorHandle, MessageEditor, carriesFiles } from "./message-editor.tsx"
 import { Slot } from "../../../app/slot-renderer.tsx"
+import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { ActionSheet } from "../../../core/components/action-sheet/action-sheet.tsx"
@@ -46,6 +47,7 @@ import { setRunOptionsAtom } from "../atoms/set-run-options.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { sendMessageFailure, setRunOptionsFailure } from "../rules/failure-message.ts"
 import { statusLabel } from "../rules/status-label.ts"
+import { sendNowAtom } from "../atoms/send-now.ts"
 import { sendMessageAtom } from "../atoms/send-message.ts"
 import "./composer.css"
 
@@ -63,6 +65,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
   const choice = useAtomValue(workingFolderChoiceOf(sessionId))
   const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
   const interrupt = useAtomSet(interruptSessionAtom)
+  const sendNow = useAtomSet(sendNowAtom)
   const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
   const running = isRunning(session?.status)
   const preparing = session?.status === "preparing_worktree"
@@ -92,6 +95,20 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
       current.text === "" ? { ...current, text: relaunchFailure.message } : current,
     )
   }, [relaunchFailureKey])
+
+  const unreadText = (session?.unreadMessages ?? []).map((message) => message.text).join("\n\n")
+  useEffect(() => {
+    if (unreadText === "") return
+    // Runs again on each mount, so a draft that already holds the messages keeps them once.
+    setDraft((current) =>
+      current.text.includes(unreadText)
+        ? current
+        : {
+            ...current,
+            text: current.text === "" ? unreadText : `${current.text}\n\n${unreadText}`,
+          },
+    )
+  }, [unreadText])
 
   const changeRunOptions = (options: Partial<RunOptions>) => {
     setOptionsFailure(null)
@@ -189,6 +206,39 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     (relaunchFailure &&
       RUN_OPTIONS.find((option) => session?.[option] !== relaunchFailure.previous[option])) ??
     "model"
+  const pending = session?.pendingMessages ?? []
+  const pendingSheet = pending.length > 0 && (
+    <div className="iv-composer__pending-sheet">
+      <ActionSheet
+        icon="clock"
+        title={
+          pending.length === 1
+            ? "Sent to the agent"
+            : `${pending.length} messages sent to the agent`
+        }
+        data-testid="composer-pending"
+      >
+        <ul className="iv-composer__pending">
+          {pending.map((message) => (
+            <li key={message.id} className="iv-composer__pending-message" title={message.text}>
+              {message.text || message.images.map((image) => `[Image #${image.number}]`).join(" ")}
+            </li>
+          ))}
+        </ul>
+        <div className="iv-composer__sheet-row">
+          <span className="iv-composer__sheet-hint">
+            Read once the agent's current tool call or turn ends. Stop puts{" "}
+            {pending.length === 1 ? "it" : "them"} back here.
+          </span>
+          <Tooltip content="Stops this turn and sends your messages">
+            <Button variant="ghost" size="sm" onClick={() => sendNow({ projectPath, sessionId })}>
+              Send now
+            </Button>
+          </Tooltip>
+        </div>
+      </ActionSheet>
+    </div>
+  )
   const relaunchSheet = session && relaunchFailure && (
     <ActionSheet
       tone="danger"
@@ -243,6 +293,7 @@ export function Composer({ projectPath, sessionId }: { projectPath: string; sess
     <div className="iv-composer" ref={root} data-keybinding-area="composer">
       {alert}
       {session && <Slot slot="composer.above" props={{ session, isEmptyComposer }} />}
+      {pendingSheet}
       {relaunchSheet}
       <div
         className="iv-composer__surface"

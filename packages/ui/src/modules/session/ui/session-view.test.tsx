@@ -28,6 +28,7 @@ test("the transcript renders through the plugins and the status line shows the u
       role: "user",
       text: "hello",
       images: [],
+      steer: false,
     },
     {
       ...base,
@@ -78,6 +79,8 @@ test("the transcript renders through the plugins and the status line shows the u
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,
@@ -123,6 +126,8 @@ const mountSession = async (
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status,
     statusChangedAt: at,
     createdAt: at,
@@ -288,6 +293,8 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "working",
     statusChangedAt: at,
     createdAt: at,
@@ -418,6 +425,8 @@ test("Escape closes an open menu without interrupting the session", async () => 
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "working",
     statusChangedAt: at,
     createdAt: at,
@@ -470,6 +479,8 @@ const mountNewSession = async (checkout: Partial<FakeCheckout> = {}) => {
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "idle" as const,
     statusChangedAt: at,
     createdAt: at,
@@ -692,6 +703,8 @@ const mountDeletedFolderSession = async ({ extraWorktrees = 0 } = {}) => {
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,
@@ -920,4 +933,73 @@ test("a model change the server did not take goes back, says so above the compos
   await alert.getByRole("button", { name: "Retry" }).click()
   await vi.waitFor(() => expect(server.sessions.get("s1")?.model).toBe("opus"))
   await expect.element(alert).not.toBeInTheDocument()
+})
+
+test("stopping the agent before it read the messages sent while it worked puts them back in the empty composer", async () => {
+  const server = await mountSession("working")
+  await page.getByRole("textbox").fill("also check the logs")
+  await userEvent.keyboard("{Enter}")
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toHaveLength(1))
+  await page.getByRole("textbox").fill("and the config")
+  await userEvent.keyboard("{Enter}")
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toHaveLength(2))
+  await vi.waitFor(() => expect(composerText()).toBe(""))
+
+  await page.getByRole("button", { name: "Interrupt" }).click()
+
+  await vi.waitFor(() => expect(composerText()).toBe("also check the logs\n\nand the config"))
+})
+
+test("messages sent while the agent works wait in a sheet on the composer, and Send now starts a turn with them", async () => {
+  const server = await mountSession("working")
+  await page.getByRole("textbox").fill("also check the logs")
+  await userEvent.keyboard("{Enter}")
+  await page.getByRole("textbox").fill("and the config")
+  await userEvent.keyboard("{Enter}")
+
+  const sheet = page.getByTestId("composer-pending")
+  await expect.element(sheet.getByText("2 messages sent to the agent")).toBeVisible()
+  await expect.element(sheet.getByText("also check the logs")).toBeVisible()
+  await expect.element(sheet.getByText("and the config")).toBeVisible()
+
+  await sheet.getByRole("button", { name: "Send now" }).click()
+
+  await expect.element(sheet).not.toBeInTheDocument()
+  await expect.element(page.getByText("also check the logs")).toBeVisible()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toEqual([]))
+})
+
+test("the sheet names a single waiting message, and leaves once the agent reads it", async () => {
+  const server = await mountSession("working")
+  await page.getByRole("textbox").fill("also check the logs")
+  await userEvent.keyboard("{Enter}")
+
+  const sheet = page.getByTestId("composer-pending")
+  await expect.element(sheet.getByText("Sent to the agent")).toBeVisible()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toHaveLength(1))
+  server.readPendingMessages("s1")
+
+  await expect.element(sheet).not.toBeInTheDocument()
+  await expect.element(page.getByTestId("turn-steer")).toHaveTextContent("also check the logs")
+})
+
+test("unread messages come back after a draft the user typed in the meantime, and a message of images alone still shows in the sheet", async () => {
+  const server = await mountSession("working")
+  const pending = [
+    { id: "p1", text: "also check the logs", images: [] },
+    { id: "p2", text: "", images: [{ id: "img-1", number: 1, mediaType: "image/png" as const }] },
+  ]
+  server.sessions.set("s1", { ...server.sessions.get("s1")!, pendingMessages: pending })
+  server.setStatus("s1", "waiting")
+  await expect.element(page.getByTestId("composer-pending").getByText("[Image #1]")).toBeVisible()
+  await page.getByRole("textbox").fill("one more thing")
+
+  server.sessions.set("s1", {
+    ...server.sessions.get("s1")!,
+    pendingMessages: [],
+    unreadMessages: [pending[0]!],
+  })
+  server.setStatus("s1", "idle")
+
+  await vi.waitFor(() => expect(composerText()).toBe("one more thing\n\nalso check the logs"))
 })

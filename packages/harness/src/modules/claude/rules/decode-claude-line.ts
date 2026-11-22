@@ -78,6 +78,8 @@ const ControlRequestLine = Schema.Struct({
   }),
 })
 
+const CommandLifecycleLine = Schema.Struct({ command_uuid: Schema.String, state: Schema.String })
+
 const isBlock = Schema.is(AssistantBlock)
 const isToolResultBlock = Schema.is(ToolResultBlock)
 const isTextBlock = Schema.is(TextBlock)
@@ -188,6 +190,12 @@ const fromControlRequest = (line: unknown): HarnessOutput[] => {
   ]
 }
 
+// Claude Code queues a message sent mid-turn and starts it after the next tool result, or as the next turn.
+const fromCommandLifecycle = (line: unknown): HarnessOutput[] => {
+  const { command_uuid, state } = Schema.decodeUnknownSync(CommandLifecycleLine)(line)
+  return state === "started" ? [{ type: "message_read", messageId: command_uuid }] : []
+}
+
 export const decodeClaudeLine = (text: string): HarnessOutput[] => {
   let line: unknown
   try {
@@ -211,6 +219,8 @@ export const decodeClaudeLine = (text: string): HarnessOutput[] => {
         return fromControlRequest(line)
       case "system":
         return fromSystem(line, subtype)
+      case "command_lifecycle":
+        return fromCommandLifecycle(line)
       default:
         return []
     }

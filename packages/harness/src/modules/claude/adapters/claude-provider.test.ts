@@ -22,7 +22,11 @@ real(
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
           providerSessionId: null,
         })
-        yield* harness.send({ text: "Reply with exactly: pong", images: [] })
+        yield* harness.send({
+          id: crypto.randomUUID(),
+          text: "Reply with exactly: pong",
+          images: [],
+        })
         return yield* Stream.runCollect(
           Stream.takeUntil(harness.events, (o) => o.type === "status" && o.status === "idle"),
         )
@@ -53,6 +57,7 @@ real(
           providerSessionId: null,
         })
         yield* harness.send({
+          id: crypto.randomUUID(),
           text: "What single colour fills [Image #1]? Answer with one lowercase word.",
           images: [{ id: "i1", number: 1, mediaType: "image/png", base64: RED_SQUARE }],
         })
@@ -84,6 +89,7 @@ real.each([
           providerSessionId: null,
         })
         yield* harness.send({
+          id: crypto.randomUUID(),
           text: "Run the shell command `touch made.txt` with the Bash tool. Do nothing else.",
           images: [],
         })

@@ -24,6 +24,8 @@ test("answering an approval stores the decision on its item and updates the sess
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "waiting",
     statusChangedAt: at,
     createdAt: at,

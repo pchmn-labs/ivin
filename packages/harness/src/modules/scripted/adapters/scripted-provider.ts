@@ -13,6 +13,7 @@ import { toolKind } from "../../claude/rules/tool-kind.ts"
 
 export interface ScriptedSend {
   readonly sessionId: string
+  readonly id: string
   readonly text: string
   readonly images: readonly ImageData[]
 }
@@ -27,10 +28,23 @@ export const scriptedFailure = (message: string): ScriptedFailure => ({
   message,
 })
 
-export type ScriptedElement = HarnessOutput | ScriptedFailure
+// Where the turn reads the messages sent to it while it runs, as Claude Code does after a tool result.
+export interface ScriptedRead {
+  readonly _tag: "ScriptedRead"
+}
+
+export const scriptedRead: ScriptedRead = { _tag: "ScriptedRead" }
+
+export type ScriptedElement = HarnessOutput | ScriptedFailure | ScriptedRead
 
 const isFailure = (element: ScriptedElement): element is ScriptedFailure =>
   "_tag" in element && element._tag === "ScriptedFailure"
+
+const isRead = (element: ScriptedElement): element is ScriptedRead =>
+  "_tag" in element && element._tag === "ScriptedRead"
+
+const isPause = (element: ScriptedElement) =>
+  !isFailure(element) && !isRead(element) && element.type === "approval_request"
 
 const EVENT_BUFFER = 64
 
@@ -110,33 +124,55 @@ export const layerScripted = (
               providerSessionId: input.providerSessionId ?? `scripted-${sessionId}`,
             })
           let paused: readonly ScriptedElement[] | null = null
-          const play = (turn: readonly ScriptedElement[]) => {
-            const at = turn.findIndex(
-              (element) => !isFailure(element) && element.type === "approval_request",
+          // Between a scripted running status and its idle one; a turn with no status never opens.
+          let open = false
+          const waiting: string[] = []
+          const readWaiting = Effect.suspend(() =>
+            Queue.offerAll(
+              queue,
+              waiting.splice(0).map((messageId) => ({ type: "message_read" as const, messageId })),
+            ),
+          )
+          const nextTurn: Effect.Effect<void, HarnessError> = Effect.suspend(() => {
+            const next = played.get(sessionId) ?? 0
+            played.set(sessionId, next + 1)
+            const turn = turns[cycle ? next % turns.length : next]
+            return turn
+              ? play(turn)
+              : Effect.fail(new HarnessError({ message: "The scripted harness has no turn left" }))
+          })
+          // Claude Code starts the messages still queued at a turn's end as the next turn.
+          const turnEnded = Effect.suspend(() => {
+            open = false
+            return waiting.length === 0 ? Effect.void : readWaiting.pipe(Effect.andThen(nextTurn))
+          })
+          const offer = (element: ScriptedElement): Effect.Effect<void, HarnessError> => {
+            if (isFailure(element))
+              return Queue.fail(queue, new HarnessError({ message: element.message }))
+            if (isRead(element)) return readWaiting.pipe(Effect.asVoid)
+            return Queue.offer(queue, element).pipe(
+              Effect.andThen(() => {
+                if (element.type !== "status") return Effect.void
+                if (element.status === "running") open = true
+                return element.status === "idle" ? turnEnded : Effect.void
+              }),
             )
+          }
+          const play = (turn: readonly ScriptedElement[]): Effect.Effect<void, HarnessError> => {
+            const at = turn.findIndex(isPause)
             paused = at === -1 ? null : turn.slice(at + 1)
-            return Effect.forEach(
-              at === -1 ? turn : turn.slice(0, at + 1),
-              (element) =>
-                isFailure(element)
-                  ? Queue.fail(queue, new HarnessError({ message: element.message }))
-                  : Queue.offer(queue, element),
-              { discard: true },
-            )
+            return Effect.forEach(at === -1 ? turn : turn.slice(0, at + 1), offer, {
+              discard: true,
+            })
           }
           const run: HarnessRun = {
             events: Stream.fromQueue(queue),
-            send: ({ text, images }) =>
+            send: ({ id, text, images }) =>
               Effect.suspend(() => {
-                sent.push({ sessionId, text, images })
-                const next = played.get(sessionId) ?? 0
-                played.set(sessionId, next + 1)
-                const turn = turns[cycle ? next % turns.length : next]
-                return turn
-                  ? play(turn)
-                  : Effect.fail(
-                      new HarnessError({ message: "The scripted harness has no turn left" }),
-                    )
+                sent.push({ sessionId, id, text, images })
+                if (!open) return nextTurn
+                waiting.push(id)
+                return Effect.void
               }),
             respond: (decision) =>
               Effect.suspend(() => {
@@ -149,10 +185,16 @@ export const layerScripted = (
               }),
             interrupt: Effect.suspend(() => {
               interrupted.push(sessionId)
+              paused = null
               return Queue.offerAll(queue, [
                 { type: "interruption", raw: null },
                 { type: "status", status: "idle", raw: null },
-              ]).pipe(Effect.asVoid)
+              ]).pipe(
+                Effect.andThen(turnEnded),
+                // A real harness reports a failed next turn on its events, not to the interrupt.
+                Effect.catch((error) => Queue.fail(queue, error)),
+                Effect.asVoid,
+              )
             }),
           }
           return run

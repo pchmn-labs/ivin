@@ -10,15 +10,17 @@ const block = ({ mediaType, base64 }: ImageData) => ({
 })
 const content = (line: string) => JSON.parse(line).message.content
 
-test("a text message becomes one text block", () => {
-  expect(JSON.parse(userMessageLine({ text: "hello", images: [] }))).toEqual({
+test("a text message becomes one text block, under the message id", () => {
+  expect(JSON.parse(userMessageLine({ id: "m1", text: "hello", images: [] }))).toEqual({
     type: "user",
+    uuid: "m1",
     message: { role: "user", content: [{ type: "text", text: "hello" }] },
   })
 })
 
 test("each image block follows the text up to its marker", () => {
   const line = userMessageLine({
+    id: "m1",
     text: "the test fails: [Image #2]\nand the card overflows [Image #1] on mobile",
     images: [webp, png],
   })
@@ -32,16 +34,14 @@ test("each image block follows the text up to its marker", () => {
 })
 
 test("an image whose marker is missing comes first, and a message of images alone has no text block", () => {
-  expect(content(userMessageLine({ text: "", images: [png] }))).toEqual([block(png)])
-  expect(content(userMessageLine({ text: "see [Image #2]", images: [png, webp] }))).toEqual([
-    block(png),
-    { type: "text", text: "see [Image #2]" },
-    block(webp),
-  ])
+  expect(content(userMessageLine({ id: "m1", text: "", images: [png] }))).toEqual([block(png)])
+  expect(
+    content(userMessageLine({ id: "m1", text: "see [Image #2]", images: [png, webp] })),
+  ).toEqual([block(png), { type: "text", text: "see [Image #2]" }, block(webp)])
 })
 
 test("a marker with no image stays text", () => {
-  expect(content(userMessageLine({ text: "[Image #9] is gone", images: [] }))).toEqual([
+  expect(content(userMessageLine({ id: "m1", text: "[Image #9] is gone", images: [] }))).toEqual([
     { type: "text", text: "[Image #9] is gone" },
   ])
 })

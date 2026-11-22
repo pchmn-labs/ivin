@@ -24,6 +24,8 @@ const setup = async () => {
     effort: "high",
     permissionMode: "manual",
     relaunchFailure: null,
+    pendingMessages: [],
+    unreadMessages: [],
     status: "working",
     statusChangedAt: at,
     createdAt: at,

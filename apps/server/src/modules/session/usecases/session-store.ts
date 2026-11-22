@@ -4,6 +4,7 @@ import type {
   RunOptions,
   Session,
   SessionStatus,
+  PendingMessage,
 } from "@ivin/contracts/session"
 import { Context, type Effect } from "effect"
 
@@ -34,6 +35,15 @@ export class SessionStore extends Context.Service<
       id: string,
       failure: RelaunchFailure | null,
     ) => Effect.Effect<void>
+    readonly addPendingMessage: (id: string, message: PendingMessage) => Effect.Effect<void>
+    // Null when the message is not pending, such as one that started a turn.
+    readonly takePendingMessage: (
+      id: string,
+      messageId: string,
+    ) => Effect.Effect<PendingMessage | null>
+    readonly pendingMessages: (id: string) => Effect.Effect<readonly PendingMessage[]>
+    readonly markPendingUnread: (id: string) => Effect.Effect<void>
+    readonly clearUnreadMessages: (id: string) => Effect.Effect<void>
     readonly setWorkingFolder: (
       id: string,
       workingFolder: string,
@@ -47,7 +57,7 @@ export class SessionStore extends Context.Service<
       status: SessionStatus,
       at: Session["statusChangedAt"],
     ) => Effect.Effect<void>
-    // No run survives a connection, so a session left working or waiting is idle again.
+    // No run survives a connection, so a session left working or waiting is idle again, its pending messages unread.
     readonly resetRunning: Effect.Effect<void>
     readonly touch: (id: string, at: Session["lastActivityAt"]) => Effect.Effect<void>
     readonly setArchivedAt: (id: string, at: Session["archivedAt"]) => Effect.Effect<void>

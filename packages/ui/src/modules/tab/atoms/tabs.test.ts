@@ -99,6 +99,8 @@ const seeded = () => {
       effort: "high",
       permissionMode: "manual",
       relaunchFailure: null,
+      pendingMessages: [],
+      unreadMessages: [],
       status: "idle",
       statusChangedAt: at,
       createdAt: at,

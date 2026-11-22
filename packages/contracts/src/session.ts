@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
-import { ImageData } from "./transcript.ts"
+import { ImageData, ImageRef } from "./transcript.ts"
 
 // `waiting`: the agent waits on the user, such as an approval.
 export const SessionStatus = Schema.Literals([
@@ -56,6 +56,13 @@ export const RelaunchFailure = Schema.Struct({
 })
 export type RelaunchFailure = typeof RelaunchFailure.Type
 
+export const PendingMessage = Schema.Struct({
+  id: Schema.String,
+  text: Schema.String,
+  images: Schema.Array(ImageRef),
+})
+export type PendingMessage = typeof PendingMessage.Type
+
 export const Session = Schema.Struct({
   id: Schema.String,
   projectPath: Schema.String,
@@ -72,6 +79,8 @@ export const Session = Schema.Struct({
   effort: Schema.String,
   permissionMode: Schema.String,
   relaunchFailure: Schema.NullOr(RelaunchFailure),
+  pendingMessages: Schema.Array(PendingMessage),
+  unreadMessages: Schema.Array(PendingMessage),
   status: SessionStatus,
   statusChangedAt: Schema.DateTimeUtcFromMillis,
   createdAt: Schema.DateTimeUtcFromMillis,
@@ -256,6 +265,12 @@ export const SessionRpcs = RpcGroup.make(
   }),
   // Stops the running turn; the agent keeps its process and the events received so far.
   Rpc.make("session.interrupt", {
+    payload: { sessionId: Schema.String },
+    success: Session,
+    error: SessionNotFound,
+  }),
+  // Stops the running turn so the agent starts a new one with the pending messages.
+  Rpc.make("session.sendNow", {
     payload: { sessionId: Schema.String },
     success: Session,
     error: SessionNotFound,

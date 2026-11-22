@@ -25,6 +25,8 @@ export const createSession = (projectPath: string) =>
       harness,
       ...newSessionRunOptions(yield* runOptions, yield* store.lastRunOptions(projectPath)),
       relaunchFailure: null,
+      pendingMessages: [],
+      unreadMessages: [],
       status: "idle",
       statusChangedAt: now,
       createdAt: now,

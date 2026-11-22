@@ -44,7 +44,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
   )
 }
 
-const base = { id: "i0", sessionId: "s1", position: 0, at: 0 }
+const base = { id: "i0", sessionId: "s1", position: 0, at: 0, steer: false }
 
 test("an assistant message renders Markdown", async () => {
   await mount({

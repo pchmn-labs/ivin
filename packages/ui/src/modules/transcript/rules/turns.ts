@@ -13,8 +13,12 @@ export type TranscriptRow =
       readonly turnIds: ReadonlyArray<string>
     }
 
-const isWork = (item: TranscriptItem) => item.type === "tool_call" || item.type === "approval"
-const isUserMessage = (item: TranscriptItem) => item.type === "message" && item.role === "user"
+const isSteer = (item: TranscriptItem) =>
+  item.type === "message" && item.role === "user" && item.steer
+const isWork = (item: TranscriptItem) =>
+  item.type === "tool_call" || item.type === "approval" || isSteer(item)
+const isUserMessage = (item: TranscriptItem) =>
+  item.type === "message" && item.role === "user" && !item.steer
 
 // Items before the first user message are a turn cut by paging.
 // The last turn gets a work row before its first tool call, for the line that says the agent works.
@@ -70,6 +74,7 @@ export const lastTurnMessageId = (rows: ReadonlyArray<TranscriptRow>): string | 
 
 export interface Step {
   readonly id: string
+  readonly steer: MessageItem | null
   // Null for the calls made before the agent wrote anything.
   readonly sentence: MessageItem | null
   readonly children: ReadonlyArray<TranscriptItem>
@@ -96,11 +101,23 @@ export const turnWork = (
   work: ReadonlyArray<TranscriptItem>,
   turn: ReadonlyArray<TranscriptItem>,
 ): TurnWork => {
-  const steps: Array<{ id: string; sentence: MessageItem | null; children: TranscriptItem[] }> = []
+  const steps: Array<{
+    id: string
+    steer: MessageItem | null
+    sentence: MessageItem | null
+    children: TranscriptItem[]
+  }> = []
   for (const item of work) {
-    if (isAssistantText(item)) steps.push({ id: item.id, sentence: item, children: [] })
+    const last = steps.at(-1)
+    if (item.type === "message" && isSteer(item))
+      steps.push({ id: item.id, steer: item, sentence: null, children: [] })
+    else if (isAssistantText(item) && last?.steer && !last.sentence && last.children.length === 0)
+      last.sentence = item
+    else if (isAssistantText(item))
+      steps.push({ id: item.id, steer: null, sentence: item, children: [] })
     else {
-      if (steps.length === 0) steps.push({ id: `${id}:start`, sentence: null, children: [] })
+      if (steps.length === 0)
+        steps.push({ id: `${id}:start`, steer: null, sentence: null, children: [] })
       if (item.type !== "thinking" && item.type !== "usage") steps.at(-1)!.children.push(item)
     }
   }

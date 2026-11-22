@@ -21,6 +21,7 @@ const message = (sessionId: string, id: string, position: number): TranscriptIte
   role: "assistant",
   text: id,
   images: [],
+  steer: false,
 })
 
 const setup = async () => {

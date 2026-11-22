@@ -79,6 +79,11 @@
   border-color: var(--iv-danger);
 }
 
+.iv-turn__step[data-steer]:not([data-current])::before {
+  border-color: color-mix(in srgb, var(--iv-text) 40%, var(--iv-bg));
+  background: var(--iv-bubble);
+}
+
 .iv-turn__step[data-current]::before {
   border-color: var(--iv-accent);
   background: color-mix(in srgb, var(--iv-accent) 30%, var(--iv-bg));
@@ -162,6 +167,18 @@
 
 .iv-turn__sentence {
   color: var(--iv-text-prose);
+}
+
+.iv-turn__steer {
+  display: flex;
+  margin-bottom: var(--iv-space-1);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
+}
+
+.iv-turn__steer .iv-block.iv-block--bubble {
+  max-width: 100%;
+  padding: var(--iv-space-1) 10px;
 }
 
 .iv-turn__summary {

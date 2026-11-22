@@ -252,7 +252,7 @@ test("sending a message stores the user message then the scripted events in orde
   ])
   expect(rows[0]!.id).toBe("msg-1")
   expect(JSON.parse(rows[1]!.payload).raw).toEqual({ from: "scripted" })
-  expect(sent).toEqual([{ sessionId, text: "go", images: [] }])
+  expect(sent).toEqual([{ sessionId, id: "msg-1", text: "go", images: [] }])
 })
 
 test("a tool call and its result come back as one item, in order after the user message", async () => {
@@ -646,30 +646,23 @@ test("a harness that cannot take a message stores the message and an error, and 
 
 test("a message sent while a turn is still running reaches the provider", async () => {
   const sent: ScriptedSend[] = []
-  const status = await withServer(
-    newDatabase(),
-    [
-      [running, said("Working")],
-      [said("Noted"), idle],
-    ],
-    sent,
-    (client) =>
-      Effect.gen(function* () {
-        const session = yield* client["session.create"]({ projectPath: "/p" })
-        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-        yield* until(endOfTranscript(client, session.id), (p) => p.items.length === 2)
-        expect(yield* statusOf(client, "/p", session.id)).toBe("working")
-        yield* client["session.sendMessage"]({
-          sessionId: session.id,
-          messageId: "m2",
-          text: "also",
-        })
-        return yield* until(statusOf(client, "/p", session.id), (s) => s === "idle")
-      }),
+  const status = await withServer(newDatabase(), [[running, said("Working")]], sent, (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p" })
+      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+      yield* until(endOfTranscript(client, session.id), (p) => p.items.length === 2)
+      expect(yield* statusOf(client, "/p", session.id)).toBe("working")
+      yield* client["session.sendMessage"]({
+        sessionId: session.id,
+        messageId: "m2",
+        text: "also",
+      })
+      return yield* statusOf(client, "/p", session.id)
+    }),
   )
 
   expect(sent.map((s) => s.text)).toEqual(["go", "also"])
-  expect(status).toBe("idle")
+  expect(status).toBe("working")
 })
 
 test("watching a project's sessions streams each status and title change", async () => {

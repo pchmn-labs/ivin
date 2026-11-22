@@ -6,6 +6,7 @@ import type { HarnessOutput } from "@ivin/contracts/transcript"
 import {
   layerScripted,
   scriptedFailure,
+  scriptedRead,
   type ScriptedElement,
   type ScriptedOptions,
   type StartInput,
@@ -25,6 +26,14 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
 const running: HarnessOutput = { type: "status", status: "running", raw: null }
 const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
+const asked: HarnessOutput = {
+  type: "approval_request",
+  requestId: "r1",
+  toolCallId: "t1",
+  name: "ls",
+  input: { path: "." },
+  raw: null,
+}
 const answered = (text: string): readonly HarnessOutput[] => [running, said(text), idle]
 
 const defaults = { model: "scripted", effort: "low", permissionMode: "ask" }
@@ -166,7 +175,7 @@ test("a change while running leaves the running turn alone and applies to the ne
   const starts: StartInput[] = []
   await withServer(
     newDatabase(),
-    [[running, said("working")], [said("steered"), idle], answered("next")],
+    [[running, said("working"), asked, scriptedRead, said("steered"), idle], answered("next")],
     (client) =>
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p" })
@@ -177,6 +186,11 @@ test("a change while running leaves the running turn alone and applies to the ne
           options: { model: "scripted-large" },
         })
         yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m2", text: "b" })
+        yield* client["session.answerApproval"]({
+          sessionId: session.id,
+          requestId: "r1",
+          allow: true,
+        })
         yield* untilSaid(client, session.id, "steered")
         expect(starts).toHaveLength(1)
         yield* untilIdle(client, session.id)

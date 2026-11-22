@@ -30,6 +30,7 @@ export const sendMessage = (
       return yield* new WorkingFolderDeleted({ sessionId })
     }
     if (found.relaunchFailure !== null) yield* store.setRelaunchFailure(sessionId, null)
+    if (found.unreadMessages.length > 0) yield* store.clearUnreadMessages(sessionId)
     if (!found.started) {
       if (workingFolder?.kind === "new_worktree") {
         yield* moveToNewWorktree(found, "creation")

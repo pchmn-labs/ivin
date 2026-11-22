@@ -3,6 +3,7 @@ import {
   type RunOptions,
   type Session,
   type SessionStatus,
+  type PendingMessage,
 } from "@ivin/contracts/session"
 import type {
   HarnessDelta,
@@ -34,10 +35,18 @@ interface UserMessage {
   readonly images: readonly ImageData[]
 }
 
-const userMessageEvent = ({ text, images }: UserMessage): HarnessEvent => ({
-  type: "user_message",
+const unsent = ({ id, text, images }: UserMessage | PendingMessage): PendingMessage => ({
+  id,
   text,
   images: images.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
+})
+
+const userMessageEvent = (message: UserMessage | PendingMessage, steer = false): HarnessEvent => ({
+  type: "user_message",
+  text: message.text,
+  images: unsent(message).images,
+  // Left out of turn-starting messages, so they are stored as before steers existed.
+  steer: steer || undefined,
   raw: null,
 })
 
@@ -53,6 +62,8 @@ export class SessionRuns extends Context.Service<
     ) => Effect.Effect<void, ApprovalNotOpen>
     // No-op with no run.
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
+    // Stops the turn so the agent takes the pending messages as the next one; no-op without any.
+    readonly sendNow: (sessionId: string) => Effect.Effect<void>
     // No-op with no run.
     readonly stop: (sessionId: string) => Effect.Effect<void>
     // True from the agent's start until it stops, idle between turns included.
@@ -221,7 +232,9 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
 
         const end = Effect.suspend(() => {
           if (runs.get(session.id) === run) runs.delete(session.id)
-          return Scope.close(scope, Exit.void)
+          return Scope.close(scope, Exit.void).pipe(
+            Effect.andThen(sessions.markPendingUnread(session.id)),
+          )
         })
 
         const follower = yield* followAgentWorktree(
@@ -241,8 +254,19 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             ? offerPreviousOptions(session.id, options, turn.message, turn.error)
             : sessions.setConfirmedRunOptions(session.id, options)
         })
+        const readMessage = (messageId: string) =>
+          Effect.gen(function* () {
+            const message = yield* sessions.takePendingMessage(session.id, messageId)
+            if (message === null) return
+            const steer = busy
+            busy = true
+            if (!steer) yield* follower.turnStarted
+            yield* writer.record(userMessageEvent(message, steer), message.id)
+            if (!steer) yield* setStatus(session.id, "working")
+          })
         const handle = (output: HarnessOutput) => {
           if (output.type === "delta") return writer.stream(output)
+          if (output.type === "message_read") return readMessage(output.messageId)
           if (output.type === "provider_session") {
             if (output.providerSessionId === providerSessionId) return Effect.void
             providerSessionId = output.providerSessionId
@@ -332,6 +356,18 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
     return {
       send: (session, message) =>
         Effect.gen(function* () {
+          const working = runs.get(session.id)
+          if (working?.busy()) {
+            yield* sessions.addPendingMessage(session.id, unsent(message))
+            yield* sessionFeed.publish(session.id)
+            return yield* working
+              .send(message)
+              .pipe(
+                Effect.catchTag("HarnessError", (error) =>
+                  working.end.pipe(Effect.andThen(working.fail(error))),
+                ),
+              )
+          }
           yield* setStatus(session.id, "working")
           const run = yield* runOf(session, message)
           if (!run) return
@@ -364,7 +400,20 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
               ),
             )
         }),
-      interrupt: (sessionId) => Effect.suspend(() => runs.get(sessionId)?.interrupt ?? Effect.void),
+      interrupt: (sessionId) =>
+        Effect.gen(function* () {
+          const run = runs.get(sessionId)
+          if (!run) return
+          if ((yield* sessions.pendingMessages(sessionId)).length === 0) return yield* run.interrupt
+          yield* run.record({ type: "interruption", raw: null })
+          yield* run.end
+          yield* setStatus(sessionId, "idle")
+        }),
+      sendNow: (sessionId) =>
+        Effect.gen(function* () {
+          const run = runs.get(sessionId)
+          if (run && (yield* sessions.pendingMessages(sessionId)).length > 0) yield* run.interrupt
+        }),
       stop: (sessionId) =>
         Effect.suspend(() => {
           const run = runs.get(sessionId)
