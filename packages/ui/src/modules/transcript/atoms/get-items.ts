@@ -81,7 +81,7 @@ export const transcriptOf = strongFamily((sessionId: string) => {
               )
             }),
             // The list is dropped with the feed, so a page loaded before no longer describes it.
-            Effect.ensuring(Atom.set(paging, unloaded)),
+            Effect.onInterrupt(() => Atom.set(paging, unloaded)),
           )
         }),
     },
