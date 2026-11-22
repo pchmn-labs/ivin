@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
+import type { SentMessagePlace } from "../rules/transcript-place.ts"
 import { lastTurnMessageId, type TranscriptRow } from "../rules/turns.ts"
 
 // --iv-ease-out, cubic-bezier(0.22, 1, 0.36, 1), approximated as an ease-out quint.
@@ -13,9 +14,11 @@ const USER_SCROLL_EVENTS = ["wheel", "touchmove", "keydown", "pointerdown"] as c
 export function useSentMessageScroll({
   loaded,
   rows,
+  restored,
 }: {
   loaded: boolean
   rows: ReadonlyArray<TranscriptRow>
+  restored?: SentMessagePlace | undefined
 }) {
   const root = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLElement | null>(null)
@@ -26,6 +29,7 @@ export function useSentMessageScroll({
   const frame = useRef(0)
   const userScrolled = useRef(false)
   const [roomLeft, setRoomLeft] = useState(false)
+  const roomLeftNow = useRef(false)
   // Null until loaded, so the turns already there when the transcript opens are not scrolled to.
   const seen = useRef<{
     turn: string | undefined
@@ -44,7 +48,8 @@ export function useSentMessageScroll({
 
   const setRoom = useCallback((height: number) => {
     room.current = Math.max(0, height)
-    setRoomLeft(hasRoomLeft())
+    roomLeftNow.current = hasRoomLeft()
+    setRoomLeft(roomLeftNow.current)
     // Set on the transcript for its stylesheet to read, as resize-handle does.
     root.current?.style.setProperty("--iv-transcript-room", `${room.current}px`)
   }, [])
@@ -128,6 +133,22 @@ export function useSentMessageScroll({
     })
   }, [loaded, turnMessageId, rows, setRoom, fitRoom])
 
+  // On mount only: the view opens once at the restored place, then follows the transcript.
+  useLayoutEffect(() => {
+    if (!restored) return
+    sentId.current = restored.id
+    sentTop.current = restored.top
+    userScrolled.current = restored.userScrolled
+    setRoom(restored.room)
+  }, [])
+
+  // Only while room is left under the message: past that, the list's own scroll position says it all.
+  const sentMessagePlace = useCallback((): SentMessagePlace | undefined => {
+    const id = sentId.current
+    if (id === undefined || !roomLeftNow.current) return undefined
+    return { id, top: sentTop.current, room: room.current, userScrolled: userScrolled.current }
+  }, [])
+
   useEffect(
     () => () => {
       cancelAnimationFrame(frame.current)
@@ -166,5 +187,5 @@ export function useSentMessageScroll({
   const followOutput =
     roomLeft || sending ? false : (atBottom: boolean) => atBottom && ("auto" as const)
 
-  return { root, scrollerRef, followOutput, fitRoom }
+  return { root, scrollerRef, followOutput, fitRoom, sentMessagePlace }
 }

@@ -1,4 +1,4 @@
-import { RegistryProvider } from "@effect/atom-react"
+import { RegistryProvider, useAtomMount } from "@effect/atom-react"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
@@ -8,7 +8,7 @@ import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
-import { PAGE_SIZE } from "../atoms/get-items.ts"
+import { PAGE_SIZE, transcriptOf } from "../atoms/get-items.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
 const message = (position: number, text = `message ${position}`): TranscriptItem => ({
@@ -321,3 +321,107 @@ test.each([true, false])(
     })
   },
 )
+
+// The session's tab keeps its transcript in memory while the view is closed, as switching tabs does.
+function KeptTranscript() {
+  useAtomMount(transcriptOf("s1").list.ids)
+  return null
+}
+
+const switchableView = (
+  server: ReturnType<typeof makeFakeServer>,
+  shown: boolean,
+  live = false,
+) => (
+  <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+    <KeptTranscript />
+    <div style={{ position: "relative", height: 300 }}>
+      <PluginsProvider plugins={builtinPlugins}>
+        {shown && <TranscriptView sessionId="s1" live={live} />}
+      </PluginsProvider>
+    </div>
+  </RegistryProvider>
+)
+
+const fortyMessages = () => Array.from({ length: 40 }, (_, i) => message(i))
+
+const closeAndOpen = async (
+  screen: Awaited<ReturnType<typeof render>>,
+  server: ReturnType<typeof makeFakeServer>,
+  meanwhile: () => void = () => {},
+  live = false,
+) => {
+  await screen.rerender(switchableView(server, false, live))
+  await expect.element(page.getByTestId("transcript")).not.toBeInTheDocument()
+  meanwhile()
+  await screen.rerender(switchableView(server, true, live))
+}
+
+test("the transcript opens again where the user had scrolled it", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", fortyMessages())
+  const screen = await render(switchableView(server, true))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+  scroller().scrollTop -= 250
+  // The browser would send it a frame later.
+  scroller().dispatchEvent(new Event("scroll"))
+  const scrolledTo = scroller().scrollTop
+
+  await closeAndOpen(screen, server)
+
+  await vi.waitFor(() => expect(Math.abs(scroller().scrollTop - scrolledTo)).toBeLessThan(2))
+})
+
+test("a transcript left at its end opens again at its end, with the items that came meanwhile", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", fortyMessages())
+  const screen = await render(switchableView(server, true))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+
+  await closeAndOpen(screen, server, () => {
+    for (let i = 40; i < 45; i++) server.pushItem(message(i))
+  })
+
+  await expect.element(page.getByText("message 44", { exact: true })).toBeVisible()
+})
+
+const sendMessage = async (server: ReturnType<typeof makeFakeServer>) => {
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+  const screen = await render(switchableView(server, true))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+  server.pushItem(userMessage(40))
+  await screen.rerender(switchableView(server, true, true))
+  await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
+  return screen
+}
+
+const topInView = (text: string) =>
+  page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
+  scroller().getBoundingClientRect().top
+
+test("a sent message is still at the top of the view when the transcript opens again", async () => {
+  const server = makeFakeServer()
+  const screen = await sendMessage(server)
+
+  await closeAndOpen(screen, server, () => server.pushItem(message(41)), true)
+
+  await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
+  await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
+})
+
+test("an answer that grew taller than the view while the transcript was closed opens at its end", async () => {
+  const server = makeFakeServer()
+  const screen = await sendMessage(server)
+  const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
+
+  await closeAndOpen(
+    screen,
+    server,
+    () =>
+      server.pushItem(message(41, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n"))),
+    true,
+  )
+
+  await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
+  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
+})
