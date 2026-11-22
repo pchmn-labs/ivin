@@ -12,3 +12,6 @@ export const openFileFailure = (error: unknown, path: string): ActionFailure =>
 
 export const closeFileFailure = (path: string): string =>
   `${fileName(path)} could not be closed. Retry.`
+
+export const outsideFileFailure = (path: string): string =>
+  `${path} is outside the session's working folder, so it is not opened.`

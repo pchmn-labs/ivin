@@ -265,3 +265,99 @@ test("a file keeps its scroll position when another file or session comes and go
   await expect.element(code("main.ts")).toBeVisible()
   await expect.poll(() => scroller().scrollTop).toBe(6000)
 })
+
+const answer = (text: string) => ({
+  sessionId: "s1",
+  id: "a1",
+  position: 0,
+  at: 0,
+  type: "message" as const,
+  role: "assistant" as const,
+  text,
+  images: [],
+})
+const transcriptLink = (name: string) => page.getByRole("link", { name, exact: true })
+const longMain = Array.from({ length: 2000 }, (_, n) => `line ${n + 1}`).join("\n")
+
+test("a file linked in an agent's answer opens beside the chat", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [answer("See [the readme](README.md) and [main](/dev/shop/src/main.ts).")])
+  await mount(server)
+  await transcriptLink("the readme").click()
+  await expect.element(code("README.md")).toHaveTextContent("# Shop")
+  await transcriptLink("main").click()
+  await expect.element(fileTab("main.ts")).toHaveAttribute("aria-selected", "true")
+  expect(server.subViews.get("s1")?.subViews).toEqual([
+    { kind: "file", path: "README.md" },
+    { kind: "file", path: "src/main.ts" },
+  ])
+})
+
+test("a linked line opens the file scrolled to it, and another link to the file moves there", async () => {
+  const server = makeServer()
+  server.files.set(`${project}/src/main.ts`, { kind: "text", text: longMain })
+  server.seedItems("s1", [answer("[start](src/main.ts:1500) and [end](src/main.ts#L1900-L1905)")])
+  await mount(server)
+  await transcriptLink("start").click()
+  await expect.element(code("main.ts").getByText("line 1500", { exact: true })).toBeInViewport()
+  await transcriptLink("end").click()
+  await expect.element(code("main.ts").getByText("line 1900", { exact: true })).toBeInViewport()
+})
+
+test("a file link opens with the keyboard", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [answer("[the readme](./README.md)")])
+  await mount(server)
+  await expect.element(transcriptLink("the readme")).toBeVisible()
+  ;(transcriptLink("the readme").element() as HTMLElement).focus()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(code("README.md")).toHaveTextContent("# Shop")
+})
+
+test("a web link is left to the browser and opens no file", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [answer("[ivin](https://github.com/pchmn-labs/ivin)")])
+  await mount(server)
+  await expect
+    .element(transcriptLink("ivin"))
+    .toHaveAttribute("href", "https://github.com/pchmn-labs/ivin")
+})
+
+test("a link outside the working folder opens nothing and says why", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [answer("[zshrc](/Users/me/.zshrc)")])
+  await mount(server)
+  await transcriptLink("zshrc").click()
+  await expect
+    .element(
+      page.getByText(
+        "/Users/me/.zshrc is outside the session's working folder, so it is not opened.",
+      ),
+    )
+    .toBeVisible()
+  await expect.element(card()).not.toBeInTheDocument()
+})
+
+test("a linked file that fails to open says so next to the answer, and Retry opens it", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [answer("[the readme](README.md)")])
+  await mount(server)
+  server.failNextCall("tab.openSubView")
+  await transcriptLink("the readme").click()
+  await expect.element(page.getByText("README.md could not be opened. Retry.")).toBeVisible()
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(code("README.md")).toHaveTextContent("# Shop")
+  await expect
+    .element(page.getByText("README.md could not be opened. Retry."))
+    .not.toBeInTheDocument()
+})
+
+test("a linked file that does not exist opens with the file view's message", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [answer("[old](src/old.ts:3)")])
+  await mount(server)
+  await transcriptLink("old").click()
+  await expect
+    .element(card().getByText("old.ts no longer exists. Retry once it is back."))
+    .toBeVisible()
+})

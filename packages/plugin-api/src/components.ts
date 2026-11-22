@@ -218,6 +218,8 @@ export interface ProjectMarkProps {
 
 export interface MarkdownProps {
   readonly text: string
+  // Links to files of this session's working folder open beside its chat.
+  readonly sessionId?: string
 }
 
 export interface ActionSheetProps {
