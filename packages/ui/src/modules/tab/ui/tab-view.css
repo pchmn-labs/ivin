@@ -32,10 +32,11 @@
 .iv-tab-view__split[data-full-width] .iv-tab-view__session {
   position: absolute;
   z-index: 1;
-  inset: calc(var(--iv-space-9) + 2px) calc(var(--iv-space-2) + 1px) calc(var(--iv-space-2) + 1px);
+  inset: calc(var(--iv-space-9) + 1px) calc(var(--iv-space-2) + 1px) calc(var(--iv-space-2) + 1px);
   min-width: 0;
   overflow: hidden;
-  border-radius: 0 0 var(--iv-radius-card) var(--iv-radius-card);
+  border-radius: 0 0 calc(var(--iv-radius-card) - 1px) calc(var(--iv-radius-card) - 1px);
+  background: var(--iv-bg);
   visibility: hidden;
 }
 
