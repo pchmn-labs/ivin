@@ -93,6 +93,9 @@ export class SessionNotFound extends Schema.TaggedError<SessionNotFound>()("Sess
   sessionId: Schema.String,
 }) {}
 
+export const RenamedBy = Schema.Literals(["user", "agent"])
+export type RenamedBy = typeof RenamedBy.Type
+
 export class SessionTitleChosenByUser extends Schema.TaggedError<SessionTitleChosenByUser>()(
   "SessionTitleChosenByUser",
   { sessionId: Schema.String },
@@ -200,12 +203,11 @@ export const SessionRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String },
     error: SessionNotFound,
   }),
-  // `by` defaults to the user, whose title the agent may not replace.
   Rpc.make("session.rename", {
     payload: {
       sessionId: Schema.String,
       title: Schema.String,
-      by: Schema.optional(Schema.Literals(["user", "agent"])),
+      by: Schema.optional(RenamedBy),
     },
     success: Session,
     error: Schema.Union([SessionNotFound, SessionTitleChosenByUser]),

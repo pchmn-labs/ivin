@@ -175,7 +175,15 @@ export const migrations: readonly Migration[] = [
   {
     version: 18,
     sql: `ALTER TABLE sessions ADD COLUMN title_source TEXT;
-    UPDATE sessions SET title_source = 'user' WHERE title_locked = 1;
+    UPDATE sessions SET title_source = CASE
+      WHEN instr(
+        (SELECT json_extract(e.payload, '$.text') FROM transcript_events e
+         WHERE e.session_id = sessions.id AND e.type = 'user_message' ORDER BY e.sequence LIMIT 1),
+        rtrim(title, '…')
+      ) > 0 THEN 'message'
+      ELSE 'user'
+    END
+    WHERE title_locked = 1;
     ALTER TABLE sessions DROP COLUMN title_locked`,
   },
 ]

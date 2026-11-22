@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { CommandFailed, type Command, type Input, UsageError } from "./command.ts"
 import { Server } from "./connection.ts"
-import { sessionIdOf, sessionOption } from "./session-annotation.ts"
+import { sessionIdOf, sessionNotFound, sessionOption } from "./session-annotation.ts"
 
 const argumentsOf = (input: Input) => {
   const title = input.positionals[0]?.trim() ?? ""
@@ -31,13 +31,7 @@ export const sessionRename: Command = {
       const { client } = yield* Server
       const session = yield* client["session.rename"]({ sessionId, title, by: "agent" }).pipe(
         Effect.catchTags({
-          SessionNotFound: () =>
-            Effect.fail(
-              new CommandFailed({
-                reason: "sessionNotFound",
-                message: `No session has the id "${sessionId}".`,
-              }),
-            ),
+          SessionNotFound: () => sessionNotFound(sessionId),
           SessionTitleChosenByUser: () =>
             Effect.fail(
               new CommandFailed({

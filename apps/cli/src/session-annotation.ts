@@ -23,6 +23,14 @@ export const sessionIdOf = ({ values, env }: Input) => {
   return sessionId
 }
 
+export const sessionNotFound = (sessionId: string) =>
+  Effect.fail(
+    new CommandFailed({
+      reason: "sessionNotFound",
+      message: `No session has the id "${sessionId}".`,
+    }),
+  )
+
 export const annotateSession = (sessionId: string, ns: string, kind: string, data: Schema.Json) =>
   Effect.gen(function* () {
     const { client } = yield* Server
@@ -33,13 +41,7 @@ export const annotateSession = (sessionId: string, ns: string, kind: string, dat
       data,
     }).pipe(
       Effect.catchTags({
-        SessionNotFound: () =>
-          Effect.fail(
-            new CommandFailed({
-              reason: "sessionNotFound",
-              message: `No session has the id "${sessionId}".`,
-            }),
-          ),
+        SessionNotFound: () => sessionNotFound(sessionId),
         AnnotationDataInvalid: () =>
           Effect.fail(
             new UsageError({

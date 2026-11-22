@@ -1,9 +1,9 @@
-import { SessionNotFound, SessionTitleChosenByUser } from "@ivin/contracts/session"
+import { type RenamedBy, SessionNotFound, SessionTitleChosenByUser } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { SessionFeed } from "./session-feed.ts"
-import { SessionStore, type TitleSource } from "./session-store.ts"
+import { SessionStore } from "./session-store.ts"
 
-export const renameSession = (sessionId: string, title: string, by: TitleSource = "user") =>
+export const renameSession = (sessionId: string, title: string, by: RenamedBy = "user") =>
   Effect.gen(function* () {
     const store = yield* SessionStore
     const feed = yield* SessionFeed

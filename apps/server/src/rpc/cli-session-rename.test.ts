@@ -6,7 +6,7 @@ import { buildCli, runCli, withCliServer } from "./cli-server.ts"
 
 beforeAll(buildCli, 60_000)
 
-// The tests may themselves run in an ivin session's agent, hence the empty IVIN_SESSION_ID.
+// IVIN_SESSION_ID is set even outside a session, as the tests may themselves run in an ivin session's agent.
 const rename = (
   args: readonly string[],
   options: { inSession?: boolean; userTitle?: string } = {},
