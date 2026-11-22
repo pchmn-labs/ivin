@@ -434,7 +434,7 @@ function vWindow() {
   const nav = `<aside class="card">${cardTop()}<div class="column">
     <div class="nav-head"><button class="icon-btn" data-close-settings title="Back to sessions Esc">${I.back}</button><b>Settings</b></div>
     <div class="nav" role="tablist" aria-orientation="vertical">${SECTIONS.map((x) => `<button class="row" role="tab" aria-selected="${x.id === S.section}" ${x.id === S.section ? "data-selected" : ""} data-section="${x.id}">${I[x.icon] ? (typeof I[x.icon] === "function" ? I[x.icon]() : I[x.icon]) : ""}<span class="title">${x.title}</span></button>`).join("")}</div>
-    <div class="nav-foot"><button class="row nav-file" data-open-file title="${FILE}">${I.braces}<span class="title">Open settings.json</span></button><div class="nav-keys">↑↓ section · Esc back</div></div>
+    <div class="nav-foot"><button class="row nav-file" data-open-file title="${FILE}">${I.braces}<span class="title">Open settings.json</span></button></div>
   </div></aside>`
   const body = `<div class="section-page" id="settings-root" tabindex="-1"><div class="section-col">
     ${problem()}
