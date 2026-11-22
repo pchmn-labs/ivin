@@ -10,6 +10,11 @@ import { getShellInstall } from "../modules/cli/usecases/get-shell-install.ts"
 import { installInShell } from "../modules/cli/usecases/install-in-shell.ts"
 import { layerFsFileReader } from "../modules/file/adapters/fs-file-reader.ts"
 import { layerFsFolderReader } from "../modules/file/adapters/fs-folder-reader.ts"
+import { layerFsFolderWatcher } from "../modules/file/adapters/fs-folder-watcher.ts"
+import { listFiles } from "../modules/file/usecases/list-files.ts"
+import { readGitStatus } from "../modules/file/usecases/read-git-status.ts"
+import { layerSharedFolderWatch } from "../modules/file/usecases/shared-folder-watch.ts"
+import { watchFolder } from "../modules/file/usecases/watch-folder.ts"
 import { listFolder } from "../modules/file/usecases/list-folder.ts"
 import { readFile } from "../modules/file/usecases/read-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
@@ -75,10 +80,12 @@ export const layerServices = Layer.mergeAll(layerWorktreeCleanup, layerImageComp
   Layer.provideMerge(Layer.mergeAll(layerSessionRuns, layerCurrentSettings)),
   Layer.provideMerge(layerSessionFeed),
   Layer.provideMerge(layerOriginFetch),
+  Layer.provideMerge(layerSharedFolderWatch),
   Layer.provideMerge(
     Layer.mergeAll(
       layerGitCli,
       layerFsFolderReader,
+      layerFsFolderWatcher,
       layerFsFileReader,
       layerSqliteProjectStore,
       layerSqliteSessionStore,
@@ -176,6 +183,9 @@ export const handlers = Rpcs.toLayer(
       "worktree.listBranches": ({ projectPath }) => listBranches(projectPath),
       "file.listFolder": ({ sessionId, path }) => listFolder(sessionId, path),
       "file.readFile": ({ sessionId, path }) => readFile(sessionId, path),
+      "file.listFiles": ({ sessionId }) => listFiles(sessionId),
+      "file.gitStatus": ({ sessionId }) => readGitStatus(sessionId),
+      "file.watch": ({ sessionId }) => watchFolder(sessionId),
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),

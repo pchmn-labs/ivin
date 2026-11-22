@@ -1,8 +1,8 @@
 import type { FolderNotListed } from "@ivin/contracts/file"
-import type { FolderListing } from "@ivin/plugin-api/ui"
+import type { FileListing, FolderListing } from "@ivin/plugin-api/ui"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 
-const failed = (text: string, retryable: boolean): FolderListing => ({
+const failed = (text: string, retryable: boolean): Extract<FileListing, { kind: "failed" }> => ({
   kind: "failed",
   failure: { text, retryable },
 })
@@ -25,5 +25,16 @@ export const folderListingFailure = (error: unknown, path: string): FolderListin
         : failed(`${folder} could not be read. Check its permissions, then retry.`, true)
     default:
       return failed(`${folder} could not be listed. Retry.`, true)
+  }
+}
+
+export const fileListingFailure = (error: unknown): FileListing => {
+  switch (errorTag(error)) {
+    case "WorkingFolderDeleted":
+      return { kind: "deleted" }
+    case "SessionNotFound":
+      return failed("This session no longer exists, so its files cannot be listed.", false)
+    default:
+      return failed("The working folder's files could not be listed. Retry.", true)
   }
 }

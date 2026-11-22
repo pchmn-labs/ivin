@@ -1,7 +1,7 @@
 import { FolderNotListed, PathOutsideWorkingFolder } from "@ivin/contracts/file"
 import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
 import { expect, test } from "vitest"
-import { folderListingFailure } from "./folder-listing.ts"
+import { fileListingFailure, folderListingFailure } from "./folder-listing.ts"
 
 test("a deleted working folder is its own state, not a failure", () => {
   expect(folderListingFailure(new WorkingFolderDeleted({ sessionId: "s" }), "")).toEqual({
@@ -30,5 +30,20 @@ test("each failure names the folder, and offers a retry only when one can work",
   expect(failure(new Error("connection lost"), "src")).toEqual({
     text: "The folder src could not be listed. Retry.",
     retryable: true,
+  })
+})
+
+test("a file listing that fails says why, and offers a retry when one can work", () => {
+  expect(fileListingFailure({ _tag: "WorkingFolderDeleted" })).toEqual({ kind: "deleted" })
+  expect(fileListingFailure({ _tag: "SessionNotFound" })).toEqual({
+    kind: "failed",
+    failure: {
+      text: "This session no longer exists, so its files cannot be listed.",
+      retryable: false,
+    },
+  })
+  expect(fileListingFailure(new Error("lost"))).toEqual({
+    kind: "failed",
+    failure: { text: "The working folder's files could not be listed. Retry.", retryable: true },
   })
 })

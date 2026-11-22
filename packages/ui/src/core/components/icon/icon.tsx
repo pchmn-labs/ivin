@@ -6,6 +6,8 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowsInLineVertical,
+  Eye,
+  EyeSlash,
   ArrowsLeftRight,
   ArrowsOut,
   ArrowUp,
@@ -88,6 +90,8 @@ const icons = {
   "brackets-curly": BracketsCurly,
   "app-window": AppWindow,
   "collapse-all": ArrowsInLineVertical,
+  eye: Eye,
+  "eye-slash": EyeSlash,
 } satisfies Record<IconName, PhosphorIcon>
 
 export function Icon({ name, size = 16, label }: IconProps) {

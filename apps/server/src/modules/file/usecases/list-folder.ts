@@ -29,5 +29,5 @@ export const listFolder = (sessionId: string, path: string) =>
       folder,
       entries.map((entry) => entry.name),
     )
-    return sortEntries(entries.filter((entry) => !ignored.has(entry.name)))
+    return sortEntries(entries.map((entry) => ({ ...entry, ignored: ignored.has(entry.name) })))
   })

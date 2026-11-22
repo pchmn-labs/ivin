@@ -13,7 +13,9 @@ const worktree = "/dev/shop/.worktrees/fix-cart"
 
 const folder = (...names: string[]): ReadonlyArray<FolderEntry> =>
   names.map((name) =>
-    name.endsWith("/") ? { name: name.slice(0, -1), kind: "folder" } : { name, kind: "file" },
+    name.endsWith("/")
+      ? { name: name.slice(0, -1), kind: "folder", ignored: false }
+      : { name, kind: "file", ignored: false },
   )
 
 const makeServer = () => {

@@ -11,7 +11,10 @@ import {
   FileNotRead,
   FolderNotListed,
   type FileContent,
+  type FileList,
+  type FolderChange,
   type FolderEntry,
+  type GitStatusEntry,
 } from "@ivin/contracts/file"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
@@ -104,6 +107,12 @@ export interface FakeServer {
   // missing here has had it deleted.
   readonly folders: Map<string, ReadonlyArray<FolderEntry>>
   readonly listedFolders: ReadonlyArray<string>
+  // What `file.gitStatus` returns, by working folder.
+  readonly gitStatus: Map<string, ReadonlyArray<GitStatusEntry>>
+  // `file.listFiles` lists the files of `folders` that git does not ignore; this many times so far.
+  readonly fileListings: () => number
+  // Streams paths changed on disk to `file.watch` for that working folder; change `folders` first.
+  readonly changeOnDisk: (workingFolder: string, paths: ReadonlyArray<string>) => void
   // What `file.readFile` reads, by absolute path; a path missing here has no file.
   readonly files: Map<string, FileContent | "unreadable">
   // Makes the next file.readFile wait until `release` is called.
@@ -206,6 +215,19 @@ export const makeFakeServer = (
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
+  const gitStatus = new Map<string, ReadonlyArray<GitStatusEntry>>()
+  let fileListings = 0
+  const diskChanges = Effect.runSync(
+    PubSub.unbounded<{ readonly workingFolder: string; readonly change: FolderChange }>(),
+  )
+  const filesUnder = (folder: string, prefix: string): Array<string> =>
+    (folders.get(folder) ?? [])
+      .filter((entry) => !entry.ignored)
+      .flatMap((entry) =>
+        entry.kind === "file"
+          ? [prefix + entry.name]
+          : filesUnder(`${folder}/${entry.name}`, `${prefix}${entry.name}/`),
+      )
   const listedFolders: Array<string> = []
   const files = new Map<string, FileContent | "unreadable">()
   let holdRead: Promise<void> | null = null
@@ -709,6 +731,34 @@ export const makeFakeServer = (
             : Effect.succeed(entries)
         },
       ),
+    "file.listFiles": ({ sessionId }: { sessionId: string }) =>
+      Effect.suspend((): Effect.Effect<FileList, SessionNotFound | WorkingFolderDeleted> => {
+        const session = sessions.get(sessionId)
+        if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
+        if (!folders.has(session.workingFolder))
+          return Effect.fail(new WorkingFolderDeleted({ sessionId }))
+        fileListings++
+        return Effect.succeed({ paths: filesUnder(session.workingFolder, ""), truncated: false })
+      }),
+    "file.gitStatus": ({ sessionId }: { sessionId: string }) =>
+      Effect.suspend(() => {
+        const session = sessions.get(sessionId)
+        if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
+        return Effect.succeed(gitStatus.get(session.workingFolder) ?? [])
+      }),
+    "file.watch": ({ sessionId }: { sessionId: string }) =>
+      Stream.unwrap(
+        Effect.suspend(() => {
+          const session = sessions.get(sessionId)
+          if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
+          return Effect.map(PubSub.subscribe(diskChanges), (subscription) =>
+            Stream.fromSubscription(subscription).pipe(
+              Stream.filter(({ workingFolder }) => workingFolder === session.workingFolder),
+              Stream.map(({ change }) => change),
+            ),
+          )
+        }),
+      ),
     "file.readFile": ({ sessionId, path }: { sessionId: string; path: string }) =>
       Effect.promise(() => holdRead ?? Promise.resolve()).pipe(
         Effect.andThen(
@@ -991,6 +1041,10 @@ export const makeFakeServer = (
     shell,
     folders,
     listedFolders,
+    gitStatus,
+    fileListings: () => fileListings,
+    changeOnDisk: (workingFolder, paths) =>
+      Effect.runSync(PubSub.publish(diskChanges, { workingFolder, change: { paths } })),
     files,
     holdNextRead: () => {
       let release!: () => void

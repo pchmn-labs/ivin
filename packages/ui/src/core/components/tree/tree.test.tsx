@@ -175,3 +175,79 @@ test("the rows carry their level, and the active row shows a focus ring while th
   await userEvent.keyboard("{ArrowDown}")
   expect(getComputedStyle(item("lib").element()).outlineStyle).toBe("solid")
 })
+
+test("a row shows its git status: the name's colour, and a letter for a file or a dot for a folder", async () => {
+  await render(
+    <WithKeys>
+      <div style={{ display: "flex", height: 300 }}>
+        <Tree
+          label="Files"
+          rows={[
+            { id: "src", name: "src", depth: 0, expanded: false, status: "modified" },
+            { id: "a.ts", name: "a.ts", depth: 0, expanded: null, status: "untracked" },
+            { id: "dist", name: "dist", depth: 0, expanded: false, status: "ignored" },
+            { id: "b.ts", name: "b.ts", depth: 0, expanded: null },
+          ]}
+          onToggle={() => undefined}
+        />
+      </div>
+    </WithKeys>,
+  )
+  const row = (name: string) => page.getByRole("treeitem", { name, exact: true })
+  await expect.element(row("a.ts")).toHaveAttribute("data-status", "untracked")
+  await expect.element(row("a.ts")).toHaveAccessibleDescription("Untracked")
+  expect(row("a.ts").element().textContent).toBe("a.tsU")
+  await expect.element(row("src")).toHaveAccessibleDescription("Has changes")
+  expect(row("src").element().querySelector(".iv-tree__dot")).not.toBeNull()
+  await expect.element(row("dist")).toHaveAccessibleDescription("Ignored by git")
+  expect(row("dist").element().textContent).toBe("dist")
+  await expect.element(row("b.ts")).not.toHaveAttribute("data-status")
+})
+
+test("the matched part of a name is highlighted", async () => {
+  await render(
+    <WithKeys>
+      <div style={{ display: "flex", height: 300 }}>
+        <Tree
+          label="Files"
+          rows={[{ id: "cart.ts", name: "cart.ts", depth: 0, expanded: null, match: [1, 3] }]}
+          onToggle={() => undefined}
+        />
+      </div>
+    </WithKeys>,
+  )
+  await expect.element(page.getByRole("treeitem", { name: "cart.ts" })).toBeVisible()
+  expect(document.querySelector(".iv-tree__match")?.textContent).toBe("ar")
+})
+
+test("revealId selects its row and scrolls it into view, once it is among the rows", async () => {
+  const many: ReadonlyArray<TreeRow> = Array.from({ length: 200 }, (_, i) => ({
+    id: `f${i}`,
+    name: `file-${i}.ts`,
+    depth: 0,
+    expanded: null,
+  }))
+  function Reveal() {
+    const [rows, setRows] = useState<ReadonlyArray<TreeRow>>(many.slice(0, 10))
+    const [revealId, setRevealId] = useState<string | null>(null)
+    return (
+      <WithKeys>
+        <button type="button" onClick={() => setRevealId("f150")}>
+          reveal
+        </button>
+        <button type="button" onClick={() => setRows(many)}>
+          load
+        </button>
+        <div style={{ display: "flex", height: 300 }}>
+          <Tree label="Files" rows={rows} onToggle={() => undefined} revealId={revealId} />
+        </div>
+      </WithKeys>
+    )
+  }
+  await render(<Reveal />)
+  await page.getByRole("button", { name: "reveal" }).click()
+  await page.getByRole("button", { name: "load" }).click()
+  const row = page.getByRole("treeitem", { name: "file-150.ts" })
+  await expect.element(row).toBeInViewport()
+  await expect.element(row).toHaveAttribute("aria-selected", "true")
+})

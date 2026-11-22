@@ -16,6 +16,13 @@
   --iv-syntax-tag: var(--iv-project-hue-2);
   --iv-syntax-property: var(--iv-text);
 
+  --iv-git-modified: var(--iv-project-hue-2);
+  --iv-git-added: var(--iv-project-hue-0);
+  --iv-git-untracked: var(--iv-project-hue-5);
+  --iv-git-deleted: var(--iv-project-hue-4);
+  --iv-git-conflicted: var(--iv-danger);
+  --iv-git-ignored: color-mix(in srgb, var(--iv-text-faint) 70%, transparent);
+
   --iv-font-sans:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Segoe UI", sans-serif;
   --iv-font-mono: ui-monospace, "SF Mono", Menlo, monospace;

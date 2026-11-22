@@ -75,3 +75,71 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.iv-tree__row[data-status="modified"] .iv-tree__name,
+.iv-tree__row[data-status="modified"] .iv-tree__letter {
+  color: var(--iv-git-modified);
+}
+
+.iv-tree__row[data-status="added"] .iv-tree__name,
+.iv-tree__row[data-status="added"] .iv-tree__letter {
+  color: var(--iv-git-added);
+}
+
+.iv-tree__row[data-status="untracked"] .iv-tree__name,
+.iv-tree__row[data-status="untracked"] .iv-tree__letter {
+  color: var(--iv-git-untracked);
+}
+
+.iv-tree__row[data-status="deleted"] .iv-tree__name,
+.iv-tree__row[data-status="deleted"] .iv-tree__letter {
+  color: var(--iv-git-deleted);
+}
+
+.iv-tree__row[data-status="conflicted"] .iv-tree__name,
+.iv-tree__row[data-status="conflicted"] .iv-tree__letter {
+  color: var(--iv-git-conflicted);
+}
+
+.iv-tree__row[data-status="ignored"] .iv-tree__name {
+  color: var(--iv-git-ignored);
+}
+
+.iv-tree__letter {
+  flex: none;
+  width: var(--iv-tree-indent);
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  text-align: center;
+}
+
+.iv-tree__dot {
+  flex: none;
+  width: 5px;
+  height: 5px;
+  margin: 0 var(--iv-space-1);
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.iv-tree__row[data-status="modified"] .iv-tree__dot {
+  color: var(--iv-git-modified);
+}
+
+.iv-tree__row[data-status="added"] .iv-tree__dot {
+  color: var(--iv-git-added);
+}
+
+.iv-tree__row[data-status="untracked"] .iv-tree__dot {
+  color: var(--iv-git-untracked);
+}
+
+.iv-tree__row[data-status="conflicted"] .iv-tree__dot {
+  color: var(--iv-git-conflicted);
+}
+
+.iv-tree__match {
+  background: none;
+  color: var(--iv-accent);
+  font-weight: var(--iv-weight-semibold);
+}
