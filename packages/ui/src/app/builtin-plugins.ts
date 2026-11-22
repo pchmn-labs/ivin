@@ -1,28 +1,28 @@
-import approvalsManifest from "../../../../plugins/approvals/plugin.json"
-import * as approvals from "../../../../plugins/approvals/ui.tsx"
-import changesManifest from "../../../../plugins/changes/plugin.json"
-import * as changes from "../../../../plugins/changes/ui.tsx"
-import filesManifest from "../../../../plugins/files/plugin.json"
-import * as files from "../../../../plugins/files/ui.tsx"
-import inactiveSessionsManifest from "../../../../plugins/inactive-sessions/plugin.json"
-import * as inactiveSessions from "../../../../plugins/inactive-sessions/ui.tsx"
-import messagesManifest from "../../../../plugins/messages/plugin.json"
-import * as messages from "../../../../plugins/messages/ui.tsx"
-import toolCallsManifest from "../../../../plugins/tool-calls/plugin.json"
-import * as toolCalls from "../../../../plugins/tool-calls/ui.tsx"
-import usageManifest from "../../../../plugins/usage/plugin.json"
-import * as usage from "../../../../plugins/usage/ui.tsx"
-import workingManifest from "../../../../plugins/working/plugin.json"
-import * as working from "../../../../plugins/working/ui.tsx"
+import approvalsPackage from "../../../../plugins/approvals/package.json"
+import * as approvals from "../../../../plugins/approvals/src/ui.tsx"
+import changesPackage from "../../../../plugins/changes/package.json"
+import * as changes from "../../../../plugins/changes/src/ui.tsx"
+import filesPackage from "../../../../plugins/files/package.json"
+import * as files from "../../../../plugins/files/src/ui.tsx"
+import inactiveSessionsPackage from "../../../../plugins/inactive-sessions/package.json"
+import * as inactiveSessions from "../../../../plugins/inactive-sessions/src/ui.tsx"
+import messagesPackage from "../../../../plugins/messages/package.json"
+import * as messages from "../../../../plugins/messages/src/ui.tsx"
+import toolCallsPackage from "../../../../plugins/tool-calls/package.json"
+import * as toolCalls from "../../../../plugins/tool-calls/src/ui.tsx"
+import usagePackage from "../../../../plugins/usage/package.json"
+import * as usage from "../../../../plugins/usage/src/ui.tsx"
+import workingPackage from "../../../../plugins/working/package.json"
+import * as working from "../../../../plugins/working/src/ui.tsx"
 import type { UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
 
 export const builtinPlugins: ReadonlyArray<UiPluginEntry> = [
-  { manifest: approvalsManifest, activate: approvals.activate },
-  { manifest: filesManifest, activate: files.activate },
-  { manifest: changesManifest, activate: changes.activate },
-  { manifest: inactiveSessionsManifest, activate: inactiveSessions.activate },
-  { manifest: messagesManifest, activate: messages.activate },
-  { manifest: toolCallsManifest, activate: toolCalls.activate },
-  { manifest: usageManifest, activate: usage.activate },
-  { manifest: workingManifest, activate: working.activate },
+  { manifest: approvalsPackage.ivin, activate: approvals.activate },
+  { manifest: filesPackage.ivin, activate: files.activate },
+  { manifest: changesPackage.ivin, activate: changes.activate },
+  { manifest: inactiveSessionsPackage.ivin, activate: inactiveSessions.activate },
+  { manifest: messagesPackage.ivin, activate: messages.activate },
+  { manifest: toolCallsPackage.ivin, activate: toolCalls.activate },
+  { manifest: usagePackage.ivin, activate: usage.activate },
+  { manifest: workingPackage.ivin, activate: working.activate },
 ]

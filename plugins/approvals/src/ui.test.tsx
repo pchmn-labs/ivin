@@ -2,7 +2,7 @@ import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
-import { hostComponents } from "../../packages/ui/src/app/host-components.ts"
+import { hostComponents } from "../../../packages/ui/src/app/host-components.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type {
   ApprovalItem,

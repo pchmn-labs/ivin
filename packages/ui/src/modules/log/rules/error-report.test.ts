@@ -26,17 +26,17 @@ test("a tagged error gives its tag as type, and a bare value its own type", () =
 })
 
 test("an error whose file or first stack frame is under plugins/<id>/ comes from a plugin", () => {
-  expect(thrownByPlugin("http://localhost:5173/plugins/usage/ui.tsx", null)).toBe(true)
+  expect(thrownByPlugin("http://localhost:5173/plugins/usage/src/ui.tsx", null)).toBe(true)
   expect(
     thrownByPlugin(undefined, {
       stack:
-        "Error: x\n    at onClick (http://localhost:5173/plugins/usage/ui.tsx:3:9)\n    at app.tsx:1",
+        "Error: x\n    at onClick (http://localhost:5173/plugins/usage/src/ui.tsx:3:9)\n    at app.tsx:1",
     }),
   ).toBe(true)
   expect(
     thrownByPlugin("http://localhost:5173/src/app/app.tsx", {
       stack:
-        "Error: x\n    at run (http://localhost:5173/src/app/app.tsx:3:9)\n    at /plugins/usage/ui.tsx:1",
+        "Error: x\n    at run (http://localhost:5173/src/app/app.tsx:3:9)\n    at /plugins/usage/src/ui.tsx:1",
     }),
   ).toBe(false)
 })
