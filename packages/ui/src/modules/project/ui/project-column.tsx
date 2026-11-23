@@ -14,12 +14,11 @@ import "./project-column.css"
 
 export function ProjectColumn({
   project,
-  select = false,
+  projectMenu = false,
   children,
 }: {
   project: Project
-  // Names the project in a menu of the open projects, for a sidebar with no rail.
-  select?: boolean
+  projectMenu?: boolean
   children: ReactNode
 }) {
   const closeProject = useAtomSet(closeProjectAtom)
@@ -38,8 +37,8 @@ export function ProjectColumn({
   }
   return (
     <div className="iv-project-column">
-      <div className="iv-project-column__head" data-select={select || undefined}>
-        {select ? (
+      <div className="iv-project-column__head" data-project-menu={projectMenu || undefined}>
+        {projectMenu ? (
           <ProjectSelect project={project} />
         ) : (
           <>

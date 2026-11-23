@@ -49,7 +49,7 @@ const BOTTOM_MAX_SHARE = 0.7
 
 export function App() {
   const connection = useAtomValue(connectionAtom)
-  const strip = useAtomValue(settingsAtom).sidebar.layout === "strip"
+  const { layout } = useAtomValue(settingsAtom).sidebar
   const current = useAtomValue(selectedProjectAtom)
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom)
   const registry = useContext(RegistryContext)
@@ -134,9 +134,9 @@ export function App() {
                   extra={<SettingsButton />}
                 />
               </div>
-              <div className="iv-app__card-body" data-layout={strip ? "strip" : "rail"}>
-                {!strip && <ProjectRail />}
-                <ProjectColumn project={current} select={strip}>
+              <div className="iv-app__card-body" data-layout={layout}>
+                {layout === "rail" && <ProjectRail />}
+                <ProjectColumn project={current} projectMenu={layout === "strip"}>
                   <SidebarTabs />
                 </ProjectColumn>
               </div>
@@ -153,7 +153,7 @@ export function App() {
                   <Slot slot="sidebar.bottom" props={{}} />
                 </div>
               </div>
-              {strip && <ProjectStrip />}
+              {layout === "strip" && <ProjectStrip />}
               <ResizeHandle
                 label="Resize the sidebar"
                 edge="right"

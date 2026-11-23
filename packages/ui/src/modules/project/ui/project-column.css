@@ -14,7 +14,7 @@
   padding: 0 var(--iv-space-2) 0 var(--iv-space-4);
 }
 
-.iv-project-column__head[data-select] {
+.iv-project-column__head[data-project-menu] {
   padding-left: var(--iv-space-2);
 }
 

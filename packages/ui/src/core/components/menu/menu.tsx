@@ -8,9 +8,8 @@ import "./menu.css"
 export type { MenuProps }
 
 type Action = Exclude<MenuItem, "separator" | { readonly heading: string }> & {
-  // In place of the icon, such as a project's creature.
+  // In place of the icon.
   readonly leading?: ReactNode
-  // After the label, such as a count.
   readonly trailing?: ReactNode
   readonly "aria-label"?: string
 }

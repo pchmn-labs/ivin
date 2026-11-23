@@ -16,6 +16,11 @@ export const defaultSettings: Settings = {
   sidebar: { layout: "rail" },
 }
 
+const choicesOf = <Value extends string>(
+  schema: { readonly literals: ReadonlyArray<Value> },
+  labels: Record<Value, string>,
+) => schema.literals.map((value) => ({ value, label: labels[value] }))
+
 export type SettingPath = {
   [Section in keyof Settings]: `${Section}.${keyof Settings[Section] & string}`
 }[keyof Settings]
@@ -83,16 +88,15 @@ export const settingSections: ReadonlyArray<SettingSection> = [
         label: "Projects",
         description:
           "Rail lists the projects in a column beside the sessions. Strip names the selected project above the sessions and lines up the others at the sidebar's foot.",
-        choices: [
-          { value: "rail", label: "Rail" },
-          { value: "strip", label: "Strip" },
-        ],
+        choices: choicesOf(Settings.fields.sidebar.fields.layout, {
+          rail: "Rail",
+          strip: "Strip",
+        }),
       },
     ],
   },
 ]
 
-// The values a setting with fixed values takes, as `"rail" or "strip"`.
 export const choicesText = (values: ReadonlyArray<string>): string => {
   const quoted = values.map((value) => JSON.stringify(value))
   return quoted.length < 2
@@ -124,7 +128,6 @@ export class SettingValueInvalid extends Schema.TaggedError<SettingValueInvalid>
   {
     path: Schema.String,
     expected: Schema.Literals(["boolean", "number", "string", "oneOf"]),
-    // The values a setting of `expected` "oneOf" takes.
     allowed: Schema.optional(Schema.Array(Schema.String)),
   },
 ) {}

@@ -13,7 +13,7 @@
   align-items: center;
   gap: var(--iv-space-half);
   min-width: 0;
-  padding: var(--iv-space-1) var(--iv-space-half);
+  padding: var(--iv-space-1);
   overflow-x: auto;
   scroll-padding-inline: var(--iv-space-2);
   scrollbar-width: none;

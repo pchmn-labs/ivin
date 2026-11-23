@@ -1,4 +1,3 @@
-// Null past either end, so stepping stops there rather than wrapping around.
 export const neighbourProject = (
   projects: ReadonlyArray<{ readonly path: string }>,
   selectedPath: string | null,

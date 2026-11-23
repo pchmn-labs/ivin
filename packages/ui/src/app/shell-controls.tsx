@@ -8,7 +8,6 @@ export interface ShellControlsProps {
   readonly projectPath: string
   readonly sidebarOpen: boolean
   readonly onToggleSidebar: () => void
-  // Before back and forward, such as the Settings button.
   readonly extra?: ReactNode
 }
 

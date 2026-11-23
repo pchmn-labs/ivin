@@ -42,9 +42,11 @@ export function ProjectStrip() {
   const row = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
-    row.current
-      ?.querySelector('[aria-current="true"]')
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" })
+    row.current?.querySelector('[aria-current="true"]')?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    })
   }, [selectedPath])
 
   return (
