@@ -188,6 +188,8 @@ interface HarnessProvider {
   readonly id: "claude" | "codex" | "acp" | "scripted"
   readonly start: (input: StartInput) => Effect<HarnessRun, HarnessError, Scope>
   readonly toolKind: (name: string) => ToolKind
+  // One prompt to a small model, outside any session; null when the harness has none.
+  readonly completeText: ((prompt: string) => Effect<string, HarnessError>) | null
 }
 interface HarnessRun {
   readonly events: Stream<HarnessEvent | HarnessDelta, HarnessError>
@@ -458,6 +460,7 @@ Once the CLI is stable, an optional `ivin` MCP server can expose the same comman
 The feature that started this design, as two plugins: `github` knows the forge, `prs` shows pull requests whatever the forge.
 
 - `github`'s `server.ts` watches `transcript.onEvent` for a `gh pr create` or GitHub MCP `create_pull_request` result holding a PR URL, and adds a `pr` annotation with `relation: "created"`. Deterministic, free, no agent cooperation needed.
+- `github` turns the `citation` the server stores from a session's first message into an `issue` or `pr` annotation with `relation: "referenced"`, on the project's GitHub remote, asking `gh` whether the number is an issue or a pull request.
 - The agent adds what detection can't see with `ivin link <url> --as referenced`; the `ivin-customize` skill tells it when.
 - `github` polls each open PR's state, CI and mergeability with `ctx.poll` and `ctx.exec("gh", …)`, and updates the annotation.
 - `prs`'s `ui.tsx` reads the `pr` annotations and fills `session.badge` (state icon, CI chip, `+n`), `session.card` (folded PR list) and `tab.decoration`.
