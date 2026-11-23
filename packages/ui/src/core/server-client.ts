@@ -44,11 +44,10 @@ export const makeServerClientLayer = () =>
               port.onmessage = (event) => handler(event.data)
             },
             postMessage: (data) => port.postMessage(data),
-            onLost: (handler) => {
+            onLost: (handler) =>
               window.ivin.onServerState((state) => {
                 if (state.kind !== "running") handler()
-              })
-            },
+              }),
           }),
         ),
       )

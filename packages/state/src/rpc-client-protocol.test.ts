@@ -47,7 +47,10 @@ test("a request in flight when the connection is lost fails with a message", asy
       layerClientProtocolMessagePort({
         onMessage: (handler) => port1.on("message", handler),
         postMessage: (data) => port1.postMessage(data),
-        onLost: (handler) => (lose = handler),
+        onLost: (handler) => {
+          lose = handler
+          return () => {}
+        },
       }),
     ),
     Effect.scoped,

@@ -28,7 +28,6 @@ export interface ClosablePort extends RpcPort {
   readonly onClose: (handler: () => void) => void
 }
 
-// Serves one client until its port closes: the streams and watchers it opened end with it.
 export const serveOverClosingPort = (port: ClosablePort, info: ServerInfo["Service"]) =>
   Effect.raceFirst(
     Layer.launch(serveOverPort(port, info)),

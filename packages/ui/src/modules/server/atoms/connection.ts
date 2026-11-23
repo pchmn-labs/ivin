@@ -5,7 +5,6 @@ import { serverStateAtom } from "./server-state.ts"
 export interface Connection {
   readonly state: "connecting" | "connected" | "restarting" | "failed"
   readonly text: string
-  // Set when the user can ask the desktop app to start the server again.
   readonly canRestart?: boolean
 }
 
