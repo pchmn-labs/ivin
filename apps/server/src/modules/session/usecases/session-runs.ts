@@ -35,7 +35,7 @@ import {
   Semaphore,
   Stream,
 } from "effect"
-import { applyEvent } from "../../transcript/rules/derive-items.ts"
+import { applyEvent, unansweredEvents } from "../../transcript/rules/derive-items.ts"
 import {
   applyDelta,
   blockAfterEvent,
@@ -266,37 +266,8 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           // Not the user's activity, so the session keeps its place in the sidebar.
           const writeUnanswered = Effect.suspend(() =>
             Effect.forEach(
-              [...itemState.openRequests.values()],
-              (request) => {
-                const unanswered = write(
-                  { type: "request_unanswered", requestId: request.requestId, raw: null },
-                  undefined,
-                  { touch: false },
-                )
-                const heldBack =
-                  request.type === "approval" &&
-                  request.toolCallId !== null &&
-                  itemState.openToolCalls.has(request.toolCallId)
-                    ? request.toolCallId
-                    : null
-                return heldBack === null
-                  ? unanswered
-                  : unanswered.pipe(
-                      Effect.andThen(
-                        write(
-                          {
-                            type: "tool_result",
-                            toolCallId: heldBack,
-                            output: "Not run: the approval was not answered.",
-                            isError: true,
-                            raw: null,
-                          },
-                          undefined,
-                          { touch: false },
-                        ),
-                      ),
-                    )
-              },
+              unansweredEvents(itemState),
+              (event) => write(event, undefined, { touch: false }),
               { discard: true },
             ),
           )

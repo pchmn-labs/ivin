@@ -1,6 +1,6 @@
 import type { TranscriptEvent } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
-import { applyEvent, emptyItemState, replay } from "./derive-items.ts"
+import { applyEvent, emptyItemState, replay, unansweredEvents } from "./derive-items.ts"
 
 const kindOf = (name: string) => (name === "list_files" ? "search" : "other")
 const derive = (all: TranscriptEvent[]) => replay(all, kindOf).items
@@ -276,6 +276,33 @@ test("an unanswered request closes its approval or question in place, and only a
     { id: "e2", type: "question", status: "unanswered" },
   ])
   expect(state.openRequests.size).toBe(0)
+})
+
+test("closing open requests fails the running tool call each approval was for, and only that one", () => {
+  const { state } = replay(
+    events(
+      call("t1"),
+      { ...request("r1"), toolCallId: "t1" },
+      call("t2"),
+      result("t2"),
+      { ...request("r2"), toolCallId: "t2" },
+      asked("q1"),
+    ),
+    kindOf,
+  )
+
+  expect(unansweredEvents(state)).toEqual([
+    { type: "request_unanswered", requestId: "r1", raw: null },
+    {
+      type: "tool_result",
+      toolCallId: "t1",
+      output: "Not run: the approval was not answered.",
+      isError: true,
+      raw: null,
+    },
+    { type: "request_unanswered", requestId: "r2", raw: null },
+    { type: "request_unanswered", requestId: "q1", raw: null },
+  ])
 })
 
 test("replaying from a state carried over gives the items replaying every event gives", () => {

@@ -35,8 +35,8 @@ function UnansweredRecord({ item }: { item: QuestionItem }) {
         <Text size="sm" tone="muted">
           Not answered:
         </Text>
-        {item.questions.map(({ question }) => (
-          <Stack key={question} direction="row" gap={1} align="baseline">
+        {item.questions.map(({ question }, index) => (
+          <Stack key={index} direction="row" gap={1} align="baseline">
             <Text size="sm" tone="muted">
               •
             </Text>

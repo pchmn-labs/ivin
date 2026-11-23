@@ -1,4 +1,9 @@
-import type { ToolKind, TranscriptEvent, TranscriptItem } from "@ivin/contracts/transcript"
+import type {
+  HarnessEvent,
+  ToolKind,
+  TranscriptEvent,
+  TranscriptItem,
+} from "@ivin/contracts/transcript"
 
 type MessageItem = Extract<TranscriptItem, { type: "message" }>
 type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
@@ -193,3 +198,28 @@ export const replay = (
   }
   return { items: [...byId.values()].toSorted((a, b) => a.position - b.position), state }
 }
+
+// Closes each open request; an approval's tool call never ran, so it fails rather than spin.
+export const unansweredEvents = (state: ItemState): HarnessEvent[] =>
+  [...state.openRequests.values()].flatMap((request): HarnessEvent[] => {
+    const closed: HarnessEvent = {
+      type: "request_unanswered",
+      requestId: request.requestId,
+      raw: null,
+    }
+    const call =
+      request.type === "approval" && request.toolCallId !== null
+        ? state.openToolCalls.get(request.toolCallId)
+        : undefined
+    if (!call) return [closed]
+    return [
+      closed,
+      {
+        type: "tool_result",
+        toolCallId: call.toolCallId,
+        output: "Not run: the approval was not answered.",
+        isError: true,
+        raw: null,
+      },
+    ]
+  })

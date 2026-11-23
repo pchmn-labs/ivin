@@ -45,7 +45,7 @@ function UnansweredRecord({ input }: { input: string }) {
 function ApprovalRecord({ item }: SlotProps["transcript.approval"]) {
   const input = formatToolInput(item.name, item.input)
   if (item.decision === "unanswered") return <UnansweredRecord input={input} />
-  // An allowed call shows as its tool row; only a denial needs a trace.
+  // An allowed call shows as its tool row.
   if (item.decision !== "deny") return null
   return (
     <Stack direction="row" gap={2} align="center">
