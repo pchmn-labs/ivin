@@ -16,7 +16,7 @@ body { overflow: hidden; background: var(--iv-bg); color: var(--iv-text); }
 }
 .proto-row { padding: 6px 8px; border-radius: var(--iv-radius-md); color: var(--iv-text-muted); }
 .proto-row[data-active] { background: var(--iv-bg-active); color: var(--iv-text); }
-.proto-main { flex: 1; min-width: 0; border-radius: 10px; background: var(--iv-bg-card); display: flex; flex-direction: column; }
+.proto-main { flex: 1; min-width: 0; border-radius: 10px; background: var(--iv-bg); display: flex; flex-direction: column; }
 .proto-center { flex: 1; display: grid; place-content: center; justify-items: center; gap: 12px; text-align: center; padding: 32px; }
 .proto-center--wide { max-width: 520px; margin: 0 auto; }
 .proto-title { font-size: var(--iv-text-lg); font-weight: 600; margin: 0; }
@@ -29,3 +29,8 @@ body { overflow: hidden; background: var(--iv-bg); color: var(--iv-text); }
 .proto-ghost { height: 14px; border-radius: 4px; background: var(--iv-bg-active); opacity: 0.5; }
 .proto-bar { padding: 8px 16px; border-bottom: 1px solid var(--iv-border); }
 .proto-block { text-align: left; width: 100%; box-sizing: border-box; }
+
+.proto-sections { display: flex; flex-direction: column; gap: 14px; font-size: var(--iv-text-sm); }
+.proto-section { display: flex; flex-direction: column; gap: 4px; }
+.proto-label { color: var(--iv-text-faint); font-size: var(--iv-text-xs); font-weight: 500; }
+.proto-box { padding: 8px 10px; border: 1px solid var(--iv-border); border-radius: var(--iv-radius-md); background: var(--iv-bg-subtle); }

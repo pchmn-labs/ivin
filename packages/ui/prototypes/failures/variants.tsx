@@ -73,33 +73,47 @@ function ArchiveDialog({ variant, running, onClose }: { variant: 1 | 2 | 3; runn
   const actions = (
     <>
       <Button variant="secondary" onClick={onClose}>Cancel</Button>
-      <Button variant="danger" onClick={onClose}>{running ? "Stop and archive" : "Archive and drop edits"}</Button>
+      <Button variant="danger" onClick={onClose}>{running ? "Stop and archive" : "Archive"}</Button>
     </>
   )
   const title = "Archive “Fix the login redirect”?"
+  const files = (
+    <ul className="proto-files">{FILES.map((f) => <li key={f} className="proto-file"><span className="proto-dot" />{f}</li>)}</ul>
+  )
   if (variant === 1) {
+    // Sentence: one description line, the files under it
     return (
       <Dialog open onOpenChange={onClose} title={title} actions={actions}
-        description={`${running ? "The agent is still working and stops. " : ""}Your unsaved edits to ${FILES.join(", ")} are lost.`} />
+        description={running ? "The agent is working and stops. These files have unsaved edits, which are lost:" : "These files have unsaved edits, which are lost:"}>
+        {files}
+      </Dialog>
     )
   }
   if (variant === 2) {
+    // Sections: a small faint label per consequence, files in a boxed list
     return (
-      <Dialog open onOpenChange={onClose} title={title} description="Archiving cannot keep everything." actions={actions}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <Dialog open onOpenChange={onClose} title={title} actions={actions}>
+        <div className="proto-sections">
           {running && (
-            <div className="proto-consequence"><Icon name="loader" size={14} /><span>The agent is working. Archiving stops it.</span></div>
+            <div className="proto-section">
+              <span className="proto-label">Agent</span>
+              <span>Working. Archiving stops it.</span>
+            </div>
           )}
-          <div className="proto-consequence"><Icon name="circle-alert" size={14} /><span>{FILES.length} files have unsaved edits, which are lost:</span></div>
-          <ul className="proto-files">{FILES.map((f) => <li key={f} className="proto-file"><span className="proto-dot" />{f}</li>)}</ul>
+          <div className="proto-section">
+            <span className="proto-label">Unsaved edits · {FILES.length} files</span>
+            <div className="proto-box">{files}</div>
+          </div>
         </div>
       </Dialog>
     )
   }
+  // Summary: the loss is the title, the agent is a footnote
   return (
-    <Dialog open onOpenChange={onClose} title={`${FILES.length} files with unsaved edits`}
-      description={`${title.replace("?", "")} drops them${running ? " and stops the agent" : ""}. This cannot be undone.`} actions={actions}>
-      <ul className="proto-files">{FILES.map((f) => <li key={f} className="proto-file"><span className="proto-dot" />{f}</li>)}</ul>
+    <Dialog open onOpenChange={onClose} title={`Drop the unsaved edits of ${FILES.length} files and archive?`}
+      description="“Fix the login redirect” goes to the archive. The edits cannot come back." actions={actions}>
+      <div className="proto-box">{files}</div>
+      {running && <div className="proto-consequence"><Icon name="loader" size={14} /><span>The agent is working and stops.</span></div>}
     </Dialog>
   )
 }
