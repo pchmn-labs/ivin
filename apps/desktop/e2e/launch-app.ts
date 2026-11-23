@@ -1,4 +1,9 @@
-import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test"
+import {
+  _electron as electron,
+  type ElectronApplication,
+  expect,
+  type Page,
+} from "@playwright/test"
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { delimiter, dirname, join } from "node:path"
@@ -68,6 +73,11 @@ export const launchPackagedApp = (
 
 // The settings page is the one place that names the server's version.
 export const openServerVersion = async (window: Page) => {
-  await window.keyboard.press(process.platform === "darwin" ? "Meta+Comma" : "Control+Comma")
+  const sections = window.getByRole("navigation", { name: "Settings sections" })
+  // A key pressed before the window has loaded its keybindings is lost, so press it again.
+  await expect(async () => {
+    await window.keyboard.press(process.platform === "darwin" ? "Meta+Comma" : "Control+Comma")
+    await expect(sections).toBeVisible({ timeout: 1000 })
+  }).toPass()
   return window.getByTestId("server-version")
 }
