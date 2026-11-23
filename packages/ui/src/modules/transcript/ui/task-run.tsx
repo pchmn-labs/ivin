@@ -76,17 +76,16 @@ function RunLine({ task, work }: { task: TaskItem; work: Work }) {
           {running ? (
             <Icon name="loader" size={12} />
           ) : (
-            <Icon name={failed ? "circle-alert" : task.status === "stopped" ? "square" : "check"} size={14} />
+            <Icon
+              name={failed ? "circle-alert" : task.status === "stopped" ? "square" : "check"}
+              size={14}
+            />
           )}
         </span>
       </span>
       <span className="iv-turn__label">
         {running ? "Working for " : "Worked for "}
-        {running ? (
-          <ElapsedClock since={task.at} />
-        ) : (
-          duration(Math.max(0, work.endAt - task.at))
-        )}
+        {running ? <ElapsedClock since={task.at} /> : duration(Math.max(0, work.endAt - task.at))}
       </span>
       <span className="iv-turn__rule" />
     </div>

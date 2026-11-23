@@ -232,7 +232,11 @@ const fromTaskStarted = (line: unknown): HarnessOutput[] => {
 }
 
 const taskOutcome = (status: string): "completed" | "failed" | "stopped" =>
-  status === "completed" ? "completed" : status === "stopped" || status === "killed" ? "stopped" : "failed"
+  status === "completed"
+    ? "completed"
+    : status === "stopped" || status === "killed"
+      ? "stopped"
+      : "failed"
 
 const fromTaskNotification = (line: unknown): HarnessOutput[] => {
   const ended = Schema.decodeUnknownSync(TaskNotificationLine)(line)

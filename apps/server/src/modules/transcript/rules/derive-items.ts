@@ -281,15 +281,20 @@ export const stoppedTaskEvents = (state: ItemState): HarnessEvent[] =>
   [...state.openTasks.values()].flatMap((task): HarnessEvent[] => [
     ...[...state.openToolCalls.values()]
       .filter((call) => call.parentToolCallId === task.toolCallId)
-      .map(
-        (call): HarnessEvent => ({
-          type: "tool_result",
-          toolCallId: call.toolCallId,
-          output: "Stopped.",
-          isError: true,
-          parentToolCallId: task.toolCallId,
-          raw: null,
-        }),
-      ),
-    { type: "task_ended", taskId: task.taskId, outcome: "stopped", summary: "", output: null, raw: null },
+      .map((call): HarnessEvent => ({
+        type: "tool_result",
+        toolCallId: call.toolCallId,
+        output: "Stopped.",
+        isError: true,
+        parentToolCallId: task.toolCallId,
+        raw: null,
+      })),
+    {
+      type: "task_ended",
+      taskId: task.taskId,
+      outcome: "stopped",
+      summary: "",
+      output: null,
+      raw: null,
+    },
   ])

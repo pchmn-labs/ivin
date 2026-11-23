@@ -379,7 +379,8 @@ test("a background command is a task from its start line to its notification, an
       type: "task_ended",
       taskId: "baozjf0kj",
       outcome: "completed",
-      summary: 'Background command "Run sleep 4 then echo finished in background" completed (exit code 0)',
+      summary:
+        'Background command "Run sleep 4 then echo finished in background" completed (exit code 0)',
     },
   ])
   // The first turn ends idle while the task runs; Claude Code then starts its own turn once it ends.
@@ -430,7 +431,9 @@ test("a background subagent's steps carry the call that started it, its notifica
   })
   // The main turn's own lines carry no parent.
   expect(
-    outputs.filter((o) => o.type === "assistant_text" && !("parentToolCallId" in o && o.parentToolCallId)),
+    outputs.filter(
+      (o) => o.type === "assistant_text" && !("parentToolCallId" in o && o.parentToolCallId),
+    ),
   ).toHaveLength(2)
 })
 

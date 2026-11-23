@@ -220,8 +220,8 @@ test("a session in background runs under Running with its first task and how man
 
   const running = group("Running")
   await expect.element(running.getByText("Fix the double stop")).toBeVisible()
-  await expect.element(running.getByTestId("working-background")).toHaveTextContent(
-    "[bg] Review the diff +2",
-  )
+  await expect
+    .element(running.getByTestId("working-background"))
+    .toHaveTextContent("[bg] Review the diff +2")
   await expect.element(running.getByText("In background")).toBeInTheDocument()
 })

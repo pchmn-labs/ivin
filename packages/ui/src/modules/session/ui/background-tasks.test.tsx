@@ -153,7 +153,9 @@ test("a subagent's details open in a sheet with its whole run, followed live", a
 
   const sheet = page.getByTestId("task-sheet")
   await expect.element(sheet).toBeVisible()
-  await expect.poll(() => sheet.getByTestId("task-run").element().textContent).toContain("Working for")
+  await expect
+    .poll(() => sheet.getByTestId("task-run").element().textContent)
+    .toContain("Working for")
   await expect.element(sheet.getByText("I read the session runner first.")).toBeVisible()
   await expect.element(sheet.getByText("apps/server/src/session-runs.ts")).toBeVisible()
 
@@ -188,9 +190,7 @@ test("the sheet's tabs switch between tasks, and a command's output follows live
     .poll(() => output.element().textContent, { timeout: 5000 })
     .toContain("shard 2/3 started")
   server.taskOutputs.set("s1/k2", "shard 2/3 started\n12 passed\n")
-  await expect
-    .poll(() => output.element().textContent, { timeout: 5000 })
-    .toContain("12 passed")
+  await expect.poll(() => output.element().textContent, { timeout: 5000 }).toContain("12 passed")
 })
 
 test("Escape, the close button and a click outside close the sheet", async () => {

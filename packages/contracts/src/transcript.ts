@@ -188,8 +188,6 @@ const runOptionFields = {
 }
 const RunOptionBody = Schema.Struct({ type: Schema.Literal("run_option"), ...runOptionFields })
 
-
-
 const raw = { raw: Schema.Unknown }
 const stored = {
   id: Schema.String,

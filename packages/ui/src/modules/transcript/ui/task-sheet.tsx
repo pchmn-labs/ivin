@@ -37,7 +37,13 @@ export function TaskSheet({ sessionId }: { sessionId: string }) {
   // A task that ended keeps its tab while it is the one shown.
   const shown = tasks.filter((other) => other.status === "running" || other.taskId === task.taskId)
   return (
-    <div className="iv-task-sheet" ref={sheet} data-testid="task-sheet" role="region" aria-label={`Task: ${task.description}`}>
+    <div
+      className="iv-task-sheet"
+      ref={sheet}
+      data-testid="task-sheet"
+      role="region"
+      aria-label={`Task: ${task.description}`}
+    >
       <ResizeHandle
         label="Resize the task sheet"
         edge="top"

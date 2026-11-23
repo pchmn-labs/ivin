@@ -405,7 +405,9 @@ test("a subagent's steps are items under their call, and leave the agent's own m
     ),
   )
 
-  expect(items.map((item) => [item.type, "parentToolCallId" in item && item.parentToolCallId])).toEqual([
+  expect(
+    items.map((item) => [item.type, "parentToolCallId" in item && item.parentToolCallId]),
+  ).toEqual([
     ["message", false],
     ["tool_call", "t1"],
     ["message", "t1"],
@@ -415,10 +417,7 @@ test("a subagent's steps are items under their call, and leave the agent's own m
 })
 
 test("stopping the run ends each open task and fails the calls its subagent left running", () => {
-  const { state } = replay(
-    events(taskStarted(), { ...call("s1"), parentToolCallId: "t1" }),
-    kindOf,
-  )
+  const { state } = replay(events(taskStarted(), { ...call("s1"), parentToolCallId: "t1" }), kindOf)
 
   expect(stoppedTaskEvents(state)).toMatchObject([
     { type: "tool_result", toolCallId: "s1", isError: true, parentToolCallId: "t1" },

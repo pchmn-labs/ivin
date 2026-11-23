@@ -314,3 +314,21 @@ test("interrupting a session in background stops its agent and ends its tasks", 
   expect(closed).toHaveLength(1)
   expect(session.backgroundTasks).toEqual([])
 })
+
+test("closing the tab of a session in background stops its agent and ends its tasks", async () => {
+  const db = newDatabase()
+  const closed: string[] = []
+  const session = await withServer(db, [turn], { closed }, (client) =>
+    Effect.gen(function* () {
+      yield* client["project.open"]({ path: "/p" })
+      const created = yield* client["session.create"]({ projectPath: "/p" })
+      yield* client["tab.open"]({ sessionId: created.id })
+      yield* send(client, created.id)
+      yield* untilSession(client, created.id, (s) => s.status === "in_background")
+      yield* client["tab.close"]({ sessionId: created.id })
+      return yield* untilSession(client, created.id, (s) => s.status === "idle")
+    }),
+  )
+  expect(closed).toHaveLength(1)
+  expect(session.backgroundTasks).toEqual([])
+})

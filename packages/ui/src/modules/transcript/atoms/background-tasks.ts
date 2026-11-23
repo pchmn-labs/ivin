@@ -15,7 +15,9 @@ export const openTaskOf = strongFamily((_sessionId: string) =>
 // The session's tasks, running or ended, in the order they started.
 export const tasksOf = strongFamily((sessionId: string) =>
   Atom.readable((get) =>
-    get(transcriptOf(sessionId).list.items).filter((item): item is TaskItem => item.type === "task"),
+    get(transcriptOf(sessionId).list.items).filter(
+      (item): item is TaskItem => item.type === "task",
+    ),
   ),
 )
 

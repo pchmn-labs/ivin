@@ -265,7 +265,10 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             ),
             openRequests: new Map(
               open
-                .filter((item): item is OpenRequest => item.type === "approval" || item.type === "question")
+                .filter(
+                  (item): item is OpenRequest =>
+                    item.type === "approval" || item.type === "question",
+                )
                 .map((item) => [item.requestId, item]),
             ),
             openTasks: new Map(

@@ -228,8 +228,10 @@ const tsxAllowed: Case[] = [
     "session/ui/working-folder-picker.tsx",
     "tab/ui/sub-view-card.tsx",
     "tab/ui/tab-bar.tsx",
+    "transcript/ui/background-fold.tsx",
     "transcript/ui/image-marker.tsx",
     "transcript/ui/image-thumbnail.tsx",
+    "transcript/ui/task-sheet.tsx",
     "transcript/ui/turn-work.tsx",
   ].map((file): Case => [
     `${ui}/modules/${file}`,
