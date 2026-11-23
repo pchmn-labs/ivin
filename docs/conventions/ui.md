@@ -50,3 +50,4 @@ The rules of Styles and Colour fail `pnpm lint` in `packages/ui/src`, test files
 - `atoms/`: in an atom registry, with a fake RPC client.
 - `hooks/` and `ui/`: Vitest browser mode, with the same fake RPC client.
 - `*.perf.test.tsx`: the same, on the build the app ships (production React and the React Compiler, `vitest.perf.config.ts`), failing below a frame rate. They run one file at a time, after every other test.
+- A browser test that fails saves a capture of the page in `.vitest/attachments/failure-screenshots/<test file>/<test name>.png`, at the root of the checkout or worktree, not in `packages/ui/`.
