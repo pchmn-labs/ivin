@@ -1,0 +1,43 @@
+name: Screenshots
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+concurrency:
+  group: screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  screenshots:
+    name: A UI change shows a capture
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
+          ui=$(printf '%s\n' "$files" \
+            | grep -E '^(packages/ui/src|plugins/[^/]+/src)/.*\.(tsx|css)$' \
+            | grep -vE '\.test\.(tsx|css)$' || true)
+          if [ -z "$ui" ]; then
+            echo "No UI file changed."
+            exit 0
+          fi
+          # The template's own comments name the opt-out, so they are dropped before matching.
+          shown=$(printf '%s' "$BODY" | perl -0pe 's/<!--.*?-->//gs')
+          if printf '%s' "$shown" | grep -qE '!\[|<img |No visible change\.'; then
+            echo "The body has a capture, or says nothing on screen changes."
+            exit 0
+          fi
+          echo "::error::This pull request changes UI files but its body has no capture:"
+          echo "$ui"
+          echo "Add one or two captures to the Screenshots section (launch-ivin skill), or write \"No visible change.\" there."
+          exit 1

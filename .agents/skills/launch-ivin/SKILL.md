@@ -21,7 +21,9 @@ To see another state, add a step to `apps/desktop/scripts/shot.ts`; the helpers 
 
 ## In a pull request
 
-The template's Screenshots section says when a pull request needs one. Pick the one or two `shot` PNGs of the branch that show the change, then run `.agents/skills/launch-ivin/pr-shots.sh <png>...` from the branch. It pushes them to `pr-screenshots`, a branch that holds only screenshots and is never merged, and prints the Markdown to paste into the body. When no step of `shot` shows the change, delete the section rather than add a step for it.
+A pull request that changes what the user sees shows it in one or two captures. When no step of `shot` shows the change, add one to `apps/desktop/scripts/shot.ts` that does. Read the captures before the commit: they catch what the browser tests miss (a wrapped badge, a nameless row). When the work fixes something the user pointed at in a screenshot, show them the new capture and wait for their approval before the commit.
+
+Run `.agents/skills/launch-ivin/pr-shots.sh <png>...` from the branch with the chosen PNGs. It pushes them to `pr-screenshots`, a branch that holds only screenshots and is never merged, and prints the Markdown to paste into the body's Screenshots section.
 
 ## Other tools
 
