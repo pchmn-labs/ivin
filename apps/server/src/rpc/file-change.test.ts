@@ -4,7 +4,15 @@ import { layerScripted } from "@ivin/harness"
 import { Effect, Layer, type Scope } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
@@ -272,4 +280,23 @@ test("says a binary file is binary, a file with no change is unchanged, and a di
 
 test("refuses a diff of a path outside the working folder", async () => {
   expect(await diffIn(project, "../outside.ts")).toBe("PathOutsideWorkingFolder")
+})
+
+test("listing and diffing changes runs none of the commands the repository's own config names", async () => {
+  const ran = join(root, "ran")
+  write(join(project, "notes.txt"), "one\n")
+  write(join(project, ".gitattributes"), "*.txt diff=shown\n")
+  commitAll()
+  git(project, "config", "core.fsmonitor", `echo fsmonitor >> ${ran}`)
+  git(project, "config", "diff.shown.textconv", `echo textconv >> ${ran}; cat`)
+  write(join(project, "notes.txt"), "two\n")
+  git(project, "diff")
+  expect(readFileSync(ran, "utf8")).toContain("textconv")
+  rmSync(ran)
+
+  await changesIn(project)
+  await diffIn(project, "notes.txt")
+  await callIn(project, (client, sessionId) => client["file.gitStatus"]({ sessionId }))
+
+  expect(existsSync(ran) ? readFileSync(ran, "utf8") : "").toBe("")
 })
