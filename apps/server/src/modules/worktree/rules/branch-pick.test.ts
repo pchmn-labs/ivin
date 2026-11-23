@@ -8,6 +8,7 @@ const worktrees = [
 const state = {
   workingFolder: "/repo",
   local: ["main", "feat/login", "fix/typo"],
+  remote: ["origin/main", "origin/feat/login", "origin/fix/typo", "origin/feat/new"],
   worktrees,
 }
 
@@ -69,4 +70,12 @@ test("a worktree whose folder is gone does not hold its branch", () => {
       },
     ),
   ).toEqual({ kind: "checkout", branch: "fix/typo" })
+})
+
+test("a name that is not among the listed branches resolves to unknown", () => {
+  expect(resolveBranchPick({ name: "-f", remote: false }, state)).toEqual({ kind: "unknown" })
+  expect(resolveBranchPick({ name: "origin/--detach", remote: true }, state)).toEqual({
+    kind: "unknown",
+  })
+  expect(resolveBranchPick({ name: "fix/typo", remote: true }, state)).toEqual({ kind: "unknown" })
 })

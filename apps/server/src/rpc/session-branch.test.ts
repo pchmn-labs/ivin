@@ -294,3 +294,19 @@ test("a project opened through a symlink sees its checkout and worktrees under t
   )
   expect(picked).toMatchObject({ workingFolder: linked, inWorktree: false, branch: "main" })
 })
+
+test("a branch name that is not listed is refused before git runs, and the session stays", async () => {
+  const { error, session } = await withServer((client) =>
+    Effect.gen(function* () {
+      const created = yield* client["session.create"]({ projectPath: project })
+      const error = yield* Effect.flip(
+        client["session.pickBranch"]({ sessionId: created.id, name: "--detach", remote: false }),
+      )
+      const [session] = yield* client["session.list"]({ projectPath: project })
+      return { error, session }
+    }),
+  )
+
+  expect(error).toMatchObject({ _tag: "CheckoutRefused", gitMessage: "No branch named --detach" })
+  expect(session).toMatchObject({ workingFolder: project, branch: "main" })
+})

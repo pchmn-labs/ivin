@@ -40,7 +40,8 @@ const runGit = (
   Effect.callback<string, GitError | OutputTooLong>((resume, signal) => {
     const child = execFile(
       "git",
-      args,
+      // A repository's own config may name a command git runs on a mere status; this one is unused.
+      ["-c", "core.fsmonitor=false", ...args],
       // A fetch must never wait on a credential prompt nobody can answer.
       { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer },
       (error, stdout) => {
@@ -84,6 +85,7 @@ const DIFF = [
   "diff",
   "--no-color",
   "--no-ext-diff",
+  "--no-textconv",
   "--relative",
   "-M",
 ]
@@ -115,7 +117,16 @@ const diffOf = (folder: string, change: Change, limit: number, range?: CommitRan
     if (change.status === "untracked")
       return yield* runGit(
         folder,
-        ["diff", "--no-color", "--no-ext-diff", "--no-index", "--", "/dev/null", change.path],
+        [
+          "diff",
+          "--no-color",
+          "--no-ext-diff",
+          "--no-textconv",
+          "--no-index",
+          "--",
+          "/dev/null",
+          change.path,
+        ],
         { maxBuffer: limit, succeedsOn: [1] },
       )
     const sides = yield* compared(folder, range)
@@ -132,7 +143,7 @@ const patchIds = (cwd: string, patches: string) =>
 
 const squashMerged = (folder: string, base: string, target: string) =>
   Effect.gen(function* () {
-    const diffArgs = ["--no-color", "--no-ext-diff", "--binary"]
+    const diffArgs = ["--no-color", "--no-ext-diff", "--no-textconv", "--binary"]
     const diff = yield* git(folder, ["diff", ...diffArgs, base, "HEAD"])
     const log = yield* git(folder, ["log", "-p", ...diffArgs, "--no-merges", `${base}..${target}`])
     return isSquashMerged(yield* patchIds(folder, diff), yield* patchIds(folder, log))
