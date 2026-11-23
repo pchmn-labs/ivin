@@ -1,4 +1,4 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
+import { CliSocketRpcs } from "@ivin/contracts/rpcs"
 import { layerClientProtocolMessagePort } from "@ivin/state/rpc-client-protocol"
 import { Context, Data, Effect } from "effect"
 import { RpcClient, type RpcClientError } from "effect/rpc"
@@ -9,7 +9,7 @@ import { join } from "node:path"
 export class Server extends Context.Service<
   Server,
   {
-    readonly client: RpcClient.FromGroup<typeof Rpcs, RpcClientError.RpcClientError>
+    readonly client: RpcClient.FromGroup<typeof CliSocketRpcs, RpcClientError.RpcClientError>
     readonly socketPath: string
   }
 >()("ivin/cli/Server") {}
@@ -49,6 +49,9 @@ const open = (socketPath: string) =>
     (socket) => Effect.sync(() => socket.destroy()),
   )
 
+// Longer lines close the connection; a plugin's log is the longest answer.
+const maxLineLength = 64 * 1024 * 1024
+
 // One JSON message per line, as the server frames them.
 const portOf = (socket: Socket) => ({
   onMessage: (handler: (data: unknown) => void) => {
@@ -60,9 +63,11 @@ const portOf = (socket: Socket) => ({
       while (end !== -1) {
         const line = buffered.slice(0, end)
         buffered = buffered.slice(end + 1)
+        if (line.length > maxLineLength) return socket.destroy()
         if (line !== "") handler(line)
         end = buffered.indexOf("\n")
       }
+      if (buffered.length > maxLineLength) socket.destroy()
     })
   },
   postMessage: (data: string) => {
@@ -84,7 +89,7 @@ export const withServer = <A, E, R>(
     const socket = yield* open(socketPath)
     // The process exits once the command is done; an error after that has no one to tell.
     socket.on("error", () => undefined)
-    const client = yield* RpcClient.make(Rpcs).pipe(
+    const client = yield* RpcClient.make(CliSocketRpcs).pipe(
       Effect.provide(layerClientProtocolMessagePort(portOf(socket))),
     )
     return yield* Effect.raceFirst(

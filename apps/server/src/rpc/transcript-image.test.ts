@@ -241,3 +241,28 @@ test("at start, the server deletes the images of sessions that no longer exist",
 
   expect(existsSync(join(folder, "gone"))).toBe(false)
 })
+
+test("an image whose id leaves the session's folder is refused and writes no file", async () => {
+  const folder = newFolder()
+  const escaping: ImageData = { ...screenshot, id: "../../escaped" }
+
+  const exit = await withServer(
+    newDatabase(),
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p" })
+        return yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "look",
+          images: [escaping],
+        }).pipe(Effect.exit)
+      }),
+    {},
+    join(folder, "images"),
+  )
+
+  expect(exit._tag).toBe("Failure")
+  expect(existsSync(join(folder, "escaped.png"))).toBe(false)
+})
