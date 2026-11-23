@@ -131,3 +131,9 @@ test("a run option change that failed names the option and offers a retry", () =
     "The run options were not changed.",
   )
 })
+
+test("a message refused in a folder outside every trusted project says how to trust it", () => {
+  const failure = sendMessageFailure({ _tag: "ProjectNotTrusted", path: "/tmp/x" })
+  expect(failure.text).toMatch(/no trusted project/)
+  expect(failure.text).toMatch(/trust it, then send again/)
+})

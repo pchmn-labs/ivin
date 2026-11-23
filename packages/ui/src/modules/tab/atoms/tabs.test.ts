@@ -197,7 +197,7 @@ test("opening the tab of another project's session selects that project", async 
   const { registry, server } = await setup()
   registry.mount(projectsAtom.value)
   registry.mount(openProjectAtom)
-  registry.set(openProjectAtom, "/other")
+  registry.set(openProjectAtom, { path: "/other" })
   await vi.waitFor(() => expect(registry.get(projectsAtom.value).selectedPath).toBe("/other"))
   expect(server.sessions.get("session-1")?.projectPath).toBe(project)
 

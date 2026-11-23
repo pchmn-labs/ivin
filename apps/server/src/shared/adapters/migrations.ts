@@ -196,6 +196,11 @@ export const migrations: readonly Migration[] = [
     version: 20,
     sql: "ALTER TABLE sessions ADD COLUMN waiting_for TEXT",
   },
+  {
+    version: 21,
+    sql: `CREATE TABLE trusted_projects (path TEXT PRIMARY KEY);
+    INSERT INTO trusted_projects (path) SELECT path FROM projects`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

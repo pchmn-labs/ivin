@@ -18,6 +18,7 @@ test("a picked folder is shown by name, reopened after a relaunch, and stored in
       dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [path] })
     }, projectDir)
     await window.getByRole("button", { name: "Open folder…" }).click()
+    await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).click()
     await expect(window.getByTestId("project-name")).toHaveText("my-project")
   } finally {
     await first.close()
@@ -51,6 +52,7 @@ test("two projects each with a session are back with their tabs after a relaunch
         join(root, name),
       )
       await window.getByRole("button", { name: "Open folder…" }).click()
+      await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).click()
       await expect(window.getByRole("button", { name })).toHaveAttribute("aria-current", "true")
       await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
       await expect(

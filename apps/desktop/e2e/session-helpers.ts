@@ -16,6 +16,7 @@ export const startSession = async (
     dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [path] })
   }, projectDir)
   await window.getByRole("button", { name: "Open folder…" }).click()
+  await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).click()
   await expect(window.getByTestId("project-name")).toHaveText("my-project")
   await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
   return window

@@ -24,9 +24,9 @@ const setup = () => {
 
 test("opening folders lists them in order and selects the last one opened", async () => {
   const { registry, paths } = setup()
-  registry.set(openProjectAtom, "/a")
+  registry.set(openProjectAtom, { path: "/a" })
   await vi.waitFor(() => expect(paths()).toEqual(["/a"]))
-  registry.set(openProjectAtom, "/b")
+  registry.set(openProjectAtom, { path: "/b" })
   await vi.waitFor(() => expect(paths()).toEqual(["/a", "/b"]))
   expect(registry.get(selectedProjectAtom)?.path).toBe("/b")
 
@@ -36,9 +36,9 @@ test("opening folders lists them in order and selects the last one opened", asyn
 
 test("closing the selected project selects the next one and drops its tabs", async () => {
   const { registry, server, paths } = setup()
-  registry.set(openProjectAtom, "/a")
+  registry.set(openProjectAtom, { path: "/a" })
   await vi.waitFor(() => expect(paths()).toEqual(["/a"]))
-  registry.set(openProjectAtom, "/b")
+  registry.set(openProjectAtom, { path: "/b" })
   await vi.waitFor(() => expect(paths()).toEqual(["/a", "/b"]))
   registry.mount(tabsOf("/b").value)
   registry.set(createSessionAtom, { projectPath: "/b", model: "sonnet" })
