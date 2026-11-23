@@ -38,7 +38,7 @@ Checked by Oxlint, as `no-restricted-imports` overrides in `.oxlintrc.json` whos
 
 Between workspaces, a package imports only what its `package.json` declares, and nothing declares an app.
 
-Every other direction is a convention nothing checks: `ui/` reads `hooks/` and `atoms/`, `hooks/` read `atoms/`, modules import each other freely.
+Every other direction is a convention nothing checks: `ui/` reads `hooks/` and `atoms/`, `hooks/` read `atoms/`. In the server, modules import each other in one order: [server](server.md#module-order).
 
 ## Files
 

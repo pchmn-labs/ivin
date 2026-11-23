@@ -21,7 +21,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from "vi
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { WorktreeCleanup } from "../modules/worktree/usecases/worktree-cleanup.ts"
+import { WorktreeCleanup } from "../modules/session/usecases/worktree-cleanup.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"

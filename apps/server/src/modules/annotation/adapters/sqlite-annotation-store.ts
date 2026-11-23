@@ -55,6 +55,14 @@ export const layerSqliteAnnotationStore = Layer.effect(AnnotationStore)(
     const db = yield* Database
     const decoding = makeRowDecoding()
     return {
+      targetExists: (target) =>
+        Effect.sync(
+          () =>
+            (target._tag === "session"
+              ? db.prepare("SELECT 1 FROM sessions WHERE id = ?").get(target.sessionId)
+              : db.prepare("SELECT 1 FROM projects WHERE path = ?").get(target.projectPath)) !==
+            undefined,
+        ),
       find: (id) =>
         decoding((report) => {
           const row = db.prepare(`SELECT ${COLUMNS} FROM annotations WHERE id = ?`).get(id) as
