@@ -1,5 +1,5 @@
 import { AtomRegistry } from "effect/reactivity"
-import { expect, test, vi } from "vitest"
+import { afterEach, expect, test, vi } from "vitest"
 import { notificationManager } from "../../../core/components/notification/notification-manager.ts"
 import { CommandFailure } from "../rules/command-failure.ts"
 import { commandsAtom } from "./commands.ts"
@@ -20,6 +20,8 @@ test("a command runs through its last handler, and does nothing once none is lef
   expect(ran).toEqual(["second", "first"])
 })
 
+afterEach(() => vi.restoreAllMocks())
+
 test("a command that fails with a CommandFailure shows its message, with Retry when it can be retried", async () => {
   const registry = AtomRegistry.make()
   const add = vi.spyOn(notificationManager, "add").mockReturnValue("n")
@@ -38,7 +40,6 @@ test("a command that fails with a CommandFailure shows its message, with Retry w
   expect(shown).toMatchObject({ type: "error", description: "The session was not archived." })
   shown.actionProps?.onClick?.({} as never)
   expect(retry).toHaveBeenCalledOnce()
-  add.mockRestore()
 })
 
 test("a command that fails with an error it does not know shows the command's title", async () => {
@@ -55,17 +56,24 @@ test("a command that fails with an error it does not know shows the command's ti
   expect(add.mock.calls[0]![0]).toMatchObject({ description: "Archive session failed." })
   await vi.waitFor(() => expect(unhandled).toHaveBeenCalledOnce())
   process.off("unhandledRejection", unhandled)
-  add.mockRestore()
 })
 
-test("a command that succeeds shows nothing", async () => {
+test("a command that throws still counts as run", async () => {
   const registry = AtomRegistry.make()
-  const add = vi.spyOn(notificationManager, "add").mockReturnValue("n")
-  addCommandHandler(registry, "a.b", () => Promise.resolve(), null)
+  vi.spyOn(notificationManager, "add").mockReturnValue("n")
+  const unhandled = vi.fn()
+  process.on("unhandledRejection", unhandled)
+  addCommandHandler(
+    registry,
+    "a.b",
+    () => {
+      throw new Error("raw")
+    },
+    null,
+  )
 
-  runCommand(registry, "a.b")
-  await Promise.resolve()
+  expect(runCommand(registry, "a.b")).toBe(true)
 
-  expect(add).not.toHaveBeenCalled()
-  add.mockRestore()
+  await vi.waitFor(() => expect(unhandled).toHaveBeenCalledOnce())
+  process.off("unhandledRejection", unhandled)
 })

@@ -453,13 +453,18 @@ test("the keyboard alone archives the session on screen, opens the archived list
   await expect.element(page.getByText(/^Inactive sessions/)).toBeVisible()
 })
 
-test("a failed archive from the keyboard shows a notification, and its Retry archives again", async () => {
+test("a failed archive from the keyboard shows a notification, and its Retry archives again, with a second notification when that fails too", async () => {
   const server = await mountApp()
   server.failNextCall("session.archive")
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 
   await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
   const notifications = page.getByRole("region", { name: "Notifications" })
+  await expect.element(notifications.getByText("The session was not archived.")).toBeVisible()
+  expect(server.sessions.get("s2")?.archivedAt).toBeNull()
+
+  server.failNextCall("session.archive")
+  await notifications.getByText("Retry").click()
   await expect.element(notifications.getByText("The session was not archived.")).toBeVisible()
   expect(server.sessions.get("s2")?.archivedAt).toBeNull()
 

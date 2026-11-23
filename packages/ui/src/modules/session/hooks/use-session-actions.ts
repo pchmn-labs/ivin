@@ -3,6 +3,8 @@ import type { Session } from "@ivin/contracts/session"
 import type { MenuItem } from "@ivin/plugin-api/ui"
 import { useCallback, useContext } from "react"
 import { unsavedPathsOf } from "../../file/atoms/file-edit.ts"
+import { notifyCommandFailure } from "../../command/atoms/run-command.ts"
+import { CommandFailure } from "../../command/rules/command-failure.ts"
 import { archiveSessionAtom } from "../atoms/archive-session.ts"
 import { sessionActionFailureOf } from "../atoms/session-action-failure.ts"
 import { sessionConfirmationAtom } from "../atoms/session-confirmation.ts"
@@ -22,6 +24,29 @@ export function useRequestSessionAction() {
     },
     [registry, confirm, archive],
   )
+}
+
+// The handler of `session.archive`: its failure shows in a menu that is closed when the key is pressed.
+export function useArchiveFromKey(session: Session | undefined) {
+  const registry = useContext(RegistryContext)
+  const request = useRequestSessionAction()
+  return useCallback(async (): Promise<void> => {
+    if (session === undefined) return
+    const failureOf = sessionActionFailureOf(session.id)
+    const attempt = async (): Promise<void> => {
+      registry.set(failureOf, null)
+      await request("archive", session)
+      const failure = registry.get(failureOf)
+      if (failure === null) return
+      const retry = () =>
+        void attempt().catch((error: unknown) => {
+          if (error instanceof CommandFailure) notifyCommandFailure(error)
+          else throw error
+        })
+      throw new CommandFailure(failure, retry)
+    }
+    await attempt()
+  }, [registry, request, session])
 }
 
 // No items while the session is not loaded.

@@ -47,3 +47,17 @@
 .iv-tab-view__split[data-full-width] .iv-sub-view-card {
   margin-left: var(--iv-space-2);
 }
+
+.iv-tab-view__notifications {
+  position: relative;
+  height: 0;
+}
+
+.iv-tab-view--empty {
+  position: relative;
+}
+
+.iv-tab-view--empty .iv-tab-view__notifications {
+  position: absolute;
+  inset: auto 0 0;
+}

@@ -4,11 +4,9 @@ import { TranscriptView } from "../../transcript/ui/transcript-view.tsx"
 import { transcriptOf } from "../../transcript/atoms/get-items.ts"
 import { projectsAtom } from "../../project/atoms/list-projects.ts"
 import { NotificationViewport } from "../../../core/components/notification/notification.tsx"
-import { CommandFailure } from "../../command/rules/command-failure.ts"
-import { sessionActionFailureOf } from "../atoms/session-action-failure.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
-import { useRequestSessionAction } from "../hooks/use-session-actions.ts"
+import { useArchiveFromKey } from "../hooks/use-session-actions.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
@@ -18,7 +16,15 @@ import { ImageViewer } from "../../transcript/ui/image-viewer.tsx"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import "./session-view.css"
 
-function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
+function OpenSession({
+  projectPath,
+  sessionId,
+  notifications,
+}: {
+  projectPath: string
+  sessionId: string
+  notifications: boolean
+}) {
   const sessions = sessionsOf(projectPath)
   const session = useAtomValue(sessions.item(sessionId))
   const sessionsLoaded = AsyncResult.isSuccess(
@@ -30,21 +36,8 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
     (project) => project.path === projectPath,
   )?.name
   const interrupt = useAtomSet(interruptSessionAtom)
-  const requestAction = useRequestSessionAction()
-  const registry = useContext(RegistryContext)
-  useCommandHandler(
-    "session.archive",
-    async () => {
-      if (session === undefined) return
-      await requestAction("archive", session)
-      // The failure otherwise shows in a menu that is closed when the key is pressed.
-      const failure = registry.get(sessionActionFailureOf(session.id))
-      if (failure !== null) {
-        throw new CommandFailure(failure, () => void requestAction("archive", session))
-      }
-    },
-    session !== undefined,
-  )
+  const archiveFromKey = useArchiveFromKey(session)
+  useCommandHandler("session.archive", archiveFromKey, session !== undefined)
   useCommandHandler(
     "session.interrupt",
     () => interrupt({ projectPath, sessionId }),
@@ -82,9 +75,11 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
           </Text>
         </div>
       )}
-      <div className="iv-session-view__notifications">
-        <NotificationViewport />
-      </div>
+      {notifications && (
+        <div className="iv-session-view__notifications">
+          <NotificationViewport />
+        </div>
+      )}
       <Slot key={sessionId} slot="session.composer" props={{ sessionId }} />
       <ImageViewer sessionId={sessionId} />
     </div>
@@ -94,10 +89,15 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
 export function SessionView({
   projectPath,
   sessionId,
+  notifications = true,
 }: {
   projectPath: string
   sessionId: string
+  // False while the chat is hidden under a full-width file, which draws the notifications itself.
+  notifications?: boolean
 }) {
   useAtomMount(sessionsOf(projectPath).ids)
-  return <OpenSession projectPath={projectPath} sessionId={sessionId} />
+  return (
+    <OpenSession projectPath={projectPath} sessionId={sessionId} notifications={notifications} />
+  )
 }

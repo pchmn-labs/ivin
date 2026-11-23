@@ -171,7 +171,7 @@ export interface UiContext {
   readonly commands: {
     register: (id: string, command: CommandOptions) => void
   }
-  // A temporary notification in the window, for what has no place of its own on screen.
+  // A temporary notification in the session's chat, for what has no place of its own on screen.
   readonly notify: (notification: NotifyOptions) => void
   // A default keybinding, which the user's ~/.ivin/keybindings.json can change.
   readonly keybindings: {

@@ -59,7 +59,7 @@
   --iv-notification-kind: var(--iv-accent);
 }
 
-/* Fills the gap between two spread toasts, so the pointer stays on the viewport. */
+/* Fills the gap between two spread notifications, so the pointer stays on the viewport. */
 .iv-notification::after {
   content: "";
   position: absolute;
