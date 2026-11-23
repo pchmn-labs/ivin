@@ -30,7 +30,7 @@ ivin is built so that the user's agents can change it. Everything is a plugin, t
 - Themes are files (`themes/<id>.json`: colours plus CSS), so every colour the UI uses must be a token a theme can override.
 - Plugins import only `@ivin/plugin-api` and `react`; the host supplies the design system components to them.
 - Transcript rows render inside a virtualised list and must stay cheap.
-- Domain terms live in `GLOSSARY.md`; the design of record is `docs/architecture.md`.
+- Domain terms live in `GLOSSARY.md`; the design of record is `docs/architecture/`.
 
 ## Brand Commitments
 
