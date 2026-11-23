@@ -17,6 +17,8 @@ Run `pnpm --filter @ivin/desktop shot` (about 10 s). It plays a scenario ending 
 
 Read one PNG at a time: each is a full-resolution capture, and several at once overflow the context.
 
+To look closely at a spacing or a colour, crop the capture with `sips --cropToHeightWidth <h> <w> --cropOffset <y> <x> <png> --out <out.png>` and enlarge the crop with `sips -z <h> <w> <out.png>`. Python has no PIL here.
+
 To see another state, add a step to `apps/desktop/scripts/shot.ts`; the helpers of `apps/desktop/e2e/` drive the window.
 
 ## In a pull request
