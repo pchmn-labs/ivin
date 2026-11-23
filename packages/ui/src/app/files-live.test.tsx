@@ -112,6 +112,38 @@ test("rows take the colour of their git status, and so do the folders above a ch
   await expect.element(item("README.md")).not.toHaveAttribute("data-status")
 })
 
+test("when git cannot read which files changed, a message with Retry shows above a tree that stays usable", async () => {
+  const server = makeServer()
+  server.gitStatus.set(project, [{ path: "README.md", status: "modified" }])
+  server.failNextCall("file.gitStatus")
+  await mount(server)
+  await expect
+    .element(
+      page.getByText("Git could not read which files changed, so the files show no status. Retry."),
+    )
+    .toBeVisible()
+  await expect.element(item("README.md")).not.toHaveAttribute("data-status")
+  await item("src").click()
+  await expect.element(item("main.ts")).toBeVisible()
+
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(item("README.md")).toHaveAttribute("data-status", "modified")
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
+})
+
+test("Go to file shows a listing that failed with Retry, and lists again on Retry", async () => {
+  const server = makeServer()
+  await mount(server)
+  server.failNextCall("file.listFiles")
+  await userEvent.keyboard(`{${mod}>}p{/${mod}}`)
+  await expect
+    .element(page.getByText("The working folder's files could not be listed. Retry."))
+    .toBeVisible()
+
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByText("4 files")).toBeVisible()
+})
+
 test("the eye button shows what git ignores, marked as ignored, and hides it again", async () => {
   await mount(makeServer())
   await expect.element(item("dist")).not.toBeInTheDocument()

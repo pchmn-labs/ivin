@@ -7,7 +7,7 @@ import { Effect } from "effect"
 import { defaultBranchName } from "../../worktree/rules/checkout-sync.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { newWorktreeBase } from "../../worktree/usecases/new-worktree-base.ts"
-import { checkoutChange, refreshCheckoutBranch } from "./checkout-change.ts"
+import { checkoutChange, refreshCheckoutBranch, stashAround } from "./checkout-change.ts"
 
 export const switchToDefaultBranch = (sessionId: string, localChanges?: LocalChangesChoice) =>
   Effect.gen(function* () {
@@ -23,20 +23,25 @@ export const switchToDefaultBranch = (sessionId: string, localChanges?: LocalCha
         blockedByLocalChanges: false,
       })
     }
-    // Stashed whenever asked: untracked files in the way are not counted as local changes.
-    if (localChanges?.kind === "stash") {
-      yield* git.stash(checkout, `WIP before switching to ${branch}`).pipe(Effect.mapError(refused))
-    } else if (yield* git.hasLocalChanges(checkout).pipe(Effect.mapError(refused))) {
-      if (!localChanges) return yield* new CheckoutHasLocalChanges({ sessionId })
-      yield* git.commitTracked(checkout, localChanges.message).pipe(Effect.mapError(refused))
-    }
-    const { local } = yield* git.listBranches(checkout).pipe(Effect.mapError(refused))
-    yield* (
-      local.includes(branch)
+    const switchTo = Effect.gen(function* () {
+      const { local } = yield* git.listBranches(checkout)
+      yield* local.includes(branch)
         ? git.checkout(checkout, branch)
         : git.checkoutTracking(checkout, `origin/${branch}`, branch)
+      yield* git.fastForward(checkout, `origin/${branch}`)
+    })
+    // Stashed whenever asked: untracked files in the way are not counted as local changes.
+    if (localChanges?.kind !== "stash") {
+      if (yield* git.hasLocalChanges(checkout).pipe(Effect.mapError(refused))) {
+        if (!localChanges) return yield* new CheckoutHasLocalChanges({ sessionId })
+        yield* git.commitTracked(checkout, localChanges.message).pipe(Effect.mapError(refused))
+      }
+    }
+    yield* (
+      localChanges?.kind === "stash"
+        ? stashAround(checkout, `WIP before switching to ${branch}`, switchTo)
+        : switchTo
     ).pipe(
-      Effect.andThen(git.fastForward(checkout, `origin/${branch}`)),
       Effect.mapError(refused),
       // A fast-forward refused after the checkout still leaves the session on the new branch.
       Effect.ensuring(refreshCheckoutBranch(session).pipe(Effect.ignore)),

@@ -3,7 +3,7 @@ import type { HarnessEvent } from "@ivin/contracts/transcript"
 import { DateTime, Effect } from "effect"
 import { createWorktree } from "../../worktree/usecases/create-worktree.ts"
 import { Git } from "../../worktree/usecases/git.ts"
-import { listWorktrees } from "../../worktree/usecases/list-worktrees.ts"
+import { listWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
@@ -67,7 +67,7 @@ export const moveToNewWorktree = (session: Session, cause: Cause) =>
 
 export const moveToExistingWorktree = (session: Session, path: string, cause: Cause) =>
   Effect.gen(function* () {
-    const worktree = (yield* listWorktrees(session.projectPath)).find((w) => w.path === path)
+    const worktree = (yield* listWorktreesOrNone(session.projectPath)).find((w) => w.path === path)
     if (!worktree) {
       return yield* new WorktreeNotCreated({ sessionId: session.id, reason: "not_a_worktree" })
     }

@@ -1,3 +1,4 @@
+import { SettingsFileUnavailable } from "@ivin/contracts/setting"
 import { Context, Effect, Layer, Semaphore, Stream, SubscriptionRef } from "effect"
 
 export class SettingsFile extends Context.Service<
@@ -6,11 +7,11 @@ export class SettingsFile extends Context.Service<
     readonly path: string
     // The file's text when watched, then after each change; null while it does not exist.
     readonly contents: Stream.Stream<string | null>
-    readonly read: Effect.Effect<string | null>
+    readonly read: Effect.Effect<string | null, SettingsFileUnavailable>
     // Writes what `change` makes of the file's text, one edit at a time; a failure writes nothing.
     readonly edit: <E>(
       change: (text: string | null) => Effect.Effect<string, E>,
-    ) => Effect.Effect<void, E>
+    ) => Effect.Effect<void, E | SettingsFileUnavailable>
   }
 >()("ivin/server/SettingsFile") {}
 

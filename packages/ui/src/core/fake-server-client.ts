@@ -45,7 +45,12 @@ import type {
   TranscriptItemChange,
   RunOption,
 } from "@ivin/contracts/transcript"
-import type { Branch, CheckoutStatus, Worktree } from "@ivin/contracts/worktree"
+import {
+  type Branch,
+  type CheckoutStatus,
+  type Worktree,
+  WorktreeGitFailed,
+} from "@ivin/contracts/worktree"
 import { ProjectNotOpen, ProjectNotTrusted } from "@ivin/contracts/project"
 import {
   CheckoutHasLocalChanges,
@@ -102,6 +107,8 @@ export interface FakeServer {
   // Makes every pickBranch fail as git would, with this message; null picks again.
   readonly failCheckoutWith: (gitMessage: string | null) => void
   // Makes every sendMessage fail as git would, storing this message; null sends again.
+  // Makes `worktree.list` and `worktree.listBranches` fail with git's output, until null.
+  readonly failListingWith: (gitMessage: string | null) => void
   readonly failWorktreeWith: (gitMessage: string | null) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
   readonly holdNextSend: () => { readonly release: () => void; readonly fail: () => void }
@@ -297,6 +304,7 @@ export const makeFakeServer = (
   const sentMessages: Array<FakeServer["sentMessages"][number]> = []
   const pickedFolders: Array<WorkingFolderChoice> = []
   let worktreeFailure: string | null = null
+  let listingFailure: string | null = null
   const worktrees: Array<Worktree> = []
   const checkout: FakeCheckout = {
     branch: "main",
@@ -1017,7 +1025,10 @@ export const makeFakeServer = (
         subViews.set(sessionId, next)
         return next
       }),
-    "worktree.list": () => Effect.sync(() => [...worktrees]),
+    "worktree.list": ({ projectPath }: { projectPath: string }) =>
+      listingFailure === null
+        ? Effect.sync(() => [...worktrees])
+        : Effect.fail(new WorktreeGitFailed({ projectPath, gitMessage: listingFailure })),
     "worktree.newBase": () => Effect.succeed("origin/main"),
     "worktree.checkoutStatus": () => Effect.sync(checkoutStatus),
     "session.switchToDefaultBranch": ({
@@ -1054,20 +1065,25 @@ export const makeFakeServer = (
             Object.assign(checkout, { behind: 0, dirty: stash === true ? false : checkout.dirty })
             return sessions.get(sessionId)!
           }),
-    "worktree.listBranches": () =>
-      Stream.make({ branches: branches.filter((b) => !b.remote), fetch: "fetching" as const }).pipe(
-        Stream.concat(
-          Stream.fromEffect(
-            Effect.promise(async () => {
-              const fetched = holdFetch === null ? true : await holdFetch
-              holdFetch = null
-              return fetched
-                ? { branches: [...branches], fetch: "done" as const }
-                : { branches: branches.filter((b) => !b.remote), fetch: "failed" as const }
-            }),
+    "worktree.listBranches": ({ projectPath }: { projectPath: string }) =>
+      listingFailure !== null
+        ? Stream.fail(new WorktreeGitFailed({ projectPath, gitMessage: listingFailure }))
+        : Stream.make({
+            branches: branches.filter((b) => !b.remote),
+            fetch: "fetching" as const,
+          }).pipe(
+            Stream.concat(
+              Stream.fromEffect(
+                Effect.promise(async () => {
+                  const fetched = holdFetch === null ? true : await holdFetch
+                  holdFetch = null
+                  return fetched
+                    ? { branches: [...branches], fetch: "done" as const }
+                    : { branches: branches.filter((b) => !b.remote), fetch: "failed" as const }
+                }),
+              ),
+            ),
           ),
-        ),
-      ),
     "session.pickBranch": (input: { sessionId: string; name: string; remote: boolean }) =>
       Effect.suspend((): Effect.Effect<Session, CheckoutRefused> => {
         if (checkoutFailure !== null) {
@@ -1252,6 +1268,7 @@ export const makeFakeServer = (
     worktrees,
     checkout,
     localChangesChoices,
+    failListingWith: (gitMessage) => void (listingFailure = gitMessage),
     failWorktreeWith: (gitMessage) => void (worktreeFailure = gitMessage),
     branches,
     holdNextFetch: () => {

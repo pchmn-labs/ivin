@@ -550,6 +550,19 @@ test("a new session asks for its task with the composer in the middle, and the w
   ])
 })
 
+test("a worktree list git cannot read shows a message with a retry in the working folder menu", async () => {
+  const server = await mountNewSession()
+  server.failListingWith("fatal: detected dubious ownership")
+  await picker().click()
+
+  await expect
+    .element(page.getByText("ivin could not list this project's worktrees."))
+    .toBeVisible()
+  server.failListingWith(null)
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByText("Existing worktrees")).toBeVisible()
+})
+
 test("15 worktrees scroll inside the working folder menu; keyboard only filters, picks and returns focus", async () => {
   const server = await mountNewSession()
   for (let i = 0; i < 15; i++) {

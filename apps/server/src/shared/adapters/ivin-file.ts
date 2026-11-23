@@ -16,7 +16,7 @@ export const writeText = (path: string, text: string) =>
   Effect.tryPromise(async () => {
     const temp = `${path}.${randomUUID()}.tmp`
     try {
-      await mkdir(dirname(path), { recursive: true })
+      await mkdir(dirname(path), { recursive: true, mode: 0o700 })
       await writeFile(temp, text)
       await rename(temp, path)
     } finally {
@@ -28,7 +28,9 @@ export const writeText = (path: string, text: string) =>
 export const watchIvinFile = (ivinHome: string, fileName: string): Stream.Stream<string | null> =>
   Stream.callback<void>((queue) =>
     Effect.gen(function* () {
-      yield* Effect.promise(() => mkdir(ivinHome, { recursive: true }))
+      yield* Effect.tryPromise(() => mkdir(ivinHome, { recursive: true, mode: 0o700 })).pipe(
+        Effect.catch((error) => Effect.logWarning(`could not create ${ivinHome}`, error)),
+      )
       yield* Effect.acquireRelease(
         Effect.sync(() =>
           // The folder, not the file: editors save by replacing it, and it may not exist yet.

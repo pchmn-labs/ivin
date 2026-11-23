@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { defaultBranchName, fastForwardCount } from "../rules/checkout-sync.ts"
 import { Git } from "./git.ts"
-import { listWorktrees } from "./list-worktrees.ts"
+import { listWorktreesOrNone } from "./list-worktrees.ts"
 import { newWorktreeBase } from "./new-worktree-base.ts"
 import { fetchOriginQuietly } from "./fetch-origin-quietly.ts"
 
@@ -11,7 +11,7 @@ export const checkoutStatus = (projectPath: string) =>
     yield* fetchOriginQuietly(projectPath)
     const branch = yield* git.currentBranch(projectPath)
     const defaultBranch = defaultBranchName(yield* newWorktreeBase(projectPath))
-    const worktrees = yield* listWorktrees(projectPath)
+    const worktrees = yield* listWorktreesOrNone(projectPath)
     const behind =
       branch === null
         ? 0

@@ -26,6 +26,13 @@ const DEFAULT_KILL_GRACE: Duration.Input = "2 seconds"
 const LIST_MODELS_TIMEOUT: Duration.Input = "10 seconds"
 const COMPLETE_TEXT_TIMEOUT: Duration.Input = "30 seconds"
 
+// A negative pid signals the group the child leads, with the shells and servers it started.
+const signalGroup = (pid: number, signal: NodeJS.Signals) => {
+  try {
+    process.kill(-pid, signal)
+  } catch {}
+}
+
 const spawnClaude = (
   sessionId: string,
   cwd: string,
@@ -36,6 +43,7 @@ const spawnClaude = (
     cwd,
     env: { ...process.env, IVIN_SESSION_ID: sessionId },
     stdio: ["pipe", "pipe", "pipe"],
+    detached: true,
   })
   let stderr = ""
   child.stderr.setEncoding("utf8")
@@ -101,14 +109,14 @@ export const layerClaudeWith = (
               Effect.gen(function* () {
                 stoppedByIvin = true
                 child.stdin.destroy()
-                // Without a pid, kill() would signal this whole process group.
-                if (child.pid === undefined) return
-                child.kill("SIGTERM")
+                // Without a pid, signalling -pid would hit this whole process group.
+                const pid = child.pid
+                if (pid === undefined) return
+                signalGroup(pid, "SIGTERM")
                 // A process that ignores SIGTERM must not hold the finalizer or outlive the app.
-                yield* Effect.promise(() => exited).pipe(
-                  Effect.timeout(killGrace),
-                  Effect.catch(() => Effect.sync(() => child.kill("SIGKILL"))),
-                )
+                yield* Effect.promise(() => exited).pipe(Effect.timeout(killGrace), Effect.ignore)
+                // Children that outlived the leader, or ignored SIGTERM, die here.
+                signalGroup(pid, "SIGKILL")
               }),
           )
 

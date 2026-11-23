@@ -51,7 +51,7 @@ const runGit = (
   Effect.gen(function* () {
     if (!(yield* (yield* ProjectTrust).isTrusted(cwd)))
       return yield* new GitError({
-        message: `${cwd} is in no trusted project, so ivin runs no git command in it.`,
+        message: `${cwd}${NO_TRUSTED_PROJECT}`,
       })
     const limit = (yield* TimeLimits)[timeLimitOf(args)]
     // Interrupting spawnGit kills the child.
@@ -67,6 +67,8 @@ const runGit = (
       }),
     )
   })
+
+const NO_TRUSTED_PROJECT = " is in no trusted project, so ivin runs no git command in it."
 
 const spawnGit = (
   cwd: string,
@@ -172,6 +174,15 @@ const diffOf = (folder: string, change: Change, limit: number, range: CommitRang
 const orNull = <A, R>(effect: Effect.Effect<A, GitError, R>) =>
   effect.pipe(Effect.orElseSucceed(() => null))
 
+// Outside a repository, or in an untrusted folder where no git runs, there is nothing to read; any other failure, a time limit included, fails.
+const nullOutsideRepository = (error: GitError) =>
+  error.message.includes("not a git repository") || error.message.endsWith(NO_TRUSTED_PROJECT)
+    ? Effect.succeed(null)
+    : Effect.fail(error)
+
+const prefixInRepository = (folder: string) =>
+  git(folder, ["rev-parse", "--show-prefix"]).pipe(Effect.catch(nullOutsideRepository))
+
 const patchIds = (cwd: string, patches: string) =>
   git(cwd, ["patch-id", "--stable"], `${patches}\n`).pipe(Effect.map(parsePatchIds))
 
@@ -236,10 +247,14 @@ const methods: Untrusted = {
   listWorktrees: (repo) =>
     git(repo, ["worktree", "list", "--porcelain"]).pipe(
       Effect.map((out) => underOpenedPath(parseWorktreeList(out), repo, realpathSync(repo))),
+      Effect.catch(nullOutsideRepository),
+      Effect.map((entries) => entries ?? []),
     ),
   listBranches: (repo) =>
     git(repo, ["for-each-ref", "--format=%(refname)", "refs/heads", "refs/remotes"]).pipe(
       Effect.map(parseBranches),
+      Effect.catch(nullOutsideRepository),
+      Effect.map((branches) => branches ?? { local: [], remote: [] }),
     ),
   hasRemote: (repo, remote) =>
     git(repo, ["remote"]).pipe(Effect.map((out) => out.split("\n").includes(remote))),
@@ -270,7 +285,17 @@ const methods: Untrusted = {
   isMergedInto,
   removeWorktree: (repo, path) => git(repo, ["worktree", "remove", path]).pipe(Effect.asVoid),
   stash: (folder, message) =>
-    git(folder, ["stash", "push", "--include-untracked", "-m", message]).pipe(Effect.asVoid),
+    Effect.gen(function* () {
+      const latest = orNull(git(folder, ["rev-parse", "--quiet", "--verify", "refs/stash"]))
+      const before = yield* latest
+      yield* git(folder, ["stash", "push", "--include-untracked", "-m", message])
+      return (yield* latest) !== before
+    }),
+  popStash: (folder) => git(folder, ["stash", "pop", "--quiet"]).pipe(Effect.asVoid),
+  headCommit: (folder) =>
+    orNull(git(folder, ["rev-parse", "--verify", "HEAD"])).pipe(
+      Effect.map((out) => out?.trim() || null),
+    ),
   commitTracked: (folder, message) =>
     git(folder, ["commit", "--quiet", "--all", "-m", message]).pipe(Effect.asVoid),
   fastForward: (folder, upstream) =>
@@ -294,7 +319,8 @@ const methods: Untrusted = {
         ),
   statusOf: (folder) =>
     Effect.gen(function* () {
-      const prefix = yield* git(folder, ["rev-parse", "--show-prefix"])
+      const prefix = yield* prefixInRepository(folder)
+      if (prefix === null) return []
       // No optional locks: a status that rewrote the index would fire the watcher that asked for it.
       const output = yield* git(folder, [
         "--no-optional-locks",
@@ -306,7 +332,7 @@ const methods: Untrusted = {
         ".",
       ])
       return parseGitStatus(output, prefix.trim())
-    }).pipe(Effect.orElseSucceed(() => [])),
+    }),
   gitDir: (folder) =>
     orNull(git(folder, ["rev-parse", "--absolute-git-dir"])).pipe(
       Effect.map((out) => out?.trim() || null),
@@ -322,7 +348,7 @@ const methods: Untrusted = {
       ])
       const deleted = new Set((yield* git(folder, ["ls-files", "-z", "--deleted"])).split("\0"))
       return listed.split("\0").filter((path) => path !== "" && !deleted.has(path))
-    }).pipe(Effect.orElseSucceed(() => null)),
+    }).pipe(Effect.catch(nullOutsideRepository)),
   listChanges,
   diffOf,
   tips: (folder) =>

@@ -1,5 +1,12 @@
 import { Effect, Queue, Stream } from "effect"
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test } from "vitest"
@@ -40,4 +47,33 @@ test("an edit that fails leaves the file as it was", async () => {
   expect(await Effect.runPromise(program)).toBe("refused")
   expect(readFileSync(join(home, "settings.json"), "utf8")).toBe("{ // mine\n}")
   expect(readdirSync(home)).toEqual(["settings.json"])
+})
+
+test("an edit fails with SettingsFileUnavailable when the file cannot be read, or written", async () => {
+  const home = tempHome()
+  mkdirSync(home)
+  // A folder where the file should be cannot be read.
+  mkdirSync(join(home, "settings.json", "inner"), { recursive: true })
+  const program = Effect.gen(function* () {
+    const file = yield* SettingsFile
+    return yield* file.edit(() => Effect.succeed("{}")).pipe(Effect.flip)
+  }).pipe(Effect.provide(layerFsSettingsFile(home)), Effect.scoped)
+
+  expect(await Effect.runPromise(program)).toMatchObject({
+    _tag: "SettingsFileUnavailable",
+    action: "read",
+  })
+})
+
+test("an edit in a read-only folder fails with SettingsFileUnavailable on write", async () => {
+  const home = tempHome()
+  mkdirSync(home)
+  chmodSync(home, 0o500)
+  const program = Effect.gen(function* () {
+    const file = yield* SettingsFile
+    return yield* file.edit(() => Effect.succeed("{}")).pipe(Effect.flip)
+  }).pipe(Effect.provide(layerFsSettingsFile(home)), Effect.scoped)
+
+  expect(await Effect.runPromise(program)).toMatchObject({ action: "write" })
+  chmodSync(home, 0o700)
 })

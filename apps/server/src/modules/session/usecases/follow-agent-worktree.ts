@@ -4,7 +4,7 @@ import type { Worktree } from "@ivin/contracts/worktree"
 import type { ToolActivity, ToolOutcome, ToolUse } from "@ivin/harness"
 import { Effect } from "effect"
 import { Git } from "../../worktree/usecases/git.ts"
-import { listWorktrees } from "../../worktree/usecases/list-worktrees.ts"
+import { listWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
 import { folderAfterTool, needsWorktreeList } from "../rules/agent-worktree.ts"
 import { SessionStore } from "./session-store.ts"
 
@@ -21,7 +21,7 @@ export const followAgentWorktree = (
     const calls = new Map<string, ToolUse>()
     let worktrees: readonly Worktree[] = []
 
-    const refreshWorktrees = listWorktrees(session.projectPath).pipe(
+    const refreshWorktrees = listWorktreesOrNone(session.projectPath).pipe(
       Effect.provideService(Git, git),
       Effect.tap((listed) => Effect.sync(() => void (worktrees = listed))),
     )

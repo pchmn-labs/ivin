@@ -108,3 +108,20 @@ test("keyboard only: open, filter, move, pick and Escape, with focus back on the
   await expect.element(row("main")).not.toBeInTheDocument()
   await expect.element(trigger).toHaveFocus()
 })
+
+test("a branch list git cannot read shows git's output with a retry that lists the branches", async () => {
+  const server = await mount()
+  server.failListingWith("fatal: detected dubious ownership")
+  await page.getByTestId("branch-picker").click()
+
+  await expect
+    .element(page.getByRole("alert").getByText(/^ivin could not list this project's branches\./))
+    .toBeVisible()
+  await expect
+    .element(page.getByTestId("branch-picker-git-message"))
+    .toHaveTextContent("fatal: detected dubious ownership")
+
+  server.failListingWith(null)
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(row("fix/typo")).toBeVisible()
+})

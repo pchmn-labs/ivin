@@ -1,5 +1,6 @@
 import { Effect } from "effect"
 import { readFileSync, writeFileSync } from "node:fs"
+import { join } from "node:path"
 import * as React from "react"
 import { renderToString } from "react-dom/server"
 import { expect, test, vi } from "vitest"
@@ -155,4 +156,14 @@ test("with no plugins folder, no plugin loads and a log reads empty", async () =
   const home = tempDir("home")
   expect(await listPlugins(home)).toEqual([])
   expect(await readLog(home, "../../etc/passwd")).toEqual([])
+})
+
+test("a log that cannot be written leaves plugin.list answering", async () => {
+  const home = tempDir("home")
+  writePlugin(home, "greeter", greeter)
+  writePlugin(home, "broken", { "package.json": "not json" })
+  writeFileSync(join(home, "logs"), "a file where the log folder should be")
+
+  const plugins = await listPlugins(home)
+  expect(plugins.map((p) => p._tag).sort()).toEqual(["compiled", "failed"])
 })

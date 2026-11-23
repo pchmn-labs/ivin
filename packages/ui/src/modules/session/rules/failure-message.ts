@@ -12,6 +12,7 @@ import type {
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
 import type { ProjectNotTrusted } from "@ivin/contracts/project"
+import type { WorktreeGitFailed } from "@ivin/contracts/worktree"
 import type { RunOption } from "@ivin/contracts/transcript"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import type { RunOptions } from "@ivin/contracts/session"
@@ -195,3 +196,12 @@ export const pickBranchFailure = (
   }
   return { text: `${branch} was not checked out.`, retryable: true, gitMessage: null }
 }
+
+export const listWorktreesFailure = "ivin could not list this project's worktrees."
+
+export const listBranchesFailure = (error: unknown) => ({
+  text: "ivin could not list this project's branches. Fix what git reports, then try again.",
+  gitMessage: isTag<WorktreeGitFailed>(error, "WorktreeGitFailed")
+    ? (error as WorktreeGitFailed).gitMessage
+    : null,
+})

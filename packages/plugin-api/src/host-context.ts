@@ -148,6 +148,11 @@ export interface UiHost {
   ) => void
   // The changed files of the working folder, kept up to date with the disk.
   readonly useGitStatus: (sessionId: string) => ReadonlyArray<GitStatusEntry>
+  // Why `useGitStatus` holds nothing when git could not read the changed files, else null; `retry` reads them again.
+  readonly useGitStatusFailure: (sessionId: string) => {
+    readonly failure: ActionFailure | null
+    readonly retry: () => void
+  }
   // The file the session's tab has selected beside its chat, or null.
   readonly useFileOnScreen: (sessionId: string) => string | null
   // The working folder's uncommitted changes, kept up to date with the disk.

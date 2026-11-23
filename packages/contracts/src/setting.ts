@@ -144,6 +144,11 @@ export class SettingsFileInvalid extends Schema.TaggedError<SettingsFileInvalid>
   },
 ) {}
 
+export class SettingsFileUnavailable extends Schema.TaggedError<SettingsFileUnavailable>()(
+  "SettingsFileUnavailable",
+  { path: Schema.String, action: Schema.Literals(["read", "write"]) },
+) {}
+
 export const SettingRpcs = RpcGroup.make(
   Rpc.make("setting.watch", { success: UserSettings, stream: true }),
   Rpc.make("setting.get", {
@@ -153,6 +158,11 @@ export const SettingRpcs = RpcGroup.make(
   }),
   Rpc.make("setting.set", {
     payload: { path: Schema.String, value: Schema.Json },
-    error: Schema.Union([SettingPathUnknown, SettingValueInvalid, SettingsFileInvalid]),
+    error: Schema.Union([
+      SettingPathUnknown,
+      SettingValueInvalid,
+      SettingsFileInvalid,
+      SettingsFileUnavailable,
+    ]),
   }),
 )

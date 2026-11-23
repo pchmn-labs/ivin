@@ -199,7 +199,7 @@ ipcMain.handle(RESTART_SERVER, () => {
 ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
   const file = join(ivinHome, "settings.json")
   try {
-    await mkdir(ivinHome, { recursive: true })
+    await mkdir(ivinHome, { recursive: true, mode: 0o700 })
     // The system has nothing to open until a setting is first changed.
     await writeFile(file, "{}\n", { flag: "wx" }).catch((error: NodeJS.ErrnoException) => {
       if (error.code !== "EEXIST") throw error

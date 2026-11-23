@@ -4,7 +4,7 @@ import { layerScripted, type StartInput } from "@ivin/harness"
 import { Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
@@ -239,6 +239,26 @@ test("a pull blocked by local changes says so, and pulls once they are stashed",
   })
   expect(git(project, "show", "HEAD:first.txt")).toBe("upstream edit")
   expect(git(project, "stash", "list")).toContain("WIP before pulling")
+})
+
+test("a pull with a stash that git then refuses puts the changes back", async () => {
+  commit(project, "local.txt")
+  writeFileSync(join(project, "first.txt"), "local edit")
+  const refused = await withServer([], (client) =>
+    Effect.gen(function* () {
+      const created = yield* newSession(client)
+      return yield* Effect.flip(
+        client["session.fastForward"]({ sessionId: created.id, stash: true }),
+      )
+    }),
+  )
+
+  expect(refused).toMatchObject({
+    _tag: "GitRefused",
+    message: expect.stringContaining("fast-forward"),
+  })
+  expect(readFileSync(join(project, "first.txt"), "utf8")).toBe("local edit")
+  expect(git(project, "stash", "list")).toBe("")
 })
 
 test("after the first message, the checkout is no longer switched", async () => {

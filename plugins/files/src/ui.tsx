@@ -12,6 +12,7 @@ import {
   useFileOnScreen,
   useFolderChanges,
   useGitStatus,
+  useGitStatusFailure,
   useListFiles,
   useListFolder,
   useOpenFile,
@@ -33,8 +34,9 @@ import {
   type FolderTree,
 } from "./rules/folder-tree.ts"
 import { gitMarks } from "./rules/git-marks.ts"
+import { keepListing } from "./rules/keep-listing.ts"
 import { ancestorsOf, nameOf, parentOf } from "./rules/paths.ts"
-import { rankFiles } from "./rules/rank-files.ts"
+import { indexFiles, rankFiles } from "./rules/rank-files.ts"
 import { treeRows } from "./rules/tree-rows.ts"
 
 const GO_TO_FILE_LIMIT = 50
@@ -92,10 +94,23 @@ function FolderRow({ session }: { session: Session }) {
 function useFileList(session: Session, active: boolean) {
   const listFiles = useListFiles()
   const [listing, setListing] = useState<FileListing | null>(null)
-  const load = () => void listFiles(session.id).then(setListing)
+  const asked = useRef(0)
+  const shown = useRef(0)
+  const load = () => {
+    const call = ++asked.current
+    void listFiles(session.id).then((next) => {
+      // A listing asked before the one shown is older, however late it arrives.
+      if (call < shown.current) return
+      shown.current = call
+      setListing((current) => keepListing(current, next))
+    })
+  }
   useEffect(() => {
     if (active) load()
-    else setListing(null)
+    else {
+      shown.current = ++asked.current
+      setListing(null)
+    }
   }, [active])
   useFolderChanges(session.id, (paths) => {
     if (active && paths.length > 0) load()
@@ -108,6 +123,7 @@ function FolderTreeView({ session, state }: { session: Session; state: PluginSta
   const openFile = useOpenFile()
   const statuses = useGitStatus(session.id)
   const marks = useMemo(() => gitMarks(statuses), [statuses])
+  const statusFailure = useGitStatusFailure(session.id)
   const [openFailure, setOpenFailure] = useState<({ path: string } & ActionFailure) | null>(null)
   const open = async (path: string) => {
     setOpenFailure(null)
@@ -216,6 +232,12 @@ function FolderTreeView({ session, state }: { session: Session; state: PluginSta
         />
       </Stack>
       <FolderRow session={session} />
+      {statusFailure.failure !== null && (
+        <ErrorMessage
+          message={statusFailure.failure.text}
+          {...(statusFailure.failure.retryable && { onRetry: statusFailure.retry })}
+        />
+      )}
       {filter.trim() === "" ? (
         <FolderContent
           tree={tree}
@@ -409,9 +431,13 @@ function GoToFileList({
   const [failure, setFailure] = useState<({ path: string } & ActionFailure) | null>(null)
   const placeholder = `Go to a file in ${useFolderLabel(session)}`
   const deferred = useDeferredValue(query)
+  const index = useMemo(
+    () => (listing?.kind === "listed" ? indexFiles(listing.paths) : null),
+    [listing],
+  )
   const ranked = useMemo(
-    () => (listing?.kind === "listed" ? rankFiles(listing.paths, deferred, GO_TO_FILE_LIMIT) : []),
-    [listing, deferred],
+    () => (index === null ? [] : rankFiles(index, deferred, GO_TO_FILE_LIMIT)),
+    [index, deferred],
   )
   const onPick = async (path: string) => {
     setFailure(null)

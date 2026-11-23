@@ -1,7 +1,8 @@
 import { FolderNotListed, PathOutsideWorkingFolder } from "@ivin/contracts/file"
 import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
 import { expect, test } from "vitest"
-import { fileListingFailure, folderListingFailure } from "./folder-listing.ts"
+import { GitFailed } from "@ivin/contracts/file"
+import { fileListingFailure, folderListingFailure, gitStatusFailure } from "./folder-listing.ts"
 
 test("a deleted working folder is its own state, not a failure", () => {
   expect(folderListingFailure(new WorkingFolderDeleted({ sessionId: "s" }), "")).toEqual({
@@ -46,4 +47,17 @@ test("a file listing that fails says why, and offers a retry when one can work",
     kind: "failed",
     failure: { text: "The working folder's files could not be listed. Retry.", retryable: true },
   })
+})
+
+test("a git failure says git could not list the files, or read which changed, and offers a retry", () => {
+  const error = new GitFailed({ sessionId: "s", gitMessage: "index file corrupt" })
+  expect(fileListingFailure(error)).toEqual({
+    kind: "failed",
+    failure: { text: "Git could not list the working folder's files. Retry.", retryable: true },
+  })
+  expect(gitStatusFailure(error)).toEqual({
+    text: "Git could not read which files changed, so the files show no status. Retry.",
+    retryable: true,
+  })
+  expect(gitStatusFailure(new WorkingFolderDeleted({ sessionId: "s" }))).toBeNull()
 })

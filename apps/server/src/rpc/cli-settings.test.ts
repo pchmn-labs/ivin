@@ -1,5 +1,5 @@
 import { Effect, Stream } from "effect"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { isDeepStrictEqual } from "node:util"
@@ -21,11 +21,12 @@ const text = `{
 `
 
 // Runs `ivin settings …` while the app watches a settings.json holding `initial`.
-const settings = (args: readonly string[], initial: string | null = text) => {
+const settings = (args: readonly string[], initial: string | null = text, readOnlyHome = false) => {
   const home = join(mkdtempSync(join(tmpdir(), "ivin-home-")), ".ivin")
   mkdirSync(home)
   const path = join(home, "settings.json")
   if (initial !== null) writeFileSync(path, initial)
+  if (readOnlyHome) chmodSync(home, 0o500)
   return withCliServer(
     async (socketPath, run) => {
       const loaded = readSettingsFile({ settings: defaultSettings, problem: null }, initial)
@@ -156,3 +157,10 @@ test("--json prints the values as JSON", async () => {
   expect(JSON.parse(one.stdout)).toEqual({ ok: true, path: "tabs.stopAgentOnClose", value: true })
   expect(JSON.parse(set.stdout)).toEqual({ ok: true, path: "tabs.stopAgentOnClose", value: false })
 }, 10_000)
+
+test("ivin settings set tells when the file cannot be written", async () => {
+  const run = await settings(["set", "tabs.stopAgentOnClose", "false"], null, true)
+
+  expect(run.code).toBe(1)
+  expect(run.stderr).toContain("ivin could not write")
+})

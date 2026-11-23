@@ -4,13 +4,28 @@ export interface RankedFile {
   readonly nameMatch: ReadonlyArray<number> | null
 }
 
-// The positions of `query`'s letters in `text`, in order, each as early as it can be; null if one is missing.
-const lettersIn = (text: string, query: string): Array<number> | null => {
-  const lower = text.toLowerCase()
+// Built once per listing; `rankFiles` keeps the last query's matches in it.
+export interface FileIndex {
+  readonly paths: ReadonlyArray<string>
+  readonly lower: ReadonlyArray<string>
+  readonly nameStarts: ReadonlyArray<number>
+  sorted: ReadonlyArray<string> | null
+  last: { readonly letters: string; readonly matches: ReadonlyArray<number> } | null
+}
+
+export const indexFiles = (paths: ReadonlyArray<string>): FileIndex => ({
+  paths,
+  lower: paths.map((path) => path.toLowerCase()),
+  nameStarts: paths.map((path) => path.lastIndexOf("/") + 1),
+  sorted: null,
+  last: null,
+})
+
+// `text` and `query` are lower case. The positions of the query's letters in `text`, in order, each as early as it can be; null if one is missing.
+const lettersIn = (text: string, query: string, from = 0): Array<number> | null => {
   const found: Array<number> = []
-  let from = 0
   for (const letter of query) {
-    const at = lower.indexOf(letter, from)
+    const at = text.indexOf(letter, from)
     if (at === -1) return null
     found.push(at)
     from = at + 1
@@ -18,16 +33,24 @@ const lettersIn = (text: string, query: string): Array<number> | null => {
   return found
 }
 
+const hasLetters = (text: string, query: string) => {
+  let from = 0
+  for (const letter of query) {
+    from = text.indexOf(letter, from) + 1
+    if (from === 0) return false
+  }
+  return true
+}
+
 // The tightest run of the query's letters: try each place its first letter appears.
 const tightest = (text: string, query: string): Array<number> | null => {
   let best: Array<number> | null = null
-  const lower = text.toLowerCase()
-  for (let start = lower.indexOf(query[0] ?? ""); start !== -1;) {
-    const rest = lettersIn(text.slice(start + 1), query.slice(1))
+  for (let start = text.indexOf(query[0] ?? ""); start !== -1;) {
+    const rest = lettersIn(text, query.slice(1), start + 1)
     if (rest === null) break
-    const found = [start, ...rest.map((at) => at + start + 1)]
+    const found = [start, ...rest]
     if (best === null || spread(found) < spread(best)) best = found
-    start = lower.indexOf(query[0] ?? "", start + 1)
+    start = text.indexOf(query[0] ?? "", start + 1)
   }
   return best
 }
@@ -37,34 +60,47 @@ const spread = (found: ReadonlyArray<number>) => (found.at(-1) ?? 0) - (found[0]
 // Above any name match's score, so a match across the path always ranks after.
 const PATH_MATCH = 1_000_000
 
+interface Scored extends RankedFile {
+  readonly score: number
+}
+
+const before = (a: Scored, b: Scored) =>
+  a.score - b.score || a.path.length - b.path.length || (a.path < b.path ? -1 : 1)
+
 export const rankFiles = (
-  paths: ReadonlyArray<string>,
+  index: FileIndex,
   query: string,
   limit: number,
 ): ReadonlyArray<RankedFile> => {
   const letters = query.replaceAll(/\s/g, "").toLowerCase()
-  if (letters === "")
-    return [...paths]
-      .sort()
-      .slice(0, limit)
-      .map((path) => ({ path, nameMatch: null }))
-  const scored: Array<RankedFile & { readonly score: number }> = []
-  for (const path of paths) {
-    const nameStart = path.lastIndexOf("/") + 1
-    const nameMatch = tightest(path.slice(nameStart), letters)
-    if (nameMatch !== null) {
-      // A tighter run first, then one nearer the name's start.
-      scored.push({ path, nameMatch, score: spread(nameMatch) * 1000 + (nameMatch[0] ?? 0) })
-      continue
-    }
-    const pathMatch = tightest(path, letters)
-    if (pathMatch !== null)
-      scored.push({ path, nameMatch: null, score: PATH_MATCH + spread(pathMatch) })
+  if (letters === "") {
+    index.sorted ??= [...index.paths].sort()
+    return index.sorted.slice(0, limit).map((path) => ({ path, nameMatch: null }))
   }
-  return scored
-    .sort(
-      (a, b) => a.score - b.score || a.path.length - b.path.length || (a.path < b.path ? -1 : 1),
-    )
-    .slice(0, limit)
-    .map(({ path, nameMatch }) => ({ path, nameMatch }))
+  // Every letter of a longer query is in the files the shorter one matched.
+  const last = index.last
+  const candidates =
+    last !== null && letters.startsWith(last.letters) ? last.matches : index.paths.keys()
+  const matches: Array<number> = []
+  const best: Array<Scored> = []
+  for (const at of candidates) {
+    const lower = index.lower[at] ?? ""
+    if (!hasLetters(lower, letters)) continue
+    matches.push(at)
+    const path = index.paths[at] ?? ""
+    const nameStart = index.nameStarts[at] ?? 0
+    const nameMatch = tightest(lower.slice(nameStart), letters)
+    const scored: Scored =
+      nameMatch !== null
+        ? // A tighter run first, then one nearer the name's start.
+          { path, nameMatch, score: spread(nameMatch) * 1000 + (nameMatch[0] ?? 0) }
+        : { path, nameMatch: null, score: PATH_MATCH + spread(tightest(lower, letters) ?? []) }
+    if (best.length === limit && before(scored, best[limit - 1]!) >= 0) continue
+    let place = best.length
+    while (place > 0 && before(scored, best[place - 1]!) < 0) place--
+    best.splice(place, 0, scored)
+    if (best.length > limit) best.pop()
+  }
+  index.last = { letters, matches }
+  return best.map(({ path, nameMatch }) => ({ path, nameMatch }))
 }

@@ -12,7 +12,7 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { newWorktreeBaseOf, worktreesOf } from "../../worktree/atoms/list-worktrees.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { pickWorkingFolderAtom } from "../atoms/pick-working-folder.ts"
-import { pickWorkingFolderFailure } from "../rules/failure-message.ts"
+import { listWorktreesFailure, pickWorkingFolderFailure } from "../rules/failure-message.ts"
 import { folderName, newBranchLabel } from "../rules/session-location.ts"
 import "./pick-working-folder.css"
 
@@ -28,7 +28,8 @@ interface Option {
 export function PickWorkingFolder({ session }: { session: Session }) {
   const { projectPath } = session
   const worktreesAtom = worktreesOf(projectPath)
-  const worktrees = AsyncResult.getOrElse(useAtomValue(worktreesAtom), () => [])
+  const listedWorktrees = useAtomValue(worktreesAtom)
+  const worktrees = AsyncResult.getOrElse(listedWorktrees, () => [])
   const refreshWorktrees = useAtomRefresh(worktreesAtom)
   const base = AsyncResult.getOrElse(useAtomValue(newWorktreeBaseOf(projectPath)), () => null)
   const sessions = useAtomValue(sessionsOf(projectPath).items)
@@ -155,6 +156,11 @@ export function PickWorkingFolder({ session }: { session: Session }) {
       >
         <legend className="iv-visually-hidden">Working folder</legend>
         {fixed.map(radio)}
+        {AsyncResult.isFailure(listedWorktrees) && (
+          <div data-testid="pick-working-folder-worktrees-alert">
+            <ErrorMessage message={listWorktreesFailure} onRetry={refreshWorktrees} />
+          </div>
+        )}
         {existing.length > 0 && (
           <Text size="xs" tone="faint" weight="medium">
             Existing worktrees

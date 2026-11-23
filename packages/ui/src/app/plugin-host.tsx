@@ -63,7 +63,11 @@ import { discardFailure } from "../modules/file/rules/discard-failure.ts"
 import { changeListingFailure } from "../modules/file/rules/change-listing.ts"
 import { listFilesOf } from "../modules/file/atoms/list-files.ts"
 import { folderChangesOf } from "../modules/file/atoms/watch-folder.ts"
-import { fileListingFailure, folderListingFailure } from "../modules/file/rules/folder-listing.ts"
+import {
+  fileListingFailure,
+  folderListingFailure,
+  gitStatusFailure,
+} from "../modules/file/rules/folder-listing.ts"
 import { subViewsOf } from "../modules/tab/atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../modules/tab/atoms/open-sub-view.ts"
 import { openDiffFailure, openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
@@ -254,6 +258,15 @@ const host: UiHost = {
   useGitStatus: (sessionId) => {
     const result = useAtomValue(gitStatusOf(sessionId))
     return AsyncResult.isSuccess(result) ? result.value : NO_CHANGES
+  },
+  useGitStatusFailure: (sessionId) => {
+    const atom = gitStatusOf(sessionId)
+    const result = useAtomValue(atom)
+    const retry = useAtomRefresh(atom)
+    return {
+      failure: AsyncResult.isFailure(result) ? gitStatusFailure(Cause.squash(result.cause)) : null,
+      retry,
+    }
   },
   useFileOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "file"),
   useChanges: (sessionId) => {

@@ -7,7 +7,7 @@ import { CurrentSettings } from "../../setting/usecases/current-settings.ts"
 import { TabStore } from "../../tab/usecases/tab-store.ts"
 import { isInUse, isRemovable, removalCandidates } from "../rules/worktree-removal.ts"
 import { Git } from "./git.ts"
-import { listWorktrees } from "./list-worktrees.ts"
+import { listWorktreesOrNone } from "./list-worktrees.ts"
 import { newWorktreeBase } from "./new-worktree-base.ts"
 import { OriginFetch } from "./origin-fetch.ts"
 
@@ -50,7 +50,11 @@ export const removeMergedWorktrees = (
       )
     })
     const sessions = yield* sessionUses
-    const candidates = removalCandidates(projectPath, yield* listWorktrees(projectPath), sessions)
+    const candidates = removalCandidates(
+      projectPath,
+      yield* listWorktreesOrNone(projectPath),
+      sessions,
+    )
 
     yield* Effect.forEach(candidates, ({ path, origin }) =>
       Effect.gen(function* () {

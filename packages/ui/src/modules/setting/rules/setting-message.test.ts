@@ -40,3 +40,9 @@ test("a save refused because the file is invalid says to fix the file first", ()
 test("any other failed save says the setting was not saved", () => {
   expect(saveFailureMessage(new Error("EACCES"))).toBe("The setting was not saved.")
 })
+
+test("an unreadable or unwritable file says what ivin could not do", () => {
+  expect(saveFailureMessage({ _tag: "SettingsFileUnavailable", path: "/x", action: "write" })).toBe(
+    "Not saved: ivin could not write ~/.ivin/settings.json. Check that it and its folder are accessible to you, then try again.",
+  )
+})

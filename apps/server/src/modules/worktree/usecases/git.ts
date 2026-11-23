@@ -58,7 +58,12 @@ export class Git extends Context.Service<
     // Git refuses a worktree with changes.
     readonly removeWorktree: (repo: string, path: string) => Effect.Effect<void, GitError>
     // Untracked files included, so they no longer block a checkout or a fast-forward.
-    readonly stash: (folder: string, message: string) => Effect.Effect<void, GitError>
+    // True when a stash was made: with nothing to save git succeeds and makes none.
+    readonly stash: (folder: string, message: string) => Effect.Effect<boolean, GitError>
+    // Puts the latest stash back and drops it.
+    readonly popStash: (folder: string) => Effect.Effect<void, GitError>
+    // Null before the first commit.
+    readonly headCommit: (folder: string) => Effect.Effect<string | null>
     // Untracked files stay out, as the user was never shown them.
     readonly commitTracked: (folder: string, message: string) => Effect.Effect<void, GitError>
     readonly fastForward: (folder: string, upstream: string) => Effect.Effect<void, GitError>
@@ -74,11 +79,11 @@ export class Git extends Context.Service<
       names: ReadonlyArray<string>,
     ) => Effect.Effect<ReadonlySet<string>>
     // Paths relative to `folder`, none outside a repository.
-    readonly statusOf: (folder: string) => Effect.Effect<ReadonlyArray<GitStatusEntry>>
+    readonly statusOf: (folder: string) => Effect.Effect<ReadonlyArray<GitStatusEntry>, GitError>
     // The repository's own folder for `folder`, which holds HEAD and the index; null outside a repository.
     readonly gitDir: (folder: string) => Effect.Effect<string | null>
     // Not ignored, untracked included and tracked-but-deleted left out, relative to `folder`; null outside a repository.
-    readonly listFiles: (folder: string) => Effect.Effect<ReadonlyArray<string> | null>
+    readonly listFiles: (folder: string) => Effect.Effect<ReadonlyArray<string> | null, GitError>
     // Against HEAD's commit, untracked files included, or between the commits of `range`; relative
     // to `folder`, null outside a repository.
     readonly listChanges: (

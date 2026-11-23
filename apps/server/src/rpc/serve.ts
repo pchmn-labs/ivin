@@ -11,7 +11,7 @@ const serveGroupOverPort = <R extends Rpc.Any>(
   port: RpcPort,
   info: ServerInfo["Service"],
 ) =>
-  RpcServer.layer(group).pipe(
+  RpcServer.layer(group, { disableFatalDefects: true }).pipe(
     Layer.provide(handlers),
     Layer.provide(Layer.succeed(ServerInfo)(info)),
     Layer.provide(layerProtocolMessagePort(port)),

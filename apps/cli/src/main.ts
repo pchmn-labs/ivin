@@ -120,7 +120,9 @@ const runCommand = async (
       "The ivin that started this agent serves no socket, because another ivin already does. Quit both, then open one.",
     )
   }
-  const exit = await Effect.runPromiseExit(withServer(socketPath, command.run(input)))
+  const exit = await Effect.runPromiseExit(
+    withServer(socketPath, command.run(input), command.timeLimitSeconds),
+  )
   if (Exit.isSuccess(exit)) {
     const { ok, text, json } = exit.value
     return { code: ok ? exitCode.ok : exitCode.failed, text, json: { ok, ...json } }
@@ -135,6 +137,9 @@ const runCommand = async (
   }
   if (error?._tag === "UsageError") return usageError(error.message, commandHelp(command))
   if (error?._tag === "CommandFailed") return failure(exitCode.failed, error.reason, error.message)
+  if (error?._tag === "NoAnswer") {
+    return failure(exitCode.failed, "noAnswer", `ivin did not answer within ${error.seconds} s.`)
+  }
   if (error?._tag === "ConnectionFailed") {
     return failure(exitCode.failed, "failed", `Could not connect to ivin on ${socketPath}.`)
   }

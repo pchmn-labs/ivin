@@ -391,6 +391,20 @@ test("git status is empty outside a git repository, and fails for a deleted fold
 const filesIn = (projectPath: string) =>
   callIn(projectPath, (client, sessionId) => client["file.listFiles"]({ sessionId }))
 
+test("git status and the file list fail with GitFailed when git cannot read the repository, and stay empty outside one", async () => {
+  write(join(project, "a.ts"), "a\n")
+  commitAll()
+  writeFileSync(join(project, ".git/index"), "garbage")
+
+  expect(await statusIn(project)).toBe("GitFailed")
+  expect(await filesIn(project)).toBe("GitFailed")
+
+  const plain = join(root, "plain")
+  write(join(plain, "a.ts"))
+  expect(await statusIn(plain)).toEqual([])
+  expect(await filesIn(plain)).toEqual({ paths: ["a.ts"], truncated: false })
+})
+
 test("lists the files git does not ignore, untracked included and deleted left out, sorted", async () => {
   write(join(project, ".gitignore"), "node_modules/\n*.log\n")
   write(join(project, "src/lib/deep.ts"))
