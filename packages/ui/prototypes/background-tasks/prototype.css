@@ -149,11 +149,9 @@ button.proto-task { cursor: default; }
 .proto-detail-row .proto-task-meta { flex: none; margin: 0 var(--iv-space-1); }
 /* No close button on a task tab, so the same 12px on both sides. */
 .iv-sub-view-card__tab.proto-detail-tab { padding: 0 var(--iv-space-3); }
-/* The files row's ground, so its selected tab keeps the same contrast. */
-.proto-detail-row { background: var(--iv-bg-card); }
 .proto-detail-close { margin-right: 0; }
-/* Keeps the drag line inside the sheet's rounded top corners. */
-.proto-sheet > .iv-resize-handle::after { right: var(--iv-radius-lg); left: var(--iv-radius-lg); }
+/* The drag line lies on the sheet's top border, so it bends with the rounded corners. */
+.proto-sheet > .iv-resize-handle[data-edge="top"]::after { top: 2px; right: -1px; left: -1px; height: var(--iv-radius-lg); border-top: var(--iv-line-bold) solid var(--iv-accent); border-radius: var(--iv-radius-lg) var(--iv-radius-lg) 0 0; background: none; }
 /* Over the transcript's column, at the composer's width. */
 .proto-dialog { position: absolute; top: var(--iv-space-2); bottom: var(--iv-space-6); left: 50%; right: auto; width: calc(min(var(--iv-content-width), 100%) - 2 * var(--iv-space-6)); inset-inline-start: 50%; margin: 0; overflow: hidden; background: var(--iv-bg-card); }
 .proto-main:has(.proto-dialog) { z-index: 11; }
