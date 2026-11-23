@@ -8,28 +8,30 @@ import { CodeView } from "../../../core/components/code-view/code-view.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { diffOf } from "../atoms/read-diff.ts"
-import { diffReading, diffReadingFailure } from "../rules/diff-reading.ts"
+import { type DiffKind, diffReading, diffReadingFailure } from "../rules/diff-reading.ts"
 import { diffDocument } from "../rules/diff-document.ts"
 import { fileName } from "../rules/file-name.ts"
 import "./diff-view.css"
 
 export function DiffView({
+  kind,
   sessionId,
   workingFolder,
   path,
   onOpenFile,
 }: {
+  kind: DiffKind
   sessionId: string
   workingFolder: string
   path: string
   onOpenFile: () => void
 }) {
-  const atom = diffOf(sessionId, workingFolder, path)
+  const atom = diffOf(kind, sessionId, workingFolder, path)
   const retry = useAtomRefresh(atom)
   // A long diff renders in a transition, so the window keeps answering while it opens.
   const result = useDeferredValue(useAtomValue(atom))
   const reading = AsyncResult.isSuccess(result)
-    ? diffReading(result.value, path)
+    ? diffReading(result.value, path, kind)
     : AsyncResult.isFailure(result)
       ? diffReadingFailure(Cause.squash(result.cause), path)
       : null

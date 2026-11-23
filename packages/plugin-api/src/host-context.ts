@@ -40,6 +40,22 @@ export type ChangeListing =
       readonly gitMessage: string | null
     }
 
+// `base`: the branch compared with, `origin/<default branch>`; the changes are its commits' since.
+export type CommittedChangeListing =
+  | Exclude<ChangeListing, { kind: "listed" }>
+  | {
+      readonly kind: "listed"
+      readonly base: string
+      readonly changes: ReadonlyArray<Change>
+    }
+  | { readonly kind: "no_origin" }
+  | { readonly kind: "no_default_branch" }
+  | { readonly kind: "no_merge_base" }
+
+export interface DiscardFailure extends ActionFailure {
+  readonly gitMessage: string | null
+}
+
 export interface UiHost {
   readonly useSession: (sessionId: string) => Session | undefined
   // Every open project's sessions, project by project in their order, each newest activity first.
@@ -103,6 +119,23 @@ export interface UiHost {
   readonly useDiffOnScreen: (sessionId: string) => string | null
   // The user's ~/.ivin/settings.json over the defaults, kept up to date with the file.
   readonly useSettings: () => Settings
+  // What the commits of the session's branch changed since it left origin's default branch,
+  // kept up to date with the disk.
+  readonly useCommittedChanges: (sessionId: string) => {
+    readonly listing: CommittedChangeListing
+    readonly retry: () => void
+  }
+  // Opens what the branch's commits changed in a file beside the session's chat, or selects it.
+  readonly useOpenCommittedDiff: () => (
+    sessionId: string,
+    path: string,
+  ) => Promise<ActionFailure | undefined>
+  readonly useCommittedDiffOnScreen: (sessionId: string) => string | null
+  // Restores each file to its last commit, or deletes it when git does not track it or it is new.
+  readonly useDiscardChanges: () => (
+    sessionId: string,
+    paths: ReadonlyArray<string>,
+  ) => Promise<DiscardFailure | undefined>
   readonly components: HostComponents
 }
 

@@ -7,6 +7,11 @@ import type { WorktreeState } from "../rules/worktree-removal.ts"
 // `message` is git's own output.
 export class GitError extends Data.TaggedError("GitError")<{ readonly message: string }> {}
 
+export interface CommitRange {
+  readonly from: string
+  readonly to: string
+}
+
 export class Git extends Context.Service<
   Git,
   {
@@ -61,13 +66,27 @@ export class Git extends Context.Service<
     readonly gitDir: (folder: string) => Effect.Effect<string | null>
     // Not ignored, untracked included and tracked-but-deleted left out, relative to `folder`; null outside a repository.
     readonly listFiles: (folder: string) => Effect.Effect<ReadonlyArray<string> | null>
-    // Against HEAD, untracked files included, relative to `folder`; null outside a repository.
-    readonly listChanges: (folder: string) => Effect.Effect<ReadonlyArray<Change> | null, GitError>
+    // Against HEAD, untracked files included, or between the commits of `range`; relative to
+    // `folder`, null outside a repository.
+    readonly listChanges: (
+      folder: string,
+      range?: CommitRange,
+    ) => Effect.Effect<ReadonlyArray<Change> | null, GitError>
     // The unified diff of one of those changes; null when it is longer than `limit` bytes.
     readonly diffOf: (
       folder: string,
       change: Change,
       limit: number,
+      range?: CommitRange,
     ) => Effect.Effect<string | null, GitError>
+    // False on a branch with no commit yet.
+    readonly hasCommit: (folder: string) => Effect.Effect<boolean>
+    // Null when HEAD and `target` share no commit.
+    readonly mergeBase: (folder: string, target: string) => Effect.Effect<string | null, GitError>
+    // Back to HEAD in the index and on disk, or deleted when untracked or new.
+    readonly discard: (
+      folder: string,
+      changes: ReadonlyArray<Change>,
+    ) => Effect.Effect<void, GitError>
   }
 >()("ivin/server/Git") {}

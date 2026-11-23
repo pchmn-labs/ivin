@@ -10,6 +10,7 @@ import {
   EyeSlash,
   ArrowsLeftRight,
   ArrowsOut,
+  ArrowUUpLeft,
   ArrowUp,
   BracketsCurly,
   Brain,
@@ -98,6 +99,7 @@ const icons = {
   clock: Clock,
   diff: GitDiff,
   question: Question,
+  undo: ArrowUUpLeft,
 } satisfies Record<IconName, PhosphorIcon>
 
 // Drawn filled, as the session mark's status overlay is.

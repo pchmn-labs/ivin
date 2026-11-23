@@ -19,15 +19,17 @@ const app = await electron.launch({
 
 // A repository with a linked worktree, a second branch and an origin, so the working folder menu
 // and the branch picker have something to list.
+const gitEnv = {
+  ...process.env,
+  GIT_AUTHOR_NAME: "ivin",
+  GIT_AUTHOR_EMAIL: "ivin@example.com",
+  GIT_COMMITTER_NAME: "ivin",
+  GIT_COMMITTER_EMAIL: "ivin@example.com",
+}
+let repo = ""
 const makeRepo = (dir: string) => {
-  const env = {
-    ...process.env,
-    GIT_AUTHOR_NAME: "ivin",
-    GIT_AUTHOR_EMAIL: "ivin@example.com",
-    GIT_COMMITTER_NAME: "ivin",
-    GIT_COMMITTER_EMAIL: "ivin@example.com",
-  }
-  const git = (...args: string[]) => execFileSync("git", args, { cwd: dir, env })
+  repo = dir
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: dir, env: gitEnv })
   git("init", "--quiet", "-b", "main")
   writeFileSync(join(dir, "README.md"), "hello")
   writeFileSync(join(dir, ".gitignore"), "dist/\n")
@@ -249,6 +251,31 @@ try {
   )
   await window.waitForTimeout(300)
   await shoot("files-tab")
+  // A commit ahead of origin and uncommitted edits, for the Changes tab's two lists.
+  const git = (...args: string[]) => execFileSync("git", args, { cwd: repo, env: gitEnv })
+  git("remote", "set-head", "origin", "main")
+  writeFileSync(join(repo, "src/orders/empty-page.ts"), "export const EMPTY_PAGE = []\n")
+  git("add", "src/orders/empty-page.ts")
+  git("commit", "--quiet", "-m", "empty page")
+  writeFileSync(join(repo, "README.md"), "hello\n\nOrders, with totals in cents.\n")
+  writeFileSync(join(repo, "src/main.ts"), 'import { total } from "./orders/total.ts"\n')
+  writeFileSync(join(repo, "NOTES.md"), "- empty page\n")
+  await sidebar.getByRole("tab", { name: /^Changes/ }).click()
+  await sidebar
+    .getByRole("list", { name: "Committed changes" })
+    .getByText("empty-page.ts")
+    .waitFor()
+  await sidebar.getByRole("list", { name: "Uncommitted changes" }).getByText("NOTES.md").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("changes-tab")
+  await sidebar.getByRole("list", { name: "Uncommitted changes" }).getByText("README.md").hover()
+  await window.getByRole("button", { name: "Discard the changes to README.md" }).click()
+  await window.getByRole("dialog").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("discard-dialog")
+  await window.keyboard.press("Escape")
+  await window.getByRole("dialog").waitFor({ state: "detached" })
+  await sidebar.getByRole("tab", { name: "Files" }).click()
   await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).click()
   await sidebar.getByRole("treeitem", { name: "total.ts", exact: true }).click()
   await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").waitFor()

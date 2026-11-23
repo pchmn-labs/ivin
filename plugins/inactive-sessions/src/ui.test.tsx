@@ -56,6 +56,10 @@ const mountSection = async (
     useOpenDiff: () => async () => undefined,
     useDiffOnScreen: () => null,
     useSettings: () => defaultSettings,
+    useCommittedChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
+    useOpenCommittedDiff: () => async () => undefined,
+    useCommittedDiffOnScreen: () => null,
+    useDiscardChanges: () => async () => undefined,
     useSessionActions: (session) => ({
       items: [{ label: "Archive", onSelect: () => void archived.push(session.id) }],
       failure: session.title === "Failed" ? "The session was not archived." : null,

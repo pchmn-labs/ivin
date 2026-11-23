@@ -43,7 +43,8 @@ export const parseChanges = (
     })
   }
   for (const path of untracked.split("\0"))
-    if (path !== "")
+    // A nested repository, such as a worktree, ends with a slash: none of its files is a change.
+    if (path !== "" && !path.endsWith("/"))
       changes.push({ path, previousPath: null, status: "untracked", added: null, deleted: null })
 
   return changes.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))

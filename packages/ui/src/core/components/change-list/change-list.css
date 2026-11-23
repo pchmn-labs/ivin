@@ -1,17 +1,85 @@
 .iv-change-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--iv-space-3);
+}
+
+.iv-change-list__heading {
+  display: flex;
+  align-items: center;
+  height: 24px;
+  padding-right: var(--iv-space-1);
+  border-radius: var(--iv-radius-sm);
+  color: var(--iv-text-faint);
+  transition: background-color var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-change-list__heading:hover {
+  background: var(--iv-bg-hover);
+  color: var(--iv-text-muted);
+}
+
+.iv-change-list__toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--iv-space-1);
+  height: 100%;
+  padding: 0 var(--iv-space-1);
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--iv-text-xs);
+  font-weight: var(--iv-weight-medium);
+  text-align: left;
+  cursor: default;
+}
+
+.iv-change-list__toggle:focus-visible,
+.iv-change-list__main:focus-visible {
+  outline: 2px solid var(--iv-focus-ring);
+  outline-offset: -2px;
+}
+
+.iv-change-list__chevron {
+  display: inline-flex;
+  transition: transform var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-change-list__toggle[aria-expanded="true"] .iv-change-list__chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-change-list__chevron {
+    transition: none;
+  }
+}
+
+.iv-change-list__count {
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-change-list__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-half);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.iv-change-list__item {
+  display: flex;
+  flex-direction: column;
 }
 
 .iv-change-list__row {
   display: flex;
   align-items: center;
   height: 26px;
-  padding-right: var(--iv-space-1);
   border-radius: var(--iv-radius-sm);
   transition: background-color var(--iv-duration-fast) var(--iv-ease-out);
 }
@@ -28,10 +96,10 @@
   display: flex;
   flex: 1;
   align-items: center;
-  gap: var(--iv-space-2);
+  gap: 6px;
   min-width: 0;
   height: 100%;
-  padding: 0 var(--iv-space-1) 0 var(--iv-space-2);
+  padding: 0 6px;
   border: 0;
   border-radius: inherit;
   background: transparent;
@@ -43,17 +111,40 @@
   cursor: default;
 }
 
-.iv-change-list__main:focus-visible {
-  outline: 2px solid var(--iv-focus-ring);
-  outline-offset: -2px;
+/* The status letter sits on the icon's corner, over the row's ground. */
+.iv-change-list__icon {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: var(--iv-tree-icon-size);
+  height: var(--iv-tree-icon-size);
+  color: var(--iv-text-faint);
+}
+
+.iv-change-list__icon img {
+  display: block;
+  width: var(--iv-tree-icon-size);
+  height: var(--iv-tree-icon-size);
 }
 
 .iv-change-list__letter {
-  flex: none;
-  width: 14px;
+  position: absolute;
+  right: -4px;
+  bottom: -3px;
+  min-width: 9px;
+  padding: 0 1px;
+  border-radius: 3px;
+  background: var(--iv-bg-card);
   font-family: var(--iv-font-mono);
-  font-size: var(--iv-text-xs);
+  font-size: 8px;
+  font-weight: var(--iv-weight-semibold);
+  line-height: 9px;
   text-align: center;
+}
+
+.iv-change-list__row[data-selected] .iv-change-list__letter {
+  background: color-mix(in srgb, var(--iv-text) 9%, var(--iv-bg-card));
 }
 
 .iv-change-list__name {
@@ -96,6 +187,7 @@
 .iv-change-list__action {
   display: none;
   flex: none;
+  margin: 0 var(--iv-space-half) 0 var(--iv-space-2);
 }
 
 .iv-change-list__row:hover .iv-change-list__action,
@@ -104,30 +196,57 @@
   display: inline-flex;
 }
 
-.iv-change-list__row:hover .iv-change-list__counts,
-.iv-change-list__row:focus-within .iv-change-list__counts,
-.iv-change-list__row[data-selected] .iv-change-list__counts {
-  display: none;
+.iv-change-list__action .iv-button:hover {
+  color: var(--iv-danger);
 }
 
-.iv-change-list__row[data-status="modified"] .iv-change-list__letter,
-.iv-change-list__row[data-status="renamed"] .iv-change-list__letter {
+.iv-change-list__row[data-status="modified"] :is(.iv-change-list__name, .iv-change-list__letter),
+.iv-change-list__row[data-status="renamed"] :is(.iv-change-list__name, .iv-change-list__letter) {
   color: var(--iv-git-modified);
 }
 
-.iv-change-list__row[data-status="added"] .iv-change-list__letter {
+.iv-change-list__row[data-status="added"] :is(.iv-change-list__name, .iv-change-list__letter) {
   color: var(--iv-git-added);
 }
 
-.iv-change-list__row[data-status="untracked"] .iv-change-list__letter {
+.iv-change-list__row[data-status="untracked"] :is(.iv-change-list__name, .iv-change-list__letter) {
   color: var(--iv-git-untracked);
 }
 
-.iv-change-list__row[data-status="deleted"] .iv-change-list__letter {
+.iv-change-list__row[data-status="deleted"] :is(.iv-change-list__name, .iv-change-list__letter) {
   color: var(--iv-git-deleted);
 }
 
 .iv-change-list__row[data-status="deleted"] .iv-change-list__name {
-  color: var(--iv-text-muted);
   text-decoration: line-through;
+}
+
+/* The text lines up with the row's name, the icon with its file icon. */
+.iv-change-list__error {
+  display: grid;
+  grid-template-columns: var(--iv-tree-icon-size) 1fr;
+  gap: var(--iv-space-1) 6px;
+  align-items: start;
+  padding: var(--iv-space-1) var(--iv-space-2) var(--iv-space-2) 6px;
+  color: var(--iv-danger);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+}
+
+.iv-change-list__error .iv-icon {
+  justify-self: center;
+  margin-top: 2px;
+}
+
+.iv-change-list__error-text {
+  margin: 0;
+}
+
+.iv-change-list__error-detail {
+  grid-column: 2;
+  margin: 0;
+  color: var(--iv-text-muted);
+  font-family: var(--iv-font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }

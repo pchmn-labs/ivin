@@ -17,9 +17,10 @@ export const ProjectTabs = Schema.Struct({
 })
 export type ProjectTabs = typeof ProjectTabs.Type
 
-// A file of the session's working folder, or its uncommitted diff; `path` relative to it.
+// A file of the session's working folder, its uncommitted diff, or what the commits of the
+// session's branch changed in it; `path` relative to the working folder.
 export const SubView = Schema.Struct({
-  kind: Schema.Literals(["file", "diff"]),
+  kind: Schema.Literals(["file", "diff", "committed_diff"]),
   path: Schema.String,
 })
 export type SubView = typeof SubView.Type

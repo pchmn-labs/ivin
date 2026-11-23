@@ -12,7 +12,7 @@ import {
   underOpenedPath,
 } from "../rules/git-output.ts"
 import { hasOwnCommits, isSquashMerged, mergeAddsNothing } from "../rules/merge-state.ts"
-import { Git, GitError } from "../usecases/git.ts"
+import { type CommitRange, Git, GitError } from "../usecases/git.ts"
 
 interface ExecFailure {
   readonly stderr?: string
@@ -76,19 +76,40 @@ const diffBase = (folder: string) =>
   )
 
 // No optional locks: a diff that refreshed the index would fire the watcher that asked for it.
-const DIFF = ["--no-optional-locks", "diff", "--no-color", "--no-ext-diff", "--relative", "-M"]
+// Literal pathspecs: a path such as `[id].ts` is a file name, not a pattern that matches `i.ts`.
+const LITERAL = "--literal-pathspecs"
+const DIFF = [
+  "--no-optional-locks",
+  LITERAL,
+  "diff",
+  "--no-color",
+  "--no-ext-diff",
+  "--relative",
+  "-M",
+]
 
-const listChanges = (folder: string) =>
+const compared = (folder: string, range?: CommitRange) =>
+  range === undefined
+    ? diffBase(folder).pipe(Effect.map((base) => [base]))
+    : Effect.succeed([range.from, range.to])
+
+const listChanges = (folder: string, range?: CommitRange) =>
   Effect.gen(function* () {
     if ((yield* orNull(git(folder, ["rev-parse", "--show-prefix"]))) === null) return null
-    const base = yield* diffBase(folder)
-    const nameStatus = yield* git(folder, [...DIFF, "--name-status", "-z", base, "--"])
-    const numstat = yield* git(folder, [...DIFF, "--numstat", "-z", base, "--"])
-    const untracked = yield* git(folder, ["ls-files", "-z", "--others", "--exclude-standard"])
+    const sides = yield* compared(folder, range)
+    const nameStatus = yield* git(folder, [...DIFF, "--name-status", "-z", ...sides, "--"])
+    const numstat = yield* git(folder, [...DIFF, "--numstat", "-z", ...sides, "--"])
+    const untracked =
+      range === undefined
+        ? yield* git(folder, ["ls-files", "-z", "--others", "--exclude-standard"])
+        : ""
     return parseChanges(nameStatus, numstat, untracked)
   })
 
-const diffOf = (folder: string, change: Change, limit: number) =>
+const changedPaths = (change: Change) =>
+  change.previousPath === null ? [change.path] : [change.previousPath, change.path]
+
+const diffOf = (folder: string, change: Change, limit: number, range?: CommitRange) =>
   Effect.gen(function* () {
     // git diff --no-index exits 1 when the files differ.
     if (change.status === "untracked")
@@ -97,8 +118,8 @@ const diffOf = (folder: string, change: Change, limit: number) =>
         ["diff", "--no-color", "--no-ext-diff", "--no-index", "--", "/dev/null", change.path],
         { maxBuffer: limit, succeedsOn: [1] },
       )
-    const paths = change.previousPath === null ? [change.path] : [change.previousPath, change.path]
-    return yield* runGit(folder, [...DIFF, yield* diffBase(folder), "--", ...paths], {
+    const sides = yield* compared(folder, range)
+    return yield* runGit(folder, [...DIFF, ...sides, "--", ...changedPaths(change)], {
       maxBuffer: limit,
     })
   }).pipe(Effect.catchTag("OutputTooLong", () => Effect.succeed(null)))
@@ -229,4 +250,37 @@ export const layerGitCli = Layer.succeed(Git)({
     }).pipe(Effect.orElseSucceed(() => null)),
   listChanges,
   diffOf,
+  hasCommit: (folder) => diffBase(folder).pipe(Effect.map((base) => base === "HEAD")),
+  // merge-base exits 1, with no output, when the histories share no commit.
+  mergeBase: (folder, target) =>
+    runGit(folder, ["merge-base", "HEAD", target], { succeedsOn: [1] }).pipe(
+      Effect.map((out) => out.trim() || null),
+      Effect.catchTag("OutputTooLong", () =>
+        Effect.fail(new GitError({ message: "git wrote too much" })),
+      ),
+    ),
+  discard: (folder, changes) =>
+    Effect.gen(function* () {
+      const untracked = changes.filter((change) => change.status === "untracked")
+      const tracked = changes.filter((change) => change.status !== "untracked")
+      if (tracked.length > 0)
+        yield* git(folder, [
+          LITERAL,
+          "restore",
+          `--source=${yield* diffBase(folder)}`,
+          "--staged",
+          "--worktree",
+          "--",
+          ...tracked.flatMap(changedPaths),
+        ])
+      if (untracked.length > 0)
+        yield* git(folder, [
+          LITERAL,
+          "clean",
+          "--force",
+          "--quiet",
+          "--",
+          ...untracked.map((change) => change.path),
+        ])
+    }),
 })

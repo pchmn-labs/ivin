@@ -1,9 +1,10 @@
-import { type ChangeList, GitFailed } from "@ivin/contracts/file"
+import type { ChangeList } from "@ivin/contracts/file"
 import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { FolderReader } from "./folder-reader.ts"
+import { gitFailed } from "./git-failed.ts"
 
 export const changesOf = (sessionId: string) =>
   Effect.gen(function* () {
@@ -13,7 +14,7 @@ export const changesOf = (sessionId: string) =>
     if (root === null) return yield* new WorkingFolderDeleted({ sessionId })
     const changes = yield* (yield* Git)
       .listChanges(root)
-      .pipe(Effect.mapError(({ message }) => new GitFailed({ sessionId, gitMessage: message })))
+      .pipe(Effect.mapError(gitFailed(sessionId)))
     return { root, changes }
   })
 

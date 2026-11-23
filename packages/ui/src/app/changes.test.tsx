@@ -91,6 +91,22 @@ const makeServer = () => {
     kind: "text",
     text: "# Shop\nSells shoes.\nOpen daily.\n",
   })
+  server.committedChanges.set(project, {
+    kind: "listed",
+    base: "origin/main",
+    changes: [
+      change("README.md", "modified", 4, 2),
+      change("docs/plan.md", "added", 8),
+      change("src/old-cart.ts", "deleted", 0, 12),
+    ],
+  })
+  server.committedDiffs.set(`${project}/docs/plan.md`, {
+    kind: "text",
+    status: "added",
+    added: 1,
+    deleted: 0,
+    hunks: [{ header: "@@ -0,0 +1 @@", lines: [line("added", "# The plan", null, 1)] }],
+  })
   server.openTab("s2")
   server.openTab("s1")
   return server
@@ -111,10 +127,15 @@ const mount = async (server: FakeServer) => {
 const changesTab = () =>
   page.getByRole("tablist", { name: "Sidebar" }).getByRole("tab", { name: /^Changes/ })
 const list = () => page.getByRole("list", { name: "Uncommitted changes" })
-const row = (name: string) =>
-  list().getByRole("button", {
+const committedList = () => page.getByRole("list", { name: "Committed changes" })
+const rowIn = (rows: ReturnType<typeof list>, name: string) =>
+  rows.getByRole("button", {
     name: new RegExp(`^(modified|added|deleted|renamed|untracked) ${name}`),
   })
+const row = (name: string) => rowIn(list(), name)
+const committedRow = (name: string) => rowIn(committedList(), name)
+const discardDialog = () => page.getByRole("dialog")
+const heading = (name: string) => page.getByRole("button", { name: new RegExp(`^${name} \\d`) })
 const card = () => page.getByRole("region", { name: "Open files" })
 const cardTab = (name: string, options: { exact?: boolean } = {}) =>
   card()
@@ -129,7 +150,9 @@ beforeEach(async () => {
 afterEach(() => localStorage.clear())
 
 test("the Changes tab lists the uncommitted changes with their status, and its label counts them", async () => {
-  const server = await mount(makeServer())
+  const server = makeServer()
+  server.committedChanges.delete(project)
+  await mount(server)
   await expect.element(changesTab()).toHaveTextContent("Changes3")
   await expect.element(row("README.md")).toMatchTextContent(/\+2−1$/)
   await expect.element(row("cart.ts")).toMatchTextContent(/cart\.tssrc\+3$/)
@@ -171,12 +194,8 @@ test("a click on a change opens its diff beside the chat, and Open file opens th
   await expect.element(row("README.md")).not.toHaveAttribute("aria-current")
 })
 
-test("a change's Open file button opens the file, and a deleted file's diff has none", async () => {
+test("a deleted file's diff has no Open file button", async () => {
   await mount(makeServer())
-  await row("README.md").hover()
-  await page.getByRole("button", { name: "Open README.md" }).click()
-  await expect.element(page.getByRole("textbox", { name: "README.md" })).toBeVisible()
-
   await row("old.ts").click()
   await expect.element(page.getByTestId("diff-view").getByText("export {}")).toBeVisible()
   await expect.element(card().getByRole("button", { name: "Open file" })).not.toBeInTheDocument()
@@ -212,6 +231,7 @@ test("a working folder with no changes, or outside a git repository, says so", a
   const server = makeServer()
   server.changes.set(project, { kind: "listed", changes: [] })
   server.changes.set(worktree, { kind: "not_repository" })
+  server.committedChanges.delete(project)
   await mount(server)
   await expect
     .element(page.getByText("No uncommitted changes. What the agent changes shows up here."))
@@ -240,4 +260,177 @@ test("an open diff is back at launch, from the server", async () => {
   await mount(server)
   await expect.element(cardTab("README.md diff")).toHaveAttribute("aria-selected", "true")
   await expect.element(page.getByTestId("diff-view").getByText("Open daily.")).toBeVisible()
+})
+
+test("the Changes tab lists what the branch's commits changed under the uncommitted changes, and its label counts both", async () => {
+  const server = await mount(makeServer())
+  await expect.element(changesTab()).toHaveTextContent("Changes3 · 3")
+  await expect.element(heading("Uncommitted")).toHaveTextContent("Uncommitted 3")
+  await expect.element(heading("Committed")).toHaveTextContent("Committed 3")
+  await expect
+    .element(heading("Committed"))
+    .toHaveAttribute("title", "Since the branch left origin/main")
+  await expect.element(committedRow("plan.md")).toMatchTextContent(/plan\.mddocs\+8$/)
+  await expect.element(committedRow("README.md")).toMatchTextContent(/\+4−2$/)
+  await committedRow("plan.md").hover()
+  await expect
+    .element(committedList().getByRole("button", { name: /^Discard/ }))
+    .not.toBeInTheDocument()
+
+  server.changes.set(project, { kind: "listed", changes: [] })
+  server.changeOnDisk(project, ["README.md"])
+  await expect.element(changesTab()).toHaveTextContent("Changes0 · 3")
+  await expect.element(page.getByText("No uncommitted changes.", { exact: false })).toBeVisible()
+  await expect.element(committedRow("plan.md")).toBeVisible()
+})
+
+test("a click on a committed change opens what the commits changed, apart from its uncommitted diff", async () => {
+  await mount(makeServer())
+  await committedRow("plan.md").click()
+  await expect.element(cardTab("plan.md committed")).toHaveAttribute("aria-selected", "true")
+  await expect.element(committedRow("plan.md")).toHaveAttribute("aria-current", "true")
+  await expect.element(page.getByTestId("diff-view").getByText("# The plan")).toBeVisible()
+
+  await row("README.md").click()
+  await expect.element(cardTab("README.md diff")).toHaveAttribute("aria-selected", "true")
+  await expect.element(committedRow("README.md")).not.toHaveAttribute("aria-current")
+  await committedRow("README.md").click()
+  await expect.element(cardTab("README.md committed")).toHaveAttribute("aria-selected", "true")
+  await expect
+    .element(card().getByText("The branch's commits did not change README.md."))
+    .toBeVisible()
+})
+
+test("the committed list says when the repository has no origin, or git does not know its default branch", async () => {
+  const server = makeServer()
+  server.committedChanges.set(project, { kind: "no_origin" })
+  server.committedChanges.set(worktree, { kind: "no_default_branch" })
+  await mount(server)
+  await expect
+    .element(
+      page.getByText(
+        "This repository has no origin remote, so the branch's commits cannot be listed.",
+      ),
+    )
+    .toBeVisible()
+  await expect.element(row("README.md")).toBeVisible()
+  await expect.element(changesTab()).toHaveTextContent("Changes3")
+
+  await sessionTab("Fix the cart").getByRole("tab").click()
+  await expect
+    .element(
+      page.getByText(
+        "Git does not know origin's default branch, so the branch's commits cannot be listed. Run git remote set-head origin --auto.",
+      ),
+    )
+    .toBeVisible()
+})
+
+test("Backspace on a change asks first, naming the file, then restores it", async () => {
+  await mount(makeServer())
+  ;(row("README.md").element() as HTMLElement).focus()
+  await userEvent.keyboard("{Backspace}")
+  await expect.element(discardDialog()).toHaveAccessibleName("Discard the changes to “README.md”?")
+  await expect
+    .element(discardDialog())
+    .toHaveAccessibleDescription("The file goes back to its last commit. This cannot be undone.")
+  await expect.element(discardDialog().getByText("README.md", { exact: true })).toBeVisible()
+  await expect.element(discardDialog().getByRole("button", { name: "Cancel" })).toHaveFocus()
+  await userEvent.keyboard("{Escape}")
+  await expect.element(discardDialog()).not.toBeInTheDocument()
+  await expect.element(row("README.md")).toBeVisible()
+
+  ;(row("README.md").element() as HTMLElement).focus()
+  await userEvent.keyboard("{Backspace}")
+  await expect.element(discardDialog()).toBeVisible()
+  await userEvent.keyboard("{Tab}")
+  await expect
+    .element(discardDialog().getByRole("button", { name: "Discard changes" }))
+    .toHaveFocus()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(discardDialog()).not.toBeInTheDocument()
+  await expect.element(row("README.md")).not.toBeInTheDocument()
+  await expect.element(changesTab()).toHaveTextContent("Changes2 · 3")
+})
+
+test("Discard all asks with what goes back and what is deleted, and discards only the changes it showed", async () => {
+  const server = await mount(makeServer())
+  await page.getByRole("button", { name: "Discard all uncommitted changes" }).click()
+  await expect.element(discardDialog()).toHaveAccessibleName("Discard all uncommitted changes?")
+  await expect
+    .element(discardDialog())
+    .toHaveAccessibleDescription(
+      "2 files go back to their last commit, and 1 new file is deleted. This cannot be undone.",
+    )
+  const listed = server.changes.get(project)
+  if (listed === undefined || !("changes" in listed)) throw new Error("no changes")
+  server.changes.set(project, {
+    kind: "listed",
+    changes: [...listed.changes, change("late.ts", "untracked")],
+  })
+  server.changeOnDisk(project, ["late.ts"])
+  await discardDialog().getByRole("button", { name: "Discard all" }).click()
+  await expect.element(row("README.md")).not.toBeInTheDocument()
+  await expect.element(row("late.ts")).toBeVisible()
+  await expect.element(committedRow("plan.md")).toBeVisible()
+})
+
+test("⌘Backspace in the list asks to discard every uncommitted change", async () => {
+  await mount(makeServer())
+  ;(committedRow("plan.md").element() as HTMLElement).focus()
+  await userEvent.keyboard("{Backspace}")
+  await expect.element(discardDialog()).not.toBeInTheDocument()
+  await userEvent.keyboard(`{${mod}>}{Backspace}{/${mod}}`)
+  await expect.element(discardDialog()).toHaveAccessibleName("Discard all uncommitted changes?")
+})
+
+test("a failed Discard all shows git's message under the heading", async () => {
+  const server = makeServer()
+  server.discardFailures.set(`${project}/old.ts`, "fatal: Unable to create 'index.lock'")
+  await mount(server)
+  await page.getByRole("button", { name: "Discard all uncommitted changes" }).click()
+  await discardDialog().getByRole("button", { name: "Discard all" }).click()
+  await expect
+    .element(page.getByRole("region", { name: "Uncommitted" }).getByRole("alert").first())
+    .toMatchTextContent(
+      /^Git could not discard the uncommitted changes\. Fix what it reports, then discard again\.\s*fatal: Unable to create 'index\.lock'$/,
+    )
+  await expect.element(row("README.md")).toBeVisible()
+})
+
+test("discarding an untracked file says it deletes it", async () => {
+  await mount(makeServer())
+  await sessionTab("Fix the cart").getByRole("tab").click()
+  await row("notes.md").hover()
+  await page.getByRole("button", { name: "Discard the changes to notes.md" }).click()
+  await expect.element(discardDialog()).toHaveAccessibleName("Delete “notes.md”?")
+  await expect
+    .element(discardDialog())
+    .toHaveAccessibleDescription(
+      "Git does not track this file, so discarding its changes deletes it. This cannot be undone.",
+    )
+  await discardDialog().getByRole("button", { name: "Delete file" }).click()
+  await expect.element(page.getByText("No uncommitted changes.", { exact: false })).toBeVisible()
+})
+
+test("a failed discard shows git's message under the file's row", async () => {
+  const server = makeServer()
+  server.discardFailures.set(`${project}/README.md`, "fatal: Unable to create 'index.lock'")
+  await mount(server)
+  await row("README.md").hover()
+  await page.getByRole("button", { name: "Discard the changes to README.md" }).click()
+  await discardDialog().getByRole("button", { name: "Discard changes" }).click()
+  const failure = list().getByRole("listitem").filter({ hasText: "README.md" }).getByRole("alert")
+  await expect
+    .element(failure)
+    .toMatchTextContent(
+      /^Git could not discard the changes to README\.md\. Fix what it reports, then discard again\.\s*fatal: Unable to create 'index\.lock'$/,
+    )
+  await expect.element(row("README.md")).toBeVisible()
+
+  server.discardFailures.clear()
+  await row("README.md").hover()
+  await page.getByRole("button", { name: "Discard the changes to README.md" }).click()
+  await discardDialog().getByRole("button", { name: "Discard changes" }).click()
+  await expect.element(row("README.md")).not.toBeInTheDocument()
 })

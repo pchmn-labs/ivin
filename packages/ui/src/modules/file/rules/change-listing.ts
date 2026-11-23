@@ -2,7 +2,9 @@ import type { GitFailed } from "@ivin/contracts/file"
 import type { ChangeListing } from "@ivin/plugin-api/ui"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 
-export const changeListingFailure = (error: unknown): ChangeListing => {
+export const changeListingFailure = (
+  error: unknown,
+): Extract<ChangeListing, { kind: "deleted" | "failed" }> => {
   switch (errorTag(error)) {
     case "WorkingFolderDeleted":
       return { kind: "deleted" }

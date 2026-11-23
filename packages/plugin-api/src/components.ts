@@ -51,6 +51,7 @@ export type IconName =
   | "clock"
   | "diff"
   | "question"
+  | "undo"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"
@@ -80,6 +81,8 @@ export interface IconButtonProps {
   readonly "aria-expanded"?: boolean
   readonly "aria-pressed"?: boolean
   readonly "data-testid"?: string
+  // -1 leaves it out of the Tab order, for a control whose keys reach it another way.
+  readonly tabIndex?: number
 }
 
 export interface IconProps {
@@ -365,16 +368,49 @@ export interface ChangeListItem {
   readonly deleted: number | null
   // Shown on hover, such as where a renamed file comes from.
   readonly title?: string
+  // Shown under the row, such as why its changes could not be discarded.
+  readonly error?: ChangeListError
 }
 
-// Rows of changed files, one tab stop: Up and Down move between rows, Enter or a click opens one.
+// `detail` is a tool's output, shown in mono under the text.
+export interface ChangeListError {
+  readonly text: string
+  readonly detail: string | null
+}
+
+// A heading that folds its rows, with their count.
+export interface ChangeGroup {
+  readonly id: string
+  readonly heading: string
+  // The rows' accessible name.
+  readonly label: string
+  // Shown on hover over the heading.
+  readonly title?: string
+  readonly items: ReadonlyArray<ChangeListItem>
+  // The row's Discard button, shown on hover, focus or selection.
+  readonly onDiscard?: (id: string) => void
+  // The heading's button, always shown.
+  readonly discardAll?: { readonly label: string; readonly onDiscard: () => void }
+  // Shown under the heading, such as why discarding them all failed.
+  readonly error?: ChangeListError
+}
+
+export interface ChangeListRow {
+  readonly groupId: string
+  readonly id: string
+}
+
+// One tab stop over every group: Up, Down, Home and End move through headings and rows, Left and
+// Right fold a heading, Left on a row goes to its heading, Enter or a click opens a row.
 export interface ChangeListProps {
   readonly label: string
-  readonly items: ReadonlyArray<ChangeListItem>
-  readonly selectedId: string | null
-  readonly onOpen: (id: string) => void
-  // The row's Open file button, which shows on hover, focus or selection; none for a deleted file.
-  readonly onOpenFile?: (id: string) => void
+  readonly groups: ReadonlyArray<ChangeGroup>
+  readonly selected: ChangeListRow | null
+  readonly onOpen: (row: ChangeListRow) => void
+  // The keybinding area of the list, for the plugin's commands on the focused row.
+  readonly area?: string
+  // The focused row, null on a heading or when the focus leaves the list.
+  readonly onFocusRow?: (row: ChangeListRow | null) => void
 }
 
 export interface SearchFieldProps {

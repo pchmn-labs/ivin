@@ -42,6 +42,10 @@ const mount = async (item: ToolCallItem) => {
     useOpenDiff: () => async () => undefined,
     useDiffOnScreen: () => null,
     useSettings: () => defaultSettings,
+    useCommittedChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
+    useOpenCommittedDiff: () => async () => undefined,
+    useCommittedDiffOnScreen: () => null,
+    useDiscardChanges: () => async () => undefined,
     useSessionActions: () => ({ items: [], failure: null }),
     components: hostComponents,
   }
