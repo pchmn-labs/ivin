@@ -14,8 +14,6 @@ export class SessionFeed extends Context.Service<
     // Publishes the stored state of the session, an archived session as removed.
     readonly publish: (sessionId: string) => Effect.Effect<void>
     readonly publishRemoved: (projectPath: string, sessionId: string) => Effect.Effect<void>
-    // Subscribed on return: nothing published afterwards is missed. A watcher that falls
-    // behind gets the removals it missed, then `current` again.
     readonly watch: (
       projectPath: string,
       current: Effect.Effect<readonly SessionChange[]>,

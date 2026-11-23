@@ -16,8 +16,6 @@ export class AnnotationFeed extends Context.Service<
   AnnotationFeed,
   {
     readonly publish: (change: AnnotationChange) => Effect.Effect<void>
-    // Subscribed on return: nothing published afterwards is missed. A watcher that falls
-    // behind gets the removals it missed, then `current` again.
     readonly watch: (
       target: AnnotationTarget,
       current: Effect.Effect<readonly AnnotationChange[]>,

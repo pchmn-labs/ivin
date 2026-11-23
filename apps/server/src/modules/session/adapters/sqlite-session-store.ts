@@ -10,7 +10,12 @@ import {
 import { Schema } from "effect"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
-import { makeRowDecoding, rowDecoder } from "../../../shared/adapters/row-decoding.ts"
+import {
+  makeRowDecoding,
+  parseJson,
+  rowDecoder,
+  type Report,
+} from "../../../shared/adapters/row-decoding.ts"
 import { SessionStore } from "../usecases/session-store.ts"
 
 interface SessionRow {
@@ -37,29 +42,20 @@ interface SessionRow {
   last_image_number: number
 }
 
-type Report = Parameters<ReturnType<typeof rowDecoder>>[2]
-
 const decodeMessages = rowDecoder(Schema.Array(PendingMessage), "session messages")
-const decodeRelaunchFailure = rowDecoder(RelaunchFailure, "session run options")
+const decodeRelaunchFailure = rowDecoder(RelaunchFailure, "session relaunch failure")
 const decodeRunOptions = rowDecoder(RunOptions, "session run options")
 
-const messagesOf = (row: SessionRow, column: string, stored: string, report: Report) => {
-  try {
-    return decodeMessages(JSON.parse(stored), `${row.id}.${column}`, report) ?? []
-  } catch (error) {
-    report("session messages", `${row.id}.${column}`, error)
-    return []
-  }
+const messagesOf = (id: string, column: string, stored: string, report: Report) => {
+  const key = `${id}.${column}`
+  const parsed = parseJson(stored, "session messages", key, report)
+  return parsed === undefined ? [] : (decodeMessages(parsed, key, report) ?? [])
 }
 
 const relaunchFailureOf = (row: SessionRow, report: Report) => {
   if (row.relaunch_failure === null) return null
-  try {
-    return decodeRelaunchFailure(JSON.parse(row.relaunch_failure), row.id, report) ?? null
-  } catch (error) {
-    report("session run options", row.id, error)
-    return null
-  }
+  const parsed = parseJson(row.relaunch_failure, "session relaunch failure", row.id, report)
+  return parsed === undefined ? null : (decodeRelaunchFailure(parsed, row.id, report) ?? null)
 }
 
 const toSession = (row: SessionRow, report: Report): Session => ({
@@ -76,8 +72,8 @@ const toSession = (row: SessionRow, report: Report): Session => ({
   effort: row.effort,
   permissionMode: row.permission_mode,
   relaunchFailure: relaunchFailureOf(row, report),
-  pendingMessages: messagesOf(row, "pending_messages", row.pending_messages, report),
-  unreadMessages: messagesOf(row, "unread_messages", row.unread_messages, report),
+  pendingMessages: messagesOf(row.id, "pending_messages", row.pending_messages, report),
+  unreadMessages: messagesOf(row.id, "unread_messages", row.unread_messages, report),
   status: row.status,
   waitingFor: row.waiting_for,
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
@@ -110,9 +106,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
       const row = db.prepare("SELECT pending_messages FROM sessions WHERE id = ?").get(id) as
         | { pending_messages: string }
         | undefined
-      return row
-        ? messagesOf({ id } as SessionRow, "pending_messages", row.pending_messages, report)
-        : []
+      return row ? messagesOf(id, "pending_messages", row.pending_messages, report) : []
     }
     return {
       insert: (session) =>
@@ -224,12 +218,8 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             .get(id) as { confirmed_run_options: string | null } | undefined
           const stored = row?.confirmed_run_options ?? null
           if (stored === null) return null
-          try {
-            return decodeRunOptions(JSON.parse(stored), id, report) ?? null
-          } catch (error) {
-            report("session run options", id, error)
-            return null
-          }
+          const parsed = parseJson(stored, "session run options", id, report)
+          return parsed === undefined ? null : (decodeRunOptions(parsed, id, report) ?? null)
         }),
       setConfirmedRunOptions: (id, options) =>
         Effect.sync(() => {

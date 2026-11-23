@@ -23,7 +23,7 @@ export const layerHarnessAfterLoginShellPath = <E, R>(
       const { completeText } = inner
       return {
         ...inner,
-        // The Claude provider keeps its first answer, fallback included.
+        // A provider may cache its first answer, so it must not run before the read ends.
         runOptions: Effect.andThen(ready, inner.runOptions),
         program: Effect.andThen(ready, inner.program),
         completeText:

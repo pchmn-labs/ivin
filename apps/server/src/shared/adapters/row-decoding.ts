@@ -1,7 +1,16 @@
 import { Cause, Effect, Exit, Schema } from "effect"
 import { logError } from "../../modules/log/usecases/log-error.ts"
 
-type Report = (what: string, key: string, error: unknown) => void
+export type Report = (what: string, key: string, error: unknown) => void
+
+export const parseJson = (text: string, what: string, key: string, report: Report): unknown => {
+  try {
+    return JSON.parse(text)
+  } catch (error) {
+    report(what, key, error)
+    return undefined
+  }
+}
 
 // A row that no longer matches its schema is reported once per store, not on every read.
 export const makeRowDecoding = () => {

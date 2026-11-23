@@ -1,7 +1,12 @@
 import { Annotation, type AnnotationTarget } from "@ivin/contracts/annotation"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
-import { makeRowDecoding, rowDecoder } from "../../../shared/adapters/row-decoding.ts"
+import {
+  makeRowDecoding,
+  parseJson,
+  rowDecoder,
+  type Report,
+} from "../../../shared/adapters/row-decoding.ts"
 import { AnnotationStore } from "../usecases/annotation-store.ts"
 
 interface AnnotationRow {
@@ -24,28 +29,25 @@ const targetColumns = (target: AnnotationTarget) =>
 
 const decodeAnnotation = rowDecoder(Annotation, "annotation")
 
-const toAnnotation = (row: AnnotationRow, report: Parameters<typeof decodeAnnotation>[2]) => {
-  try {
-    return decodeAnnotation(
-      {
-        id: row.id,
-        target:
-          row.target_type === "session"
-            ? { _tag: "session", sessionId: row.target_id }
-            : { _tag: "project", projectPath: row.target_id },
-        ns: row.ns,
-        kind: row.kind,
-        data: JSON.parse(row.data),
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      },
-      row.id,
-      report,
-    )
-  } catch (error) {
-    report("annotation", row.id, error)
-    return undefined
-  }
+const toAnnotation = (row: AnnotationRow, report: Report) => {
+  const data = parseJson(row.data, "annotation", row.id, report)
+  if (data === undefined) return undefined
+  return decodeAnnotation(
+    {
+      id: row.id,
+      target:
+        row.target_type === "session"
+          ? { _tag: "session", sessionId: row.target_id }
+          : { _tag: "project", projectPath: row.target_id },
+      ns: row.ns,
+      kind: row.kind,
+      data,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    },
+    row.id,
+    report,
+  )
 }
 
 export const layerSqliteAnnotationStore = Layer.effect(AnnotationStore)(

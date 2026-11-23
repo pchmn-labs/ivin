@@ -7,7 +7,12 @@ import {
 import { DateTime, Effect, Layer } from "effect"
 import type { DatabaseSync, SQLInputValue } from "node:sqlite"
 import { Database } from "../../../shared/adapters/database.ts"
-import { makeRowDecoding, rowDecoder } from "../../../shared/adapters/row-decoding.ts"
+import {
+  makeRowDecoding,
+  parseJson,
+  rowDecoder,
+  type Report,
+} from "../../../shared/adapters/row-decoding.ts"
 import type { ItemState } from "../rules/derive-items.ts"
 import { TranscriptStore } from "../usecases/transcript-store.ts"
 
@@ -25,10 +30,12 @@ const EVENT_COLUMNS = "id, session_id, sequence, type, at, payload"
 const decodeEvent = rowDecoder(TranscriptEvent, "transcript event")
 const decodeItem = rowDecoder(TranscriptItem, "transcript item")
 
-const toEvent = (row: EventRow, report: Parameters<typeof decodeEvent>[2]) =>
-  decodeEvent(
+const toEvent = (row: EventRow, report: Report) => {
+  const payload = parseJson(row.payload, "transcript event", row.id, report)
+  if (payload === undefined) return undefined
+  return decodeEvent(
     {
-      ...JSON.parse(row.payload),
+      ...(payload as object),
       id: row.id,
       sessionId: row.session_id,
       sequence: row.sequence,
@@ -38,9 +45,12 @@ const toEvent = (row: EventRow, report: Parameters<typeof decodeEvent>[2]) =>
     row.id,
     report,
   )
+}
 
-const toItem = (row: { id: string; payload: string }, report: Parameters<typeof decodeItem>[2]) =>
-  decodeItem(JSON.parse(row.payload), row.id, report)
+const toItem = (row: { id: string; payload: string }, report: Report) => {
+  const payload = parseJson(row.payload, "transcript item", row.id, report)
+  return payload === undefined ? undefined : decodeItem(payload, row.id, report)
+}
 
 type UserMessageEvent = Extract<TranscriptEvent, { type: "user_message" }>
 type OpenToolCall = Extract<TranscriptItem, { type: "tool_call" }>
@@ -90,7 +100,7 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
       upsertItem.run(item.id, item.sessionId, item.position, item.type, JSON.stringify(item))
 
     const readEvents = (
-      report: Parameters<typeof decodeEvent>[2],
+      report: Report,
       sessionId: string,
       type: TranscriptEvent["type"] | null = null,
     ) => {
@@ -111,11 +121,7 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
         )
     }
 
-    const readItems = (
-      report: Parameters<typeof decodeItem>[2],
-      sql: string,
-      ...params: SQLInputValue[]
-    ) =>
+    const readItems = (report: Report, sql: string, ...params: SQLInputValue[]) =>
       (db.prepare(sql).all(...params) as { id: string; payload: string }[])
         .map((row) => toItem(row, report))
         .filter((item) => item !== undefined)

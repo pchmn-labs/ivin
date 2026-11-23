@@ -10,8 +10,6 @@ export class ItemFeed extends Context.Service<
   ItemFeed,
   {
     readonly publish: (change: FeedChange) => Effect.Effect<void>
-    // Subscribed on return: nothing published afterwards is missed. A watcher that falls
-    // behind gets `current` again.
     readonly watch: (
       sessionId: string,
       current: Effect.Effect<readonly TranscriptItemChange[]>,
