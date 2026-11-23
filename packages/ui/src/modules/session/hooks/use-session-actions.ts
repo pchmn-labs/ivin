@@ -74,8 +74,13 @@ export function useSessionActions(
   if (session === undefined) return { items: [], failure: null }
   return {
     items: [
-      { label: "Archive", icon: "archive", onSelect: () => request("archive", session) },
-      { label: "Delete…", icon: "trash", danger: true, onSelect: () => request("delete", session) },
+      { label: "Archive", icon: "archive", onSelect: () => void request("archive", session) },
+      {
+        label: "Delete…",
+        icon: "trash",
+        danger: true,
+        onSelect: () => void request("delete", session),
+      },
     ],
     failure,
   }

@@ -11,13 +11,8 @@ export const runCommand = (registry: AtomRegistry.AtomRegistry, commandId: strin
   // The last handler registered wins: a component mounted later takes over the command.
   const handler = registry.get(commandHandlersAtom).findLast((h) => h.commandId === commandId)
   if (handler === undefined) return false
-  const run = (): Promise<unknown> => {
-    try {
-      return Promise.resolve(handler.run())
-    } catch (error) {
-      return Promise.reject(error)
-    }
-  }
+  // async turns a handler that throws synchronously into a rejection.
+  const run = async (): Promise<unknown> => handler.run()
   void run().catch((error: unknown) => {
     if (error instanceof CommandFailure) return notifyCommandFailure(error)
     const title = registry.get(commandsAtom).find((c) => c.id === commandId)?.title ?? commandId
