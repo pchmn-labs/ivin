@@ -14,6 +14,10 @@ const takes = (path: string) => {
     .flatMap((section) => section.settings)
     .find((setting) => setting.path === path)?.choices
   if (choices !== undefined) return choicesText(choices.map((choice) => choice.value))
+  const count = settingSections
+    .flatMap((section) => section.settings)
+    .find((setting) => setting.path === path)?.count
+  if (count !== undefined) return `a whole number of ${count.unit}, ${count.min} or more`
   const value = settingValue(defaultSettings, path)
   if (typeof value === "boolean") return "true or false"
   if (typeof value === "number") return "a number"

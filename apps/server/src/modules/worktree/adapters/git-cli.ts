@@ -12,6 +12,10 @@ import {
   underOpenedPath,
 } from "../rules/git-output.ts"
 import { ProjectTrust } from "../../project/usecases/project-trust.ts"
+import {
+  LoginShellPath,
+  type LoginShellPathService,
+} from "../../../shared/usecases/login-shell-path.ts"
 import { commandOf, withOverrides } from "../rules/git-overrides.ts"
 import { type GitTimeLimit, timeLimitOf } from "../rules/git-time-limit.ts"
 import { hasOwnCommits, isSquashMerged, mergeAddsNothing } from "../rules/merge-state.ts"
@@ -53,6 +57,8 @@ const runGit = (
       return yield* new GitError({
         message: `${cwd} is in no trusted project, so ivin runs no git command in it.`,
       })
+    // git hooks and filters run programs found on the login shell's PATH.
+    yield* (yield* LoginShellPath).ready
     const limit = (yield* TimeLimits)[timeLimitOf(args)]
     // Interrupting spawnGit kills the child.
     return yield* spawnGit(cwd, args, input, maxBuffer, succeedsOn).pipe(
@@ -218,7 +224,12 @@ type Untrusted = {
     : never
 }
 
-const trusting = (methods: Untrusted, trust: ProjectTrust["Service"], limits: GitTimeLimits) =>
+const trusting = (
+  methods: Untrusted,
+  trust: ProjectTrust["Service"],
+  limits: GitTimeLimits,
+  loginShellPath: LoginShellPathService,
+) =>
   Object.fromEntries(
     Object.entries(methods).map(([name, method]) => [
       name,
@@ -228,6 +239,7 @@ const trusting = (methods: Untrusted, trust: ProjectTrust["Service"], limits: Gi
         )(...args).pipe(
           Effect.provideService(ProjectTrust, trust),
           Effect.provideService(TimeLimits, limits),
+          Effect.provideService(LoginShellPath, loginShellPath),
         ),
     ]),
   ) as unknown as GitShape
@@ -378,7 +390,7 @@ const methods: Untrusted = {
 export const layerGitCliWith = (limits: GitTimeLimits) =>
   Layer.effect(Git)(
     Effect.gen(function* () {
-      return trusting(methods, yield* ProjectTrust, limits)
+      return trusting(methods, yield* ProjectTrust, limits, yield* LoginShellPath)
     }),
   )
 

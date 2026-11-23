@@ -1,6 +1,7 @@
-import type { Annotation, AnnotationTarget } from "@ivin/contracts/annotation"
+import { Annotation, type AnnotationTarget } from "@ivin/contracts/annotation"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
+import { makeRowDecoding, rowDecoder } from "../../../shared/adapters/row-decoding.ts"
 import { AnnotationStore } from "../usecases/annotation-store.ts"
 
 interface AnnotationRow {
@@ -21,32 +22,46 @@ const targetColumns = (target: AnnotationTarget) =>
     ? (["session", target.sessionId] as const)
     : (["project", target.projectPath] as const)
 
-const toAnnotation = (row: AnnotationRow): Annotation => ({
-  id: row.id,
-  target:
-    row.target_type === "session"
-      ? { _tag: "session", sessionId: row.target_id }
-      : { _tag: "project", projectPath: row.target_id },
-  ns: row.ns,
-  kind: row.kind,
-  data: JSON.parse(row.data),
-  createdAt: DateTime.makeUnsafe(row.created_at),
-  updatedAt: DateTime.makeUnsafe(row.updated_at),
-})
+const decodeAnnotation = rowDecoder(Annotation, "annotation")
+
+const toAnnotation = (row: AnnotationRow, report: Parameters<typeof decodeAnnotation>[2]) => {
+  try {
+    return decodeAnnotation(
+      {
+        id: row.id,
+        target:
+          row.target_type === "session"
+            ? { _tag: "session", sessionId: row.target_id }
+            : { _tag: "project", projectPath: row.target_id },
+        ns: row.ns,
+        kind: row.kind,
+        data: JSON.parse(row.data),
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      },
+      row.id,
+      report,
+    )
+  } catch (error) {
+    report("annotation", row.id, error)
+    return undefined
+  }
+}
 
 export const layerSqliteAnnotationStore = Layer.effect(AnnotationStore)(
   Effect.gen(function* () {
     const db = yield* Database
+    const decoding = makeRowDecoding()
     return {
       find: (id) =>
-        Effect.sync(() => {
+        decoding((report) => {
           const row = db.prepare(`SELECT ${COLUMNS} FROM annotations WHERE id = ?`).get(id) as
             | AnnotationRow
             | undefined
-          return row ? toAnnotation(row) : null
+          return (row && toAnnotation(row, report)) ?? null
         }),
       list: (target, kind) =>
-        Effect.sync(() =>
+        decoding((report) =>
           (
             db
               .prepare(
@@ -55,10 +70,12 @@ export const layerSqliteAnnotationStore = Layer.effect(AnnotationStore)(
                  ORDER BY created_at, rowid`,
               )
               .all(...targetColumns(target), kind, kind) as unknown as AnnotationRow[]
-          ).map(toAnnotation),
+          )
+            .map((row) => toAnnotation(row, report))
+            .filter((annotation) => annotation !== undefined),
         ),
       save: (annotation, key) =>
-        Effect.sync(() => {
+        decoding((report) => {
           const row = db
             .prepare(
               `INSERT INTO annotations (${COLUMNS}, key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -76,7 +93,7 @@ export const layerSqliteAnnotationStore = Layer.effect(AnnotationStore)(
               DateTime.toEpochMillis(annotation.updatedAt),
               key,
             ) as unknown as AnnotationRow
-          return toAnnotation(row)
+          return toAnnotation(row, report) ?? annotation
         }),
       remove: (id) =>
         Effect.sync(() => {

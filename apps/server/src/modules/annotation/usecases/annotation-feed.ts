@@ -1,7 +1,8 @@
 import type { AnnotationChange, AnnotationTarget } from "@ivin/contracts/annotation"
-import { Context, Effect, Layer, PubSub, type Scope, Stream } from "effect"
+import { Context, type Effect, Layer, type Scope, type Stream } from "effect"
+import { makeWatcherFeed } from "../../../shared/usecases/watcher-feed.ts"
 
-const FEED_CAPACITY = 256
+const WATCHER_BUFFER = 256
 
 const targetOf = (change: AnnotationChange) =>
   change._tag === "changed" ? change.annotation.target : change.target
@@ -15,29 +16,20 @@ export class AnnotationFeed extends Context.Service<
   AnnotationFeed,
   {
     readonly publish: (change: AnnotationChange) => Effect.Effect<void>
-    // Subscribed on return: nothing published afterwards is missed.
+    // Subscribed on return: nothing published afterwards is missed. A watcher that falls
+    // behind gets the removals it missed, then `current` again.
     readonly watch: (
       target: AnnotationTarget,
+      current: Effect.Effect<readonly AnnotationChange[]>,
     ) => Effect.Effect<Stream.Stream<AnnotationChange>, never, Scope.Scope>
   }
 >()("ivin/server/AnnotationFeed") {}
 
-export const layerAnnotationFeed = Layer.effect(AnnotationFeed)(
-  Effect.gen(function* () {
-    const pubsub = yield* Effect.acquireRelease(
-      PubSub.sliding<AnnotationChange>(FEED_CAPACITY),
-      PubSub.shutdown,
-    )
-    return {
-      publish: (change) => PubSub.publish(pubsub, change).pipe(Effect.asVoid),
-      watch: (target) =>
-        PubSub.subscribe(pubsub).pipe(
-          Effect.map((subscription) =>
-            Stream.fromSubscription(subscription).pipe(
-              Stream.filter((change) => sameTarget(targetOf(change), target)),
-            ),
-          ),
-        ),
-    }
-  }),
-)
+export const layerAnnotationFeed = Layer.sync(AnnotationFeed)(() => {
+  const feed = makeWatcherFeed<AnnotationTarget, AnnotationChange>({
+    capacity: WATCHER_BUFFER,
+    matches: (target, change) => sameTarget(targetOf(change), target),
+    isRemoval: (change) => change._tag === "removed",
+  })
+  return { publish: feed.publish, watch: feed.watch }
+})

@@ -1,12 +1,13 @@
-import type {
-  ImageMediaType,
-  ImageRef,
+import {
   TranscriptEvent,
   TranscriptItem,
+  type ImageMediaType,
+  type ImageRef,
 } from "@ivin/contracts/transcript"
 import { DateTime, Effect, Layer } from "effect"
 import type { DatabaseSync, SQLInputValue } from "node:sqlite"
 import { Database } from "../../../shared/adapters/database.ts"
+import { makeRowDecoding, rowDecoder } from "../../../shared/adapters/row-decoding.ts"
 import type { ItemState } from "../rules/derive-items.ts"
 import { TranscriptStore } from "../usecases/transcript-store.ts"
 
@@ -21,17 +22,25 @@ interface EventRow {
 
 const EVENT_COLUMNS = "id, session_id, sequence, type, at, payload"
 
-const toEvent = (row: EventRow): TranscriptEvent =>
-  ({
-    ...JSON.parse(row.payload),
-    id: row.id,
-    sessionId: row.session_id,
-    sequence: row.sequence,
-    type: row.type,
-    at: DateTime.makeUnsafe(row.at),
-  }) as TranscriptEvent
+const decodeEvent = rowDecoder(TranscriptEvent, "transcript event")
+const decodeItem = rowDecoder(TranscriptItem, "transcript item")
 
-const toItem = (row: { payload: string }) => JSON.parse(row.payload) as TranscriptItem
+const toEvent = (row: EventRow, report: Parameters<typeof decodeEvent>[2]) =>
+  decodeEvent(
+    {
+      ...JSON.parse(row.payload),
+      id: row.id,
+      sessionId: row.session_id,
+      sequence: row.sequence,
+      type: row.type,
+      at: row.at,
+    },
+    row.id,
+    report,
+  )
+
+const toItem = (row: { id: string; payload: string }, report: Parameters<typeof decodeItem>[2]) =>
+  decodeItem(JSON.parse(row.payload), row.id, report)
 
 type UserMessageEvent = Extract<TranscriptEvent, { type: "user_message" }>
 type OpenToolCall = Extract<TranscriptItem, { type: "tool_call" }>
@@ -72,6 +81,7 @@ const inTransaction = (db: DatabaseSync, body: () => void) => {
 export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
   Effect.gen(function* () {
     const db = yield* Database
+    const decoding = makeRowDecoding()
     const upsertItem = db.prepare(
       `INSERT INTO transcript_items (id, session_id, position, type, payload) VALUES (?, ?, ?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET payload = excluded.payload`,
@@ -79,7 +89,11 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
     const writeItem = (item: TranscriptItem) =>
       upsertItem.run(item.id, item.sessionId, item.position, item.type, JSON.stringify(item))
 
-    const readEvents = (sessionId: string, type: TranscriptEvent["type"] | null = null) => {
+    const readEvents = (
+      report: Parameters<typeof decodeEvent>[2],
+      sessionId: string,
+      type: TranscriptEvent["type"] | null = null,
+    ) => {
       const rows = db
         .prepare(
           `SELECT ${EVENT_COLUMNS} FROM transcript_events
@@ -88,7 +102,8 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
         .all(sessionId, type, type) as unknown as EventRow[]
       const images = compressedImages(db, sessionId)
       return rows
-        .map(toEvent)
+        .map((row) => toEvent(row, report))
+        .filter((event) => event !== undefined)
         .map((event) =>
           event.type === "user_message" && event.images
             ? { ...event, images: images(event.images) }
@@ -96,11 +111,17 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
         )
     }
 
-    const readItems = (sql: string, ...params: SQLInputValue[]) =>
-      (db.prepare(sql).all(...params) as { payload: string }[]).map(toItem)
+    const readItems = (
+      report: Parameters<typeof decodeItem>[2],
+      sql: string,
+      ...params: SQLInputValue[]
+    ) =>
+      (db.prepare(sql).all(...params) as { id: string; payload: string }[])
+        .map((row) => toItem(row, report))
+        .filter((item) => item !== undefined)
 
     return {
-      append: ({ id, sessionId, sequence, at, ...body }, { item, openMessageId }) =>
+      append: ({ id, sessionId, sequence, at, ...body }, { item, openMessageId }, touchedAt) =>
         Effect.sync(() =>
           inTransaction(db, () => {
             db.prepare(
@@ -117,6 +138,11 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             db.prepare(
               "UPDATE transcript_item_states SET open_message_id = ? WHERE session_id = ?",
             ).run(openMessageId, sessionId)
+            if (touchedAt)
+              db.prepare("UPDATE sessions SET last_activity_at = ? WHERE id = ?").run(
+                DateTime.toEpochMillis(touchedAt),
+                sessionId,
+              )
           }),
         ),
       lastSequence: (sessionId) =>
@@ -127,18 +153,18 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
           return row.sequence ?? 0
         }),
       userMessages: (sessionId) =>
-        Effect.sync(() =>
-          readEvents(sessionId, "user_message").filter(
+        decoding((report) =>
+          readEvents(report, sessionId, "user_message").filter(
             (event): event is UserMessageEvent => event.type === "user_message",
           ),
         ),
       ensureItems: (sessionId, version, derive) =>
-        Effect.sync(() => {
+        decoding((report) => {
           const stored = db
             .prepare("SELECT version FROM transcript_item_states WHERE session_id = ?")
             .get(sessionId) as { version: number } | undefined
           if (stored?.version === version) return
-          const { items, openMessageId } = derive(readEvents(sessionId))
+          const { items, openMessageId } = derive(readEvents(report, sessionId))
           inTransaction(db, () => {
             db.prepare("DELETE FROM transcript_items WHERE session_id = ?").run(sessionId)
             for (const item of items) writeItem(item)
@@ -151,9 +177,10 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
           })
         }),
       itemsPage: (sessionId, position, before, after) =>
-        Effect.sync(() => {
+        decoding((report) => {
           const earlier = readItems(
-            `SELECT payload FROM transcript_items
+            report,
+            `SELECT id, payload FROM transcript_items
              WHERE session_id = ? AND position < ? ORDER BY position DESC LIMIT ?`,
             sessionId,
             position ?? Number.MAX_SAFE_INTEGER,
@@ -163,7 +190,8 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             position === null
               ? []
               : readItems(
-                  `SELECT payload FROM transcript_items
+                  report,
+                  `SELECT id, payload FROM transcript_items
                    WHERE session_id = ? AND position >= ? ORDER BY position LIMIT ?`,
                   sessionId,
                   position,
@@ -182,9 +210,10 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
           }
         }),
       itemState: (sessionId) =>
-        Effect.sync((): ItemState => {
+        decoding((report): ItemState => {
           const open = readItems(
-            `SELECT payload FROM transcript_items WHERE session_id = ? AND (
+            report,
+            `SELECT id, payload FROM transcript_items WHERE session_id = ? AND (
                (type = 'tool_call' AND payload ->> '$.status' = 'running')
                OR (type = 'approval' AND payload ->> '$.decision' IS NULL)
                OR (type = 'question' AND payload ->> '$.status' = 'open')
@@ -192,7 +221,8 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             sessionId,
           )
           const [openMessage] = readItems(
-            `SELECT i.payload FROM transcript_item_states s
+            report,
+            `SELECT i.id, i.payload FROM transcript_item_states s
              JOIN transcript_items i ON i.id = s.open_message_id WHERE s.session_id = ?`,
             sessionId,
           )

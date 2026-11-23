@@ -29,6 +29,7 @@ import {
   Duration,
   Effect,
   Exit,
+  Fiber,
   Layer,
   Option,
   Scope,
@@ -50,6 +51,7 @@ import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { runOptionsOf, sameRunOptions } from "../rules/run-options.ts"
 import { followAgentWorktree } from "./follow-agent-worktree.ts"
+import { CurrentSettings } from "../../setting/usecases/current-settings.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionStore } from "./session-store.ts"
 
@@ -139,7 +141,11 @@ const guarded = <A, E, R>(action: string, effect: Effect.Effect<A, E, R>) =>
     ),
   )
 
-export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
+// `idleLimit` is read each time a turn ends; 0 never stops the agent.
+export const layerSessionRunsWith = (
+  interruptDeadline: Duration.Input,
+  idleLimit: Effect.Effect<Duration.Input> = Effect.succeed(0),
+) =>
   Layer.effect(SessionRuns)(
     Effect.gen(function* () {
       const provider = yield* HarnessProvider
@@ -220,12 +226,15 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
                 at,
               }
               const next = applyEvent(itemState, stored, provider.toolKind)
-              yield* transcript.append(stored, {
-                item: next.item,
-                openMessageId: next.state.openMessage?.id ?? null,
-              })
+              yield* transcript.append(
+                stored,
+                {
+                  item: next.item,
+                  openMessageId: next.state.openMessage?.id ?? null,
+                },
+                touch ? at : null,
+              )
               itemState = next.state
-              if (touch) yield* sessions.touch(session.id, at)
               if (next.item) yield* feed.publish({ type: "upsert", item: next.item })
               yield* sessionFeed.publish(session.id)
             })
@@ -307,7 +316,9 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
               Effect.andThen(guarded("set failed status", setStatus(session.id, "failed"))),
             )
 
-          return { record, decide, turnStatus, stream, fail, closeRequests }
+          const hasOpenRequests = () => itemState.openRequests.size > 0
+
+          return { record, decide, turnStatus, stream, fail, closeRequests, hasOpenRequests }
         })
 
       const buildRun = (
@@ -327,13 +338,48 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
             })
             .pipe(Scope.provide(scope))
 
+          let idleTimer: Fiber.Fiber<void> | null = null
+          const cancelIdleTimer = Effect.suspend(() => {
+            const timer = idleTimer
+            idleTimer = null
+            return timer === null ? Effect.void : Fiber.interrupt(timer)
+          })
+
           const end = Effect.suspend(() => {
             if (runs.get(session.id) === run) runs.delete(session.id)
-            return guarded("stop agent", Scope.close(scope, Exit.void)).pipe(
+            return cancelIdleTimer.pipe(
+              Effect.andThen(guarded("stop agent", Scope.close(scope, Exit.void))),
               Effect.andThen(guarded("close open requests", writer.closeRequests)),
               Effect.andThen(
                 guarded("move pending messages to unread", sessions.markPendingUnread(session.id)),
               ),
+            )
+          })
+
+          const startIdleTimer: Effect.Effect<void> = Effect.gen(function* () {
+            yield* cancelIdleTimer
+            const limit = Duration.fromInputUnsafe(yield* idleLimit)
+            if (Duration.isZero(limit)) return
+            const idleTurn = turn
+            // Forked out of the run's scope: stopping closes that scope, which would interrupt this fiber mid-stop.
+            idleTimer = yield* Effect.sleep(limit).pipe(
+              Effect.andThen(
+                locked(
+                  session.id,
+                  Effect.gen(function* () {
+                    // This fiber is about to stop or re-arm the run, which must not interrupt it.
+                    idleTimer = null
+                    if (runs.get(session.id) !== run || busy || turn !== idleTurn) return
+                    const pending = yield* sessions.pendingMessages(session.id)
+                    if (pending.length > 0 || writer.hasOpenRequests()) {
+                      // Re-checked after another limit: neither ends with a turn of its own.
+                      return yield* startIdleTimer
+                    }
+                    yield* stopRun(session.id)
+                  }),
+                ),
+              ),
+              Effect.forkIn(layerScope),
             )
           })
 
@@ -386,6 +432,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
                 output.type === "status" ? writer.turnStatus(output.status) : Effect.void,
               ),
               Effect.andThen(follower.observe(output)),
+              Effect.andThen(turnEnded ? startIdleTimer : Effect.void),
             )
           }
 
@@ -651,4 +698,12 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
     }),
   )
 
-export const layerSessionRuns = layerSessionRunsWith("10 seconds")
+export const layerSessionRuns = Layer.unwrap(
+  Effect.gen(function* () {
+    const settings = yield* CurrentSettings
+    return layerSessionRunsWith(
+      "10 seconds",
+      settings.get.pipe(Effect.map(({ agents }) => Duration.minutes(agents.stopWhenIdleMinutes))),
+    )
+  }),
+)

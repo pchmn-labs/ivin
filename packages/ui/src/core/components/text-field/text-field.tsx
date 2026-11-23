@@ -11,6 +11,9 @@ interface FieldProps {
   readonly autoFocus?: boolean
   readonly placeholder?: string
   readonly disabled?: boolean
+  readonly inputMode?: "numeric"
+  readonly "aria-invalid"?: boolean
+  readonly "aria-describedby"?: string
   readonly "data-testid"?: string
 }
 

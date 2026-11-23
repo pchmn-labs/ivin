@@ -34,6 +34,20 @@ const booleanOf = (
   return value
 }
 
+const minutesOf = (
+  file: Record<string, unknown>,
+  section: string,
+  key: string,
+  fallback: number,
+) => {
+  const value = sectionOf(file, section)[key]
+  if (value === undefined) return fallback
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+    throw new Invalid({ reason: "invalidSetting", setting: `${section}.${key}` })
+  }
+  return value
+}
+
 const choiceOf = <Value extends string>(
   file: Record<string, unknown>,
   section: string,
@@ -82,6 +96,14 @@ const read = (text: string | null): Settings => {
         "layout",
         Settings.fields.sidebar.fields.layout.literals,
         defaultSettings.sidebar.layout,
+      ),
+    },
+    agents: {
+      stopWhenIdleMinutes: minutesOf(
+        file,
+        "agents",
+        "stopWhenIdleMinutes",
+        defaultSettings.agents.stopWhenIdleMinutes,
       ),
     },
   }

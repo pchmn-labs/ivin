@@ -21,6 +21,7 @@ const sectionIcons: Record<SettingsPageSectionKey, IconName> = {
   worktrees: "worktree",
   files: "folder",
   sidebar: "panel-left",
+  agents: "robot",
   commandLine: "terminal",
 }
 

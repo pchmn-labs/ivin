@@ -8,6 +8,7 @@ test("the known paths are the dotted paths of the settings schema's leaves", () 
     "worktrees.removeOnTabClose",
     "files.folderIcons",
     "sidebar.layout",
+    "agents.stopWhenIdleMinutes",
   ])
 })
 
@@ -40,6 +41,19 @@ test("a setting with fixed values takes one of them and is refused with the list
       reason: "invalidValue",
       expected: "oneOf",
       allowed: ["rail", "strip"],
+    })
+  }
+})
+
+test("a count of minutes takes a whole number of 0 or more", () => {
+  for (const value of [0, 10, 120]) {
+    expect(checkSetting("agents.stopWhenIdleMinutes", value)).toEqual({ ok: true })
+  }
+  for (const value of [-1, 1.5, "10", true, null]) {
+    expect(checkSetting("agents.stopWhenIdleMinutes", value)).toEqual({
+      ok: false,
+      reason: "invalidValue",
+      expected: "wholeNumber",
     })
   }
 })
