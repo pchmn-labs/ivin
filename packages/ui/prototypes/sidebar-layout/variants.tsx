@@ -213,4 +213,4 @@ function StripLayout(o: StripOptions) {
 export const GearOnTop = () => <StripLayout settings="top" badge="count" size="md" arrows />
 export const GearAtEnd = () => <StripLayout settings="end" badge="count" size="sm" arrows={false} />
 export const DotBadges = () => <StripLayout settings="top" badge="dot" size="sm" arrows={false} />
-export const Mix = () => <StripLayout settings="top" badge="dot" size="md" arrows />
+export const Mix = () => <StripLayout settings="top" badge="dot" size="sm" arrows />
