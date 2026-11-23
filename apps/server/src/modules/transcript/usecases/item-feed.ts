@@ -1,5 +1,6 @@
 import type { TranscriptItemChange } from "@ivin/contracts/transcript"
-import { Context, Effect, Layer, type Scope, type Stream } from "effect"
+import type { Effect } from "effect"
+import { Context, Layer, type Scope, type Stream } from "effect"
 import { makeWatcherFeed } from "../../../shared/usecases/watcher-feed.ts"
 
 const WATCHER_BUFFER = 1024

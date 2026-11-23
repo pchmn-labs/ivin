@@ -15,6 +15,7 @@ import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { forkWatch } from "./test-waits.ts"
 
 const makeClient = () => RpcTest.makeClient(Rpcs)
 type Client = Effect.Success<ReturnType<typeof makeClient>>
@@ -247,12 +248,9 @@ test("watching a session starts with its annotations, then streams additions, up
       const other = yield* client["session.create"]({ projectPath: "/p" })
       const target = sessionTarget(session.id)
       yield* client["annotation.add"]({ target, ns: "cli", kind: "note", data: "before" })
-      const watching = yield* client["annotation.watch"]({ target }).pipe(
-        Stream.take(4),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(client["annotation.watch"]({ target }), (stream) =>
+        stream.pipe(Stream.take(4), Stream.runCollect),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["annotation.add"]({
         target: sessionTarget(other.id),
         ns: "cli",
@@ -291,12 +289,9 @@ test("deleting a session removes its annotations and tells its watchers", async 
       const session = yield* client["session.create"]({ projectPath: "/p" })
       const target = sessionTarget(session.id)
       const added = yield* client["annotation.add"]({ target, ns: "cli", kind: "note", data: 1 })
-      const watching = yield* client["annotation.watch"]({ target }).pipe(
-        Stream.take(2),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(client["annotation.watch"]({ target }), (stream) =>
+        stream.pipe(Stream.take(2), Stream.runCollect),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["session.delete"]({ sessionId: session.id })
       const [, removed] = yield* Fiber.join(watching)
       return {

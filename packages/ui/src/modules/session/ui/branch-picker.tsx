@@ -146,12 +146,12 @@ export function BranchPicker({
       {shownFailure && (
         <div className="iv-branch-picker__failure">
           <ErrorMessage
-            message={shownFailure!.text}
+            message={shownFailure.text}
             {...(failure === null && { onRetry: refresh })}
           />
-          {shownFailure!.gitMessage !== null && (
+          {shownFailure.gitMessage !== null && (
             <pre className="iv-branch-picker__git" data-testid="branch-picker-git-message">
-              {shownFailure!.gitMessage}
+              {shownFailure.gitMessage}
             </pre>
           )}
         </div>

@@ -1,6 +1,6 @@
 import type { SessionChange } from "@ivin/contracts/session"
 import { Effect, Stream } from "effect"
-import { SessionStore } from "./session-store.ts"
+import type { SessionStore } from "./session-store.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { listSessions } from "./list-sessions.ts"
 

@@ -226,7 +226,7 @@ test("diffs a modified file in hunks, numbering each side and marking the change
 
   const diff = await diffIn(project, "a.ts")
   expect(diff).toMatchObject({ kind: "text", status: "modified", added: 1, deleted: 2 })
-  if (typeof diff === "string" || diff.kind !== "text") throw new Error(String(diff))
+  if (typeof diff === "string" || diff.kind !== "text") throw new Error(JSON.stringify(diff))
   expect(diff.hunks.map((hunk) => hunk.header)).toEqual(["@@ -1,5 +1,5 @@", "@@ -13,7 +13,6 @@"])
   expect(diff.hunks[0]!.lines.slice(0, 4)).toEqual([
     { kind: "context", text: "line 1", oldLine: 1, newLine: 1, changed: null },

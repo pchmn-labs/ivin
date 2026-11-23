@@ -2,7 +2,7 @@ import { RegistryContext, RegistryProvider, useAtomMount } from "@effect/atom-re
 import { DateTime } from "effect"
 import type { AtomRegistry } from "effect/reactivity"
 import { useContext, useEffect } from "react"
-import { expect, test, vi } from "vitest"
+import { afterEach, expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
@@ -56,7 +56,20 @@ const scroller = () => document.querySelector<HTMLElement>('[data-testid="transc
 // The image files the transcript asks the window to load: one per <img> it has drawn.
 const loadedImages = () =>
   [...document.querySelectorAll<HTMLImageElement>("img")].map((image) => image.getAttribute("src"))
-const frames = () => new Promise((resolve) => setTimeout(resolve, 150))
+// The browser sends the scroll event once the view has moved, after Virtuoso has seen it.
+const scrollEvent = () =>
+  new Promise<void>((resolve) =>
+    scroller().addEventListener("scroll", () => resolve(), { once: true }),
+  )
+const topInView = (text: string) =>
+  page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
+  scroller().getBoundingClientRect().top
+const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
+
+// The sent-message scroll reads its duration from this token: 0 ends it on its first frame.
+const setMotion = (duration: string) =>
+  document.documentElement.style.setProperty("--iv-duration-base", duration)
+afterEach(() => document.documentElement.style.removeProperty("--iv-duration-base"))
 
 test("the transcript stays put when scrolled up and follows when at the bottom", async () => {
   const server = makeFakeServer()
@@ -102,12 +115,13 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
 
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
 
+  const scrolled = scrollEvent()
   scroller().scrollTop -= 250
-  await frames()
+  await scrolled
   const scrolledUpTo = scroller().scrollTop
+  const heightBefore = scroller().scrollHeight
   server.pushItem(message(40))
-  await vi.waitFor(() => expect(document.body.textContent).not.toContain("message 40"))
-  await frames()
+  await expect.poll(() => scroller().scrollHeight).toBeGreaterThan(heightBefore)
   expect(scroller().scrollTop).toBe(scrolledUpTo)
 
   // The virtual list grows as rows are measured, so one jump may stop short of the bottom.
@@ -152,11 +166,10 @@ test("a transcript of 200 images loads only the images of the rows on screen", a
   const onScreen = new Set(loadedImages())
   expect(onScreen.size).toBeLessThan(20)
 
-  for (let i = 0; i < 5; i++) {
+  await vi.waitFor(() => {
     scroller().scrollTop = 0
-    await frames()
-  }
-  await vi.waitFor(() => expect(loadedImages().some((src) => !onScreen.has(src))).toBe(true))
+    expect(loadedImages().some((src) => !onScreen.has(src))).toBe(true)
+  })
   expect(new Set(loadedImages()).size).toBeLessThan(200)
 })
 
@@ -178,16 +191,13 @@ test("a sent message scrolls up to the top of the view, and stays there while th
   const screen = await render(sessionView(server, 300, false))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
 
-  const topInView = (text: string) =>
-    page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
-    scroller().getBoundingClientRect().top
-
+  setMotion("0ms")
   server.pushItem(userMessage(40))
+  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
   await screen.rerender(sessionView(server, 300, true))
-  await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
+  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
   server.pushItem(message(41))
   await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
-  await frames()
   expect(topInView("question 40")).toBeLessThan(30)
 })
 
@@ -207,10 +217,6 @@ test("a sent message stays at the top of the view when its tool calls fold as th
   const screen = await render(view(true))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
 
-  const topInView = (text: string) =>
-    page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
-    scroller().getBoundingClientRect().top
-
   server.pushItem(userMessage(40))
   for (let i = 41; i < 45; i++) server.pushItem(toolCall(i))
   server.pushItem(message(45))
@@ -227,11 +233,13 @@ test("a sent message goes back to the top of the view when the view grows after 
   const screen = await render(sessionView(server, 300, false))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
 
+  setMotion("0ms")
   server.pushItem(userMessage(40))
+  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
   await screen.rerender(view(300))
+  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
   server.pushItem(message(41, Array.from({ length: 4 }, (_, i) => `line ${i}`).join("\n\n")))
   await expect.element(page.getByText("line 3", { exact: true })).toBeVisible()
-  await frames()
   await screen.rerender(view(80))
   await vi.waitFor(() => expect(page.getByText("question 40", { exact: true }).query()).toBeNull())
   await screen.rerender(view(300))
@@ -249,16 +257,36 @@ test("once the answer is taller than the view, the transcript follows its end", 
 
   const screen = await render(sessionView(server, 300, false))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
-  const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
 
+  setMotion("0ms")
   server.pushItem(userMessage(40))
+  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
   await screen.rerender(sessionView(server, 300, true))
-  await frames()
+  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
   server.pushItem(message(41, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n")))
   await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
   server.pushItem(message(42))
   await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
   await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
+})
+
+test("an answer taller than the view that arrives while the view scrolls to the sent message is followed to its end", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+
+  const screen = await render(sessionView(server, 300, false))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+
+  // Long enough that the answer always arrives before the scroll ends.
+  setMotion("1500ms")
+  server.pushItem(userMessage(40))
+  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
+  await screen.rerender(sessionView(server, 300, true))
+  server.pushItem(message(41, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n")))
+  await expect.poll(fromEnd, { timeout: 5_000 }).toBeLessThan(2)
+  server.pushItem(message(42))
+  await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
+  await expect.poll(fromEnd).toBeLessThan(2)
 })
 
 test("loading the older items of a long turn does not scroll to its message", async () => {
@@ -280,7 +308,6 @@ test("loading the older items of a long turn does not scroll to its message", as
     scroller().scrollTop = 0
     expect(page.getByText("question 0", { exact: true }).query()).not.toBeNull()
   })
-  await frames()
   const room = document.querySelector<HTMLElement>(".iv-transcript")!.style
   expect(room.getPropertyValue("--iv-transcript-room")).toBe("")
 })
@@ -507,10 +534,6 @@ const sendMessage = async (server: ReturnType<typeof makeFakeServer>) => {
   await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
   return screen
 }
-
-const topInView = (text: string) =>
-  page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
-  scroller().getBoundingClientRect().top
 
 test("a sent message is still at the top of the view when the transcript opens again", async () => {
   const server = makeFakeServer()

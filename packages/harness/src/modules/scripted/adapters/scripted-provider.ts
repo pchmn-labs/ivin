@@ -1,6 +1,7 @@
 import type { HarnessRunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
-import { Cause, Deferred, type Duration, Effect, Layer, Queue, Stream } from "effect"
+import type { Cause } from "effect"
+import { Deferred, type Duration, Effect, Layer, Queue, Stream } from "effect"
 import {
   HarnessError,
   HarnessProvider,

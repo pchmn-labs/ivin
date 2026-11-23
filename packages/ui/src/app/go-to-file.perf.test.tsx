@@ -67,7 +67,7 @@ test("typing 8 keys in Go to file over 50,000 paths while changes arrive keeps e
       last = now
     }
   })()
-  for (const [at, key] of [...QUERY].entries()) {
+  for (const [at, key] of Array.from(QUERY).entries()) {
     server.changeOnDisk(project, [`folder-${at}/component-${at}-0.tsx`])
     await userEvent.keyboard(key)
     await expect.element(field).toHaveValue(QUERY.slice(0, at + 1))

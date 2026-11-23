@@ -30,8 +30,7 @@ test("optimistic applies at once, reconciles with the answer and rolls back on f
 
   const gate = Deferred.makeUnsafe<Row>()
   const pending = run(registry, write(Deferred.await(gate)))
-  await new Promise((resolve) => setTimeout(resolve, 0))
-  expect(registry.get(list.item("x"))?.label).toBe("pending")
+  await expect.poll(() => registry.get(list.item("x"))?.label).toBe("pending")
   Deferred.doneUnsafe(gate, Effect.succeed(row("x", 1, "saved")))
   await pending
   expect(registry.get(list.item("x"))?.label).toBe("saved")

@@ -1,6 +1,6 @@
 import type { AnnotationChange, AnnotationTarget } from "@ivin/contracts/annotation"
 import { Effect, Stream } from "effect"
-import { AnnotationStore } from "./annotation-store.ts"
+import type { AnnotationStore } from "./annotation-store.ts"
 import { AnnotationFeed } from "./annotation-feed.ts"
 import { listAnnotations } from "./list-annotations.ts"
 

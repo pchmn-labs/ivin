@@ -14,7 +14,15 @@ import { Slot } from "./slot-renderer.tsx"
 
 function Notes({ sessionId }: { sessionId: string }) {
   const notes = useAnnotations(sessionId, "note")
-  return <span>{notes.length ? notes.map((note) => String(note.data)).join(",") : "none"}</span>
+  return (
+    <span>
+      {notes.length
+        ? notes
+            .map((note) => (typeof note.data === "string" ? note.data : JSON.stringify(note.data)))
+            .join(",")
+        : "none"}
+    </span>
+  )
 }
 
 const notes: UiPluginEntry = {

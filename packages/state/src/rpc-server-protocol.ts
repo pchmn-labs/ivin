@@ -1,12 +1,13 @@
 import { Effect, Layer, Queue } from "effect"
-import { RpcMessage, RpcSerialization, RpcServer } from "effect/rpc"
+import type { RpcMessage } from "effect/rpc"
+import { RpcSerialization, RpcServer } from "effect/rpc"
 
-export interface RpcPort {
+export interface RpcServerPort {
   readonly onMessage: (handler: (data: unknown) => void) => void
   readonly postMessage: (data: string) => void
 }
 
-export const layerProtocolMessagePort = (port: RpcPort): Layer.Layer<RpcServer.Protocol> => {
+export const layerProtocolMessagePort = (port: RpcServerPort): Layer.Layer<RpcServer.Protocol> => {
   const serialization = RpcSerialization.json
   return Layer.effect(RpcServer.Protocol)(
     RpcServer.Protocol.make(
