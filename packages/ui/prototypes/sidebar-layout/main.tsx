@@ -5,11 +5,11 @@ import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
 import { toggleConnection } from "./shared.tsx"
-import { DotBadges, GearAtEnd, GearOnTop, Rail } from "./variants.tsx"
+import { DotBadges, GearOnTop, Mix, Rail } from "./variants.tsx"
 
 const VARIANTS = [
+  { name: "Mix", Component: Mix },
   { name: "Gear on top", Component: GearOnTop },
-  { name: "Gear at the end", Component: GearAtEnd },
   { name: "Dot badges", Component: DotBadges },
   { name: "Rail (today)", Component: Rail },
 ]

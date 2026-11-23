@@ -131,3 +131,4 @@ body { overflow: hidden; background: var(--iv-bg); color: var(--iv-text); }
   border-radius: 50%; background: var(--iv-danger);
   box-shadow: 0 0 0 1.5px var(--iv-bg-card); pointer-events: none;
 }
+.proto-strip__project[data-size="md"] + .proto-badge-dot { top: 0; right: 0; }
