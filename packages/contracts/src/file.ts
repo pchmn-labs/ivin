@@ -190,14 +190,14 @@ export const FileRpcs = RpcGroup.make(
   Rpc.make("file.listFiles", {
     payload: { sessionId: Schema.String },
     success: FileList,
-    error: Schema.Union([SessionNotFound, WorkingFolderDeleted]),
+    error: Schema.Union([SessionNotFound, WorkingFolderDeleted, GitFailed]),
   }),
   // The changed files inside the working folder, with paths in the form of `file.listFolder`;
   // none outside a git repository.
   Rpc.make("file.gitStatus", {
     payload: { sessionId: Schema.String },
     success: Schema.Array(GitStatusEntry),
-    error: Schema.Union([SessionNotFound, WorkingFolderDeleted]),
+    error: Schema.Union([SessionNotFound, WorkingFolderDeleted, GitFailed]),
   }),
   // The working folder's uncommitted changes against HEAD, untracked files included, sorted by path,
   // with paths in the form of `file.listFolder`.

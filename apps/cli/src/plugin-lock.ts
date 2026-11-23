@@ -15,6 +15,7 @@ export const pluginLock: Command = {
     "Resolves the dependencies in the plugin's package.json with the pnpm ivin ships, and writes the versions to pnpm-lock.yaml in the plugin's folder, keeping those its current lockfile holds. A plugin with dependencies loads only with a lockfile that matches them. Run it after changing the dependencies.",
   options: {},
   maxArguments: 1,
+  timeLimitSeconds: 300,
   check: (input) => {
     const id = idOf(input)
     return id instanceof UsageError ? id : null

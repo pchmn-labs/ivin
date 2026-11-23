@@ -2,6 +2,7 @@ import {
   choicesText,
   type SettingPathUnknown,
   type SettingsFileInvalid,
+  type SettingsFileUnavailable,
   type SettingValueInvalid,
 } from "@ivin/contracts/setting"
 import { CommandFailed } from "./command.ts"
@@ -17,7 +18,7 @@ const expectedText = ({ expected, allowed }: SettingValueInvalid) =>
       }[expected]
 
 export const settingFailed = (
-  error: SettingPathUnknown | SettingValueInvalid | SettingsFileInvalid,
+  error: SettingPathUnknown | SettingValueInvalid | SettingsFileInvalid | SettingsFileUnavailable,
   value?: unknown,
 ) => {
   switch (error._tag) {
@@ -30,6 +31,11 @@ export const settingFailed = (
       return new CommandFailed({
         reason: "invalidValue",
         message: `${error.path} takes ${expectedText(error)}, not ${JSON.stringify(value)}.`,
+      })
+    case "SettingsFileUnavailable":
+      return new CommandFailed({
+        reason: "unavailableFile",
+        message: `ivin could not ${error.action} ${error.path}. Check that it and its folder are accessible to you, then run the command again.`,
       })
     case "SettingsFileInvalid": {
       const { parseError } = error

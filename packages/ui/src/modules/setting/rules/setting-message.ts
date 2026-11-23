@@ -3,6 +3,7 @@ import {
   defaultSettings,
   settingSections,
   type SettingsFileInvalid,
+  type SettingsFileUnavailable,
   type SettingsFileProblem,
 } from "@ivin/contracts/setting"
 import { settingValue } from "./setting-value.ts"
@@ -38,7 +39,18 @@ const isFileInvalid = (error: unknown): error is SettingsFileInvalid =>
   "_tag" in error &&
   error._tag === "SettingsFileInvalid"
 
-export const saveFailureMessage = (error: unknown): string =>
-  isFileInvalid(error)
-    ? `Not saved: ${settingsProblemMessage({ reason: error.reason, setting: null })} Fix it, then try again.`
-    : "The setting was not saved."
+const isFileUnavailable = (error: unknown): error is SettingsFileUnavailable =>
+  typeof error === "object" &&
+  error !== null &&
+  "_tag" in error &&
+  error._tag === "SettingsFileUnavailable"
+
+export const saveFailureMessage = (error: unknown): string => {
+  if (isFileInvalid(error)) {
+    return `Not saved: ${settingsProblemMessage({ reason: error.reason, setting: null })} Fix it, then try again.`
+  }
+  if (isFileUnavailable(error)) {
+    return `Not saved: ivin could not ${error.action} ${SETTINGS_FILE}. Check that it and its folder are accessible to you, then try again.`
+  }
+  return "The setting was not saved."
+}

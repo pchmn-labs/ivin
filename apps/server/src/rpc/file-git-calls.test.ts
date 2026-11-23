@@ -183,3 +183,73 @@ test("two sessions in one working folder run one check-ignore per batch", async 
     }),
   )
 })
+
+const isFileListing = (call: string) => / ls-files -z --cached /.test(` ${call} `)
+
+const listedPaths = (reader: Reader & { paths: ReadonlyArray<string> }) => reader.paths
+
+const readFilesOnChange = (client: Client, sessionId: string) =>
+  Effect.gen(function* () {
+    const reader: Reader & { paths: ReadonlyArray<string> } = { batches: 0, reads: 0, paths: [] }
+    const batches = client["file.watch"]({ sessionId }).pipe(
+      Stream.tap(() => Effect.sync(() => reader.batches++)),
+    )
+    yield* Stream.merge(Stream.make(undefined), batches).pipe(
+      Stream.mapEffect(() =>
+        client["file.listFiles"]({ sessionId }).pipe(
+          Effect.tap((list) =>
+            Effect.sync(() => {
+              reader.paths = list.paths
+              reader.reads++
+            }),
+          ),
+        ),
+      ),
+      Stream.runDrain,
+      Effect.forkScoped,
+    )
+    return reader
+  })
+
+test("a change to a file's content lists no files, and a created or deleted file lists them once for every reader", async () => {
+  const { edit, created, deleted } = await withServer((client) =>
+    Effect.gen(function* () {
+      const { id: sessionId } = yield* client["session.create"]({ projectPath: project })
+      const readers = [
+        yield* readFilesOnChange(client, sessionId),
+        yield* readFilesOnChange(client, sessionId),
+      ]
+      yield* untilWatched(readers)
+      yield* until(() => readers.every(isIdle))
+
+      const step = (change: () => void) =>
+        Effect.gen(function* () {
+          const before = readers[0]?.batches ?? 0
+          gitLog.clear()
+          change()
+          yield* until(() => readers.every((reader) => reader.batches > before && isIdle(reader)))
+          const batches = (readers[0]?.batches ?? 0) - before
+          return { batches, listings: gitLog.calls().filter(isFileListing).length }
+        })
+
+      const edit = yield* step(() => writeFileSync(join(project, "a.ts"), "a\nchanged again\n"))
+      const created = yield* step(() => writeFileSync(join(project, "new.ts"), "n\n"))
+      const seenCreated = readers.map((reader) => listedPaths(reader).includes("new.ts"))
+      const deleted = yield* step(() => rmSync(join(project, "b.ts")))
+      const seenDeleted = readers.map((reader) => !listedPaths(reader).includes("b.ts"))
+      return {
+        edit,
+        created: { ...created, seen: seenCreated },
+        deleted: { ...deleted, seen: seenDeleted },
+      }
+    }),
+  )
+
+  expect(edit.listings).toBe(0)
+  expect(created.seen).toEqual([true, true])
+  expect(created.listings).toBeGreaterThan(0)
+  expect(created.listings).toBeLessThanOrEqual(created.batches)
+  expect(deleted.seen).toEqual([true, true])
+  expect(deleted.listings).toBeGreaterThan(0)
+  expect(deleted.listings).toBeLessThanOrEqual(deleted.batches)
+})

@@ -38,6 +38,8 @@ export interface Command {
   readonly description: string
   readonly options: Readonly<Record<string, Option>>
   readonly maxArguments: number
+  // How long the app may take to answer; 30 when absent.
+  readonly timeLimitSeconds?: number
   // Runs before connecting, so that invalid usage exits 2 even when ivin is not running.
   readonly check?: (input: Input) => UsageError | null
   readonly run: (input: Input) => Effect.Effect<Result, UsageError | CommandFailed, Server>

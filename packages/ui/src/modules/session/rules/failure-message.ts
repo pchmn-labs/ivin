@@ -12,6 +12,7 @@ import type {
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
 import type { ProjectNotTrusted } from "@ivin/contracts/project"
+import type { WorktreeGitFailed } from "@ivin/contracts/worktree"
 import type { RunOption } from "@ivin/contracts/transcript"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import type { RunOptions } from "@ivin/contracts/session"
@@ -141,11 +142,18 @@ const NOT_DONE: Record<CheckoutAction, string> = {
 export const checkoutFailure = (error: unknown, action: CheckoutAction): CheckoutFailure => {
   const none = { gitMessage: null, blockedByLocalChanges: false }
   if (isTag<GitRefused>(error, "GitRefused")) {
-    const { message, blockedByLocalChanges } = error as GitRefused
+    const { message, blockedByLocalChanges, stash } = error as GitRefused
+    const kept =
+      stash === undefined
+        ? ""
+        : ` Your changes are in the stash "${stash}": run git stash pop to get them back.`
     return {
-      text: blockedByLocalChanges
-        ? `${NOT_DONE[action]} Local changes are in the way: stash them, or fix what git reports.`
-        : `${NOT_DONE[action]} Fix what git reports, then retry.`,
+      text:
+        kept !== ""
+          ? `${NOT_DONE[action]}${kept}`
+          : blockedByLocalChanges
+            ? `${NOT_DONE[action]} Local changes are in the way: stash them, or fix what git reports.`
+            : `${NOT_DONE[action]} Fix what git reports, then retry.`,
       retryable: true,
       gitMessage: message,
       blockedByLocalChanges,
@@ -195,3 +203,13 @@ export const pickBranchFailure = (
   }
   return { text: `${branch} was not checked out.`, retryable: true, gitMessage: null }
 }
+
+export const listWorktreesFailure =
+  "ivin could not list this project's worktrees. Fix what git reports, then retry."
+
+export const listBranchesFailure = (error: unknown) => ({
+  text: "ivin could not list this project's branches. Fix what git reports, then try again.",
+  gitMessage: isTag<WorktreeGitFailed>(error, "WorktreeGitFailed")
+    ? (error as WorktreeGitFailed).gitMessage
+    : null,
+})

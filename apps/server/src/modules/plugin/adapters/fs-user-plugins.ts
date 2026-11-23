@@ -188,7 +188,7 @@ export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string) => {
           const code = await bundle(folder, entryPath, installed).catch((error: unknown) => {
             throw new Error(`Could not compile ${entry}: ${messageOf(error)}`)
           })
-          await mkdir(cacheFolder, { recursive: true })
+          await mkdir(cacheFolder, { recursive: true, mode: 0o700 })
           // Renamed into place, so a killed write never leaves a partial bundle under a valid name.
           const partial = `${file}.${process.pid}.partial`
           await writeFile(partial, code)
@@ -204,12 +204,14 @@ export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string) => {
         catch: (error) => new PluginNotLocked({ reason: messageOf(error) }),
       }),
     appendLog: (id, line) =>
-      Effect.promise(async () => {
+      Effect.tryPromise(async () => {
         const file = logFile(id)
         if (file === null) return
-        await mkdir(logFolder, { recursive: true })
+        await mkdir(logFolder, { recursive: true, mode: 0o700 })
         await appendFile(file, `${line.replaceAll("\n", " ")}\n`)
-      }).pipe(Effect.ignore),
+      }).pipe(
+        Effect.catch((error) => Effect.logWarning(`could not write the log of ${id}`, error)),
+      ),
     readLog: (id) =>
       Effect.promise(async () => {
         const file = logFile(id)

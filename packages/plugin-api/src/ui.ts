@@ -238,6 +238,7 @@ export const useFolderChanges = (
   onChange: (paths: ReadonlyArray<string>) => void,
 ) => useHost().useFolderChanges(sessionId, onChange)
 export const useGitStatus = (sessionId: string) => useHost().useGitStatus(sessionId)
+export const useGitStatusFailure = (sessionId: string) => useHost().useGitStatusFailure(sessionId)
 export const useFileOnScreen = (sessionId: string) => useHost().useFileOnScreen(sessionId)
 export const useChanges = (sessionId: string) => useHost().useChanges(sessionId)
 export const useOpenDiff = () => useHost().useOpenDiff()

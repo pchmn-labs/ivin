@@ -1,7 +1,7 @@
 import { GitRefused } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { Git } from "../../worktree/usecases/git.ts"
-import { checkoutChange, refreshCheckoutBranch } from "./checkout-change.ts"
+import { checkoutChange, refreshCheckoutBranch, stashAround } from "./checkout-change.ts"
 
 export const fastForward = (sessionId: string, stash = false) =>
   Effect.gen(function* () {
@@ -15,7 +15,9 @@ export const fastForward = (sessionId: string, stash = false) =>
         blockedByLocalChanges: false,
       })
     }
-    if (stash) yield* git.stash(checkout, "WIP before pulling").pipe(Effect.mapError(refused))
-    yield* git.fastForward(checkout, `origin/${branch}`).pipe(Effect.mapError(refused))
+    const pull = git.fastForward(checkout, `origin/${branch}`)
+    yield* (stash ? stashAround(checkout, "WIP before pulling", pull) : pull).pipe(
+      Effect.mapError(refused),
+    )
     return yield* refreshCheckoutBranch(session)
   })

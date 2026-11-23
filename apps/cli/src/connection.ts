@@ -1,6 +1,6 @@
 import { CliSocketRpcs } from "@ivin/contracts/rpcs"
 import { layerClientProtocolMessagePort } from "@ivin/state/rpc-client-protocol"
-import { Context, Data, Effect } from "effect"
+import { Context, Data, Duration, Effect } from "effect"
 import { RpcClient, type RpcClientError } from "effect/rpc"
 import { connect, type Socket } from "node:net"
 import { homedir } from "node:os"
@@ -20,6 +20,13 @@ export class ConnectionFailed extends Data.TaggedError("ConnectionFailed")<{
   readonly socketPath: string
   readonly cause: unknown
 }> {}
+
+export class NoAnswer extends Data.TaggedError("NoAnswer")<{
+  readonly socketPath: string
+  readonly seconds: number
+}> {}
+
+export const DEFAULT_TIME_LIMIT_SECONDS = 30
 
 // Null when the app that started this agent could not serve its socket.
 export const socketPathOf = (env: NodeJS.ProcessEnv): string | null =>
@@ -84,7 +91,8 @@ const closed = (socket: Socket, socketPath: string) =>
 export const withServer = <A, E, R>(
   socketPath: string,
   use: Effect.Effect<A, E, R | Server>,
-): Effect.Effect<A, E | NotRunning | ConnectionFailed, Exclude<R, Server>> =>
+  timeLimitSeconds = DEFAULT_TIME_LIMIT_SECONDS,
+): Effect.Effect<A, E | NotRunning | ConnectionFailed | NoAnswer, Exclude<R, Server>> =>
   Effect.gen(function* () {
     const socket = yield* open(socketPath)
     // The process exits once the command is done; an error after that has no one to tell.
@@ -95,5 +103,10 @@ export const withServer = <A, E, R>(
     return yield* Effect.raceFirst(
       use.pipe(Effect.provideService(Server, { client, socketPath })),
       closed(socket, socketPath),
+    ).pipe(
+      Effect.timeoutOrElse({
+        duration: Duration.seconds(timeLimitSeconds),
+        orElse: () => Effect.fail(new NoAnswer({ socketPath, seconds: timeLimitSeconds })),
+      }),
     )
   }).pipe(Effect.scoped)

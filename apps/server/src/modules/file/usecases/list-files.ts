@@ -2,9 +2,10 @@ import { FILE_LIST_LIMIT } from "@ivin/contracts/file"
 import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
-import { Git } from "../../worktree/usecases/git.ts"
+import { ChangeFeed } from "./change-feed.ts"
 import { limitFiles } from "../rules/file-list.ts"
 import { FolderReader } from "./folder-reader.ts"
+import { gitFailed } from "./git-failed.ts"
 
 export const listFiles = (sessionId: string) =>
   Effect.gen(function* () {
@@ -13,7 +14,9 @@ export const listFiles = (sessionId: string) =>
     const reader = yield* FolderReader
     const root = yield* reader.realPath(session.workingFolder)
     if (root === null) return yield* new WorkingFolderDeleted({ sessionId })
-    const tracked = yield* (yield* Git).listFiles(root)
+    const tracked = yield* (yield* ChangeFeed)
+      .listFiles(root)
+      .pipe(Effect.mapError(gitFailed(sessionId)))
     const paths =
       tracked ??
       (yield* reader

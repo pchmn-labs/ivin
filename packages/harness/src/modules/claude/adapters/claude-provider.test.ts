@@ -268,6 +268,33 @@ setInterval(() => {}, 1000)`,
   )
 })
 
+test("closing the scope kills the shells the agent started, which ignore SIGTERM", async () => {
+  await withFakeClaude(
+    `process.on("SIGTERM", () => {})
+const sleeper = require("node:child_process").spawn("sh", ["-c", "trap '' TERM; exec sleep 30"], { stdio: "ignore" })
+require("node:fs").writeFileSync(process.env.FAKE_PID, String(sleeper.pid))
+setInterval(() => {}, 1000)`,
+    async (dir) => {
+      const pidFile = join(dir, "pid")
+      process.env["FAKE_PID"] = pidFile
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          yield* (yield* HarnessProvider).start({
+            sessionId: "s1",
+            cwd: dir,
+            options: { model: "haiku", effort: "low", permissionMode: "manual" },
+            providerSessionId: null,
+          })
+          yield* Effect.promise(() => vi.waitFor(() => expect(existsSync(pidFile)).toBe(true)))
+        }).pipe(Effect.provide(layerClaudeWith("100 millis")), Effect.scoped),
+      )
+
+      const pid = Number(readFileSync(pidFile, "utf8"))
+      await vi.waitFor(() => expect(() => process.kill(pid, 0)).toThrow())
+    },
+  )
+})
+
 test("start fails with plain words when claude is not on the PATH", async () => {
   const path = process.env["PATH"]
   process.env["PATH"] = mkdtempSync(join(tmpdir(), "ivin-empty-path-"))

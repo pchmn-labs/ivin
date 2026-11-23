@@ -14,7 +14,7 @@ import { Icon } from "../../../core/components/icon/icon.tsx"
 import { branchesOf } from "../../worktree/atoms/list-branches.ts"
 import { pickBranchAtom } from "../atoms/pick-branch.ts"
 import { branchMark, pickPreview } from "../rules/branch-pick.ts"
-import { pickBranchFailure } from "../rules/failure-message.ts"
+import { listBranchesFailure, pickBranchFailure } from "../rules/failure-message.ts"
 import { isRunning } from "../rules/is-running.ts"
 import "./branch-picker.css"
 
@@ -40,6 +40,10 @@ export function BranchPicker({
   const refresh = useAtomRefresh(branchesAtom)
   const pickBranch = useAtomSet(pickBranchAtom, { mode: "promiseExit" })
 
+  const listFailure = AsyncResult.isFailure(listed)
+    ? listBranchesFailure(Cause.squash(listed.cause))
+    : null
+  const shownFailure = failure ?? listFailure
   const list = AsyncResult.getOrElse(listed, () => null)
   const branches = list?.branches ?? []
   const fetch = list?.fetch ?? "fetching"
@@ -139,12 +143,15 @@ export function BranchPicker({
         </>
       )}
     >
-      {failure && (
+      {shownFailure && (
         <div className="iv-branch-picker__failure">
-          <ErrorMessage message={failure.text} />
-          {failure.gitMessage !== null && (
+          <ErrorMessage
+            message={shownFailure!.text}
+            {...(failure === null && { onRetry: refresh })}
+          />
+          {shownFailure!.gitMessage !== null && (
             <pre className="iv-branch-picker__git" data-testid="branch-picker-git-message">
-              {failure.gitMessage}
+              {shownFailure!.gitMessage}
             </pre>
           )}
         </div>

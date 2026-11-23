@@ -7,6 +7,8 @@ import {
 } from "../../../core/components/composer-menu/composer-menu.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { newWorktreeBaseOf, worktreesOf } from "../../worktree/atoms/list-worktrees.ts"
+import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
+import { listWorktreesFailure } from "../rules/failure-message.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
 import type { SessionLocationLabel } from "@ivin/plugin-api/ui"
@@ -24,7 +26,8 @@ export function WorkingFolderPicker({
 }) {
   const [choice, setChoice] = useAtom(workingFolderChoiceOf(session.id))
   const worktreesAtom = worktreesOf(session.projectPath)
-  const worktrees = AsyncResult.getOrElse(useAtomValue(worktreesAtom), () => [])
+  const listedWorktrees = useAtomValue(worktreesAtom)
+  const worktrees = AsyncResult.getOrElse(listedWorktrees, () => [])
   const refreshWorktrees = useAtomRefresh(worktreesAtom)
   const baseAtom = newWorktreeBaseOf(session.projectPath)
   const base = AsyncResult.getOrElse(useAtomValue(baseAtom), () => null)
@@ -78,6 +81,11 @@ export function WorkingFolderPicker({
         noMatch={(query) => `No worktree matches “${query}”.`}
         groups={groups}
         onPick={setChoice}
+        status={() =>
+          AsyncResult.isFailure(listedWorktrees) && (
+            <ErrorMessage message={listWorktreesFailure} onRetry={refreshWorktrees} />
+          )
+        }
         onOpenChange={(open) => {
           if (!open) return
           refreshWorktrees()

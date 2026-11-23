@@ -1,6 +1,6 @@
 import { _electron as electron, type Locator } from "@playwright/test"
 import { execFileSync } from "node:child_process"
-import { mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeTempDir } from "../e2e/launch-app.ts"
@@ -373,6 +373,19 @@ try {
   await window.getByRole("group", { name: "Projects" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("strip-layout")
+  // A repository git cannot read: the lists and the status fail instead of showing nothing.
+  appendFileSync(join(repo, ".git/config"), "[broken\n")
+  // The status is read again after a change on disk.
+  writeFileSync(join(repo, "notes.txt"), "a change")
+  await sidebar.getByRole("tab", { name: "Files" }).click()
+  await sidebar.getByRole("button", { name: "Retry" }).first().waitFor()
+  await window.waitForTimeout(300)
+  await shoot("files-git-failure")
+  await window.getByTestId("branch-picker").click()
+  await window.getByTestId("branch-picker-git-message").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("branch-picker-git-failure")
+  await window.keyboard.press("Escape")
   const [server] = descendantsOf(app.process().pid!).filter((proc) =>
     proc.command.includes("node.mojom.NodeService"),
   )

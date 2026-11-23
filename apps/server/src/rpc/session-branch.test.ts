@@ -4,7 +4,16 @@ import { layerScripted, type StartInput } from "@ivin/harness"
 import { Effect, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, realpathSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import {
+  appendFileSync,
+  mkdirSync,
+  mkdtempSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
@@ -311,4 +320,25 @@ test("a branch name that is not listed is refused before git runs, and the sessi
 
   expect(error).toMatchObject({ _tag: "CheckoutRefused", gitMessage: "No branch named --detach" })
   expect(session).toMatchObject({ workingFolder: project, branch: "main" })
+})
+
+test("worktrees and branches fail with git's message when git cannot read the repository, and are empty outside one", async () => {
+  const plain = join(root, "plain")
+  mkdirSync(plain)
+  const empty = await withServer((client) =>
+    Effect.all([client["worktree.list"]({ projectPath: plain }), listBranches(client, plain)]),
+  )
+  expect(empty[0]).toEqual([])
+  expect([...empty[1]].every((list) => list.branches.length === 0)).toBe(true)
+
+  appendFileSync(join(project, ".git/config"), "[broken\n")
+  const failures = await withServer((client) =>
+    Effect.all([
+      Effect.flip(client["worktree.list"]({ projectPath: project })),
+      Effect.flip(listBranches(client)),
+    ]),
+  )
+  expect(failures[0]).toMatchObject({ _tag: "WorktreeGitFailed", projectPath: project })
+  expect(failures[0].gitMessage).not.toBe("")
+  expect(failures[1]).toMatchObject({ _tag: "WorktreeGitFailed", projectPath: project })
 })

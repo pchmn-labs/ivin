@@ -8,7 +8,7 @@ import {
 import { Effect } from "effect"
 import { isBlockedByLocalChanges } from "../../worktree/rules/checkout-sync.ts"
 import { fetchOriginQuietly } from "../../worktree/usecases/fetch-origin-quietly.ts"
-import { Git, type GitError } from "../../worktree/usecases/git.ts"
+import { Git, GitError } from "../../worktree/usecases/git.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionStore } from "./session-store.ts"
 
@@ -37,6 +37,7 @@ export const checkoutChange = (sessionId: string) =>
           sessionId,
           message: error.message,
           blockedByLocalChanges: isBlockedByLocalChanges(error.message),
+          ...(error.stash !== undefined && { stash: error.stash }),
         }),
     }
   })
@@ -53,4 +54,33 @@ export const refreshCheckoutBranch = (session: Session) =>
       yield* feed.publish(other.id)
     }
     return (yield* store.findById(session.id)) ?? session
+  })
+
+// Stashes the working folder's changes, then runs `step`. When `step` fails with HEAD unmoved
+// the changes are put back; otherwise the error names the stash that holds them.
+export const stashAround = <A, E extends GitError, R>(
+  folder: string,
+  message: string,
+  step: Effect.Effect<A, E, R>,
+) =>
+  Effect.gen(function* () {
+    const git = yield* Git
+    const headBefore = yield* git.headCommit(folder)
+    const stashed = yield* git.stash(folder, message)
+    return yield* step.pipe(
+      Effect.catch((error) =>
+        Effect.gen(function* () {
+          if (!stashed) return yield* Effect.fail(error)
+          const unmoved = (yield* git.headCommit(folder)) === headBefore
+          const restored =
+            unmoved &&
+            (yield* git.popStash(folder).pipe(
+              Effect.as(true),
+              Effect.orElseSucceed(() => false),
+            ))
+          if (restored) return yield* Effect.fail(error)
+          return yield* Effect.fail(new GitError({ message: error.message, stash: message }))
+        }),
+      ),
+    )
   })

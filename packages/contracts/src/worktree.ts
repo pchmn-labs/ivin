@@ -35,11 +35,22 @@ export const BranchList = Schema.Struct({
 })
 export type BranchList = typeof BranchList.Type
 
+// `gitMessage` is git's own output.
+export class WorktreeGitFailed extends Schema.TaggedError<WorktreeGitFailed>()(
+  "WorktreeGitFailed",
+  {
+    projectPath: Schema.String,
+    gitMessage: Schema.String,
+  },
+) {}
+
 export const WorktreeRpcs = RpcGroup.make(
-  // The project's linked worktrees, without its checkout; none outside a git repository.
+  // The project's linked worktrees, without its checkout; none outside a git repository, and a
+  // failure when git cannot list them.
   Rpc.make("worktree.list", {
     payload: { projectPath: Schema.String },
     success: Schema.Array(Worktree),
+    error: WorktreeGitFailed,
   }),
   // What a new worktree starts from, from the refs as last fetched: `origin/<name>`, or `HEAD`
   // without an origin. Null when origin has no default branch or outside a git repository.
@@ -57,6 +68,7 @@ export const WorktreeRpcs = RpcGroup.make(
   Rpc.make("worktree.listBranches", {
     payload: { projectPath: Schema.String },
     success: BranchList,
+    error: WorktreeGitFailed,
     stream: true,
   }),
 )

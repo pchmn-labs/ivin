@@ -37,7 +37,12 @@ export const settingsSet: Command = {
       const { client } = yield* Server
       yield* client["setting.set"]({ path, value }).pipe(
         Effect.catchTag(
-          ["SettingPathUnknown", "SettingValueInvalid", "SettingsFileInvalid"],
+          [
+            "SettingPathUnknown",
+            "SettingValueInvalid",
+            "SettingsFileInvalid",
+            "SettingsFileUnavailable",
+          ],
           (error) => Effect.fail(settingFailed(error, value)),
         ),
       )

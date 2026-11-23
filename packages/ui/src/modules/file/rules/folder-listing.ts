@@ -1,5 +1,5 @@
 import type { FolderNotListed } from "@ivin/contracts/file"
-import type { FileListing, FolderListing } from "@ivin/plugin-api/ui"
+import type { ActionFailure, FileListing, FolderListing } from "@ivin/plugin-api/ui"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 
 const failed = (text: string, retryable: boolean): Extract<FileListing, { kind: "failed" }> => ({
@@ -28,12 +28,27 @@ export const folderListingFailure = (error: unknown, path: string): FolderListin
   }
 }
 
+export const gitStatusFailure = (error: unknown): ActionFailure | null => {
+  switch (errorTag(error)) {
+    case "WorkingFolderDeleted":
+    case "SessionNotFound":
+      return null
+    default:
+      return {
+        text: "Git could not read which files changed, so the files show no status. Retry.",
+        retryable: true,
+      }
+  }
+}
+
 export const fileListingFailure = (error: unknown): FileListing => {
   switch (errorTag(error)) {
     case "WorkingFolderDeleted":
       return { kind: "deleted" }
     case "SessionNotFound":
       return failed("This session no longer exists, so its files cannot be listed.", false)
+    case "GitFailed":
+      return failed("Git could not list the working folder's files. Retry.", true)
     default:
       return failed("The working folder's files could not be listed. Retry.", true)
   }

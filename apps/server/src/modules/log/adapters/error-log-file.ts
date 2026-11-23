@@ -11,7 +11,7 @@ const errorLogFile = (path: string) =>
     const action = typeof annotations["action"] === "string" ? annotations["action"] : "unknown"
     const error = Array.isArray(message) ? message[0] : message
     try {
-      mkdirSync(dirname(path), { recursive: true })
+      mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
       appendFileSync(path, `${errorLine(date, source, action, error)}\n`)
     } catch {}
   })

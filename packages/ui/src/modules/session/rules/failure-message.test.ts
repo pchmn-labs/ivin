@@ -137,3 +137,16 @@ test("a message refused in a folder outside every trusted project says how to tr
   expect(failure.text).toMatch(/no trusted project/)
   expect(failure.text).toMatch(/trust it, then send again/)
 })
+
+test("a pull refused after a stash names the stash that holds the changes", () => {
+  const kept = {
+    _tag: "GitRefused",
+    sessionId: "s1",
+    message: "fatal: Not possible to fast-forward",
+    blockedByLocalChanges: false,
+    stash: "WIP before pulling",
+  }
+  expect(checkoutFailure(kept, "fastForward").text).toBe(
+    'The branch was not pulled. Your changes are in the stash "WIP before pulling": run git stash pop to get them back.',
+  )
+})
