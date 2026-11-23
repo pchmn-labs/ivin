@@ -1,4 +1,4 @@
-import type { HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
+import type { HarnessRunOptions, RelaunchFailure, RunOptions } from "@ivin/contracts/session"
 import type { RunOption } from "@ivin/contracts/transcript"
 
 const OPTIONS: readonly RunOption[] = ["model", "effort", "permissionMode"]
@@ -50,3 +50,23 @@ export const runOptionsOf = ({ model, effort, permissionMode }: RunOptions): Run
   effort,
   permissionMode,
 })
+
+export interface FirstTurn {
+  readonly message: string
+  readonly error: string | null
+}
+
+export type FirstTurnOutcome =
+  | { readonly type: "confirmed" }
+  | { readonly type: "relaunchFailure"; readonly failure: RelaunchFailure }
+  | { readonly type: "none" }
+
+export const firstTurnOutcome = (
+  previous: RunOptions | null,
+  options: RunOptions,
+  { message, error }: FirstTurn,
+): FirstTurnOutcome => {
+  if (error === null) return { type: "confirmed" }
+  if (previous === null || sameRunOptions(previous, options)) return { type: "none" }
+  return { type: "relaunchFailure", failure: { previous, message, error } }
+}
