@@ -141,17 +141,6 @@ function TabBar() {
   )
 }
 
-function ToolRow({ task }: { task: Task }) {
-  return (
-    <div className="proto-toolrow">
-      <Icon name={task.kind === "agent" ? "robot" : "terminal"} size={14} />
-      <span className="proto-tool-name">{task.kind === "agent" ? "Agent" : "Bash"}</span>
-      <span className="proto-tool-arg">{task.kind === "agent" ? task.name : task.command}</span>
-      <span className="proto-bgchip">In background</span>
-    </div>
-  )
-}
-
 function Trail({ live = true }: { live?: boolean }) {
   const n = useTicker(AGENT_STEPS.length, 1400, live ? 3 : AGENT_STEPS.length)
   return (
@@ -194,6 +183,43 @@ const Body = ({ task }: { task: Task }) => (task.kind === "agent" ? <Trail /> : 
 
 function TaskIcon({ task }: { task: Task }) {
   return <Icon name={task.kind === "agent" ? "robot" : "terminal"} size={14} />
+}
+
+
+const STAT: Record<string, string> = { a: "9 steps, 1 failed", b: "running", c: "running" }
+
+function TaskRow({ task, onOpen, active }: { task: Task; onOpen: (t: Task) => void; active: boolean }) {
+  const [open, setOpen] = useState(false)
+  const steps = useTicker(AGENT_STEPS.length, 1400, 3)
+  const lines = useTicker(LOG_LINES.length, 900, 4)
+  return (
+    <div className="proto-task-block" data-active={active || undefined}>
+      <button type="button" className="proto-task" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <TaskIcon task={task} />
+        <span className="proto-task-name">{task.name}</span>
+        <span className="proto-task-meta">{task.kind === "agent" ? `${task.model} · ` : ""}{task.kind === "agent" ? `${steps + 6} steps` : STAT[task.id]}</span>
+        <span className="proto-task-chevron" data-open={open || undefined}>
+          <Icon name="chevron-right" size={12} />
+        </span>
+      </button>
+      {open && (
+        <div className="proto-peek">
+          {task.kind === "agent" ? (
+            AGENT_STEPS.slice(0, steps).map((st, i) => (
+              <div key={i} className="proto-peek-line">
+                {st.kind === "text" ? st.text : `${st.name} ${st.arg}`}
+              </div>
+            ))
+          ) : (
+            <pre className="proto-peek-log">{LOG_LINES.slice(Math.max(0, lines - 5), lines).join("\n")}</pre>
+          )}
+          <button type="button" className="proto-pill" data-shown onClick={() => onOpen(task)}>
+            {task.kind === "agent" ? "Open details" : "Open output"}
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 interface FoldProps {
@@ -242,14 +268,14 @@ function Transcript({ fold }: { fold: ReactNode }) {
               <span className="iv-turn__label">Worked for 2m 10s · 5 tool calls</span>
               <span className="iv-turn__rule" />
             </div>
-            <div className="proto-calls">
-              {TASKS.map((t) => (
-                <ToolRow key={t.id} task={t} />
-              ))}
-            </div>
           </div>
         </Item>
         <Item>{fold}</Item>
+        <Item>
+          <p className="proto-prose">
+            The subagent is reading the runner and the tests are running. When they report back I'll fix the double stop and run the full check.
+          </p>
+        </Item>
       </div>
     </div>
   )
@@ -324,7 +350,7 @@ function ApprovalSheet() {
 }
 
 export function Sheet() {
-  const [open, setOpen] = useState<Task | null>(TASKS[1]!)
+  const [open, setOpen] = useState<Task | null>(null)
   const [approval, setApproval] = useState(true)
   const [height, setHeight] = useState(280)
   useEscape(() => setOpen(null))
@@ -347,16 +373,7 @@ export function Sheet() {
       <Transcript
         fold={
           <Fold
-            renderRow={(t) => (
-              <div key={t.id} className="proto-task" data-active={open?.id === t.id || undefined}>
-                <TaskIcon task={t} />
-                <span className="proto-task-name">{t.name}</span>
-                <span className="proto-task-meta">{t.since}</span>
-                <button type="button" className="proto-pill" onClick={() => setOpen(t)}>
-                  {t.kind === "agent" ? "Details" : "Output"}
-                </button>
-              </div>
-            )}
+            renderRow={(t) => <TaskRow key={t.id} task={t} onOpen={setOpen} active={open?.id === t.id} />}
           />
         }
       />
@@ -373,38 +390,6 @@ export function Sheet() {
         {approval && <ApprovalSheet />}
         <Composer />
       </div>
-    </Window>
-  )
-}
-
-export function Inline() {
-  const [open, setOpen] = useState<string | null>("a")
-  return (
-    <Window>
-      <Transcript
-        fold={
-          <Fold
-            renderRow={(t) => (
-              <div key={t.id} className="proto-task-block">
-                <button type="button" className="proto-task" aria-expanded={open === t.id} onClick={() => setOpen(open === t.id ? null : t.id)}>
-                  <span className="proto-task-chevron" data-open={open === t.id || undefined}>
-                    <Icon name="chevron-right" size={12} />
-                  </span>
-                  <TaskIcon task={t} />
-                  <span className="proto-task-name">{t.name}</span>
-                  <span className="proto-task-meta">{t.since}</span>
-                </button>
-                {open === t.id && (
-                  <div className="proto-inline-body">
-                    <Body task={t} />
-                  </div>
-                )}
-              </div>
-            )}
-          />
-        }
-      />
-      <Composer />
     </Window>
   )
 }
@@ -467,14 +452,7 @@ export function SidePane() {
       <Transcript
         fold={
           <Fold
-            renderRow={(t) => (
-              <button key={t.id} type="button" className="proto-task" data-active={sel === `t:${t.id}` || undefined} onClick={() => openTask(t)}>
-                <TaskIcon task={t} />
-                <span className="proto-task-name">{t.name}</span>
-                <span className="proto-task-meta">{t.since}</span>
-                <Icon name="arrow-right" size={12} />
-              </button>
-            )}
+            renderRow={(t) => <TaskRow key={t.id} task={t} onOpen={openTask} active={sel === `t:${t.id}`} />}
           />
         }
       />

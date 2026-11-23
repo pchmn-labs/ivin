@@ -4,12 +4,11 @@ import "../../src/core/theme/tokens.css"
 import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
-import { Inline, Sheet, SidePane } from "./variants.tsx"
+import { Sheet, SidePane } from "./variants.tsx"
 
 const VARIANTS = [
-  { name: "Sheet", Component: Sheet },
-  { name: "Inline", Component: Inline },
-  { name: "Card tabs", Component: SidePane },
+  { name: "Fold + sheet", Component: Sheet },
+  { name: "Fold + card tab", Component: SidePane },
 ]
 
 const requested = Number.parseInt(new URLSearchParams(location.search).get("v") ?? "", 10)
