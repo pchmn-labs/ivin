@@ -3,6 +3,9 @@ import { AsyncResult } from "effect/reactivity"
 import { TranscriptView } from "../../transcript/ui/transcript-view.tsx"
 import { transcriptOf } from "../../transcript/atoms/get-items.ts"
 import { projectsAtom } from "../../project/atoms/list-projects.ts"
+import { NotificationViewport } from "../../../core/components/notification/notification.tsx"
+import { CommandFailure } from "../../command/rules/command-failure.ts"
+import { sessionActionFailureOf } from "../atoms/session-action-failure.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useRequestSessionAction } from "../hooks/use-session-actions.ts"
@@ -28,10 +31,17 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
   )?.name
   const interrupt = useAtomSet(interruptSessionAtom)
   const requestAction = useRequestSessionAction()
+  const registry = useContext(RegistryContext)
   useCommandHandler(
     "session.archive",
-    () => {
-      if (session) requestAction("archive", session)
+    async () => {
+      if (session === undefined) return
+      await requestAction("archive", session)
+      // The failure otherwise shows in a menu that is closed when the key is pressed.
+      const failure = registry.get(sessionActionFailureOf(session.id))
+      if (failure !== null) {
+        throw new CommandFailure(failure, () => void requestAction("archive", session))
+      }
     },
     session !== undefined,
   )
@@ -72,6 +82,9 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
           </Text>
         </div>
       )}
+      <div className="iv-session-view__notifications">
+        <NotificationViewport />
+      </div>
       <Slot key={sessionId} slot="session.composer" props={{ sessionId }} />
       <ImageViewer sessionId={sessionId} />
     </div>

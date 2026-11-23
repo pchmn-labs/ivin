@@ -11,14 +11,14 @@ import { needsConfirmation } from "../rules/session-confirmation.ts"
 
 export function useRequestSessionAction() {
   const confirm = useAtomSet(sessionConfirmationAtom)
-  const archive = useAtomSet(archiveSessionAtom)
+  const archive = useAtomSet(archiveSessionAtom, { mode: "promiseExit" })
   const registry = useContext(RegistryContext)
   return useCallback(
-    (action: ConfirmedAction, session: Session) => {
+    async (action: ConfirmedAction, session: Session): Promise<void> => {
       const unsaved = registry.get(unsavedPathsOf(session.id, session.workingFolder))
       const confirmation = { action, session, unsaved }
       if (needsConfirmation(confirmation)) confirm(confirmation)
-      else archive({ projectPath: session.projectPath, sessionId: session.id })
+      else await archive({ projectPath: session.projectPath, sessionId: session.id })
     },
     [registry, confirm, archive],
   )

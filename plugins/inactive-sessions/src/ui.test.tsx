@@ -26,6 +26,7 @@ const mountSection = async (
     editorExtensions: { add: () => undefined },
     fileIcons: { add: () => undefined },
     fileUrl: (path) => path,
+    notify: () => undefined,
     sidebar: { showPanel: () => undefined },
   }
   activate(ctx)
