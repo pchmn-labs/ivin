@@ -60,7 +60,6 @@ No modules and no layers; one file per concern, kebab-case.
 | Package | Holds |
 |---|---|
 | `apps/desktop` | Electron main and preload, packaging |
-| `apps/plugin-host` | the plugin host process: loads server halves, implements `ctx` over RPC |
 | `apps/cli` | the `ivin` binary, one file per command |
 | `packages/contracts` | Effect `Schema` only, the pure functions their checks call, and each setting's label and description beside the `Settings` schema, one file per subject |
 | `packages/state` | atom families, optimistic writes, stream bridging, the RPC message-port protocols |
