@@ -136,10 +136,10 @@ The terms are defined in [`GLOSSARY.md`](../../GLOSSARY.md). What the design add
 - Token deltas are not events: they go to the renderer and are never stored, and the finished block is stored once, under the id its streamed copy had.
 - Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
 
-Each module has its own file, covering its server and UI sides:
+Each module this list describes has its own file, covering its server and UI sides:
 
-- [Session](session.md): pending messages, working folder and branch, title, run options, a deleted working folder, following the agent's folder, archiving and deleting.
-- [Worktree](worktree.md): reading worktrees through the `Git` port, the branch picker, switching or fast-forwarding the checkout, removing merged worktrees.
+- [Session](session.md): pending messages, working folder and branch, title, run options, a deleted working folder, following the agent's folder, switching or fast-forwarding the checkout, archiving and deleting.
+- [Worktree](worktree.md): reading worktrees through the `Git` port, the branch picker, removing merged worktrees.
 - [Transcript](transcript.md): how plugins read transcript items, and why ivin owns the transcript.
 - [Annotation](annotation.md): the shape, storage and kinds of annotations.
 - [Project](project.md): the open projects and tabs restored at launch.

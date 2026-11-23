@@ -18,7 +18,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Read `docs/a
 
 ### Design of record
 
-`docs/architecture/` is the design the code follows: `README.md` for what spans every module, and one file per module. `DESIGN.md` is the design the UI follows. Read them before exploring an area. A change that departs from one updates it in the same PR, in the file of the module it touches.
+`docs/architecture/` is the design the code follows: one file per module of its Domain model, and `README.md` for the rest. `DESIGN.md` is the design the UI follows. Read them before exploring an area. A change that departs from one updates it in the same PR; in `docs/architecture/`, it updates the file of the module it touches.
 
 ### Conventions
 
