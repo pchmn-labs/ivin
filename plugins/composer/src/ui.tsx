@@ -242,7 +242,6 @@ function Composer({ sessionId }: { sessionId: string }) {
                 />
               )}
             </Stack>
-            {/* A working session with an empty field offers Stop; typed text can still be sent. */}
             {running && text.trim() === "" ? (
               <IconButton
                 icon="square"

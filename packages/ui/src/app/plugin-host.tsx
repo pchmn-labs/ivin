@@ -106,9 +106,12 @@ const useSubViewOnScreen = (sessionId: string, kind: SubView["kind"]) => {
   return sessionTabSelected || selected?.kind !== kind ? null : selected.path
 }
 
+const useOpenSession = (sessionId: string) =>
+  useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)
+
 // The session may belong to another project than the one on screen, from the Working panel.
 const useSessionProjectPath = (sessionId: string) =>
-  useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.projectPath ?? NO_PROJECT
+  useOpenSession(sessionId)?.projectPath ?? NO_PROJECT
 
 const failureOf = <A,>(
   exit: Exit.Exit<A, unknown>,
@@ -122,7 +125,7 @@ const host: UiHost = {
   useSessions: () => useAtomValue(openSessionsAtom),
   useProjects: () => useAtomValue(projectsAtom.value),
   useSelectedSessionId: () => useAtomValue(selectedSessionIdAtom),
-  useSession: (sessionId) => useAtomValue(openSessionsAtom).find((s) => s.id === sessionId),
+  useSession: useOpenSession,
   useTabs: () => useAtomValue(tabsOf(useProjectPath()).value).tabs,
   useTabsLoaded: () => useAtomValue(tabsOf(useProjectPath()).loaded),
   useOpenTab: () => {
@@ -159,11 +162,10 @@ const host: UiHost = {
   useSessionLocation,
   useDraft: (sessionId) => useAtom(draftOf(sessionId)),
   useSendMessage: (sessionId) => {
-    const sessions = useAtomValue(openSessionsAtom)
+    const session = useOpenSession(sessionId)
     const choice = useAtomValue(workingFolderChoiceOf(sessionId))
     const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
     return async (draft) => {
-      const session = sessions.find((s) => s.id === sessionId)
       const workingFolder = session !== undefined && !session.started ? choice : undefined
       const exit = await send({
         projectPath: session?.projectPath ?? NO_PROJECT,
@@ -191,7 +193,7 @@ const host: UiHost = {
     return () => sendNow({ projectPath, sessionId })
   },
   useOfferedRunOptions: (sessionId) => {
-    const harness = useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.harness
+    const harness = useOpenSession(sessionId)?.harness
     const server = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
     return harness !== undefined && server?.id === harness ? server.runOptions : null
   },

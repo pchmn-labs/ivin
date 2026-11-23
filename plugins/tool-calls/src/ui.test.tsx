@@ -1,10 +1,8 @@
-import { defaultSettings } from "../../../packages/contracts/src/setting.ts"
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
-import { hostComponents } from "../../../packages/ui/src/app/host-components.ts"
-import { testUiHost } from "../../../packages/ui/src/core/test-ui-host.ts"
+import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { SlotProps, ToolCallItem, UiContext } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
@@ -24,32 +22,6 @@ const mount = async (item: ToolCallItem) => {
   activate(ctx)
   const host = {
     ...testUiHost,
-    useSession: () => undefined,
-    useSessions: () => [],
-    useProjects: () => ({ projects: [], selectedPath: null }),
-    useSelectedSessionId: () => null,
-    useTabs: () => [],
-    useOpenTab: () => () => {},
-    useTranscript: () => [],
-    useAnnotations: () => [],
-    useAnswerApproval: () => async () => undefined,
-    useAnswerQuestion: () => async () => undefined,
-    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
-    useOpenFile: () => async () => undefined,
-    useListFiles: () => async () => ({ kind: "listed" as const, paths: [], truncated: false }),
-    useFolderChanges: () => undefined,
-    useGitStatus: () => [],
-    useFileOnScreen: () => null,
-    useChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
-    useOpenDiff: () => async () => undefined,
-    useDiffOnScreen: () => null,
-    useSettings: () => defaultSettings,
-    useCommittedChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
-    useOpenCommittedDiff: () => async () => undefined,
-    useCommittedDiffOnScreen: () => null,
-    useDiscardChanges: () => async () => undefined,
-    useSessionActions: () => ({ items: [], failure: null }),
-    components: hostComponents,
   }
   await render(
     <UiHostProvider host={host}>

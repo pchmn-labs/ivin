@@ -49,14 +49,12 @@
 
 /* A sheet under an attention sheet joins it, and the field then meets that sheet's plain edge. */
 .iv-composer__sheets:has(.iv-action-sheet[data-tone="attention"])
-  .iv-action-sheet:not([data-tone="attention"]) {
+  .iv-action-sheet[data-tone="neutral"] {
   border-top: 1px dashed var(--iv-attention-outline);
   border-radius: 0;
 }
 
-.iv-composer:has(.iv-action-sheet[data-tone="attention"]):has(
-    .iv-action-sheet:not([data-tone="attention"])
-  )
+.iv-composer:has(.iv-action-sheet[data-tone="attention"]):has(.iv-action-sheet[data-tone="neutral"])
   .iv-message-field {
   border-top-style: solid;
   border-top-color: var(--iv-border-strong);

@@ -105,7 +105,7 @@ function SessionsPanel() {
   const open = openSessions(inProject, tabs)
 
   return (
-    <Stack as="nav" aria-label="Sessions" direction="column" gap={2}>
+    <Stack as="nav" aria-label="Sessions" direction="column">
       {tabsLoaded && tabs.length === 0 && (
         <Text as="p" size="sm" tone="faint">
           {inProject.length === 0

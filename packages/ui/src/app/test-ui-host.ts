@@ -1,8 +1,7 @@
 import { defaultSettings } from "@ivin/contracts/setting"
 import type { UiHost } from "@ivin/plugin-api/ui"
-import { hostComponents } from "../app/host-components.ts"
-
-const emptyDraft = { text: "", images: [] }
+import { emptyDraft } from "../modules/session/rules/draft.ts"
+import { hostComponents } from "./host-components.ts"
 
 // A host with no session, project or file, for a plugin test to spread and override.
 export const testUiHost: UiHost = {

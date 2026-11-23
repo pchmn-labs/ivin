@@ -2,8 +2,6 @@ import type { SessionLocationLabel } from "@ivin/plugin-api/ui"
 import type { Session, WorkingFolderChoice } from "@ivin/contracts/session"
 import type { Worktree } from "@ivin/contracts/worktree"
 
-export type WorkingFolderLabel = SessionLocationLabel
-
 export const folderName = (path: string) => path.split("/").filter(Boolean).at(-1) ?? path
 
 // `base` is what the server will start the worktree from; `HEAD` means the checkout's branch.
@@ -17,7 +15,7 @@ export const sessionLocation = (
     Partial<Pick<Session, "workingFolderDeleted">>,
   choice: WorkingFolderChoice,
   worktrees: ReadonlyArray<Worktree>,
-): WorkingFolderLabel => {
+): SessionLocationLabel => {
   if (session.workingFolderDeleted === true) {
     return { kind: "worktree", label: "Worktree deleted", branch: session.branch, deleted: true }
   }

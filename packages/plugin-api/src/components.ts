@@ -141,7 +141,6 @@ export interface TextProps {
   readonly italic?: boolean
   readonly preWrap?: boolean
   readonly truncate?: boolean
-  // Cuts the text after this many lines.
   readonly lines?: 3
   readonly title?: string
   readonly role?: string
@@ -454,7 +453,6 @@ export interface QuickPickProps {
   readonly footer?: string
 }
 
-// Calls Enter `onSubmit` and Escape `onEscape`.
 export interface TextFieldProps {
   readonly label: string
   readonly value: string
