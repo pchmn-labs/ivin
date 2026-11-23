@@ -15,7 +15,7 @@ import { ItemFeed } from "../../transcript/usecases/item-feed.ts"
 import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { setSessionStatus } from "./session-status.ts"
-import { SessionStore } from "./session-store.ts"
+import type { SessionStore } from "./session-store.ts"
 
 export type TranscriptWriter = Effect.Success<ReturnType<typeof openTranscriptWriter>>
 
@@ -25,12 +25,9 @@ export const openTranscriptWriter = (session: Session) =>
     const transcript = yield* TranscriptStore
     const feed = yield* ItemFeed
     const sessionFeed = yield* SessionFeed
-    const sessions = yield* SessionStore
+    const context = yield* Effect.context<SessionStore | SessionFeed>()
     const setStatus = (...args: Parameters<typeof setSessionStatus>) =>
-      setSessionStatus(...args).pipe(
-        Effect.provideService(SessionStore, sessions),
-        Effect.provideService(SessionFeed, sessionFeed),
-      )
+      setSessionStatus(...args).pipe(Effect.provideContext(context))
 
     yield* ensureItems(session.id)
     let sequence = yield* transcript.lastSequence(session.id)

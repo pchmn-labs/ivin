@@ -25,7 +25,6 @@ export interface AgentRun {
   readonly answer: (answer: RequestAnswer) => Effect.Effect<boolean>
   readonly interrupt: Effect.Effect<void>
   readonly end: Effect.Effect<void>
-  // Ends the run and leaves the session idle.
   readonly stop: Effect.Effect<void>
   // Ends the run, then records the error and fails the session.
   readonly fail: (error: HarnessError) => Effect.Effect<void>

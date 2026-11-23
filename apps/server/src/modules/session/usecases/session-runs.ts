@@ -22,11 +22,11 @@ import type { Git } from "../../worktree/usecases/git.ts"
 import { runOptionsOf, sameRunOptions } from "../rules/run-options.ts"
 import { type UserMessage, unsent } from "../rules/user-message.ts"
 import { type AgentRun, recordFailedStart, runFailed, startAgentRun } from "./agent-run.ts"
+import { makeIdleStop } from "./idle-stop.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { setSessionStatus } from "./session-status.ts"
 import { SessionStore } from "./session-store.ts"
 import { openTranscriptWriter, type TranscriptWriter } from "./transcript-writer.ts"
-import { makeIdleStop } from "./idle-stop.ts"
 
 export class SessionRuns extends Context.Service<
   SessionRuns,

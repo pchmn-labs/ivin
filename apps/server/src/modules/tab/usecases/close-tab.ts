@@ -1,9 +1,7 @@
 import { SessionNotFound } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
-import { stopAgentOnTabClose } from "../../session/usecases/stop-agent-on-tab-close.ts"
-import { WorktreeCleanup } from "../../session/usecases/worktree-cleanup.ts"
-import { ImageCompression } from "./image-compression.ts"
+import { afterTabsClosed } from "./after-tabs-closed.ts"
 import { listTabs } from "./list-tabs.ts"
 import { removeTab } from "./remove-tab.ts"
 
@@ -15,8 +13,6 @@ export const closeTab = (sessionId: string) =>
       if (!session) return yield* new SessionNotFound({ sessionId })
       return yield* listTabs(session.projectPath)
     }
-    yield* stopAgentOnTabClose([sessionId])
-    yield* (yield* WorktreeCleanup).afterTabsClosed(tab.projectPath, [sessionId])
-    yield* (yield* ImageCompression).afterTabsClosed([sessionId])
+    yield* afterTabsClosed(tab.projectPath, [sessionId])
     return yield* listTabs(tab.projectPath)
   })

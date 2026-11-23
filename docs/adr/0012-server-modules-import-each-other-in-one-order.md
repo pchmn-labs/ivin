@@ -20,10 +20,11 @@ A module that needs something from a module above it declares a port, and the mo
 
 ## Considered options
 
-- **Checking the order in CI**: left for later; a `tsort` of the imports between modules finds a cycle today.
+- **Checking the order in CI**: left for later. Until then, a `tsort` of the imports between modules shows a cycle, and a review checks the order.
 - **Ports for every import across modules**: rejected because most imports already go one way, and a port only earns its place where it breaks a cycle.
 
 ## Consequences
 
 - A stateful Layer that serves use cases (a feed, a lock, the runs of all sessions) lives in `usecases/`, beside the port it implements; `adapters/` keeps the Layers that need the real outside.
+- An adapter may read another module's tables when the port it implements asks about them: `AnnotationStore` answers whether a session or a project exists.
 - `rpc/handlers.ts` composes the Layers that need no configuration, and `main.ts` adds the configured ones (paths, the harness, the database).
