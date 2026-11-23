@@ -15,6 +15,9 @@ test("an invalid setting is named by its key and the type it takes", () => {
   expect(
     settingsProblemMessage({ reason: "invalidSetting", setting: "tabs.stopAgentOnClose" }),
   ).toBe("tabs.stopAgentOnClose in ~/.ivin/settings.json takes true or false.")
+  expect(settingsProblemMessage({ reason: "invalidSetting", setting: "sidebar.layout" })).toBe(
+    'sidebar.layout in ~/.ivin/settings.json takes "rail" or "strip".',
+  )
   expect(settingsProblemMessage({ reason: "invalidSetting", setting: "tabs" })).toBe(
     "tabs in ~/.ivin/settings.json takes an object of settings.",
   )

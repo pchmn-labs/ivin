@@ -5,13 +5,13 @@ import {
   useAtomSet,
   useAtomValue,
 } from "@effect/atom-react"
-import { AsyncResult } from "effect/reactivity"
 import { useCallback, useContext, useEffect, useRef } from "react"
 import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
-import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { ProjectColumn } from "../modules/project/ui/project-column.tsx"
 import { ProjectRail } from "../modules/project/ui/project-rail.tsx"
+import { ProjectStrip } from "../modules/project/ui/project-strip.tsx"
+import { useStepProject } from "../modules/project/hooks/use-step-project.ts"
 import { NoProject, OpenFolderError } from "../modules/project/ui/no-project.tsx"
 import { useReportUncaughtErrors } from "../modules/log/hooks/use-report-uncaught-errors.ts"
 import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
@@ -28,7 +28,7 @@ import { SidebarTabs } from "./sidebar-tabs.tsx"
 import { SESSIONS_TAB, showSidebarTab, sidebarOpenAtom } from "./sidebar.ts"
 import { Slot } from "./slot-renderer.tsx"
 import { ResizeHandle } from "../core/components/resize-handle/resize-handle.tsx"
-import { getVersionAtom } from "../modules/server/atoms/get-version.ts"
+import { connectionAtom } from "../modules/server/atoms/connection.ts"
 import { useCommandHandler } from "../modules/command/hooks/use-command-handler.ts"
 import { KeybindingsFileProblem } from "../modules/keybinding/ui/keybindings-file-problem.tsx"
 import { installInShellAtom } from "../modules/cli/atoms/install-in-shell.ts"
@@ -39,6 +39,7 @@ import {
 import { SettingsButton } from "../modules/setting/ui/settings-button.tsx"
 import { SettingsNav } from "../modules/setting/ui/settings-nav.tsx"
 import { SettingsPage } from "../modules/setting/ui/settings-page.tsx"
+import { settingsAtom } from "../modules/setting/atoms/settings.ts"
 import "./app.css"
 
 const CARD_MIN = 240
@@ -47,7 +48,8 @@ const BOTTOM_MIN = 96
 const BOTTOM_MAX_SHARE = 0.7
 
 export function App() {
-  const result = useAtomValue(getVersionAtom)
+  const connection = useAtomValue(connectionAtom)
+  const { layout } = useAtomValue(settingsAtom).sidebar
   const current = useAtomValue(selectedProjectAtom)
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom)
   const registry = useContext(RegistryContext)
@@ -58,6 +60,9 @@ export function App() {
   useAtomMount(tabTranscriptsAtom)
   useReportUncaughtErrors()
   useCommandHandler("sidebar.toggle", toggleSidebar, projectPath !== null)
+  const { step } = useStepProject()
+  useCommandHandler("project.next", () => step(1), projectPath !== null)
+  useCommandHandler("project.previous", () => step(-1), projectPath !== null)
   const setArchivedOpen = useAtomSet(archivedViewOpenAtom)
   useCommandHandler(
     "session.showArchived",
@@ -94,21 +99,6 @@ export function App() {
     projectPath !== null,
   )
 
-  const connection = AsyncResult.match(result, {
-    onInitial: () => ({ state: "connecting", text: "Connecting to the server…" }),
-    onFailure: () => ({
-      state: "failed",
-      text: "ivin's server is not answering. Quit and reopen ivin.",
-    }),
-    onSuccess: ({ value }) => ({ state: "connected", text: `Server ${value}` }),
-  })
-  const version = (
-    <Tooltip content={connection.text} side="right">
-      <span className="iv-connection" data-state={connection.state} data-testid="server-version">
-        <span className="iv-visually-hidden">{connection.text}</span>
-      </span>
-    </Tooltip>
-  )
   // The desktop app does not restart a lost server, so a retry cannot work.
   const serverLost = connection.state === "failed" && (
     <div className="iv-app__alert">
@@ -127,7 +117,6 @@ export function App() {
             <KeybindingsFileProblem />
             <NoProject />
           </main>
-          <div className="iv-app__corner">{version}</div>
         </div>
       ) : (
         <div
@@ -137,23 +126,17 @@ export function App() {
         >
           {sidebarOpen && (
             <aside className="iv-app__card" aria-label="Projects and sessions">
-              <div className="iv-app__card-top">
+              <div className="iv-app__card-top" data-testid="sidebar-top-row">
                 <ShellControls
                   projectPath={projectPath}
                   sidebarOpen={sidebarOpen}
                   onToggleSidebar={toggleSidebar}
+                  extra={<SettingsButton />}
                 />
               </div>
-              <div className="iv-app__card-body">
-                <ProjectRail
-                  footer={
-                    <>
-                      <SettingsButton />
-                      {version}
-                    </>
-                  }
-                />
-                <ProjectColumn project={current}>
+              <div className="iv-app__card-body" data-layout={layout}>
+                {layout === "rail" && <ProjectRail />}
+                <ProjectColumn project={current} projectMenu={layout === "strip"}>
                   <SidebarTabs />
                 </ProjectColumn>
               </div>
@@ -170,6 +153,7 @@ export function App() {
                   <Slot slot="sidebar.bottom" props={{}} />
                 </div>
               </div>
+              {layout === "strip" && <ProjectStrip />}
               <ResizeHandle
                 label="Resize the sidebar"
                 edge="right"

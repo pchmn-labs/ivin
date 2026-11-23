@@ -218,6 +218,8 @@ const tsxAllowed: Case[] = [
   ],
   ...[
     "project/ui/project-rail.tsx",
+    "project/ui/project-select.tsx",
+    "project/ui/project-strip.tsx",
     "session/ui/branch-picker.tsx",
     "session/ui/checkout-sync.tsx",
     "session/ui/draft-images.tsx",

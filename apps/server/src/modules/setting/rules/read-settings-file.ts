@@ -1,6 +1,6 @@
 import {
   defaultSettings,
-  type Settings,
+  Settings,
   type SettingsFileProblem,
   type UserSettings,
 } from "@ivin/contracts/setting"
@@ -34,6 +34,21 @@ const booleanOf = (
   return value
 }
 
+const choiceOf = <Value extends string>(
+  file: Record<string, unknown>,
+  section: string,
+  key: string,
+  values: ReadonlyArray<Value>,
+  fallback: Value,
+): Value => {
+  const value = sectionOf(file, section)[key]
+  if (value === undefined) return fallback
+  if (!values.includes(value as Value)) {
+    throw new Invalid({ reason: "invalidSetting", setting: `${section}.${key}` })
+  }
+  return value as Value
+}
+
 const read = (text: string | null): Settings => {
   if (text === null || text.trim() === "") return defaultSettings
   const parsed = parseJsonc(text)
@@ -59,6 +74,15 @@ const read = (text: string | null): Settings => {
     },
     files: {
       folderIcons: booleanOf(file, "files", "folderIcons", defaultSettings.files.folderIcons),
+    },
+    sidebar: {
+      layout: choiceOf(
+        file,
+        "sidebar",
+        "layout",
+        Settings.fields.sidebar.fields.layout.literals,
+        defaultSettings.sidebar.layout,
+      ),
     },
   }
 }

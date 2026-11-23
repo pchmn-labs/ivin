@@ -1,10 +1,12 @@
-import { useAtom } from "@effect/atom-react"
+import { useAtom, useAtomValue } from "@effect/atom-react"
 import { useEffect, useRef, type KeyboardEvent } from "react"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Icon, type IconName } from "../../../core/components/icon/icon.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
+import { Text } from "../../../core/components/text/text.tsx"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
+import { connectionAtom } from "../../server/atoms/connection.ts"
 import { settingsSectionAtom } from "../atoms/settings-page.ts"
 import { useOpenSettingsFile } from "../hooks/use-open-settings-file.ts"
 import { SETTINGS_FILE } from "../rules/setting-message.ts"
@@ -18,6 +20,7 @@ const sectionIcons: Record<SettingsPageSectionKey, IconName> = {
   tabs: "app-window",
   worktrees: "worktree",
   files: "folder",
+  sidebar: "panel-left",
   commandLine: "terminal",
 }
 
@@ -30,6 +33,7 @@ export function SettingsNav({ onClose }: { onClose: () => void }) {
   const list = useRef<HTMLUListElement>(null)
   const file = useOpenSettingsFile()
   const backHint = useKeyHint("Back to sessions", "settings.close")
+  const connection = useAtomValue(connectionAtom)
 
   useEffect(() => {
     list.current?.querySelector<HTMLButtonElement>('[aria-current="true"]')?.focus()
@@ -78,6 +82,13 @@ export function SettingsNav({ onClose }: { onClose: () => void }) {
           onSelect={file.open}
           tooltip={{ text: SETTINGS_FILE, mono: true }}
         />
+        {connection.state === "connected" && (
+          <span className="iv-settings-nav__version" data-testid="server-version">
+            <Text size="xs" tone="faint">
+              {connection.text}
+            </Text>
+          </span>
+        )}
       </div>
     </nav>
   )

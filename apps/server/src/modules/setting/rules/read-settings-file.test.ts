@@ -4,13 +4,14 @@ import { readSettingsFile } from "./read-settings-file.ts"
 
 const initial = { settings: defaultSettings, problem: null }
 
-test("a missing or empty file holds the default settings, every one on", () => {
+test("a missing or empty file holds the default settings: every switch on, the rail layout", () => {
   expect(readSettingsFile(initial, null)).toEqual(initial)
   expect(readSettingsFile(initial, " \n")).toEqual(initial)
   expect(defaultSettings).toEqual({
     tabs: { stopAgentOnClose: true },
     worktrees: { removeOnTabClose: true },
     files: { folderIcons: true },
+    sidebar: { layout: "rail" },
   })
 })
 
@@ -20,6 +21,7 @@ test("a setting in the file replaces its default, and one left out falls back to
       tabs: { stopAgentOnClose: false },
       worktrees: { removeOnTabClose: false },
       files: { folderIcons: false },
+      sidebar: { layout: "strip" as const },
     },
     problem: null,
   }
@@ -27,6 +29,7 @@ test("a setting in the file replaces its default, and one left out falls back to
     // keep agents running
     "tabs": { "stopAgentOnClose": false, },
     "files": { "folderIcons": false },
+    "sidebar": { "layout": "strip" },
     "editor": { "fontSize": 13 },
   }`
   expect(readSettingsFile(off, text)).toEqual({
@@ -34,6 +37,7 @@ test("a setting in the file replaces its default, and one left out falls back to
       tabs: { stopAgentOnClose: false },
       worktrees: { removeOnTabClose: true },
       files: { folderIcons: false },
+      sidebar: { layout: "strip" },
     },
     problem: null,
   })
@@ -59,5 +63,9 @@ test("an invalid file keeps the previous settings and names its problem", () => 
   expect(readSettingsFile(previous, `{ "files": { "folderIcons": 1 } }`).problem).toEqual({
     reason: "invalidSetting",
     setting: "files.folderIcons",
+  })
+  expect(readSettingsFile(previous, `{ "sidebar": { "layout": "column" } }`).problem).toEqual({
+    reason: "invalidSetting",
+    setting: "sidebar.layout",
   })
 })

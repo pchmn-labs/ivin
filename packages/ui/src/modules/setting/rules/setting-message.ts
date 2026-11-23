@@ -1,5 +1,7 @@
 import {
+  choicesText,
   defaultSettings,
+  settingSections,
   type SettingsFileInvalid,
   type SettingsFileProblem,
 } from "@ivin/contracts/setting"
@@ -8,6 +10,10 @@ import { settingValue } from "./setting-value.ts"
 export const SETTINGS_FILE = "~/.ivin/settings.json"
 
 const takes = (path: string) => {
+  const choices = settingSections
+    .flatMap((section) => section.settings)
+    .find((setting) => setting.path === path)?.choices
+  if (choices !== undefined) return choicesText(choices.map((choice) => choice.value))
   const value = settingValue(defaultSettings, path)
   if (typeof value === "boolean") return "true or false"
   if (typeof value === "number") return "a number"

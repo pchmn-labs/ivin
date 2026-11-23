@@ -2,6 +2,7 @@ import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { SettingSection } from "@ivin/contracts/setting"
 import { useId } from "react"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
+import { Select } from "../../../core/components/select/select.tsx"
 import { Switch } from "../../../core/components/switch/switch.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { setSettingOf, shownSettingOf } from "../atoms/set-setting.ts"
@@ -35,16 +36,32 @@ function SettingRow({
           {setting.path}
         </Text>
         {shown.failure !== null && (
-          <ErrorMessage message={shown.failure} onRetry={() => save(shown.value === true)} />
+          <ErrorMessage
+            message={shown.failure}
+            onRetry={() =>
+              save(setting.choices === undefined ? shown.value === true : String(shown.value))
+            }
+          />
         )}
       </div>
-      <Switch
-        label={setting.label}
-        checked={shown.value === true}
-        disabled={disabled}
-        onChange={save}
-        aria-describedby={descriptionId}
-      />
+      {setting.choices === undefined ? (
+        <Switch
+          label={setting.label}
+          checked={shown.value === true}
+          disabled={disabled}
+          onChange={save}
+          aria-describedby={descriptionId}
+        />
+      ) : (
+        <Select
+          label={setting.label}
+          value={String(shown.value)}
+          options={setting.choices}
+          disabled={disabled}
+          onChange={save}
+          aria-describedby={descriptionId}
+        />
+      )}
     </li>
   )
 }

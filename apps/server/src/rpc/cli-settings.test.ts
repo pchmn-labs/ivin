@@ -67,6 +67,7 @@ test("ivin settings set changes only that value in the file, and the app applies
     tabs: { stopAgentOnClose: false },
     worktrees: { removeOnTabClose: true },
     files: { folderIcons: true },
+    sidebar: { layout: "rail" },
   })
 }, 10_000)
 
@@ -86,6 +87,14 @@ test("a value of the wrong type exits 1 with the type expected, and the file is 
 
   expect(run.code).toBe(1)
   expect(run.stderr).toContain('tabs.stopAgentOnClose takes true or false, not "maybe"')
+  expect(run.file).toBe(text)
+}, 10_000)
+
+test("a setting with fixed values names them when given another one", async () => {
+  const run = await settings(["set", "sidebar.layout", "column"])
+
+  expect(run.code).toBe(1)
+  expect(run.stderr).toContain('sidebar.layout takes "rail" or "strip", not "column"')
   expect(run.file).toBe(text)
 }, 10_000)
 
@@ -121,7 +130,7 @@ test("ivin settings get prints every setting, or the one at a path", async () =>
 
   expect(all.code).toBe(0)
   expect(all.stdout).toBe(
-    "tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\n",
+    'tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\nsidebar.layout = "rail"\n',
   )
   expect(one.stdout).toBe("true\n")
   expect(section.stdout).toBe("tabs.stopAgentOnClose = true\n")
@@ -141,6 +150,7 @@ test("--json prints the values as JSON", async () => {
       tabs: { stopAgentOnClose: false },
       worktrees: { removeOnTabClose: true },
       files: { folderIcons: true },
+      sidebar: { layout: "rail" },
     },
   })
   expect(JSON.parse(one.stdout)).toEqual({ ok: true, path: "tabs.stopAgentOnClose", value: true })

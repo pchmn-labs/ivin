@@ -11,6 +11,8 @@ export interface DefaultKeybinding extends Keybinding {
 export const coreKeybindings: ReadonlyArray<DefaultKeybinding> = [
   { key: "mod+\\", command: "sidebar.toggle", when: null, pluginId: null },
   { key: "mod+1", command: "sidebar.showSessions", when: null, pluginId: null },
+  { key: "ctrl+mod+]", command: "project.next", when: null, pluginId: null },
+  { key: "ctrl+mod+[", command: "project.previous", when: null, pluginId: null },
   { key: "escape", command: "session.interrupt", when: null, pluginId: null },
   { key: "enter", command: "composer.send", when: "composer", pluginId: null },
   { key: "mod+shift+backspace", command: "session.archive", when: null, pluginId: null },

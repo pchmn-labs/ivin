@@ -394,12 +394,14 @@ The plugin API version a plugin is built for is the range of `peerDependencies["
 
 Writes go through a temp file and a rename, so the app never reads a half-written file. An invalid file keeps the last valid version and reports the parse error (`ivin doctor`).
 
-The server reads `settings.json` and streams it (`setting.watch`). `setting.get` reads a setting at a dotted path, and `setting.set` checks the path and the value's type against the `Settings` schema, then edits that one value in place (through `jsonc-parser`), keeping the file's comments and layout; it refuses a file it cannot parse rather than rewrite it. Its settings so far, both on by default:
+The server reads `settings.json` and streams it (`setting.watch`). `setting.get` reads a setting at a dotted path, and `setting.set` checks the path and the value against the `Settings` schema (its type, or for a setting with fixed values one of them, which a refusal lists), then edits that one value in place (through `jsonc-parser`), keeping the file's comments and layout; it refuses a file it cannot parse rather than rewrite it. Its settings so far, with their defaults:
 
 ```jsonc
 {
   "tabs": { "stopAgentOnClose": true },
   "worktrees": { "removeOnTabClose": true },
+  "files": { "folderIcons": true },
+  "sidebar": { "layout": "rail" }, // or "strip"
 }
 ```
 

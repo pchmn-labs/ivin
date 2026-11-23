@@ -332,6 +332,17 @@ try {
   await window.getByRole("heading", { name: "Command line" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("settings-command-line")
+  await window
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Sidebar" })
+    .click()
+  await window.getByRole("combobox", { name: "Projects" }).selectOption("strip")
+  await window.waitForTimeout(300)
+  await shoot("settings-sidebar")
+  await window.getByRole("button", { name: "Back to sessions" }).click()
+  await window.getByRole("group", { name: "Projects" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("strip-layout")
 } finally {
   await app.close()
 }
