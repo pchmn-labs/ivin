@@ -1,7 +1,7 @@
 import type { Change } from "@ivin/contracts/file"
 import { parseChanges } from "../../file/rules/changes.ts"
 import { parseGitStatus } from "../../file/rules/git-status.ts"
-import { Effect, Layer } from "effect"
+import { Context, Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
 import { realpathSync } from "node:fs"
 import {
@@ -12,7 +12,8 @@ import {
   underOpenedPath,
 } from "../rules/git-output.ts"
 import { ProjectTrust } from "../../project/usecases/project-trust.ts"
-import { withOverrides } from "../rules/git-overrides.ts"
+import { commandOf, withOverrides } from "../rules/git-overrides.ts"
+import { type GitTimeLimit, timeLimitOf } from "../rules/git-time-limit.ts"
 import { hasOwnCommits, isSquashMerged, mergeAddsNothing } from "../rules/merge-state.ts"
 import { type CommitRange, Git, GitError } from "../usecases/git.ts"
 
@@ -25,6 +26,14 @@ interface ExecFailure {
 class OutputTooLong {
   readonly _tag = "OutputTooLong"
 }
+
+export type GitTimeLimits = Record<GitTimeLimit, `${number} ${"millis" | "seconds" | "minutes"}`>
+
+const GIT_TIME_LIMITS: GitTimeLimits = { short: "30 seconds", long: "10 minutes" }
+
+class TimeLimits extends Context.Service<TimeLimits, GitTimeLimits>()(
+  "ivin/server/GitTimeLimits",
+) {}
 
 const runGit = (
   cwd: string,
@@ -44,7 +53,19 @@ const runGit = (
       return yield* new GitError({
         message: `${cwd} is in no trusted project, so ivin runs no git command in it.`,
       })
-    return yield* spawnGit(cwd, args, input, maxBuffer, succeedsOn)
+    const limit = (yield* TimeLimits)[timeLimitOf(args)]
+    // Interrupting spawnGit kills the child.
+    return yield* spawnGit(cwd, args, input, maxBuffer, succeedsOn).pipe(
+      Effect.timeoutOrElse({
+        duration: limit,
+        orElse: () =>
+          Effect.fail(
+            new GitError({
+              message: `git ${commandOf(args)} did not finish within ${limit}`,
+            }),
+          ),
+      }),
+    )
   })
 
 const spawnGit = (
@@ -92,6 +113,17 @@ const diffBase = (folder: string) =>
     Effect.map((head) => (head === null ? EMPTY_TREE : "HEAD")),
   )
 
+// HEAD's commit, null outside a repository; one process except before the first commit.
+const diffBaseInRepository = (folder: string) =>
+  orNull(git(folder, ["rev-parse", "--show-prefix", "HEAD"])).pipe(
+    Effect.flatMap((out) => {
+      if (out !== null) return Effect.succeed({ base: out.split("\n")[1] ?? EMPTY_TREE })
+      return orNull(git(folder, ["rev-parse", "--show-prefix"])).pipe(
+        Effect.map((prefix) => (prefix === null ? null : { base: EMPTY_TREE })),
+      )
+    }),
+  )
+
 // No optional locks: a diff that refreshed the index would fire the watcher that asked for it.
 // Literal pathspecs: a path such as `[id].ts` is a file name, not a pattern that matches `i.ts`.
 const LITERAL = "--literal-pathspecs"
@@ -99,28 +131,31 @@ const LITERAL = "--literal-pathspecs"
 const PLAIN_DIFF = ["--no-color", "--no-ext-diff", "--no-textconv"]
 const DIFF = ["--no-optional-locks", LITERAL, "diff", ...PLAIN_DIFF, "--relative", "-M"]
 
-const compared = (folder: string, range?: CommitRange) =>
-  range === undefined
-    ? diffBase(folder).pipe(Effect.map((base) => [base]))
-    : Effect.succeed([range.from, range.to])
+const sidesOf = (range: CommitRange) =>
+  range.to === undefined ? [range.from] : [range.from, range.to]
 
-const listChanges = (folder: string, range?: CommitRange) =>
+const listChanges = (folder: string, given?: CommitRange) =>
   Effect.gen(function* () {
-    if ((yield* orNull(git(folder, ["rev-parse", "--show-prefix"]))) === null) return null
-    const sides = yield* compared(folder, range)
+    let range = given
+    if (range === undefined) {
+      const found = yield* diffBaseInRepository(folder)
+      if (found === null) return null
+      range = { from: found.base }
+    } else if ((yield* orNull(git(folder, ["rev-parse", "--show-prefix"]))) === null) return null
+    const sides = sidesOf(range)
     const nameStatus = yield* git(folder, [...DIFF, "--name-status", "-z", ...sides, "--"])
     const numstat = yield* git(folder, [...DIFF, "--numstat", "-z", ...sides, "--"])
     const untracked =
-      range === undefined
+      range.to === undefined
         ? yield* git(folder, ["ls-files", "-z", "--others", "--exclude-standard"])
         : ""
-    return parseChanges(nameStatus, numstat, untracked)
+    return { range, changes: parseChanges(nameStatus, numstat, untracked) }
   })
 
 const changedPaths = (change: Change) =>
   change.previousPath === null ? [change.path] : [change.previousPath, change.path]
 
-const diffOf = (folder: string, change: Change, limit: number, range?: CommitRange) =>
+const diffOf = (folder: string, change: Change, limit: number, range: CommitRange) =>
   Effect.gen(function* () {
     // git diff --no-index exits 1 when the files differ.
     if (change.status === "untracked")
@@ -129,8 +164,7 @@ const diffOf = (folder: string, change: Change, limit: number, range?: CommitRan
         ["diff", ...PLAIN_DIFF, "--no-index", "--", "/dev/null", change.path],
         { maxBuffer: limit, succeedsOn: [1] },
       )
-    const sides = yield* compared(folder, range)
-    return yield* runGit(folder, [...DIFF, ...sides, "--", ...changedPaths(change)], {
+    return yield* runGit(folder, [...DIFF, ...sidesOf(range), "--", ...changedPaths(change)], {
       maxBuffer: limit,
     })
   }).pipe(Effect.catchTag("OutputTooLong", () => Effect.succeed(null)))
@@ -180,18 +214,21 @@ type Untrusted = {
   readonly [K in keyof GitShape]: GitShape[K] extends (
     ...args: infer A
   ) => Effect.Effect<infer S, infer E>
-    ? (...args: A) => Effect.Effect<S, E, ProjectTrust>
+    ? (...args: A) => Effect.Effect<S, E, ProjectTrust | TimeLimits>
     : never
 }
 
-const trusting = (methods: Untrusted, trust: ProjectTrust["Service"]) =>
+const trusting = (methods: Untrusted, trust: ProjectTrust["Service"], limits: GitTimeLimits) =>
   Object.fromEntries(
     Object.entries(methods).map(([name, method]) => [
       name,
       (...args: never[]) =>
-        (method as (...args: never[]) => Effect.Effect<unknown, unknown, ProjectTrust>)(
-          ...args,
-        ).pipe(Effect.provideService(ProjectTrust, trust)),
+        (
+          method as (...args: never[]) => Effect.Effect<unknown, unknown, ProjectTrust | TimeLimits>
+        )(...args).pipe(
+          Effect.provideService(ProjectTrust, trust),
+          Effect.provideService(TimeLimits, limits),
+        ),
     ]),
   ) as unknown as GitShape
 
@@ -288,6 +325,21 @@ const methods: Untrusted = {
     }).pipe(Effect.orElseSucceed(() => null)),
   listChanges,
   diffOf,
+  tips: (folder) =>
+    orNull(
+      git(folder, [
+        "rev-parse",
+        "HEAD",
+        "refs/remotes/origin/HEAD",
+        "--abbrev-ref",
+        "refs/remotes/origin/HEAD",
+      ]),
+    ).pipe(
+      Effect.map((out) => {
+        const [head, baseCommit, base] = out?.trim().split("\n") ?? []
+        return head && baseCommit && base ? { head, base, baseCommit } : null
+      }),
+    ),
   hasCommit: (folder) => diffBase(folder).pipe(Effect.map((base) => base === "HEAD")),
   // merge-base exits 1, with no output, when the histories share no commit.
   mergeBase: (folder, target) =>
@@ -323,8 +375,11 @@ const methods: Untrusted = {
     }),
 }
 
-export const layerGitCli = Layer.effect(Git)(
-  Effect.gen(function* () {
-    return trusting(methods, yield* ProjectTrust)
-  }),
-)
+export const layerGitCliWith = (limits: GitTimeLimits) =>
+  Layer.effect(Git)(
+    Effect.gen(function* () {
+      return trusting(methods, yield* ProjectTrust, limits)
+    }),
+  )
+
+export const layerGitCli = layerGitCliWith(GIT_TIME_LIMITS)

@@ -15,14 +15,14 @@ const READS = new Set([
   "worktree list",
 ])
 
-const command = (args: ReadonlyArray<string>) => {
+export const commandOf = (args: ReadonlyArray<string>) => {
   const at = args.findIndex((arg) => !arg.startsWith("-"))
   if (at === -1) return ""
   return args[at] === "worktree" ? `worktree ${args[at + 1] ?? ""}` : (args[at] ?? "")
 }
 
 export const withOverrides = (args: ReadonlyArray<string>): ReadonlyArray<string> => {
-  const name = command(args)
+  const name = commandOf(args)
   return [
     "-c",
     "core.fsmonitor=false",

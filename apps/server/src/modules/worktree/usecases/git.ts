@@ -7,9 +7,22 @@ import type { WorktreeState } from "../rules/worktree-removal.ts"
 // `message` is git's own output.
 export class GitError extends Data.TaggedError("GitError")<{ readonly message: string }> {}
 
+// No `to`: the working folder.
 export interface CommitRange {
   readonly from: string
-  readonly to: string
+  readonly to?: string
+}
+
+export interface ChangeListing {
+  readonly range: CommitRange
+  readonly changes: ReadonlyArray<Change>
+}
+
+export interface Tips {
+  readonly head: string
+  // `origin/<name>` and its commit, from `refs/remotes/origin/HEAD`.
+  readonly base: string
+  readonly baseCommit: string
 }
 
 export class Git extends Context.Service<
@@ -66,19 +79,22 @@ export class Git extends Context.Service<
     readonly gitDir: (folder: string) => Effect.Effect<string | null>
     // Not ignored, untracked included and tracked-but-deleted left out, relative to `folder`; null outside a repository.
     readonly listFiles: (folder: string) => Effect.Effect<ReadonlyArray<string> | null>
-    // Against HEAD, untracked files included, or between the commits of `range`; relative to
-    // `folder`, null outside a repository.
+    // Against HEAD's commit, untracked files included, or between the commits of `range`; relative
+    // to `folder`, null outside a repository.
     readonly listChanges: (
       folder: string,
       range?: CommitRange,
-    ) => Effect.Effect<ReadonlyArray<Change> | null, GitError>
-    // The unified diff of one of those changes; null when it is longer than `limit` bytes.
+    ) => Effect.Effect<ChangeListing | null, GitError>
+    // The unified diff of one of those changes, over the listing's range; null when it is longer
+    // than `limit` bytes.
     readonly diffOf: (
       folder: string,
       change: Change,
       limit: number,
-      range?: CommitRange,
+      range: CommitRange,
     ) => Effect.Effect<string | null, GitError>
+    // Null before the first commit, or with no `refs/remotes/origin/HEAD`.
+    readonly tips: (folder: string) => Effect.Effect<Tips | null>
     // False on a branch with no commit yet.
     readonly hasCommit: (folder: string) => Effect.Effect<boolean>
     // Null when HEAD and `target` share no commit.

@@ -9,13 +9,13 @@ import { type CommitRange, Git } from "../../worktree/usecases/git.ts"
 import { parseDiff } from "../rules/diff.ts"
 import { relativeNames } from "../rules/folder-path.ts"
 import { gitFailed } from "./git-failed.ts"
-import { changesOf } from "./list-changes.ts"
+import { sharedChangesOf } from "./list-changes.ts"
 
-// The diff of `path` among `changes`, between the commits of `range`, or against HEAD without one.
+// The diff of `path` among `changes`, over the `range` they were listed in.
 export const diffAmong = (
   sessionId: string,
   path: string,
-  { root, changes, range }: { root: string; changes: ReadonlyArray<Change>; range?: CommitRange },
+  { root, changes, range }: { root: string; changes: ReadonlyArray<Change>; range: CommitRange },
 ) =>
   Effect.gen(function* () {
     const names = relativeNames(path)
@@ -34,7 +34,7 @@ export const readDiff = (sessionId: string, path: string) =>
   Effect.gen(function* () {
     if (relativeNames(path) === null)
       return yield* new PathOutsideWorkingFolder({ sessionId, path })
-    const { root, changes } = yield* changesOf(sessionId)
-    if (changes === null) return { kind: "not_repository" } satisfies FileDiff
-    return yield* diffAmong(sessionId, path, { root, changes })
+    const { root, listing } = yield* sharedChangesOf(sessionId)
+    if (listing === null) return { kind: "not_repository" } satisfies FileDiff
+    return yield* diffAmong(sessionId, path, { root, ...listing })
   })

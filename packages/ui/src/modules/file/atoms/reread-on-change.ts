@@ -11,6 +11,8 @@ export const rereadOnChange = <A, E>(
       Effect.gen(function* () {
         const client = yield* ServerClient
         return Stream.merge(Stream.make(undefined), client["file.watch"]({ sessionId })).pipe(
+          // A read sees every change before it, so changes during one need a single read after it.
+          Stream.buffer({ capacity: 1, strategy: "sliding" }),
           Stream.mapEffect(() => read(client)),
         )
       }),

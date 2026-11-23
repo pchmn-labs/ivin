@@ -271,3 +271,60 @@ test("a branch with no commit yet has no committed changes", async () => {
     changes: [],
   })
 })
+
+// Lists the committed changes of one session, once before each step and once after the last.
+const committedChangesAcross = (projectPath: string, steps: ReadonlyArray<() => void>) =>
+  withServer((client) =>
+    Effect.gen(function* () {
+      const { id } = yield* client["session.create"]({ projectPath })
+      const list = client["file.listCommittedChanges"]({ sessionId: id })
+      const listings = [yield* list]
+      for (const step of steps) {
+        step()
+        listings.push(yield* list)
+      }
+      return listings
+    }),
+  )
+
+const pathsOf = (listing: unknown) =>
+  (listing as { changes: ReadonlyArray<{ path: string }> }).changes.map((change) => change.path)
+
+test("a new commit gives a new committed listing in the same server", async () => {
+  commit(project, { "first.ts": "1\n" })
+
+  const [before, after] = await committedChangesAcross(project, [
+    () => commit(project, { "second.ts": "2\n" }),
+  ])
+
+  expect(pathsOf(before)).toEqual(["first.ts"])
+  expect(pathsOf(after)).toEqual(["first.ts", "second.ts"])
+})
+
+test("a fetch that moves origin's default branch gives a new committed listing", async () => {
+  commit(project, { "feature.ts": "f\n" })
+
+  const [before, after] = await committedChangesAcross(project, [
+    () => {
+      git(project, "push", "--quiet", "origin", "feature:main")
+      git(project, "fetch", "--quiet", "origin")
+    },
+  ])
+
+  expect(pathsOf(before)).toEqual(["feature.ts"])
+  expect(pathsOf(after)).toEqual([])
+})
+
+test("origin's default branch moved to another branch gives a new committed listing", async () => {
+  commit(upstream, { "release.ts": "r\n" })
+  git(upstream, "push", "--quiet", "origin", "main:release")
+  git(project, "fetch", "--quiet", "origin")
+  commit(project, { "feature.ts": "f\n" })
+
+  const [before, after] = await committedChangesAcross(project, [
+    () => git(project, "remote", "set-head", "origin", "release"),
+  ])
+
+  expect(before).toMatchObject({ kind: "listed", base: "origin/main" })
+  expect(after).toMatchObject({ kind: "listed", base: "origin/release" })
+})

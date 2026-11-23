@@ -13,8 +13,8 @@ export const discardChanges = (sessionId: string, paths: ReadonlyArray<string>) 
       if (names === null) return yield* new PathOutsideWorkingFolder({ sessionId, path })
       wanted.add(names.join("/"))
     }
-    const { root, changes } = yield* changesOf(sessionId)
-    const discarded = (changes ?? []).filter((change) => wanted.has(change.path))
+    const { root, listing } = yield* changesOf(sessionId)
+    const discarded = (listing?.changes ?? []).filter((change) => wanted.has(change.path))
     if (discarded.length === 0) return
     yield* (yield* Git).discard(root, discarded).pipe(Effect.mapError(gitFailed(sessionId)))
   })
