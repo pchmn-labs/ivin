@@ -103,6 +103,11 @@ const QuestionAnswerBody = Schema.Struct({
   requestId: Schema.String,
   answers: Schema.NullOr(Schema.Array(QuestionAnswer)),
 })
+// The run ended before the user answered request `requestId`.
+const RequestUnansweredBody = Schema.Struct({
+  type: Schema.Literal("request_unanswered"),
+  requestId: Schema.String,
+})
 const StatusBody = Schema.Struct({
   type: Schema.Literal("status"),
   status: Schema.Literals(["running", "idle"]),
@@ -162,6 +167,7 @@ const eventBodies = [
   ApprovalDecisionBody,
   QuestionRequestBody,
   QuestionAnswerBody,
+  RequestUnansweredBody,
   UsageBody,
   StatusBody,
   ErrorBody,
@@ -176,7 +182,6 @@ const stored = {
   sessionId: Schema.String,
   sequence: Schema.Int,
   at: Schema.DateTimeUtcFromMillis,
-  raw: Schema.Unknown,
 }
 
 // What a harness emits; the server gives it an id, a session and a sequence when it stores it.
@@ -271,7 +276,7 @@ export const ApprovalItem = Schema.Struct({
   toolCallId: Schema.NullOr(Schema.String),
   name: Schema.String,
   input: Schema.Unknown,
-  decision: Schema.NullOr(Schema.Literals(["allow", "deny"])),
+  decision: Schema.NullOr(Schema.Literals(["allow", "deny", "unanswered"])),
 })
 
 export const QuestionItem = Schema.Struct({
@@ -280,7 +285,7 @@ export const QuestionItem = Schema.Struct({
   requestId: Schema.String,
   toolCallId: Schema.NullOr(Schema.String),
   questions: Schema.Array(Question),
-  status: Schema.Literals(["open", "answered", "declined"]),
+  status: Schema.Literals(["open", "answered", "declined", "unanswered"]),
   answers: Schema.Array(QuestionAnswer),
 })
 

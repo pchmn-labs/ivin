@@ -223,7 +223,7 @@ test("a title the agent gives before the first message is not replaced by it", a
   expect(title).toBe("Agent name")
 })
 
-test("sending a message stores the user message then the scripted events in order", async () => {
+test("sending a message stores the user message then the scripted events in order, without their raw lines", async () => {
   const db = newDatabase()
   const sent: ScriptedSend[] = []
   const sessionId = await withServer(db, [turn], sent, (client) =>
@@ -254,7 +254,7 @@ test("sending a message stores the user message then the scripted events in orde
     [7, "status"],
   ])
   expect(rows[0]!.id).toBe("msg-1")
-  expect(JSON.parse(rows[1]!.payload).raw).toEqual({ from: "scripted" })
+  expect(rows.filter((r) => "raw" in JSON.parse(r.payload))).toEqual([])
   expect(sent).toEqual([{ sessionId, id: "msg-1", text: "go", images: [] }])
 })
 
@@ -962,7 +962,7 @@ const askAndAnswer = async (allow: boolean) => {
 test("allowing a request stores the decision, tells the harness and lets the turn finish", async () => {
   const { page, responded, decisions } = await askAndAnswer(true)
 
-  expect(decisions).toMatchObject([{ requestId: "r1", allow: true, raw: null }])
+  expect(decisions).toEqual([{ type: "approval_decision", requestId: "r1", allow: true }])
   expect(page.items.find((item) => item.type === "approval")).toMatchObject({
     requestId: "r1",
     decision: "allow",

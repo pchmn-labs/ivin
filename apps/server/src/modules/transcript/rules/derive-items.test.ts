@@ -1,6 +1,6 @@
 import type { TranscriptEvent } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
-import { applyEvent, deriveItems, emptyItemState } from "./derive-items.ts"
+import { applyEvent, deriveItems, emptyItemState, replay } from "./derive-items.ts"
 
 const kindOf = (name: string) => (name === "list_files" ? "search" : "other")
 const derive = (all: TranscriptEvent[]) => deriveItems(all, kindOf)
@@ -15,7 +15,6 @@ const events = (...bodies: Body[]): TranscriptEvent[] =>
         sessionId: "s1",
         sequence: index + 1,
         at: { epochMilliseconds: (index + 1) * 1000 },
-        raw: null,
         ...body,
       }) as unknown as TranscriptEvent,
   )
@@ -263,6 +262,46 @@ test("an approval decision does not close a question, nor an answer an approval"
     { type: "question", status: "open" },
     { type: "approval", decision: null },
   ])
+})
+
+test("an unanswered request closes its approval or question in place, and only an open one", () => {
+  const unanswered = (requestId: string): Body => ({ type: "request_unanswered", requestId })
+  const { items, state } = replay(
+    events(request("r1"), asked("q1"), unanswered("r1"), unanswered("q1"), unanswered("r1")),
+    kindOf,
+  )
+
+  expect(items).toMatchObject([
+    { id: "e1", type: "approval", decision: "unanswered" },
+    { id: "e2", type: "question", status: "unanswered" },
+  ])
+  expect(state.openRequests.size).toBe(0)
+})
+
+test("replaying from a state carried over gives the items replaying every event gives", () => {
+  const all = events(
+    user("hi"),
+    assistant("one"),
+    call("t1"),
+    request("r1"),
+    {
+      type: "usage",
+      inputTokens: 1,
+      outputTokens: 1,
+      cacheReadTokens: 0,
+      cacheWriteTokens: 0,
+      costUsd: null,
+    },
+    assistant("two"),
+    assistant("three"),
+    result("t1"),
+    decision("r1", true),
+  )
+  const head = replay(all.slice(0, 6), kindOf)
+  const tail = replay(all.slice(6), kindOf, head.state)
+  const merged = new Map([...head.items, ...tail.items].map((item) => [item.id, item]))
+
+  expect([...merged.values()]).toEqual(derive(all))
 })
 
 test("an interruption is its own item and closes the open assistant message", () => {

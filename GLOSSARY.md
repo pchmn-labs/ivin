@@ -60,11 +60,11 @@ A user message the agent reads while a turn runs, when a tool call ends: it join
 _Avoid_: queued message, interjection
 
 **Approval**:
-An agent's request to run a tool that the user allows or denies, together with that decision. It is open until decided, and the session waits meanwhile.
+An agent's request to run a tool that the user allows or denies, together with that decision. It is open until decided, and the session waits meanwhile. When its turn or run ends first, it stays unanswered.
 _Avoid_: permission, permission prompt
 
 **Question**:
-A set of questions the agent asks the user in a turn, each with options to pick (one, or several when the agent allows it) or an answer in the user's own words, together with the answers given. It is open until answered or declined, and the session waits meanwhile.
+A set of questions the agent asks the user in a turn, each with options to pick (one, or several when the agent allows it) or an answer in the user's own words, together with the answers given. It is open until answered or declined, and the session waits meanwhile. When its turn or run ends first, it stays unanswered.
 _Avoid_: prompt, survey
 
 **Annotation**:

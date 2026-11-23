@@ -265,11 +265,14 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           )
         }),
       resetRunning: Effect.sync(() => {
-        db.prepare(
-          `UPDATE sessions SET status = 'idle', waiting_for = NULL, status_changed_at = last_activity_at
-           WHERE status NOT IN ('idle', 'failed')`,
-        ).run()
+        const reset = db
+          .prepare(
+            `UPDATE sessions SET status = 'idle', waiting_for = NULL, status_changed_at = last_activity_at
+             WHERE status NOT IN ('idle', 'failed') RETURNING id`,
+          )
+          .all() as { id: string }[]
         db.prepare(`UPDATE sessions SET ${pendingToUnread} WHERE pending_messages <> '[]'`).run()
+        return reset.map((row) => row.id)
       }),
       touch: (id, at) =>
         Effect.sync(() => {
@@ -290,6 +293,8 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           db.exec("BEGIN IMMEDIATE")
           try {
             db.prepare("DELETE FROM transcript_events WHERE session_id = ?").run(id)
+            db.prepare("DELETE FROM transcript_items WHERE session_id = ?").run(id)
+            db.prepare("DELETE FROM transcript_item_states WHERE session_id = ?").run(id)
             db.prepare("DELETE FROM images WHERE session_id = ?").run(id)
             db.prepare("DELETE FROM sub_views WHERE session_id = ?").run(id)
             db.prepare("DELETE FROM tabs WHERE session_id = ?").run(id)

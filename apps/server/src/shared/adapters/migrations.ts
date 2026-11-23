@@ -201,6 +201,24 @@ export const migrations: readonly Migration[] = [
     sql: `CREATE TABLE trusted_projects (path TEXT PRIMARY KEY);
     INSERT INTO trusted_projects (path) SELECT path FROM projects`,
   },
+  {
+    version: 22,
+    sql: `
+    CREATE TABLE transcript_items (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      payload TEXT NOT NULL
+    );
+    CREATE INDEX transcript_items_by_position ON transcript_items (session_id, position);
+    CREATE TABLE transcript_item_states (
+      session_id TEXT PRIMARY KEY,
+      version INTEGER NOT NULL,
+      open_message_id TEXT
+    );
+    UPDATE transcript_events SET payload = json_remove(payload, '$.raw')`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

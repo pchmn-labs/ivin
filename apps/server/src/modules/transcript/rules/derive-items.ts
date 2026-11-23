@@ -5,6 +5,9 @@ type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
 type QuestionItem = Extract<TranscriptItem, { type: "question" }>
 
+// Bump when a change to these rules alters items already stored, so they are derived again.
+export const ITEMS_VERSION = 1
+
 export interface ItemState {
   readonly openMessage: MessageItem | null
   readonly openToolCalls: ReadonlyMap<string, ToolCallItem>
@@ -134,6 +137,15 @@ export const applyEvent = (
           : { ...request, status: "answered", answers: event.answers }
       return { state: closeRequest(state, event.requestId), item }
     }
+    case "request_unanswered": {
+      const request = state.openRequests.get(event.requestId)
+      if (!request) return { state, item: null }
+      const item: ApprovalItem | QuestionItem =
+        request.type === "approval"
+          ? { ...request, decision: "unanswered" }
+          : { ...request, status: "unanswered" }
+      return { state: closeRequest(state, event.requestId), item }
+    }
     case "usage": {
       const item: TranscriptItem = {
         ...base,
@@ -154,7 +166,7 @@ export const applyEvent = (
     }
     case "working_folder":
     case "run_option": {
-      const { id: _id, sessionId: _s, sequence: _q, at: _at, raw: _raw, ...change } = event
+      const { id: _id, sessionId: _s, sequence: _q, at: _at, ...change } = event
       const item: TranscriptItem = { ...base, ...change }
       return { state: { ...state, openMessage: null }, item }
     }
@@ -166,16 +178,23 @@ export const applyEvent = (
   }
 }
 
-export const deriveItems = (
+// The items `events` create or change after `state`, each in its last form, by position.
+export const replay = (
   events: readonly TranscriptEvent[],
   toolKind: (name: string) => ToolKind,
-): TranscriptItem[] => {
+  from: ItemState = emptyItemState,
+): { readonly items: TranscriptItem[]; readonly state: ItemState } => {
   const byId = new Map<string, TranscriptItem>()
-  let state = emptyItemState
+  let state = from
   for (const event of events) {
     const next = applyEvent(state, event, toolKind)
     state = next.state
     if (next.item) byId.set(next.item.id, next.item)
   }
-  return [...byId.values()].toSorted((a, b) => a.position - b.position)
+  return { items: [...byId.values()].toSorted((a, b) => a.position - b.position), state }
 }
+
+export const deriveItems = (
+  events: readonly TranscriptEvent[],
+  toolKind: (name: string) => ToolKind,
+): TranscriptItem[] => replay(events, toolKind).items

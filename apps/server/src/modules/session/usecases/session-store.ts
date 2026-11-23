@@ -62,7 +62,8 @@ export class SessionStore extends Context.Service<
       waitingFor?: WaitingFor,
     ) => Effect.Effect<void>
     // No run survives a connection, so a session left working or waiting is idle again, its pending messages unread.
-    readonly resetRunning: Effect.Effect<void>
+    // Gives the ids of those sessions.
+    readonly resetRunning: Effect.Effect<readonly string[]>
     readonly touch: (id: string, at: Session["lastActivityAt"]) => Effect.Effect<void>
     readonly setArchivedAt: (id: string, at: Session["archivedAt"]) => Effect.Effect<void>
     // Erases the session, its transcript and its tab in one transaction.

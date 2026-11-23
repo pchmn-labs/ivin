@@ -79,7 +79,7 @@ test("a pending approval docks a sheet with the command and the two options", as
 })
 
 test("no pending approval means no sheet", async () => {
-  await mount([approval("allow")])
+  await mount([approval("allow"), approval("unanswered", "r2")])
   await expect.element(page.getByTestId("approval-sheet")).not.toBeInTheDocument()
 })
 

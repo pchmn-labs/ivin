@@ -132,9 +132,9 @@ Tests sit beside the file they test, at three levels:
 
 The terms are defined in [`GLOSSARY.md`](../../GLOSSARY.md). What the design adds to them:
 
-- Transcript events are `user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `approval_decision`, `question_request`, `question_answer`, `usage`, `status`, `error`, `interruption`, `working_folder`, `run_option`… Each is written to SQLite as it streams, never re-read from the provider's files.
+- Transcript events are `user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `approval_decision`, `question_request`, `question_answer`, `request_unanswered`, `usage`, `status`, `error`, `interruption`, `working_folder`, `run_option`… Each is written to SQLite as it streams, never re-read from the provider's files.
 - Token deltas are not events: they go to the renderer and are never stored, and the finished block is stored once, under the id its streamed copy had.
-- Provider-specific payloads are kept in a `raw` field so plugins can read what the normalisation drops; `raw` is outside the API contract and changes with the provider.
+- A harness reads the provider's own line (`raw`) while it normalises it; the stored event leaves it out.
 
 Each module this list describes has its own file, covering its server and UI sides:
 
