@@ -21,7 +21,6 @@ const command = (args: ReadonlyArray<string>) => {
   return args[at] === "worktree" ? `worktree ${args[at + 1] ?? ""}` : (args[at] ?? "")
 }
 
-// The settings ivin overrides in every repository, before git's own arguments.
 export const withOverrides = (args: ReadonlyArray<string>): ReadonlyArray<string> => {
   const name = command(args)
   return [

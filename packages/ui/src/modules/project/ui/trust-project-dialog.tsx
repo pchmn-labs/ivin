@@ -3,11 +3,11 @@ import { useRef } from "react"
 import { Button } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
-import { folderToTrustAtom } from "../atoms/folder-to-trust.ts"
+import { projectToTrustAtom } from "../atoms/project-to-trust.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
 
-export function TrustFolderDialog() {
-  const [folder, setFolder] = useAtom(folderToTrustAtom)
+export function TrustProjectDialog() {
+  const [folder, setFolder] = useAtom(projectToTrustAtom)
   const { trust } = useOpenFolder()
   // The dialog keeps its text while it fades out.
   const shown = useRef(folder)

@@ -181,40 +181,62 @@ test("a worktree of a trusted project, under .worktrees/ or made outside ivin, n
 
 test("a session in a folder outside every trusted project never starts its agent", async () => {
   const folder = join(root, "hooks")
+  const hookRan = join(root, "hook-ran")
   mkdirSync(join(folder, ".claude"), { recursive: true })
-  writeFileSync(join(folder, ".claude", "settings.json"), '{"hooks":{}}')
+  writeFileSync(
+    join(folder, ".claude", "settings.json"),
+    JSON.stringify({
+      hooks: {
+        SessionStart: [{ hooks: [{ type: "command", command: `touch '${hookRan}'` }] }],
+      },
+    }),
+  )
   const starts: StartInput[] = []
 
-  const { returned, page } = await withServer(
+  const refused = await withServer(
     newDatabase(),
     (client) =>
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: folder })
-        const returned = yield* client["session.sendMessage"]({
+        return yield* client["session.sendMessage"]({
           sessionId: session.id,
           messageId: "m1",
           text: "go",
-        })
-        const page = yield* client["transcript.getItems"]({
-          sessionId: session.id,
-          position: null,
-          before: 100,
-          after: 100,
-        })
-        return { returned, page }
+        }).pipe(Effect.flip)
       }),
     starts,
   )
 
+  expect(refused).toMatchObject({ _tag: "ProjectNotTrusted", path: folder })
   expect(starts).toEqual([])
-  expect(returned.status).toBe("failed")
-  expect(page.items).toMatchObject([
-    { id: "m1", role: "user", text: "go" },
-    {
-      type: "error",
-      message: `${folder} is in no trusted project, so ivin does not start the agent in it.`,
-    },
-  ])
+  expect(existsSync(hookRan)).toBe(false)
+})
+
+test("a folder whose .git file points into a trusted repository is not taken for its worktree", async () => {
+  const fake = join(root, "fake")
+  mkdirSync(fake)
+  writeFileSync(join(fake, ".git"), `gitdir: ${join(project, ".git")}\n`)
+  const starts: StartInput[] = []
+
+  const refused = await withServer(
+    newDatabase(),
+    (client) =>
+      Effect.gen(function* () {
+        yield* client["project.open"]({ path: project, trust: true })
+        const opening = yield* client["project.open"]({ path: fake }).pipe(Effect.flip)
+        const session = yield* client["session.create"]({ projectPath: fake })
+        const sending = yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "go",
+        }).pipe(Effect.flip)
+        return [opening._tag, sending._tag]
+      }),
+    starts,
+  )
+
+  expect(refused).toEqual(["ProjectNotTrusted", "ProjectNotTrusted"])
+  expect(starts).toEqual([])
 })
 
 test("a project saved before trust existed opens without asking", async () => {

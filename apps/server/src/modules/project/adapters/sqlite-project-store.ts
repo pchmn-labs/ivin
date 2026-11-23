@@ -62,12 +62,12 @@ export const layerSqliteProjectStore = Layer.effect(ProjectStore)(
         }),
       trust: (path) =>
         Effect.sync(() => {
-          db.prepare("INSERT OR IGNORE INTO trusted_folders (path) VALUES (?)").run(path)
+          db.prepare("INSERT OR IGNORE INTO trusted_projects (path) VALUES (?)").run(path)
         }),
-      trustedFolders: Effect.sync(() =>
-        (db.prepare("SELECT path FROM trusted_folders").all() as unknown as { path: string }[]).map(
-          (row) => row.path,
-        ),
+      trustedProjects: Effect.sync(() =>
+        (
+          db.prepare("SELECT path FROM trusted_projects").all() as unknown as { path: string }[]
+        ).map((row) => row.path),
       ),
     }
   }),

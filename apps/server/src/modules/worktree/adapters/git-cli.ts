@@ -11,7 +11,7 @@ import {
   parseWorktreeList,
   underOpenedPath,
 } from "../rules/git-output.ts"
-import { FolderTrust } from "../../project/usecases/folder-trust.ts"
+import { ProjectTrust } from "../../project/usecases/project-trust.ts"
 import { withOverrides } from "../rules/git-overrides.ts"
 import { hasOwnCommits, isSquashMerged, mergeAddsNothing } from "../rules/merge-state.ts"
 import { type CommitRange, Git, GitError } from "../usecases/git.ts"
@@ -40,7 +40,7 @@ const runGit = (
   } = {},
 ) =>
   Effect.gen(function* () {
-    if (!(yield* (yield* FolderTrust).isTrusted(cwd)))
+    if (!(yield* (yield* ProjectTrust).isTrusted(cwd)))
       return yield* new GitError({
         message: `${cwd} is in no trusted project, so ivin runs no git command in it.`,
       })
@@ -180,18 +180,18 @@ type Untrusted = {
   readonly [K in keyof GitShape]: GitShape[K] extends (
     ...args: infer A
   ) => Effect.Effect<infer S, infer E>
-    ? (...args: A) => Effect.Effect<S, E, FolderTrust>
+    ? (...args: A) => Effect.Effect<S, E, ProjectTrust>
     : never
 }
 
-const trusting = (methods: Untrusted, trust: FolderTrust["Service"]) =>
+const trusting = (methods: Untrusted, trust: ProjectTrust["Service"]) =>
   Object.fromEntries(
     Object.entries(methods).map(([name, method]) => [
       name,
       (...args: never[]) =>
-        (method as (...args: never[]) => Effect.Effect<unknown, unknown, FolderTrust>)(
+        (method as (...args: never[]) => Effect.Effect<unknown, unknown, ProjectTrust>)(
           ...args,
-        ).pipe(Effect.provideService(FolderTrust, trust)),
+        ).pipe(Effect.provideService(ProjectTrust, trust)),
     ]),
   ) as unknown as GitShape
 
@@ -325,6 +325,6 @@ const methods: Untrusted = {
 
 export const layerGitCli = Layer.effect(Git)(
   Effect.gen(function* () {
-    return trusting(methods, yield* FolderTrust)
+    return trusting(methods, yield* ProjectTrust)
   }),
 )

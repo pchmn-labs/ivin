@@ -334,7 +334,7 @@ test("a folder in no trusted project asks to be trusted before it opens, and Tru
     value: { pickFolder: () => Promise.resolve("/dev/other") },
   })
   const server = await mountApp()
-  server.untrustedFolders.add("/dev/other")
+  server.untrustedProjects.add("/dev/other")
   await page.getByRole("button", { name: "Open folder…" }).click()
   const dialog = page.getByRole("dialog")
   await expect.element(dialog.getByText("Trust “other”?")).toBeVisible()
@@ -345,7 +345,7 @@ test("a folder in no trusted project asks to be trusted before it opens, and Tru
   await dialog.getByRole("button", { name: "Trust and open" }).click()
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
-  expect(server.untrustedFolders.has("/dev/other")).toBe(false)
+  expect(server.untrustedProjects.has("/dev/other")).toBe(false)
 })
 
 test("cancelling the trust dialog leaves the folder unopened and shows no error", async () => {
@@ -354,14 +354,14 @@ test("cancelling the trust dialog leaves the folder unopened and shows no error"
     value: { pickFolder: () => Promise.resolve("/dev/other") },
   })
   const server = await mountApp()
-  server.untrustedFolders.add("/dev/other")
+  server.untrustedProjects.add("/dev/other")
   await page.getByRole("button", { name: "Open folder…" }).click()
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click()
 
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
   await expect.element(page.getByTestId("project-name")).not.toHaveTextContent("other")
-  expect(server.untrustedFolders.has("/dev/other")).toBe(true)
+  expect(server.untrustedProjects.has("/dev/other")).toBe(true)
 })
 
 test("a server that does not answer is reported in the window, without a raw error", async () => {

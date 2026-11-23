@@ -13,6 +13,6 @@ export class ProjectStore extends Context.Service<
     readonly removeOpen: (path: string) => Effect.Effect<void>
     readonly select: (path: string | null) => Effect.Effect<void>
     readonly trust: (path: string) => Effect.Effect<void>
-    readonly trustedFolders: Effect.Effect<ReadonlyArray<string>>
+    readonly trustedProjects: Effect.Effect<ReadonlyArray<string>>
   }
 >()("ivin/server/ProjectStore") {}

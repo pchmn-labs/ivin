@@ -13,7 +13,7 @@ import { ProjectRail } from "../modules/project/ui/project-rail.tsx"
 import { ProjectStrip } from "../modules/project/ui/project-strip.tsx"
 import { useStepProject } from "../modules/project/hooks/use-step-project.ts"
 import { NoProject, OpenFolderError } from "../modules/project/ui/no-project.tsx"
-import { TrustFolderDialog } from "../modules/project/ui/trust-folder-dialog.tsx"
+import { TrustProjectDialog } from "../modules/project/ui/trust-project-dialog.tsx"
 import { useReportUncaughtErrors } from "../modules/log/hooks/use-report-uncaught-errors.ts"
 import { useRecordSessionVisits } from "../modules/session/hooks/use-session-history.ts"
 import { archivedViewOpenAtom } from "../modules/session/atoms/archived-view.ts"
@@ -115,7 +115,7 @@ export function App() {
             <MainTopBar projectPath={null} controls={null} />
             {serverLost}
             <OpenFolderError />
-            <TrustFolderDialog />
+            <TrustProjectDialog />
             <KeybindingsFileProblem />
             <NoProject />
           </main>
@@ -175,7 +175,7 @@ export function App() {
             />
             {serverLost}
             <OpenFolderError />
-            <TrustFolderDialog />
+            <TrustProjectDialog />
             <StartSessionError projectPath={projectPath} />
             <KeybindingsFileProblem />
             <TabView projectPath={projectPath} />

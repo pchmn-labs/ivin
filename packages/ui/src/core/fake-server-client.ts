@@ -108,7 +108,7 @@ export interface FakeServer {
   // Makes the next tab.reorder wait until `release` is called, or fail.
   readonly holdNextReorder: () => { readonly release: () => void; readonly fail: () => void }
   // Folders `project.open` refuses until a call carries the user's trust.
-  readonly untrustedFolders: Set<string>
+  readonly untrustedProjects: Set<string>
   // Opens a project, or a session's tab, as the server would.
   readonly openProject: (path: string) => void
   readonly openTab: (sessionId: string) => void
@@ -291,7 +291,7 @@ export const makeFakeServer = (
         : Effect.fail(new SessionNotFound({ sessionId })),
     )
   const failing = new Set<string>()
-  const untrustedFolders = new Set<string>()
+  const untrustedProjects = new Set<string>()
   const holding = new Map<string, Promise<boolean>>()
   const sentMessages: Array<FakeServer["sentMessages"][number]> = []
   const pickedFolders: Array<WorkingFolderChoice> = []
@@ -482,9 +482,9 @@ export const makeFakeServer = (
     "project.list": () => Effect.sync(openProjects),
     "project.open": ({ path, trust }: { path: string; trust?: boolean }) =>
       Effect.gen(function* () {
-        if (untrustedFolders.has(path)) {
+        if (untrustedProjects.has(path)) {
           if (!trust) return yield* new ProjectNotTrusted({ path })
-          untrustedFolders.delete(path)
+          untrustedProjects.delete(path)
         }
         if (!projects.some((p) => p.path === path)) {
           projects.push({ path, name: path.split("/").at(-1)!, lastOpenedAt: tick() })
@@ -1291,7 +1291,7 @@ export const makeFakeServer = (
       Effect.runSync(PubSub.publish(keybindingChanges, state))
     },
     failNextCall: (rpc) => void failing.add(rpc),
-    untrustedFolders,
+    untrustedProjects,
     holdNextCall: (rpc) => {
       let settle!: (ok: boolean) => void
       holding.set(rpc, new Promise<boolean>((resolve) => (settle = resolve)))

@@ -1,7 +1,7 @@
 import { useAtomSet } from "@effect/atom-react"
 import { Cause, Exit } from "effect"
 import { pickFolder } from "../adapters/pick-folder.ts"
-import { folderToTrustAtom } from "../atoms/folder-to-trust.ts"
+import { projectToTrustAtom } from "../atoms/project-to-trust.ts"
 import { openFolderFailureAtom } from "../atoms/open-folder-failure.ts"
 import { openProjectAtom } from "../atoms/open-project.ts"
 import { isNotTrusted, openProjectFailure } from "../rules/failure-message.ts"
@@ -9,7 +9,7 @@ import { isNotTrusted, openProjectFailure } from "../rules/failure-message.ts"
 export function useOpenFolder() {
   const openProject = useAtomSet(openProjectAtom, { mode: "promiseExit" })
   const setFailure = useAtomSet(openFolderFailureAtom)
-  const setFolderToTrust = useAtomSet(folderToTrustAtom)
+  const setFolderToTrust = useAtomSet(projectToTrustAtom)
   const open = async (path: string, trust = false) => {
     setFailure(null)
     const exit = await openProject(trust ? { path, trust } : { path })

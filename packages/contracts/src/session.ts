@@ -1,6 +1,7 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
 import { ImageData, ImageRef, QuestionAnswer } from "./transcript.ts"
+import { ProjectNotTrusted } from "./project.ts"
 
 // `waiting`: the agent waits on the user, such as an approval or an answer to its questions.
 export const SessionStatus = Schema.Literals([
@@ -242,7 +243,12 @@ export const SessionRpcs = RpcGroup.make(
       workingFolder: Schema.optional(WorkingFolderChoice),
     },
     success: Session,
-    error: Schema.Union([SessionNotFound, WorktreeNotCreated, WorkingFolderDeleted]),
+    error: Schema.Union([
+      SessionNotFound,
+      WorktreeNotCreated,
+      WorkingFolderDeleted,
+      ProjectNotTrusted,
+    ]),
   }),
   Rpc.make("session.setRunOptions", {
     payload: {

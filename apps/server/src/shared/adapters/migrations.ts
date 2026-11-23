@@ -198,9 +198,8 @@ export const migrations: readonly Migration[] = [
   },
   {
     version: 21,
-    // ivin already ran git in every saved project.
-    sql: `CREATE TABLE trusted_folders (path TEXT PRIMARY KEY);
-    INSERT INTO trusted_folders (path) SELECT path FROM projects`,
+    sql: `CREATE TABLE trusted_projects (path TEXT PRIMARY KEY);
+    INSERT INTO trusted_projects (path) SELECT path FROM projects`,
   },
 ]
 

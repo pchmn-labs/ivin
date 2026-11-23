@@ -31,7 +31,7 @@ import { lockPlugin } from "../modules/plugin/usecases/lock-plugin.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
-import { layerFsFolderTrust } from "../modules/project/adapters/fs-folder-trust.ts"
+import { layerFsProjectTrust } from "../modules/project/adapters/fs-project-trust.ts"
 import { layerSqliteProjectStore } from "../modules/project/adapters/sqlite-project-store.ts"
 import { closeProject } from "../modules/project/usecases/close-project.ts"
 import { listProjects } from "../modules/project/usecases/list-projects.ts"
@@ -116,7 +116,7 @@ export const layerServices = Layer.mergeAll(
       layerAnnotationFeed,
     ),
   ),
-  Layer.provideMerge(layerFsFolderTrust),
+  Layer.provideMerge(layerFsProjectTrust),
   Layer.provideMerge(layerSqliteProjectStore),
 )
 

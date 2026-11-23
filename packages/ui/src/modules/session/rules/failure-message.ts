@@ -11,6 +11,7 @@ import type {
   WorktreeFailure,
   WorktreeNotCreated,
 } from "@ivin/contracts/session"
+import type { ProjectNotTrusted } from "@ivin/contracts/project"
 import type { RunOption } from "@ivin/contracts/transcript"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import type { RunOptions } from "@ivin/contracts/session"
@@ -53,6 +54,12 @@ export const sendMessageFailure = (error: unknown): ActionFailure => {
     return {
       text: "This session's worktree was deleted, so the message was not sent. Pick where the agent continues, then send it again.",
       retryable: false,
+    }
+  }
+  if (isTag<ProjectNotTrusted>(error, "ProjectNotTrusted")) {
+    return {
+      text: "The message was not sent: this session's folder is in no trusted project, so ivin does not start the agent there. Open the folder as a project and trust it, then send again.",
+      retryable: true,
     }
   }
   return { text: "The message was not sent.", retryable: true }
