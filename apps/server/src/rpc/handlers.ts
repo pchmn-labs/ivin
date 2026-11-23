@@ -86,6 +86,7 @@ import { layerImageCompression } from "../modules/transcript/usecases/image-comp
 import { listImages } from "../modules/transcript/usecases/list-images.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
+import { watchUsage } from "../modules/transcript/usecases/watch-usage.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
 import { layerFirstMessageReading } from "../modules/session/usecases/first-message-reading.ts"
 import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
@@ -230,6 +231,7 @@ export const handlers = Rpcs.toLayer(
       "transcript.getItems": ({ sessionId, position, before, after }) =>
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),
+      "transcript.watchUsage": ({ sessionId }) => watchUsage(sessionId),
       "transcript.listImages": ({ sessionId }) => listImages(sessionId),
     }),
   ),

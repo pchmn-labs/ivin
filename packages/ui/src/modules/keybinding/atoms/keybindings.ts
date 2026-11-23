@@ -15,6 +15,7 @@ export const coreKeybindings: ReadonlyArray<DefaultKeybinding> = [
   { key: "ctrl+mod+[", command: "project.previous", when: null, pluginId: null },
   { key: "escape", command: "session.interrupt", when: null, pluginId: null },
   { key: "enter", command: "composer.send", when: "composer", pluginId: null },
+  { key: "mod+alt+enter", command: "session.sendNow", when: "composer", pluginId: null },
   { key: "mod+shift+backspace", command: "session.archive", when: null, pluginId: null },
   { key: "mod+shift+a", command: "session.showArchived", when: null, pluginId: null },
   { key: "mod+backspace", command: "session.delete", when: "archivedSessions", pluginId: null },

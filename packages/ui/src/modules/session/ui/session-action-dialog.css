@@ -1,0 +1,28 @@
+.iv-session-action-dialog__files {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+  color: var(--iv-text);
+}
+
+.iv-session-action-dialog__file {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  overflow-wrap: anywhere;
+}
+
+.iv-session-action-dialog__file::before {
+  content: "";
+  flex: none;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--iv-danger);
+}

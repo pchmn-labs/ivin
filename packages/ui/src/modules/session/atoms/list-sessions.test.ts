@@ -28,7 +28,11 @@ test("the session list shows the newest activity first, after create and after s
   const [newest, oldest] = registry.get(sessions.ids)
   expect(registry.get(sessions.item(oldest!))?.id).toBe(oldest)
 
-  registry.set(sendMessageAtom, { projectPath: project, sessionId: oldest!, text: "hello" })
+  registry.set(sendMessageAtom, {
+    projectPath: project,
+    sessionId: oldest!,
+    draft: { text: "hello", images: [] },
+  })
   await vi.waitFor(() => expect(registry.get(sessions.ids)).toEqual([oldest, newest]))
   expect(registry.get(sessions.item(oldest!))?.title).toBe("hello")
 })

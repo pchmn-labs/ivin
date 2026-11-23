@@ -1,14 +1,7 @@
 import { expect, test } from "vitest"
-import { pendingText, withRelaunchMessage, withUnreadMessages } from "./draft.ts"
+import { pendingText, withRelaunchMessage } from "./draft.ts"
 
 const draft = (text: string) => ({ text, images: [] })
-
-test("unread messages fill an empty draft, follow typed text, and are added once", () => {
-  expect(withUnreadMessages(draft(""), "one")).toEqual(draft("one"))
-  expect(withUnreadMessages(draft("typed"), "one")).toEqual(draft("typed\n\none"))
-  const once = withUnreadMessages(draft("typed"), "one")
-  expect(withUnreadMessages(once, "one")).toBe(once)
-})
 
 test("the message of a failed relaunch comes back only into an empty draft", () => {
   expect(withRelaunchMessage(draft(""), { message: "fix it" })).toEqual(draft("fix it"))

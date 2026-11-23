@@ -124,7 +124,7 @@ export interface FakeServer {
   readonly tabOrder: (projectPath: string) => ReadonlyArray<string>
   // Streams the user's keybindings to `keybinding.watch`, as after a change to the file.
   readonly setUserKeybindings: (state: UserKeybindings) => void
-  // Makes the next call of this RPC die, as a lost connection would.
+  // Makes the next call of this RPC die, as a lost connection would; a `watch` RPC streams the death.
   readonly failNextCall: (rpc: string) => void
   readonly callsOf: (rpc: string) => number
   // Makes the next call of this RPC wait until `release` is called, or die as `failNextCall`.
@@ -725,9 +725,10 @@ export const makeFakeServer = (
       Effect.flatMap(
         Effect.promise(async () => {
           sentMessages.push(input)
-          if (hold) {
-            const ok = await hold.wait
-            hold = null
+          const held = hold
+          hold = null
+          if (held) {
+            const ok = await held.wait
             if (!ok) throw new Error("send failed")
           }
           return sessions.get(input.sessionId)
@@ -1147,6 +1148,34 @@ export const makeFakeServer = (
         return updated
       }),
     "transcript.getItems": getItems,
+    "transcript.watchUsage": ({ sessionId }: { sessionId: string }) =>
+      Stream.unwrap(
+        Effect.gen(function* () {
+          const subscription = yield* PubSub.subscribe(pubsub)
+          const total = () => {
+            const usages = itemsOf(sessionId).filter((item) => item.type === "usage")
+            return usages.length === 0
+              ? null
+              : {
+                  tokens: usages.reduce((sum, u) => sum + u.inputTokens + u.outputTokens, 0),
+                  costUsd: usages.reduce((sum, u) => sum + (u.costUsd ?? 0), 0),
+                }
+          }
+          return Stream.make(total()).pipe(
+            Stream.concat(
+              Stream.fromSubscription(subscription).pipe(
+                Stream.filter(
+                  (change) =>
+                    change.type === "upsert" &&
+                    change.item.sessionId === sessionId &&
+                    change.item.type === "usage",
+                ),
+                Stream.map(total),
+              ),
+            ),
+          )
+        }),
+      ),
     "transcript.listImages": ({ sessionId }: { sessionId: string }) =>
       Effect.sync(() =>
         itemsOf(sessionId).flatMap((item) =>
@@ -1241,7 +1270,9 @@ export const makeFakeServer = (
         calls.set(rpc, (calls.get(rpc) ?? 0) + 1)
         const run = () =>
           failing.delete(rpc)
-            ? Effect.die(new Error(`${rpc} failed`))
+            ? /\.watch/.test(rpc)
+              ? Stream.die(new Error(`${rpc} failed`))
+              : Effect.die(new Error(`${rpc} failed`))
             : (call as (...a: Array<unknown>) => unknown)(...args)
         const held = holding.get(rpc)
         if (!held) return run()

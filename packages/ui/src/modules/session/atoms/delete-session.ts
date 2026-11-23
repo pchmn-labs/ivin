@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { Atom } from "effect/reactivity"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
+import { discardSessionEditsAtom } from "../../file/atoms/file-edit.ts"
 import { tabsOf } from "../../tab/atoms/list-tabs.ts"
 import { archivedSessionsOf } from "./list-archived-sessions.ts"
 import { sessionsOf } from "./list-sessions.ts"
@@ -14,6 +15,7 @@ export const deleteSessionAtom = serverRuntime.fn<{
     const client = yield* ServerClient
     yield* client["session.delete"]({ sessionId })
     yield* sessionsOf(projectPath).remove(sessionId)
+    yield* Atom.set(discardSessionEditsAtom, sessionId)
     yield* tabsOf(projectPath).set(yield* client["tab.list"]({ projectPath }))
     yield* Atom.refresh(archivedSessionsOf(projectPath))
   }).pipe(recordingFailure("delete", sessionId)),

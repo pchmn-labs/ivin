@@ -1,4 +1,5 @@
 import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { AsyncResult } from "effect/reactivity"
 import { TranscriptView } from "../../transcript/ui/transcript-view.tsx"
 import { transcriptOf } from "../../transcript/atoms/get-items.ts"
 import { projectsAtom } from "../../project/atoms/list-projects.ts"
@@ -15,7 +16,11 @@ import { Slot } from "../../../app/slot-renderer.tsx"
 import "./session-view.css"
 
 function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
-  const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
+  const sessions = sessionsOf(projectPath)
+  const session = useAtomValue(sessions.item(sessionId))
+  const sessionsLoaded = AsyncResult.isSuccess(
+    useAtomValue(sessions.status) ?? AsyncResult.initial(),
+  )
   const status = session?.status
   const transcript = useAtomValue(transcriptOf(sessionId).view)
   const projectName = useAtomValue(projectsAtom.value).projects.find(
@@ -51,7 +56,12 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
       )}
       {!blank && (
         <div className="iv-session-view__transcript">
-          <TranscriptView key={sessionId} sessionId={sessionId} live={isRunning(status)} />
+          <TranscriptView
+            key={sessionId}
+            sessionId={sessionId}
+            live={isRunning(status)}
+            sessionGone={session === undefined && sessionsLoaded}
+          />
         </div>
       )}
       {status === "preparing_worktree" && (

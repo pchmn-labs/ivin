@@ -4,6 +4,8 @@ import {
   answerQuestionFailure,
   checkoutFailure,
   createSessionFailure,
+  renameFailure,
+  sendNowFailure,
   sendMessageFailure,
   setRunOptionsFailure,
 } from "./failure-message.ts"
@@ -149,4 +151,20 @@ test("a pull refused after a stash names the stash that holds the changes", () =
   expect(checkoutFailure(kept, "fastForward").text).toBe(
     'The branch was not pulled. Your changes are in the stash "WIP before pulling": run git stash pop to get them back.',
   )
+})
+
+test("a Send now or a rename that failed says what did not happen and offers a retry", () => {
+  expect(sendNowFailure(new Error("lost"))).toEqual({
+    text: "The messages were not sent now.",
+    retryable: true,
+  })
+  expect(sendNowFailure(sessionNotFound).retryable).toBe(false)
+  expect(renameFailure(new Error("lost"))).toEqual({
+    text: "The session was not renamed.",
+    retryable: true,
+  })
+  expect(renameFailure(sessionNotFound)).toEqual({
+    text: "This session no longer exists.",
+    retryable: false,
+  })
 })

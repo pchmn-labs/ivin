@@ -1,22 +1,26 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { Session } from "@ivin/contracts/session"
 import type { MenuItem } from "@ivin/plugin-api/ui"
-import { useCallback } from "react"
+import { useCallback, useContext } from "react"
+import { unsavedPathsOf } from "../../file/atoms/file-edit.ts"
 import { archiveSessionAtom } from "../atoms/archive-session.ts"
 import { sessionActionFailureOf } from "../atoms/session-action-failure.ts"
 import { sessionConfirmationAtom } from "../atoms/session-confirmation.ts"
-import { isRunning } from "../rules/is-running.ts"
 import type { ConfirmedAction } from "../rules/session-action-failure.ts"
+import { needsConfirmation } from "../rules/session-confirmation.ts"
 
 export function useRequestSessionAction() {
   const confirm = useAtomSet(sessionConfirmationAtom)
   const archive = useAtomSet(archiveSessionAtom)
+  const registry = useContext(RegistryContext)
   return useCallback(
     (action: ConfirmedAction, session: Session) => {
-      if (action === "delete" || isRunning(session.status)) confirm({ action, session })
+      const unsaved = registry.get(unsavedPathsOf(session.id, session.workingFolder))
+      const confirmation = { action, session, unsaved }
+      if (needsConfirmation(confirmation)) confirm(confirmation)
       else archive({ projectPath: session.projectPath, sessionId: session.id })
     },
-    [confirm, archive],
+    [registry, confirm, archive],
   )
 }
 

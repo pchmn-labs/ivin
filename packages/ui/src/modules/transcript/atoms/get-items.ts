@@ -1,5 +1,5 @@
 import { Effect, Stream } from "effect"
-import { Atom, AtomRegistry } from "effect/reactivity"
+import { Atom, AsyncResult, AtomRegistry } from "effect/reactivity"
 import type { TranscriptDelta, TranscriptItem } from "@ivin/contracts/transcript"
 import { makeFrameBatch } from "@ivin/state/frame-batch"
 import { makeEntityList, type EntityWriter } from "@ivin/state/entity-list"
@@ -98,8 +98,15 @@ export const transcriptOf = strongFamily((sessionId: string) => {
   })
   const view = Atom.readable((get) => {
     // Read after the feed starts: its first write to `paging` would otherwise rebuild this atom, and the feed with it.
-    const { rows: list, prepended } = get(rows)
-    return { ...get(paging), rows: list, prepended }
+    const { rows: shown, prepended } = get(rows)
+    const status = get(list.status)
+    return {
+      ...get(paging),
+      // A retry in flight is waiting, not failed.
+      failed: status !== undefined && AsyncResult.isFailure(status) && !status.waiting,
+      rows: shown,
+      prepended,
+    }
   })
   // `live`: the session's agent is working.
   const work = Atom.family((live: boolean) =>

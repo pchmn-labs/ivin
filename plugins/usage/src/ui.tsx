@@ -1,9 +1,9 @@
-import { Text, defineUi, useTranscript } from "@ivin/plugin-api/ui"
+import { Text, defineUi, useUsage } from "@ivin/plugin-api/ui"
 import type { SlotProps } from "@ivin/plugin-api/ui"
-import { formatUsage, totalUsage } from "./rules/total-usage.ts"
+import { formatUsage } from "./rules/total-usage.ts"
 
 function UsageStatus({ sessionId }: SlotProps["composer.status"]) {
-  const total = totalUsage(useTranscript(sessionId))
+  const total = useUsage(sessionId)
   if (total === null) return null
   return (
     <Text size="sm" tone="muted" data-testid="usage-status">

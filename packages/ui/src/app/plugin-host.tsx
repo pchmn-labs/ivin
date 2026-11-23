@@ -24,6 +24,7 @@ import {
   type ActionFailure,
   type CommittedChangeListing,
   type ChangeListing,
+  type Draft,
   type UiHost,
 } from "@ivin/plugin-api/ui"
 import { sessionAnnotationsOf } from "../modules/annotation/atoms/list-annotations.ts"
@@ -36,16 +37,16 @@ import { useSessionActions } from "../modules/session/hooks/use-session-actions.
 import { useSessionLocation } from "../modules/session/hooks/use-session-location.ts"
 import { draftOf } from "../modules/session/atoms/draft.ts"
 import { interruptSessionAtom } from "../modules/session/atoms/interrupt-session.ts"
-import { renameSessionAtom } from "../modules/session/atoms/rename-session.ts"
+import { renameFailureOf, renameSessionAtom } from "../modules/session/atoms/rename-session.ts"
 import { sendMessageAtom } from "../modules/session/atoms/send-message.ts"
-import { sendNowAtom } from "../modules/session/atoms/send-now.ts"
+import { sendFailureOf } from "../modules/session/atoms/send-failure.ts"
+import { sendNowAtom, sendNowFailureOf } from "../modules/session/atoms/send-now.ts"
+import { takeUnreadMessagesAtom } from "../modules/session/atoms/take-unread-messages.ts"
 import { setRunOptionsAtom } from "../modules/session/atoms/set-run-options.ts"
 import { workingFolderChoiceOf } from "../modules/session/atoms/working-folder-choice.ts"
-import { draftImages } from "../modules/session/rules/draft.ts"
 import {
   answerApprovalFailure,
   answerQuestionFailure,
-  sendMessageFailure,
   setRunOptionsFailure,
 } from "../modules/session/rules/failure-message.ts"
 import { getHarnessAtom } from "../modules/server/atoms/get-harness.ts"
@@ -72,6 +73,7 @@ import { subViewsOf } from "../modules/tab/atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../modules/tab/atoms/open-sub-view.ts"
 import { openDiffFailure, openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
 import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
+import { usageOf } from "../modules/transcript/atoms/get-usage.ts"
 import { settingsAtom } from "../modules/setting/atoms/settings.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
@@ -137,6 +139,10 @@ const host: UiHost = {
     return (sessionId) => openTab({ sessionId })
   },
   useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).list.items),
+  useUsage: (sessionId) => {
+    const result = useAtomValue(usageOf(sessionId))
+    return AsyncResult.isSuccess(result) ? result.value : null
+  },
   useAnnotations: (sessionId, kind) => {
     const annotations = useAtomValue(sessionAnnotationsOf(sessionId).items)
     return useMemo(() => annotations.filter((a) => a.kind === kind), [annotations, kind])
@@ -158,33 +164,55 @@ const host: UiHost = {
     }
   },
   useSessionActions,
-  useRenameSession: () => {
+  useRenameSession: (session) => {
     const rename = useAtomSet(renameSessionAtom)
-    return (session, title) =>
+    const failure = useAtomValue(renameFailureOf(session.id))
+    const run = (title: string) =>
       rename({ projectPath: session.projectPath, sessionId: session.id, title })
+    return {
+      rename: run,
+      failure: failure && {
+        message: failure.text,
+        ...(failure.retryable && { onRetry: () => run(failure.title) }),
+      },
+    }
   },
   useSessionLocation,
   useDraft: (sessionId) => useAtom(draftOf(sessionId)),
   useSendMessage: (sessionId) => {
     const session = useOpenSession(sessionId)
     const choice = useAtomValue(workingFolderChoiceOf(sessionId))
-    const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
-    return async (draft) => {
+    const sendMessage = useAtomSet(sendMessageAtom)
+    const failure = useAtomValue(sendFailureOf(sessionId))
+    const send = (draft: Draft) => {
       const workingFolder = session !== undefined && !session.started ? choice : undefined
-      const exit = await send({
+      sendMessage({
         projectPath: session?.projectPath ?? NO_PROJECT,
         sessionId,
-        text: draft.text,
-        images: draftImages(draft).map(({ id, number, mediaType, base64 }) => ({
-          id,
-          number,
-          mediaType,
-          base64,
-        })),
+        draft,
         ...(workingFolder && { workingFolder }),
       })
-      return failureOf(exit, sendMessageFailure)
     }
+    return {
+      send,
+      failure: failure && {
+        message: failure.text,
+        ...(failure.retryable && { onRetry: () => send(failure.draft) }),
+      },
+    }
+  },
+  useTakeUnreadMessages: (sessionId) => {
+    const session = useOpenSession(sessionId)
+    const take = useAtomSet(takeUnreadMessagesAtom)
+    const ids = session?.unreadMessages.map((message) => message.id).join(",")
+    useEffect(() => {
+      if (session === undefined) return
+      take({
+        sessionId,
+        lastImageNumber: session.lastImageNumber,
+        messages: session.unreadMessages,
+      })
+    }, [sessionId, ids, session !== undefined])
   },
   useInterruptSession: (sessionId) => {
     const projectPath = useSessionProjectPath(sessionId)
@@ -193,8 +221,16 @@ const host: UiHost = {
   },
   useSendNow: (sessionId) => {
     const projectPath = useSessionProjectPath(sessionId)
-    const sendNow = useAtomSet(sendNowAtom)
-    return () => sendNow({ projectPath, sessionId })
+    const run = useAtomSet(sendNowAtom)
+    const failure = useAtomValue(sendNowFailureOf(sessionId))
+    const sendNow = () => run({ projectPath, sessionId })
+    return {
+      sendNow,
+      failure: failure && {
+        message: failure.text,
+        ...(failure.retryable && { onRetry: sendNow }),
+      },
+    }
   },
   useOfferedRunOptions: (sessionId) => {
     const harness = useOpenSession(sessionId)?.harness

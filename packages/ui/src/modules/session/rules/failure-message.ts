@@ -102,6 +102,16 @@ export const setRunOptionsFailure = (
   return { text: `${what} not changed.`, retryable: true }
 }
 
+export const sendNowFailure = (error: unknown): ActionFailure =>
+  isTag<SessionNotFound>(error, "SessionNotFound")
+    ? { text: "This session no longer exists.", retryable: false }
+    : { text: "The messages were not sent now.", retryable: true }
+
+export const renameFailure = (error: unknown): ActionFailure =>
+  isTag<SessionNotFound>(error, "SessionNotFound")
+    ? { text: "This session no longer exists.", retryable: false }
+    : { text: "The session was not renamed.", retryable: true }
+
 export const createSessionFailure = (_error: unknown): ActionFailure => ({
   text: "The session was not created.",
   retryable: true,

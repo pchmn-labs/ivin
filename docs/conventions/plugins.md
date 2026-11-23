@@ -21,3 +21,7 @@ plugins/<id>/
 
 - `rules/`: called directly.
 - The halves: with a fake `ctx`.
+
+## Failures the host contains
+
+An editor extension that CodeMirror rejects when the host builds an editor state with it, and a file icon function that throws, are turned off and reported in `ivin plugin logs <id>`; the rest of the plugin keeps working. A slot component that throws while rendering is reported there too.

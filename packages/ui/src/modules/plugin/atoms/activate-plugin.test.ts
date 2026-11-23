@@ -1,5 +1,5 @@
 import { AtomRegistry } from "effect/reactivity"
-import { expect, test } from "vitest"
+import { expect, test, vi } from "vitest"
 import { EditorView } from "@ivin/plugin-api/editor"
 import { defineUi } from "@ivin/plugin-api/ui"
 import { activatePlugin, type UiPluginEntry } from "./activate-plugin.ts"
@@ -7,6 +7,7 @@ import { commandsAtom } from "../../command/atoms/commands.ts"
 import { runCommand } from "../../command/atoms/run-command.ts"
 import { defaultKeybindingsAtom } from "../../keybinding/atoms/keybindings.ts"
 import { contributionsAtom, editorExtensionsAtom, fileIconsAtom } from "./contributions.ts"
+import { makeTestRegistry } from "../../../core/test-registry.ts"
 
 const plugin = (id: string): UiPluginEntry => ({
   manifest: { id },
@@ -109,4 +110,47 @@ test("a plugin's file URL is served from its own folder", () => {
     () => undefined,
   )
   expect(url).toBe("ivin-plugin://file-icons/icons/a.svg")
+})
+
+test("an editor extension CodeMirror rejects is turned off and reported against its plugin", async () => {
+  const { registry, server } = makeTestRegistry()
+  const good = EditorView.contentAttributes.of({ "data-good": "yes" })
+  const invalid = { extension: 42 } as never
+  activatePlugin(
+    registry,
+    {
+      manifest: { id: "vim" },
+      activate: defineUi((ctx) => {
+        ctx.editorExtensions.add(invalid)
+        ctx.editorExtensions.add(good)
+      }),
+    },
+    () => undefined,
+  )
+  expect(registry.get(editorExtensionsAtom)).toEqual([good])
+  await vi.waitFor(() => expect(server.pluginFailures).toHaveLength(1))
+  expect(server.pluginFailures[0]?.id).toBe("vim")
+})
+
+test("a file icon function that throws is turned off, reported once, and the others still draw", async () => {
+  const { registry, server } = makeTestRegistry()
+  const row = { name: "a", folder: false, open: false }
+  activatePlugin(
+    registry,
+    {
+      manifest: { id: "icons" },
+      activate: defineUi((ctx) => {
+        ctx.fileIcons.add(() => {
+          throw new Error("boom")
+        })
+        ctx.fileIcons.add(() => "fallback")
+      }),
+    },
+    () => undefined,
+  )
+  const draw = () => registry.get(fileIconsAtom).map((icon) => icon(row))
+  expect(draw()).toEqual([null, "fallback"])
+  expect(draw()).toEqual([null, "fallback"])
+  await vi.waitFor(() => expect(server.pluginFailures).toHaveLength(1))
+  expect(server.pluginFailures[0]?.id).toBe("icons")
 })

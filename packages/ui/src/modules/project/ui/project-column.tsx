@@ -1,4 +1,4 @@
-import { useAtom, useAtomSet } from "@effect/atom-react"
+import { useAtom } from "@effect/atom-react"
 import type { ReactNode } from "react"
 import type { Project } from "@ivin/contracts/project"
 import { IconButton } from "../../../core/components/button/button.tsx"
@@ -7,7 +7,7 @@ import { useCommandKey } from "../../keybinding/hooks/use-key-hint.ts"
 import { archivedViewOpenAtom } from "../../session/atoms/archived-view.ts"
 import { ArchivedSessionList } from "../../session/ui/archived-session-list.tsx"
 import { NewSessionButton } from "../../session/ui/new-session-button.tsx"
-import { closeProjectAtom } from "../atoms/close-project.ts"
+import { useRequestCloseProject } from "../hooks/use-request-close-project.ts"
 import { ProjectCreature } from "./project-creature.tsx"
 import { ProjectSelect } from "./project-select.tsx"
 import "./project-column.css"
@@ -21,7 +21,7 @@ export function ProjectColumn({
   projectMenu?: boolean
   children: ReactNode
 }) {
-  const closeProject = useAtomSet(closeProjectAtom)
+  const requestClose = useRequestCloseProject()
   const [archivedOpen, setArchivedOpen] = useAtom(archivedViewOpenAtom)
   const archivedKey = useCommandKey("session.showArchived")
   if (archivedOpen) {
@@ -63,7 +63,7 @@ export function ProjectColumn({
             {
               label: "Close project",
               icon: "x",
-              onSelect: () => closeProject(project.path),
+              onSelect: () => requestClose(project),
             },
           ]}
         />

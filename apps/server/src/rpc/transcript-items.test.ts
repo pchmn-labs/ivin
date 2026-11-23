@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite"
 import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput, TranscriptItem } from "@ivin/contracts/transcript"
 import { layerScripted, type ScriptedElement } from "@ivin/harness"
-import { Effect, Layer } from "effect"
+import { Effect, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { expect, test } from "vitest"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
@@ -382,4 +382,61 @@ test("the tool call of an unanswered approval fails, with the reason as its outp
     output: "Not run: the approval was not answered.",
   })
   expect(toolCalls).toBe(1)
+})
+
+const usage = (
+  inputTokens: number,
+  outputTokens: number,
+  costUsd: number | null,
+): HarnessOutput => ({
+  type: "usage",
+  inputTokens,
+  outputTokens,
+  cacheReadTokens: 0,
+  cacheWriteTokens: 0,
+  costUsd,
+  raw: null,
+})
+
+test("a session's usage is summed from every stored usage item, and grows with each new one", async () => {
+  const db = newDatabase()
+  const totals = await withServer(
+    db,
+    [
+      [running, usage(100, 20, 0.5), usage(10, 5, null), idle],
+      [running, usage(1, 1, 0.25), idle],
+    ],
+    (client) =>
+      Effect.gen(function* () {
+        const { id } = yield* client["session.create"]({ projectPath: "/p" })
+        const empty = yield* client["transcript.watchUsage"]({ sessionId: id }).pipe(
+          Stream.take(1),
+          Stream.runCollect,
+        )
+        yield* client["session.sendMessage"]({ sessionId: id, messageId: "m1", text: "go" })
+        yield* untilStatus(client, id, "idle")
+        const first = yield* client["transcript.watchUsage"]({ sessionId: id }).pipe(
+          Stream.take(1),
+          Stream.runCollect,
+        )
+        // The next message is sent once the stream has delivered its first total.
+        const grown = yield* client["transcript.watchUsage"]({ sessionId: id }).pipe(
+          Stream.tap((total) =>
+            total?.tokens === 135
+              ? client["session.sendMessage"]({ sessionId: id, messageId: "m2", text: "more" })
+              : Effect.void,
+          ),
+          Stream.take(2),
+          Stream.runCollect,
+        )
+        return { empty, first, grown }
+      }),
+  )
+
+  expect(totals.empty).toEqual([null])
+  expect(totals.first).toEqual([{ tokens: 135, costUsd: 0.5 }])
+  expect(totals.grown).toEqual([
+    { tokens: 135, costUsd: 0.5 },
+    { tokens: 137, costUsd: 0.75 },
+  ])
 })

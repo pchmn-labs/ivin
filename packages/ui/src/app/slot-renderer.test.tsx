@@ -16,8 +16,8 @@ const plugin = (id: string, text: string, options = {}): UiPluginEntry => ({
   }),
 })
 
-const app = (plugins: ReadonlyArray<UiPluginEntry>) => (
-  <RegistryProvider initialValues={[[serverClientLayerAtom, makeFakeServer().layer]]}>
+const app = (plugins: ReadonlyArray<UiPluginEntry>, server = makeFakeServer()) => (
+  <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
     <PluginsProvider plugins={plugins}>
       <div data-testid="status">
         <Slot slot="composer.status" props={{ sessionId: "s1" }} />
@@ -107,4 +107,21 @@ test("a tool-call contribution with a tool name renders only for that tool", asy
     </RegistryProvider>,
   )
   await vi.waitFor(() => expect(status()).toBe("bash view"))
+})
+
+test("a contribution that throws while rendering is reported to its plugin's log", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {})
+  const server = makeFakeServer()
+  const broken: UiPluginEntry = {
+    manifest: { id: "prs" },
+    activate: defineUi((ctx) => {
+      ctx.slots.add("composer.status", () => {
+        throw new Error("boom")
+      })
+    }),
+  }
+  await render(app([broken], server))
+  await vi.waitFor(() => expect(server.pluginFailures).toHaveLength(1))
+  expect(server.pluginFailures[0]).toMatchObject({ id: "prs" })
+  expect(server.pluginFailures[0]?.reason).toContain("boom")
 })

@@ -19,6 +19,7 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "project.previous", title: "Previous project", pluginId: null },
   { id: "session.interrupt", title: "Interrupt", pluginId: null },
   { id: "composer.send", title: "Send", pluginId: null },
+  { id: "session.sendNow", title: "Send now", pluginId: null },
   { id: "session.archive", title: "Archive session", pluginId: null },
   { id: "session.showArchived", title: "Show archived sessions", pluginId: null },
   { id: "session.delete", title: "Delete session", pluginId: null },

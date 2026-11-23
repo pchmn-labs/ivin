@@ -5,10 +5,15 @@ import "../core/theme/tokens.css"
 import "../core/theme/base.css"
 import { useServerStateBridge } from "../modules/server/hooks/use-server-state-bridge.ts"
 import { App } from "./app.tsx"
+import { WindowFailureBoundary } from "./failure-boundary.tsx"
 
 function DesktopApp() {
   useServerStateBridge()
-  return <App />
+  return (
+    <WindowFailureBoundary>
+      <App />
+    </WindowFailureBoundary>
+  )
 }
 
 createRoot(document.getElementById("root")!).render(
