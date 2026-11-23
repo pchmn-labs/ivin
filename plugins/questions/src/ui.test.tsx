@@ -189,6 +189,21 @@ test("declined questions say so in the transcript", async () => {
     .toBeVisible()
 })
 
+test("questions left unanswered list each question and say the agent can no longer take the answers, with no sheet", async () => {
+  await mount([asked("unanswered")])
+  await expect.element(sheet()).not.toBeInTheDocument()
+  const record = page.getByTestId("question-record")
+  await expect.element(record.getByText("Not answered:")).toBeVisible()
+  await expect.element(record.getByText("Which test runner?")).toBeVisible()
+  await expect.element(record.getByText("Which folders?")).toBeVisible()
+  await expect
+    .element(
+      record.getByText("The agent stopped while it waited, so it can no longer take your answers."),
+    )
+    .toBeVisible()
+  await expect.element(record.getByText("Asked 2 questions")).not.toBeInTheDocument()
+})
+
 test("the answers picked so far survive the sheet closing and opening again", async () => {
   const requestId = crypto.randomUUID()
   const first = await mount([{ ...asked(), requestId }])

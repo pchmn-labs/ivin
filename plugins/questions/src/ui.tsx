@@ -25,7 +25,36 @@ const KEYS = [
   { key: "Esc", label: "Decline" },
 ]
 
+function UnansweredRecord({ item }: { item: QuestionItem }) {
+  return (
+    <Stack direction="row" gap={2} align="start" data-testid="question-record">
+      <Text size="sm" tone="muted">
+        <Icon name="circle-alert" size={14} />
+      </Text>
+      <Stack gap={0}>
+        <Text size="sm" tone="muted">
+          Not answered:
+        </Text>
+        {item.questions.map(({ question }) => (
+          <Stack key={question} direction="row" gap={1} align="baseline">
+            <Text size="sm" tone="muted">
+              •
+            </Text>
+            <Text size="sm" tone="muted">
+              {question}
+            </Text>
+          </Stack>
+        ))}
+        <Text size="xs" tone="faint">
+          The agent stopped while it waited, so it can no longer take your answers.
+        </Text>
+      </Stack>
+    </Stack>
+  )
+}
+
 function QuestionRecord({ item }: SlotProps["transcript.question"]) {
+  if (item.status === "unanswered") return <UnansweredRecord item={item} />
   const count = item.questions.length
   if (item.status === "declined")
     return (

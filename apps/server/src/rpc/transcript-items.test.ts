@@ -353,3 +353,33 @@ test("a new run leaves unanswered, before its first turn ends, the requests an e
 
   expect(item).toMatchObject({ requestId: "r1", decision: "unanswered" })
 })
+
+test("the tool call an unanswered approval held back fails, with the reason as its output", async () => {
+  const held: ScriptedElement[] = [
+    running,
+    call("t1"),
+    { ...approval("r1"), toolCallId: "t1" } as HarnessOutput,
+  ]
+  const { tool, others } = await withServer(newDatabase(), [held], (client) =>
+    Effect.gen(function* () {
+      const { id } = yield* client["session.create"]({ projectPath: "/p" })
+      yield* client["session.sendMessage"]({ sessionId: id, messageId: "m1", text: "go" })
+      yield* untilStatus(client, id, "waiting")
+      yield* client["session.interrupt"]({ sessionId: id })
+      const page = yield* until(everything(client, id), (page) =>
+        page.items.some((item) => item.type === "tool_call" && item.status !== "running"),
+      )
+      return {
+        tool: page.items.find((item) => item.type === "tool_call"),
+        others: page.items.filter((item) => item.type === "tool_call").length,
+      }
+    }),
+  )
+
+  expect(tool).toMatchObject({
+    toolCallId: "t1",
+    status: "error",
+    output: "Not run: the approval was not answered.",
+  })
+  expect(others).toBe(1)
+})
