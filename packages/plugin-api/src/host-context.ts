@@ -131,13 +131,11 @@ export interface UiHost {
     path: string,
   ) => Promise<ActionFailure | undefined>
   readonly useCommittedDiffOnScreen: (sessionId: string) => string | null
-  // Restores a file to its last commit, or deletes it when git does not track it.
-  readonly useDiscardChange: () => (
+  // Restores each file to its last commit, or deletes it when git does not track it or it is new.
+  readonly useDiscardChanges: () => (
     sessionId: string,
-    path: string,
+    paths: ReadonlyArray<string>,
   ) => Promise<DiscardFailure | undefined>
-  // `useDiscardChange` for every uncommitted change.
-  readonly useDiscardAllChanges: () => (sessionId: string) => Promise<DiscardFailure | undefined>
   readonly components: HostComponents
 }
 

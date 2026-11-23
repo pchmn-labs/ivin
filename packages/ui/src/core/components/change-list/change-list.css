@@ -187,7 +187,7 @@
 .iv-change-list__action {
   display: none;
   flex: none;
-  margin: 0 var(--iv-space-half) 0 6px;
+  margin: 0 var(--iv-space-half) 0 var(--iv-space-2);
 }
 
 .iv-change-list__row:hover .iv-change-list__action,

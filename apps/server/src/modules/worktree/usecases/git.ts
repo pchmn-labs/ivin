@@ -79,6 +79,8 @@ export class Git extends Context.Service<
       limit: number,
       range?: CommitRange,
     ) => Effect.Effect<string | null, GitError>
+    // False on a branch with no commit yet.
+    readonly hasCommit: (folder: string) => Effect.Effect<boolean>
     // Null when HEAD and `target` share no commit.
     readonly mergeBase: (folder: string, target: string) => Effect.Effect<string | null, GitError>
     // Back to HEAD in the index and on disk, or deleted when untracked or new.

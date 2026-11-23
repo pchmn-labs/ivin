@@ -235,21 +235,16 @@ export const FileRpcs = RpcGroup.make(
       GitFailed,
     ]),
   }),
-  // Restores a path `file.listChanges` lists to HEAD, index included, or deletes it when untracked.
-  // A path with no uncommitted change is left as it is.
-  Rpc.make("file.discardChange", {
-    payload: { sessionId: Schema.String, path: Schema.String },
+  // Restores each of `paths` that `file.listChanges` lists to HEAD, index included, or deletes it
+  // when untracked or new; the others are left as they are. Paths as in `file.listFolder`.
+  Rpc.make("file.discardChanges", {
+    payload: { sessionId: Schema.String, paths: Schema.Array(Schema.String) },
     error: Schema.Union([
       SessionNotFound,
       WorkingFolderDeleted,
       PathOutsideWorkingFolder,
       GitFailed,
     ]),
-  }),
-  // `file.discardChange` for every path `file.listChanges` lists.
-  Rpc.make("file.discardAllChanges", {
-    payload: { sessionId: Schema.String },
-    error: Schema.Union([SessionNotFound, WorkingFolderDeleted, GitFailed]),
   }),
   // The paths created, changed or deleted on disk, a batch at a time; what git ignores is left out.
   Rpc.make("file.watch", {

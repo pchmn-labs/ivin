@@ -3,9 +3,11 @@ import type { DiscardFailure } from "@ivin/plugin-api/ui"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 import { fileName } from "./file-name.ts"
 
-// `path` null for all the uncommitted changes at once.
-export const discardFailure = (error: unknown, path: string | null): DiscardFailure => {
-  const what = path === null ? "the uncommitted changes" : `the changes to ${fileName(path)}`
+export const discardFailure = (error: unknown, paths: ReadonlyArray<string>): DiscardFailure => {
+  const what =
+    paths.length === 1
+      ? `the changes to ${fileName(paths[0] as string)}`
+      : "the uncommitted changes"
   switch (errorTag(error)) {
     case "SessionNotFound":
       return {

@@ -22,6 +22,7 @@ export const committedChangesOf = (sessionId: string) =>
       return unlisted("no_origin")
     const base = yield* git.originHead(root)
     if (base === null) return unlisted("no_default_branch")
+    if (!(yield* git.hasCommit(root))) return { kind: "listed", root, base, changes: [] } as const
     const mergeBase = yield* git.mergeBase(root, base).pipe(Effect.mapError(failed))
     if (mergeBase === null) return unlisted("no_merge_base")
     const range = { from: mergeBase, to: "HEAD" }

@@ -81,6 +81,8 @@ export interface IconButtonProps {
   readonly "aria-expanded"?: boolean
   readonly "aria-pressed"?: boolean
   readonly "data-testid"?: string
+  // -1 leaves it out of the Tab order, for a control whose keys reach it another way.
+  readonly tabIndex?: number
 }
 
 export interface IconProps {
@@ -385,12 +387,17 @@ export interface ChangeGroup {
   // Shown on hover over the heading.
   readonly title?: string
   readonly items: ReadonlyArray<ChangeListItem>
-  // The row's Discard button, shown on hover, focus or selection, and Backspace on the row.
+  // The row's Discard button, shown on hover, focus or selection.
   readonly onDiscard?: (id: string) => void
-  // The heading's button, always shown, and ⌘Backspace anywhere in the list.
+  // The heading's button, always shown.
   readonly discardAll?: { readonly label: string; readonly onDiscard: () => void }
   // Shown under the heading, such as why discarding them all failed.
   readonly error?: ChangeListError
+}
+
+export interface ChangeListRow {
+  readonly groupId: string
+  readonly id: string
 }
 
 // One tab stop over every group: Up, Down, Home and End move through headings and rows, Left and
@@ -398,8 +405,12 @@ export interface ChangeGroup {
 export interface ChangeListProps {
   readonly label: string
   readonly groups: ReadonlyArray<ChangeGroup>
-  readonly selected: { readonly groupId: string; readonly id: string } | null
-  readonly onOpen: (groupId: string, id: string) => void
+  readonly selected: ChangeListRow | null
+  readonly onOpen: (row: ChangeListRow) => void
+  // The keybinding area of the list, for the plugin's commands on the focused row.
+  readonly area?: string
+  // The focused row, null on a heading or when the focus leaves the list.
+  readonly onFocusRow?: (row: ChangeListRow | null) => void
 }
 
 export interface SearchFieldProps {

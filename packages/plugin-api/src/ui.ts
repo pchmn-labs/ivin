@@ -204,8 +204,7 @@ export const useCommittedChanges = (sessionId: string) => useHost().useCommitted
 export const useOpenCommittedDiff = () => useHost().useOpenCommittedDiff()
 export const useCommittedDiffOnScreen = (sessionId: string) =>
   useHost().useCommittedDiffOnScreen(sessionId)
-export const useDiscardChange = () => useHost().useDiscardChange()
-export const useDiscardAllChanges = () => useHost().useDiscardAllChanges()
+export const useDiscardChanges = () => useHost().useDiscardChanges()
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"
 export { pendingQuestion } from "./pending-question.ts"

@@ -37,7 +37,7 @@ import { folderKey, listFolderOf } from "../modules/file/atoms/list-folder.ts"
 import { gitStatusOf } from "../modules/file/atoms/git-status.ts"
 import { changesOf } from "../modules/file/atoms/list-changes.ts"
 import { committedChangesOf } from "../modules/file/atoms/list-committed-changes.ts"
-import { discardAllChangesAtom, discardChangeAtom } from "../modules/file/atoms/discard-change.ts"
+import { discardChangesAtom } from "../modules/file/atoms/discard-changes.ts"
 import { discardFailure } from "../modules/file/rules/discard-failure.ts"
 import { changeListingFailure } from "../modules/file/rules/change-listing.ts"
 import { listFilesOf } from "../modules/file/atoms/list-files.ts"
@@ -196,18 +196,11 @@ const host: UiHost = {
   },
   useOpenCommittedDiff: () => useOpenSubView("committed_diff"),
   useCommittedDiffOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "committed_diff"),
-  useDiscardChange: () => {
-    const discard = useAtomSet(discardChangeAtom, { mode: "promiseExit" })
-    return async (sessionId, path) => {
-      const exit = await discard({ sessionId, path })
-      return Exit.isFailure(exit) ? discardFailure(Cause.squash(exit.cause), path) : undefined
-    }
-  },
-  useDiscardAllChanges: () => {
-    const discard = useAtomSet(discardAllChangesAtom, { mode: "promiseExit" })
-    return async (sessionId) => {
-      const exit = await discard({ sessionId })
-      return Exit.isFailure(exit) ? discardFailure(Cause.squash(exit.cause), null) : undefined
+  useDiscardChanges: () => {
+    const discard = useAtomSet(discardChangesAtom, { mode: "promiseExit" })
+    return async (sessionId, paths) => {
+      const exit = await discard({ sessionId, paths })
+      return Exit.isFailure(exit) ? discardFailure(Cause.squash(exit.cause), paths) : undefined
     }
   },
   components: hostComponents,

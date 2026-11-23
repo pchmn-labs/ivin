@@ -353,8 +353,8 @@ test("Backspace on a change asks first, naming the file, then restores it", asyn
   await expect.element(changesTab()).toHaveTextContent("Changes2 · 3")
 })
 
-test("Discard all asks with what goes back and what is deleted, then empties the uncommitted list", async () => {
-  await mount(makeServer())
+test("Discard all asks with what goes back and what is deleted, and discards only the changes it showed", async () => {
+  const server = await mount(makeServer())
   await page.getByRole("button", { name: "Discard all uncommitted changes" }).click()
   await expect.element(discardDialog()).toHaveAccessibleName("Discard all uncommitted changes?")
   await expect
@@ -362,14 +362,31 @@ test("Discard all asks with what goes back and what is deleted, then empties the
     .toHaveAccessibleDescription(
       "2 files go back to their last commit, and 1 new file is deleted. This cannot be undone.",
     )
+  const listed = server.changes.get(project)
+  if (listed === undefined || !("changes" in listed)) throw new Error("no changes")
+  server.changes.set(project, {
+    kind: "listed",
+    changes: [...listed.changes, change("late.ts", "untracked")],
+  })
+  server.changeOnDisk(project, ["late.ts"])
   await discardDialog().getByRole("button", { name: "Discard all" }).click()
-  await expect.element(page.getByText("No uncommitted changes.", { exact: false })).toBeVisible()
+  await expect.element(row("README.md")).not.toBeInTheDocument()
+  await expect.element(row("late.ts")).toBeVisible()
   await expect.element(committedRow("plan.md")).toBeVisible()
+})
+
+test("⌘Backspace in the list asks to discard every uncommitted change", async () => {
+  await mount(makeServer())
+  ;(committedRow("plan.md").element() as HTMLElement).focus()
+  await userEvent.keyboard("{Backspace}")
+  await expect.element(discardDialog()).not.toBeInTheDocument()
+  await userEvent.keyboard(`{${mod}>}{Backspace}{/${mod}}`)
+  await expect.element(discardDialog()).toHaveAccessibleName("Discard all uncommitted changes?")
 })
 
 test("a failed Discard all shows git's message under the heading", async () => {
   const server = makeServer()
-  server.discardFailures.set(project, "fatal: Unable to create 'index.lock'")
+  server.discardFailures.set(`${project}/old.ts`, "fatal: Unable to create 'index.lock'")
   await mount(server)
   await page.getByRole("button", { name: "Discard all uncommitted changes" }).click()
   await discardDialog().getByRole("button", { name: "Discard all" }).click()

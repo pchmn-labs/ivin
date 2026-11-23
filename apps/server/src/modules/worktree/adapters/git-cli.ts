@@ -76,7 +76,17 @@ const diffBase = (folder: string) =>
   )
 
 // No optional locks: a diff that refreshed the index would fire the watcher that asked for it.
-const DIFF = ["--no-optional-locks", "diff", "--no-color", "--no-ext-diff", "--relative", "-M"]
+// Literal pathspecs: a path such as `[id].ts` is a file name, not a pattern that matches `i.ts`.
+const LITERAL = "--literal-pathspecs"
+const DIFF = [
+  "--no-optional-locks",
+  LITERAL,
+  "diff",
+  "--no-color",
+  "--no-ext-diff",
+  "--relative",
+  "-M",
+]
 
 const compared = (folder: string, range?: CommitRange) =>
   range === undefined
@@ -240,6 +250,7 @@ export const layerGitCli = Layer.succeed(Git)({
     }).pipe(Effect.orElseSucceed(() => null)),
   listChanges,
   diffOf,
+  hasCommit: (folder) => diffBase(folder).pipe(Effect.map((base) => base === "HEAD")),
   // merge-base exits 1, with no output, when the histories share no commit.
   mergeBase: (folder, target) =>
     runGit(folder, ["merge-base", "HEAD", target], { succeedsOn: [1] }).pipe(
@@ -254,6 +265,7 @@ export const layerGitCli = Layer.succeed(Git)({
       const tracked = changes.filter((change) => change.status !== "untracked")
       if (tracked.length > 0)
         yield* git(folder, [
+          LITERAL,
           "restore",
           `--source=${yield* diffBase(folder)}`,
           "--staged",
@@ -263,6 +275,7 @@ export const layerGitCli = Layer.succeed(Git)({
         ])
       if (untracked.length > 0)
         yield* git(folder, [
+          LITERAL,
           "clean",
           "--force",
           "--quiet",

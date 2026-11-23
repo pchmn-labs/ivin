@@ -111,11 +111,8 @@ const committedChangesIn = (projectPath: string) =>
 const committedDiffIn = (projectPath: string, path: string) =>
   callIn(projectPath, (client, sessionId) => client["file.readCommittedDiff"]({ sessionId, path }))
 
-const discardIn = (projectPath: string, path: string) =>
-  callIn(projectPath, (client, sessionId) => client["file.discardChange"]({ sessionId, path }))
-
-const discardAllIn = (projectPath: string) =>
-  callIn(projectPath, (client, sessionId) => client["file.discardAllChanges"]({ sessionId }))
+const discardIn = (projectPath: string, ...paths: string[]) =>
+  callIn(projectPath, (client, sessionId) => client["file.discardChanges"]({ sessionId, paths }))
 
 const changesIn = (projectPath: string) =>
   callIn(projectPath, (client, sessionId) => client["file.listChanges"]({ sessionId }))
@@ -226,7 +223,7 @@ test("discarding fails with git's message when git cannot write the index, and r
   const failure = await withServer((client) =>
     Effect.gen(function* () {
       const { id } = yield* client["session.create"]({ projectPath: project })
-      return yield* client["file.discardChange"]({ sessionId: id, path: "shared.ts" }).pipe(
+      return yield* client["file.discardChanges"]({ sessionId: id, paths: ["shared.ts"] }).pipe(
         Effect.flip,
       )
     }),
@@ -236,18 +233,39 @@ test("discarding fails with git's message when git cannot write the index, and r
   expect(await discardIn(project, "../outside.ts")).toBe("PathOutsideWorkingFolder")
 })
 
-test("discarding all restores every tracked file and deletes every untracked one", async () => {
+test("discarding several paths restores every tracked file and deletes every untracked one, and leaves a path it was not given", async () => {
   write(join(project, "shared.ts"), "changed\n")
   rmSync(join(project, "gone.ts"))
   write(join(project, "notes.md"), "n\n")
   write(join(project, "added.ts"), "a\n")
   git(project, "add", "added.ts")
+  write(join(project, "later.md"), "written after the dialog opened\n")
 
-  expect(await discardAllIn(project)).toBeUndefined()
+  expect(await discardIn(project, "shared.ts", "gone.ts", "notes.md", "added.ts")).toBeUndefined()
   expect(readFileSync(join(project, "shared.ts"), "utf8")).toBe("one\ntwo\n")
   expect(readFileSync(join(project, "gone.ts"), "utf8")).toBe("g\n")
   expect(existsSync(join(project, "notes.md"))).toBe(false)
   expect(existsSync(join(project, "added.ts"))).toBe(false)
-  expect(await changesIn(project)).toEqual({ kind: "listed", changes: [] })
-  expect(await discardAllIn(project)).toBeUndefined()
+  expect(await changesIn(project)).toMatchObject({ changes: [{ path: "later.md" }] })
+})
+
+test("a path is a file name, not a pattern: discarding [id].ts leaves i.ts", async () => {
+  write(join(project, "[id].ts"), "page\n")
+  write(join(project, "i.ts"), "kept\n")
+  write(join(project, "s*.ts"), "star\n")
+  write(join(project, "shared.ts"), "edited\n")
+
+  expect(await discardIn(project, "[id].ts", "s*.ts")).toBeUndefined()
+  expect(existsSync(join(project, "[id].ts"))).toBe(false)
+  expect(existsSync(join(project, "i.ts"))).toBe(true)
+  expect(readFileSync(join(project, "shared.ts"), "utf8")).toBe("edited\n")
+})
+
+test("a branch with no commit yet has no committed changes", async () => {
+  git(project, "switch", "--quiet", "--orphan", "fresh")
+  expect(await committedChangesIn(project)).toEqual({
+    kind: "listed",
+    base: "origin/main",
+    changes: [],
+  })
 })

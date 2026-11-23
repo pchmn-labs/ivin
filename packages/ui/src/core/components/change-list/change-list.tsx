@@ -4,6 +4,7 @@ import type {
   ChangeListError,
   ChangeListItem,
   ChangeListProps,
+  ChangeListRow,
 } from "@ivin/plugin-api/ui"
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react"
 import { fileIconsAtom } from "../../../modules/plugin/atoms/contributions.ts"
@@ -12,7 +13,7 @@ import { IconButton } from "../button/button.tsx"
 import { Icon } from "../icon/icon.tsx"
 import "./change-list.css"
 
-export type { ChangeGroup, ChangeListItem, ChangeListProps }
+export type { ChangeGroup, ChangeListItem, ChangeListProps, ChangeListRow }
 
 const LETTERS = { modified: "M", added: "A", deleted: "D", renamed: "R", untracked: "U" } as const
 
@@ -29,7 +30,7 @@ function ErrorLines({ error }: { error: ChangeListError }) {
   )
 }
 
-export function ChangeList({ label, groups, selected, onOpen }: ChangeListProps) {
+export function ChangeList({ label, groups, selected, onOpen, area, onFocusRow }: ChangeListProps) {
   const fileIcons = useAtomValue(fileIconsAtom)
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set())
   const [focusedKey, setFocusedKey] = useState<string | null>(null)
@@ -53,6 +54,11 @@ export function ChangeList({ label, groups, selected, onOpen }: ChangeListProps)
     const nodes = root.current?.querySelectorAll<HTMLElement>("[data-nav]")
     nodes?.[Math.min(lastIndex.current, nodes.length - 1)]?.focus()
   })
+
+  const focusOn = (key: string) => {
+    setFocusedKey(key)
+    lastIndex.current = keys.indexOf(key)
+  }
 
   const fold = (group: ChangeGroup, value: boolean) =>
     setFolded((current) => {
@@ -94,19 +100,6 @@ export function ChangeList({ label, groups, selected, onOpen }: ChangeListProps)
         if (!isHeading) return
         event.preventDefault()
         return fold(group, false)
-      case "Backspace":
-      case "Delete": {
-        if (event.metaKey) {
-          const all = groups.find((candidate) => candidate.discardAll)?.discardAll
-          if (all === undefined) return
-          event.preventDefault()
-          return all.onDiscard()
-        }
-        if (isHeading || group.onDiscard === undefined) return
-        event.preventDefault()
-        lastIndex.current = current
-        return group.onDiscard(node.dataset.id as string)
-      }
     }
   }
 
@@ -116,7 +109,11 @@ export function ChangeList({ label, groups, selected, onOpen }: ChangeListProps)
       aria-label={label}
       role="group"
       ref={root}
+      data-keybinding-area={area}
       onKeyDown={onKeyDown}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget)) onFocusRow?.(null)
+      }}
     >
       {groups.map((group) => {
         const open = !folded.has(group.id)
@@ -134,8 +131,8 @@ export function ChangeList({ label, groups, selected, onOpen }: ChangeListProps)
                 data-key={key}
                 data-group={group.id}
                 onFocus={() => {
-                  setFocusedKey(key)
-                  lastIndex.current = keys.indexOf(key)
+                  focusOn(key)
+                  onFocusRow?.(null)
                 }}
                 onClick={() => fold(group, open)}
               >
@@ -150,6 +147,7 @@ export function ChangeList({ label, groups, selected, onOpen }: ChangeListProps)
                   label={group.discardAll.label}
                   tooltip={`${group.discardAll.label}…`}
                   size="sm"
+                  tabIndex={-1}
                   onClick={group.discardAll.onDiscard}
                 />
               )}
@@ -176,12 +174,11 @@ export function ChangeList({ label, groups, selected, onOpen }: ChangeListProps)
                           data-nav="row"
                           data-key={itemKey}
                           data-group={group.id}
-                          data-id={item.id}
                           onFocus={() => {
-                            setFocusedKey(itemKey)
-                            lastIndex.current = keys.indexOf(itemKey)
+                            focusOn(itemKey)
+                            onFocusRow?.({ groupId: group.id, id: item.id })
                           }}
-                          onClick={() => onOpen(group.id, item.id)}
+                          onClick={() => onOpen({ groupId: group.id, id: item.id })}
                         >
                           <span className="iv-change-list__icon" aria-hidden>
                             {fileIconOf(fileIcons, {
@@ -212,8 +209,9 @@ export function ChangeList({ label, groups, selected, onOpen }: ChangeListProps)
                               label={`Discard the changes to ${item.name}`}
                               tooltip="Discard changes…"
                               size="sm"
+                              tabIndex={-1}
                               onClick={() => {
-                                lastIndex.current = keys.indexOf(itemKey)
+                                focusOn(itemKey)
                                 group.onDiscard?.(item.id)
                               }}
                             />

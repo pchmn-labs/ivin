@@ -4,25 +4,20 @@ const deletes = (change: Change) => change.status === "untracked" || change.stat
 
 export const discardText = (change: Change) => {
   const name = change.path.slice(change.path.lastIndexOf("/") + 1)
-  if (change.status === "untracked")
+  if (!deletes(change))
     return {
-      title: `Delete “${name}”?`,
-      description:
-        "Git does not track this file, so discarding its changes deletes it. This cannot be undone.",
-      action: "Delete file",
+      title: `Discard the changes to “${name}”?`,
+      description: "The file goes back to its last commit. This cannot be undone.",
+      action: "Discard changes",
     }
-  return change.status === "added"
-    ? {
-        title: `Delete “${name}”?`,
-        description:
-          "The file is new since the last commit, so discarding its changes deletes it. This cannot be undone.",
-        action: "Delete file",
-      }
-    : {
-        title: `Discard the changes to “${name}”?`,
-        description: "The file goes back to its last commit. This cannot be undone.",
-        action: "Discard changes",
-      }
+  return {
+    title: `Delete “${name}”?`,
+    description:
+      change.status === "untracked"
+        ? "Git does not track this file, so discarding its changes deletes it. This cannot be undone."
+        : "The file is new since the last commit, so discarding its changes deletes it. This cannot be undone.",
+    action: "Delete file",
+  }
 }
 
 const files = (count: number) => (count === 1 ? "1 file" : `${count} files`)

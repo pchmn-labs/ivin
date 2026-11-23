@@ -136,8 +136,8 @@ export interface FakeServer {
   readonly committedChanges: Map<string, CommittedChangeList | { readonly gitMessage: string }>
   // What `file.readCommittedDiff` returns, by absolute path; `unchanged` when missing here.
   readonly committedDiffs: Map<string, FileDiff>
-  // `file.discardChange` fails with this git message, by absolute path, and `file.discardAllChanges`
-  // by working folder; otherwise they drop the paths from `changes` and stream them to `file.watch`.
+  // `file.discardChanges` fails with this git message when given one of these absolute paths;
+  // otherwise it drops the paths from `changes` and streams them to `file.watch`.
   readonly discardFailures: Map<string, string>
   // `file.listFiles` lists the files of `folders` that git does not ignore; this many times so far.
   readonly fileListings: () => number
@@ -892,34 +892,27 @@ export const makeFakeServer = (
           committedDiffs.get(`${session.workingFolder}/${path}`) ?? { kind: "unchanged" },
         )
       }),
-    "file.discardChange": ({ sessionId, path }: { sessionId: string; path: string }) =>
+    "file.discardChanges": ({
+      sessionId,
+      paths,
+    }: {
+      sessionId: string
+      paths: ReadonlyArray<string>
+    }) =>
       Effect.suspend((): Effect.Effect<void, SessionNotFound | GitFailed> => {
         const session = sessions.get(sessionId)
         if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
         const { workingFolder } = session
-        const gitMessage = discardFailures.get(`${workingFolder}/${path}`)
+        const gitMessage = paths
+          .map((path) => discardFailures.get(`${workingFolder}/${path}`))
+          .find((message) => message !== undefined)
         if (gitMessage !== undefined) return Effect.fail(new GitFailed({ sessionId, gitMessage }))
         const listed = changes.get(workingFolder)
         if (listed !== undefined && "changes" in listed)
           changes.set(workingFolder, {
             kind: "listed",
-            changes: listed.changes.filter((change) => change.path !== path),
+            changes: listed.changes.filter((change) => !paths.includes(change.path)),
           })
-        return PubSub.publish(diskChanges, { workingFolder, change: { paths: [path] } }).pipe(
-          Effect.asVoid,
-        )
-      }),
-    "file.discardAllChanges": ({ sessionId }: { sessionId: string }) =>
-      Effect.suspend((): Effect.Effect<void, SessionNotFound | GitFailed> => {
-        const session = sessions.get(sessionId)
-        if (session === undefined) return Effect.fail(new SessionNotFound({ sessionId }))
-        const { workingFolder } = session
-        const gitMessage = discardFailures.get(workingFolder)
-        if (gitMessage !== undefined) return Effect.fail(new GitFailed({ sessionId, gitMessage }))
-        const listed = changes.get(workingFolder)
-        const paths =
-          listed !== undefined && "changes" in listed ? listed.changes.map((c) => c.path) : []
-        changes.set(workingFolder, { kind: "listed", changes: [] })
         return PubSub.publish(diskChanges, { workingFolder, change: { paths } }).pipe(Effect.asVoid)
       }),
     "file.watch": ({ sessionId }: { sessionId: string }) =>

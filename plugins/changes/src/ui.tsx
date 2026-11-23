@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import {
   Button,
   ChangeList,
@@ -12,8 +12,7 @@ import {
   useCommittedChanges,
   useCommittedDiffOnScreen,
   useDiffOnScreen,
-  useDiscardAllChanges,
-  useDiscardChange,
+  useDiscardChanges,
   useOpenCommittedDiff,
   useOpenDiff,
   useSelectedSessionId,
@@ -21,6 +20,8 @@ import {
   type ActionFailure,
   type Change,
   type ChangeGroup,
+  type ChangeListError,
+  type ChangeListRow,
   type ChangeListing,
   type CommittedChangeListing,
   type DiscardFailure,
@@ -28,6 +29,14 @@ import {
 } from "@ivin/plugin-api/ui"
 import { changeItems } from "./rules/change-items.ts"
 import { discardAllText, discardText } from "./rules/discard-text.ts"
+
+const UNCOMMITTED = "uncommitted"
+const COMMITTED = "committed"
+// The list's keybinding area, where `changes.discard` and `changes.discardAll` apply.
+const AREA = "changes"
+
+// The panel on screen, for the commands, which run outside React.
+let onScreen: { readonly discardFocused: () => void; readonly discardAll: () => void } | null = null
 
 function Message({ children }: { children: string }) {
   return (
@@ -43,8 +52,16 @@ interface OpenFailure extends ActionFailure {
   readonly retry: () => void
 }
 
-// What the dialog asks to discard: one change, or all of them.
-type Discarding = { readonly kind: "one"; readonly change: Change } | { readonly kind: "all" }
+// The changes the dialog asks to discard, as they were when it opened.
+interface Discarding {
+  readonly all: boolean
+  readonly changes: ReadonlyArray<Change>
+}
+
+const listError = (failure: DiscardFailure): ChangeListError => ({
+  text: failure.text,
+  detail: failure.gitMessage,
+})
 
 function ListingFailure({
   listing,
@@ -66,31 +83,23 @@ function ListingFailure({
 
 function DiscardDialog({
   discarding,
-  changes,
   onCancel,
   onConfirm,
 }: {
   discarding: Discarding | null
-  changes: ReadonlyArray<Change>
   onCancel: () => void
   onConfirm: (discarding: Discarding) => void
 }) {
   // The dialog keeps its text while it fades out.
-  const shown = useRef({ discarding, changes })
-  if (discarding !== null) shown.current = { discarding, changes }
-  const last = shown.current.discarding
-  const paths =
-    last === null
-      ? []
-      : last.kind === "one"
-        ? [last.change.path]
-        : shown.current.changes.map((c) => c.path)
+  const shown = useRef(discarding)
+  if (discarding !== null) shown.current = discarding
+  const last = shown.current
   const text =
     last === null
       ? null
-      : last.kind === "one"
-        ? discardText(last.change)
-        : discardAllText(shown.current.changes)
+      : last.all
+        ? discardAllText(last.changes)
+        : discardText(last.changes[0] as Change)
   return (
     <Dialog
       open={discarding !== null}
@@ -111,7 +120,7 @@ function DiscardDialog({
       }
     >
       <Text size="xs" tone="faint" mono preWrap>
-        {paths.join("\n")}
+        {(last?.changes ?? []).map((change) => change.path).join("\n")}
       </Text>
     </Dialog>
   )
@@ -126,9 +135,7 @@ const committedMessage = (listing: CommittedChangeListing): string | null => {
     case "no_merge_base":
       return "The branch shares no commit with origin's default branch, so its commits cannot be listed."
     case "listed":
-      return listing.changes.length === 0
-        ? `The branch has no commits since ${listing.base} yet.`
-        : null
+      return listing.changes.length === 0 ? `No committed changes since ${listing.base}.` : null
     default:
       return null
   }
@@ -139,8 +146,7 @@ function ChangesOf({ session }: { session: Session }) {
   const committed = useCommittedChanges(session.id)
   const openDiff = useOpenDiff()
   const openCommittedDiff = useOpenCommittedDiff()
-  const discard = useDiscardChange()
-  const discardAll = useDiscardAllChanges()
+  const discard = useDiscardChanges()
   const diffOnScreen = useDiffOnScreen(session.id)
   const committedOnScreen = useCommittedDiffOnScreen(session.id)
   const [openFailure, setOpenFailure] = useState<OpenFailure | null>(null)
@@ -149,48 +155,59 @@ function ChangesOf({ session }: { session: Session }) {
     new Map(),
   )
   const [discardAllFailure, setDiscardAllFailure] = useState<DiscardFailure | null>(null)
-  const changes = listing.kind === "listed" ? listing.changes : []
+  const focusedRow = useRef<ChangeListRow | null>(null)
+  const changes = useMemo(() => (listing.kind === "listed" ? listing.changes : []), [listing])
 
-  const groups = useMemo((): ReadonlyArray<ChangeGroup> => {
-    const uncommitted: ChangeGroup = {
-      id: "uncommitted",
-      heading: "Uncommitted",
-      label: "Uncommitted changes",
-      items: changeItems(changes).map((item) => {
-        const failure = discardFailures.get(item.id)
-        return failure === undefined
-          ? item
-          : { ...item, error: { text: failure.text, detail: failure.gitMessage } }
-      }),
-      onDiscard: (path) =>
-        setDiscarding({
-          kind: "one",
-          change: changes.find((change) => change.path === path) as Change,
-        }),
-      discardAll: {
-        label: "Discard all uncommitted changes",
-        onDiscard: () => setDiscarding({ kind: "all" }),
+  const askOne = (path: string) => {
+    const change = changes.find((candidate) => candidate.path === path)
+    if (change !== undefined) setDiscarding({ all: false, changes: [change] })
+  }
+  const askAll = () => {
+    if (changes.length > 0) setDiscarding({ all: true, changes })
+  }
+  useEffect(() => {
+    onScreen = {
+      discardFocused: () => {
+        const row = focusedRow.current
+        if (row?.groupId === UNCOMMITTED) askOne(row.id)
       },
-      ...(discardAllFailure !== null && {
-        error: { text: discardAllFailure.text, detail: discardAllFailure.gitMessage },
-      }),
+      discardAll: askAll,
     }
-    const listed = committed.listing.kind === "listed" ? committed.listing : null
-    return [
-      ...(changes.length > 0 ? [uncommitted] : []),
-      ...(listed !== null && listed.changes.length > 0
-        ? [
-            {
-              id: "committed",
-              heading: "Committed",
-              label: "Committed changes",
-              title: `Since the branch left ${listed.base}`,
-              items: changeItems(listed.changes),
-            },
-          ]
-        : []),
-    ]
-  }, [changes, committed.listing, discardFailures, discardAllFailure])
+    return () => {
+      onScreen = null
+    }
+  })
+
+  const listed = committed.listing.kind === "listed" ? committed.listing : null
+  const groups: ReadonlyArray<ChangeGroup> = [
+    ...(changes.length > 0
+      ? [
+          {
+            id: UNCOMMITTED,
+            heading: "Uncommitted",
+            label: "Uncommitted changes",
+            items: changeItems(changes).map((item) => {
+              const failure = discardFailures.get(item.id)
+              return failure === undefined ? item : { ...item, error: listError(failure) }
+            }),
+            onDiscard: askOne,
+            discardAll: { label: "Discard all uncommitted changes", onDiscard: askAll },
+            ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
+          },
+        ]
+      : []),
+    ...(listed !== null && listed.changes.length > 0
+      ? [
+          {
+            id: COMMITTED,
+            heading: "Committed",
+            label: "Committed changes",
+            title: `Since the branch left ${listed.base}`,
+            items: changeItems(listed.changes),
+          },
+        ]
+      : []),
+  ]
 
   const run = async (
     open: (sessionId: string, path: string) => Promise<ActionFailure | undefined>,
@@ -202,18 +219,16 @@ function ChangesOf({ session }: { session: Session }) {
   }
   const confirm = async (target: Discarding) => {
     setDiscarding(null)
-    if (target.kind === "all") {
-      setDiscardAllFailure(null)
-      setDiscardFailures(new Map())
-      setDiscardAllFailure((await discardAll(session.id)) ?? null)
-      return
-    }
-    const path = target.change.path
-    const failure = await discard(session.id, path)
+    const paths = target.changes.map((change) => change.path)
+    if (target.all) setDiscardAllFailure(null)
+    const failure = await discard(session.id, paths)
+    if (target.all) return setDiscardAllFailure(failure ?? null)
     setDiscardFailures((failures) => {
       const next = new Map(failures)
-      if (failure === undefined) next.delete(path)
-      else next.set(path, failure)
+      for (const path of paths) {
+        if (failure === undefined) next.delete(path)
+        else next.set(path, failure)
+      }
       return next
     })
   }
@@ -247,17 +262,21 @@ function ChangesOf({ session }: { session: Session }) {
           {groups.length > 0 && (
             <ChangeList
               label="Changes"
+              area={AREA}
               groups={groups}
               selected={
                 diffOnScreen !== null
-                  ? { groupId: "uncommitted", id: diffOnScreen }
+                  ? { groupId: UNCOMMITTED, id: diffOnScreen }
                   : committedOnScreen !== null
-                    ? { groupId: "committed", id: committedOnScreen }
+                    ? { groupId: COMMITTED, id: committedOnScreen }
                     : null
               }
-              onOpen={(groupId, path) =>
-                void run(groupId === "committed" ? openCommittedDiff : openDiff, path)
+              onOpen={(row) =>
+                void run(row.groupId === COMMITTED ? openCommittedDiff : openDiff, row.id)
               }
+              onFocusRow={(row) => {
+                focusedRow.current = row
+              }}
             />
           )}
           {below !== null && <Message>{below}</Message>}
@@ -266,7 +285,6 @@ function ChangesOf({ session }: { session: Session }) {
           )}
           <DiscardDialog
             discarding={discarding}
-            changes={changes}
             onCancel={() => setDiscarding(null)}
             onConfirm={(target) => void confirm(target)}
           />
@@ -280,7 +298,7 @@ function ChangesPanel() {
   const sessionId = useSelectedSessionId()
   const session = useSession(sessionId ?? "")
   if (sessionId === null)
-    return <Message>No session on screen. Open one to see its uncommitted changes.</Message>
+    return <Message>No session on screen. Open one to see its changes.</Message>
   if (session === undefined) return null
   if (session.workingFolderDeleted) return <Message>{FOLDER_DELETED}</Message>
   return <ChangesOf key={`${session.id}\n${session.workingFolder}`} session={session} />
@@ -312,5 +330,15 @@ export const activate = defineUi((ctx) => {
     title: "Show changes",
     run: () => ctx.sidebar.showPanel("panel"),
   })
+  ctx.commands.register("changes.discard", {
+    title: "Discard the focused change",
+    run: () => onScreen?.discardFocused(),
+  })
+  ctx.commands.register("changes.discardAll", {
+    title: "Discard all uncommitted changes",
+    run: () => onScreen?.discardAll(),
+  })
   ctx.keybindings.add({ key: "mod+3", command: "changes.show" })
+  ctx.keybindings.add({ key: "backspace", command: "changes.discard", when: AREA })
+  ctx.keybindings.add({ key: "mod+backspace", command: "changes.discardAll", when: AREA })
 })

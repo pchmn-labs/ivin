@@ -72,7 +72,7 @@ test("one tab stop moves through the headings and rows of every group, and Enter
   await userEvent.keyboard("{ArrowUp}")
   await expect.element(row("notes.md")).toHaveFocus()
   await userEvent.keyboard("{Home}{ArrowDown}{Enter}")
-  expect(onOpen).toHaveBeenCalledWith("uncommitted", "a.ts")
+  expect(onOpen).toHaveBeenCalledWith({ groupId: "uncommitted", id: "a.ts" })
 })
 
 test("Left folds a heading, or goes from a row to its heading, and Right unfolds it", async () => {
@@ -88,23 +88,26 @@ test("Left folds a heading, or goes from a row to its heading, and Right unfolds
   await expect.element(row("a.ts")).toBeVisible()
 })
 
-test("Backspace discards the row, ⌘Backspace them all, and only a group that can discard offers it", async () => {
+test("the Discard buttons stay out of the Tab order, the focused row is reported, and only a group that can discard offers it", async () => {
   const onDiscard = vi.fn()
   const onDiscardAll = vi.fn()
-  await mount({ groups: groups({ onDiscard, onDiscardAll }) })
-  await userEvent.keyboard("{Tab}{ArrowDown}{Backspace}")
-  expect(onDiscard).toHaveBeenCalledWith("a.ts")
-  await userEvent.keyboard("{Meta>}{Backspace}{/Meta}")
+  const onFocusRow = vi.fn()
+  await mount({ groups: groups({ onDiscard, onDiscardAll }), onFocusRow })
+  await userEvent.keyboard("{Tab}{ArrowDown}")
+  expect(onFocusRow).toHaveBeenLastCalledWith({ groupId: "uncommitted", id: "a.ts" })
+  await userEvent.keyboard("{Tab}")
+  await expect.element(row("a.ts")).not.toHaveFocus()
+  expect(onFocusRow).toHaveBeenLastCalledWith(null)
+
+  await page.getByRole("button", { name: "Discard all uncommitted changes" }).click()
   expect(onDiscardAll).toHaveBeenCalledOnce()
-  await expect
-    .element(page.getByRole("button", { name: "Discard all uncommitted changes" }))
-    .toBeVisible()
+  await row("a.ts").hover()
+  await page.getByRole("button", { name: "Discard the changes to a.ts" }).click()
+  expect(onDiscard).toHaveBeenCalledWith("a.ts")
   await row("b.ts").hover()
   await expect
     .element(page.getByRole("button", { name: "Discard the changes to b.ts" }))
     .not.toBeInTheDocument()
-  await userEvent.keyboard("{End}{Backspace}")
-  expect(onDiscard).toHaveBeenCalledOnce()
 })
 
 test("each row shows its status letter, name, folder and counts", async () => {

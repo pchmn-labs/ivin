@@ -7,22 +7,22 @@ test("a git failure names the file and keeps git's message", () => {
     sessionId: "s",
     gitMessage: "fatal: Unable to create 'index.lock'",
   })
-  expect(discardFailure(error, "src/a.ts")).toEqual({
+  expect(discardFailure(error, ["src/a.ts"])).toEqual({
     text: "Git could not discard the changes to a.ts. Fix what it reports, then discard again.",
     retryable: true,
     gitMessage: "fatal: Unable to create 'index.lock'",
   })
 })
 
-test("discarding them all names no file", () => {
+test("discarding several names no file", () => {
   const error = new GitFailed({ sessionId: "s", gitMessage: "fatal: index.lock" })
-  expect(discardFailure(error, null).text).toBe(
+  expect(discardFailure(error, ["a.ts", "b.ts"]).text).toBe(
     "Git could not discard the uncommitted changes. Fix what it reports, then discard again.",
   )
 })
 
 test("a session that no longer exists cannot be retried", () => {
-  expect(discardFailure({ _tag: "SessionNotFound" }, "a.ts")).toEqual({
+  expect(discardFailure({ _tag: "SessionNotFound" }, ["a.ts"])).toEqual({
     text: "This session no longer exists, so its changes cannot be discarded.",
     retryable: false,
     gitMessage: null,

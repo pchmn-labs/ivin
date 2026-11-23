@@ -22,7 +22,7 @@ import { listChanges } from "../modules/file/usecases/list-changes.ts"
 import { readDiff } from "../modules/file/usecases/read-diff.ts"
 import { listCommittedChanges } from "../modules/file/usecases/list-committed-changes.ts"
 import { readCommittedDiff } from "../modules/file/usecases/read-committed-diff.ts"
-import { discardAllChanges, discardChange } from "../modules/file/usecases/discard-change.ts"
+import { discardChanges } from "../modules/file/usecases/discard-changes.ts"
 import { writeFile } from "../modules/file/usecases/write-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
@@ -208,8 +208,7 @@ export const handlers = Rpcs.toLayer(
       "file.readDiff": ({ sessionId, path }) => readDiff(sessionId, path),
       "file.listCommittedChanges": ({ sessionId }) => listCommittedChanges(sessionId),
       "file.readCommittedDiff": ({ sessionId, path }) => readCommittedDiff(sessionId, path),
-      "file.discardChange": ({ sessionId, path }) => discardChange(sessionId, path),
-      "file.discardAllChanges": ({ sessionId }) => discardAllChanges(sessionId),
+      "file.discardChanges": ({ sessionId, paths }) => discardChanges(sessionId, paths),
       "file.watch": ({ sessionId }) => watchFolder(sessionId),
       "file.writeFile": ({ sessionId, path, text, expectedVersion }) =>
         writeFile(sessionId, path, text, expectedVersion),
