@@ -1,7 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { Block } from "../../src/core/components/block/block.tsx"
+import { CodeBlock } from "../../src/core/components/code-block/code-block.tsx"
+import { Disclosure } from "../../src/core/components/disclosure/disclosure.tsx"
 import { HarnessMark } from "../../src/core/components/harness-mark/harness-mark.tsx"
-import { Icon } from "../../src/core/components/icon/icon.tsx"
+import { Icon, type IconName } from "../../src/core/components/icon/icon.tsx"
+import { Stack } from "../../src/core/components/stack/stack.tsx"
+import { Text } from "../../src/core/components/text/text.tsx"
 import { Tooltip } from "../../src/core/components/tooltip/tooltip.tsx"
 import "../../src/core/components/block/block.css"
 import "../../src/modules/session/ui/session-mark.css"
@@ -18,14 +22,49 @@ const TASKS: Task[] = [
   { id: "c", kind: "command", name: "Dev server", command: "pnpm dev", since: "6m 02s" },
 ]
 
-const AGENT_STEPS: { kind: "text" | "tool"; icon?: "file" | "search" | "terminal"; name?: string; arg?: string; out?: string; text?: string }[] = [
-  { kind: "text", text: "I'll start with the session runner, where the turn and the task list meet." },
-  { kind: "tool", icon: "file", name: "Read", arg: "apps/server/src/session-runs.ts", out: "412 lines" },
-  { kind: "tool", icon: "search", name: "Grep", arg: "setStatus", out: "9 matches in 3 files" },
-  { kind: "text", text: "setStatus is called from the result handler and from the stop path. Checking they take the same lock." },
-  { kind: "tool", icon: "file", name: "Read", arg: "apps/server/src/session-lock.ts", out: "88 lines" },
-  { kind: "tool", icon: "terminal", name: "Bash", arg: "pnpm test apps/server/src/session-runs.test.ts", out: "14 passed" },
-  { kind: "text", text: "The stop path reads the task list before taking the lock. A task that ends in between is stopped twice." },
+type Kind = "read" | "search" | "command" | "edit"
+interface Call {
+  kind: Kind
+  name: string
+  arg: string
+  out: string
+  failed?: boolean
+}
+interface Step {
+  sentence: string
+  calls: Call[]
+}
+const ICONS: Record<Kind, IconName> = { read: "file", search: "search", command: "terminal", edit: "pencil" }
+
+const STEPS: Step[] = [
+  {
+    sentence: "I'll start with the session runner, where the turn and the task list meet.",
+    calls: [
+      { kind: "read", name: "Read", arg: "apps/server/src/session-runs.ts", out: "export const setStatus = (run: Run, status: Status) =>\n  Effect.gen(function* () {\n    if (run.status === status) return\n    …" },
+      { kind: "search", name: "Grep", arg: "setStatus", out: "apps/server/src/session-runs.ts:88\napps/server/src/session-runs.ts:141\napps/server/src/usecases/stop-session.ts:23" },
+    ],
+  },
+  {
+    sentence: "setStatus is called from the result handler and from the stop path. Checking they take the same lock.",
+    calls: [
+      { kind: "read", name: "Read", arg: "apps/server/src/session-lock.ts", out: "export const withSessionLock = …" },
+      { kind: "read", name: "Read", arg: "apps/server/src/usecases/stop-session.ts", out: "const tasks = run.tasks.slice()\nyield* withSessionLock(…)" },
+    ],
+  },
+  {
+    sentence: "The stop path reads the task list before taking the lock. I'll check whether a test covers it.",
+    calls: [
+      { kind: "search", name: "Grep", arg: "stops a session with tasks", out: "No matches" },
+      { kind: "command", name: "Bash", arg: "pnpm test apps/server/src/session-runs.test.ts", out: "✗ stops each background task once\n  expected 1 call, got 2", failed: true },
+    ],
+  },
+  {
+    sentence: "A task that ends between the read and the lock is stopped twice. I'll confirm with a focused test.",
+    calls: [
+      { kind: "edit", name: "Edit", arg: "apps/server/src/session-runs.test.ts", out: "+ test(\"stops each background task once\", …)" },
+      { kind: "command", name: "Bash", arg: "pnpm test apps/server/src/session-runs.test.ts -t \"once\"", out: "✗ 1 failed" },
+    ],
+  },
 ]
 
 const LOG_LINES = [
@@ -41,16 +80,173 @@ const LOG_LINES = [
   "  ✓  8 worktree.spec.ts:61 › removes a merged worktree (4.2s)",
   "  ✓  9 settings.spec.ts:9 › changes the theme (0.8s)",
   "  ✓ 10 settings.spec.ts:27 › restores defaults (1.0s)",
+  "  ✓ 11 approvals.spec.ts:14 › allows a command (1.6s)",
+  "  ✓ 12 approvals.spec.ts:40 › denies a command (1.2s)",
+]
+const DEV_LINES = [
+  "$ pnpm dev",
+  "  VITE v8.0.2  ready in 412 ms",
+  "  ➜  Local:   http://localhost:5173/",
+  "  hmr update /src/app/app.tsx",
+  "  hmr update /src/modules/session/ui/session-mark.tsx",
 ]
 
-function useTicker(max: number, ms: number, start = 1) {
-  const [n, setN] = useState(start)
+// One clock for every view of a task, so the fold and the detail show the same run.
+const START = Date.now()
+function useNow(ms: number) {
+  const [now, setNow] = useState(Date.now())
   useEffect(() => {
-    const t = setInterval(() => setN((v) => Math.min(v + 1, max)), ms)
+    const t = setInterval(() => setNow(Date.now()), ms)
     return () => clearInterval(t)
-  }, [max, ms])
-  return n
+  }, [ms])
+  return now
 }
+const useStepCount = () => Math.min(STEPS.length, 2 + Math.floor((useNow(500) - START) / 4000))
+function useLog(task: Task) {
+  const lines = task.id === "c" ? DEV_LINES : LOG_LINES
+  const n = Math.min(lines.length, 4 + Math.floor((useNow(300) - START) / 1100))
+  return lines.slice(0, n)
+}
+
+const phrases = (calls: Call[]) => {
+  const count = (k: Kind) => calls.filter((c) => c.kind === k).length
+  const out: string[] = []
+  const cmd = count("command")
+  if (cmd) out.push(cmd === 1 ? "Ran a command" : `Ran ${cmd} commands`)
+  const read = count("read")
+  if (read) out.push(read === 1 ? "read a file" : `read ${read} files`)
+  if (count("edit")) out.push("edited a file")
+  if (count("search")) out.push("searched")
+  out[0] = out[0]![0]!.toUpperCase() + out[0]!.slice(1)
+  return out.join(" · ")
+}
+
+function ToolCall({ call, running }: { call: Call; running: boolean }) {
+  const header = (
+    <Stack as="span" direction="row" gap={2} align="center" grow>
+      <Icon name={ICONS[call.kind]} size={14} />
+      <Text weight="medium">{call.name}</Text>
+      <Stack as="span" grow>
+        <Text size="sm" tone="muted" mono truncate>
+          {call.arg}
+        </Text>
+      </Stack>
+      {running && (
+        <Text size="sm" tone="muted">
+          <Icon name="loader" size={12} label="running" />
+        </Text>
+      )}
+      {!running && call.failed && (
+        <Text size="sm" tone="danger">
+          failed
+        </Text>
+      )}
+    </Stack>
+  )
+  if (running) return header
+  return (
+    <Disclosure variant="row" summary={header}>
+      <CodeBlock text={call.out} />
+    </Disclosure>
+  )
+}
+
+function StepView({ step, current, defaultOpen }: { step: Step; current: boolean; defaultOpen: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  const failed = step.calls.filter((c) => c.failed).length
+  return (
+    <div className="iv-turn__step" data-failed={failed > 0 || undefined} data-current={current || undefined}>
+      <div className="iv-turn__sentence">
+        <p className="proto-prose">{step.sentence}</p>
+      </div>
+      <button type="button" className="iv-turn__summary" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="iv-turn__lead">
+          <span className="iv-turn__mark" data-state={current ? "running" : undefined}>
+            {current ? <Icon name="loader" size={12} /> : <Icon name="stack" size={14} />}
+          </span>
+          <span className="iv-turn__chevron">
+            <Icon name="chevron-right" size={12} />
+          </span>
+        </span>
+        <span className="iv-turn__phrases">
+          {phrases(step.calls)}
+          {failed > 0 && (
+            <>
+              <span className="iv-turn__dot"> · </span>
+              <span className="iv-turn__failed">{failed} failed</span>
+            </>
+          )}
+        </span>
+      </button>
+      {open && (
+        <div className="iv-turn__calls">
+          {step.calls.map((call, i) => (
+            <div key={i} className="iv-turn__call">
+              <ToolCall call={call} running={current && i === step.calls.length - 1} />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// The subagent's run, drawn as ivin draws a running turn: its last 3 steps in the fold, all of them in the detail.
+function Run({ lastOnly }: { lastOnly: boolean }) {
+  const n = useStepCount()
+  const shown = STEPS.slice(0, n)
+  const [earlierOpen, setEarlierOpen] = useState(false)
+  const hidden = lastOnly && !earlierOpen ? Math.max(0, shown.length - 3) : 0
+  const failed = shown.slice(0, hidden).flatMap((s) => s.calls).filter((c) => c.failed).length
+  return (
+    <div className="iv-turn">
+      {!lastOnly && (
+        <div className="iv-turn__line">
+          <span className="iv-turn__lead">
+            <span className="iv-turn__mark" data-state="running">
+              <Icon name="loader" size={12} />
+            </span>
+          </span>
+          <span className="iv-turn__label">Working for 3m 12s</span>
+          <span className="iv-turn__rule" />
+        </div>
+      )}
+      <div className="iv-turn__timeline">
+        {lastOnly && shown.length > 3 && (
+          <div className="iv-turn__earlier">
+            <button type="button" className="iv-turn__earlier-line" aria-expanded={earlierOpen} onClick={() => setEarlierOpen(!earlierOpen)}>
+              <span>
+                {earlierOpen ? `Hide ${shown.length - 3} earlier steps` : `${hidden} earlier steps`}
+                {failed > 0 && (
+                  <>
+                    <span className="iv-turn__dot"> · </span>
+                    <span className="iv-turn__failed">{failed} failed</span>
+                  </>
+                )}
+              </span>
+              <span className="iv-turn__chevron">
+                <Icon name="chevron-right" size={12} />
+              </span>
+            </button>
+          </div>
+        )}
+        {shown.slice(hidden).map((step, i) => {
+          const current = hidden + i === shown.length - 1
+          return <StepView key={step.sentence} step={step} current={current} defaultOpen={lastOnly ? current : true} />
+        })}
+      </div>
+    </div>
+  )
+}
+
+function Log({ task, tail }: { task: Task; tail?: number }) {
+  const lines = useLog(task)
+  return <CodeBlock text={(tail ? lines.slice(-tail) : lines).join("\n")} />
+}
+
+const Detail = ({ task }: { task: Task }) => (task.kind === "agent" ? <Run lastOnly={false} /> : <Log task={task} />)
+
+const taskIcon = (task: Task): IconName => (task.kind === "agent" ? "robot" : "terminal")
 
 function BackgroundMark({ status = "background" }: { status?: "background" | "working" | "idle" }) {
   return (
@@ -61,20 +257,22 @@ function BackgroundMark({ status = "background" }: { status?: "background" | "wo
   )
 }
 
-const TaskList = ({ tasks = TASKS }: { tasks?: Task[] }) => (
-  <ul className="proto-tip-list">
-    {tasks.map((t) => (
-      <li key={t.id}>
-        <Icon name={t.kind === "agent" ? "robot" : "terminal"} size={12} />
-        <span>{t.name}</span>
-      </li>
-    ))}
-  </ul>
-)
-
 function WithTasksTooltip({ children }: { children: ReactNode }) {
   return (
-    <Tooltip label="3 tasks in background" content={<TaskList />} side="bottom">
+    <Tooltip
+      label="3 tasks in background"
+      side="bottom"
+      content={
+        <ul className="proto-tip-list">
+          {TASKS.map((t) => (
+            <li key={t.id}>
+              <Icon name={taskIcon(t)} size={12} />
+              <span>{t.name}</span>
+            </li>
+          ))}
+        </ul>
+      }
+    >
       <span className="proto-tip-anchor">{children}</span>
     </Tooltip>
   )
@@ -141,92 +339,59 @@ function TabBar() {
   )
 }
 
-function Trail({ live = true }: { live?: boolean }) {
-  const n = useTicker(AGENT_STEPS.length, 1400, live ? 3 : AGENT_STEPS.length)
+function TaskMeta({ task }: { task: Task }) {
+  const n = useStepCount()
+  if (task.kind === "command") return <span className="proto-task-meta">running {task.since}</span>
+  const failed = STEPS.slice(0, n).flatMap((s) => s.calls).filter((c) => c.failed).length
+  const calls = STEPS.slice(0, n).flatMap((s) => s.calls).length
   return (
-    <div className="proto-trail">
-      {AGENT_STEPS.slice(0, n).map((s, i) =>
-        s.kind === "text" ? (
-          <p key={i} className="proto-trail-text">
-            {s.text}
-          </p>
-        ) : (
-          <div key={i} className="proto-trail-tool">
-            <div className="proto-toolrow">
-              <Icon name={s.icon!} size={14} />
-              <span className="proto-tool-name">{s.name}</span>
-              <span className="proto-tool-arg">{s.arg}</span>
-            </div>
-            <div className="proto-trail-out">{s.out}</div>
-          </div>
-        ),
-      )}
-      <div className="proto-live">
-        <span className="proto-live-dot" /> Working…
-      </div>
-    </div>
+    <span className="proto-task-meta">
+      {task.model} · {calls} tool calls
+      {failed > 0 && <span className="iv-turn__failed"> · {failed} failed</span>}
+    </span>
   )
 }
 
-function Log({ task }: { task: Task }) {
-  const n = useTicker(LOG_LINES.length, task.id === "c" ? 2500 : 900, task.id === "c" ? 1 : 4)
-  const lines = task.id === "c" ? ["$ pnpm dev", "  VITE v8.0.2  ready in 412 ms", "  ➜  Local:   http://localhost:5173/", "  hmr update /src/app/app.tsx"] : LOG_LINES
-  return (
-    <pre className="proto-log">
-      {lines.slice(0, Math.min(n, lines.length)).join("\n")}
-      <span className="proto-caret" />
-    </pre>
-  )
-}
-
-const Body = ({ task }: { task: Task }) => (task.kind === "agent" ? <Trail /> : <Log task={task} />)
-
-function TaskIcon({ task }: { task: Task }) {
-  return <Icon name={task.kind === "agent" ? "robot" : "terminal"} size={14} />
-}
-
-
-const STAT: Record<string, string> = { a: "9 steps, 1 failed", b: "running", c: "running" }
-
+// A task row as MonoCode draws it: the row unfolds in place, its Details pill opens the whole run.
 function TaskRow({ task, onOpen, active }: { task: Task; onOpen: (t: Task) => void; active: boolean }) {
   const [open, setOpen] = useState(false)
-  const steps = useTicker(AGENT_STEPS.length, 1400, 3)
-  const lines = useTicker(LOG_LINES.length, 900, 4)
+  const pill = task.kind === "agent" ? "Details" : "Output"
   return (
     <div className="proto-task-block" data-active={active || undefined}>
       <button type="button" className="proto-task" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <TaskIcon task={task} />
+        <Icon name={taskIcon(task)} size={14} />
         <span className="proto-task-name">{task.name}</span>
-        <span className="proto-task-meta">{task.kind === "agent" ? `${task.model} · ` : ""}{task.kind === "agent" ? `${steps + 6} steps` : STAT[task.id]}</span>
+        <span
+          role="button"
+          tabIndex={0}
+          className="proto-pill"
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpen(task)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault()
+              e.stopPropagation()
+              onOpen(task)
+            }
+          }}
+        >
+          {pill}
+        </span>
+        <span className="proto-task-spacer" />
+        <TaskMeta task={task} />
         <span className="proto-task-chevron" data-open={open || undefined}>
           <Icon name="chevron-right" size={12} />
         </span>
       </button>
-      {open && (
-        <div className="proto-peek">
-          {task.kind === "agent" ? (
-            AGENT_STEPS.slice(0, steps).map((st, i) => (
-              <div key={i} className="proto-peek-line">
-                {st.kind === "text" ? st.text : `${st.name} ${st.arg}`}
-              </div>
-            ))
-          ) : (
-            <pre className="proto-peek-log">{LOG_LINES.slice(Math.max(0, lines - 5), lines).join("\n")}</pre>
-          )}
-          <button type="button" className="proto-pill" data-shown onClick={() => onOpen(task)}>
-            {task.kind === "agent" ? "Open details" : "Open output"}
-          </button>
-        </div>
-      )}
+      {open && <div className="proto-peek">{task.kind === "agent" ? <Run lastOnly /> : <Log task={task} tail={5} />}</div>}
     </div>
   )
 }
 
-interface FoldProps {
-  renderRow: (task: Task) => ReactNode
-}
-function Fold({ renderRow }: FoldProps) {
-  const [open, setOpen] = useState(false)
+function Fold({ onOpen, activeId }: { onOpen: (t: Task) => void; activeId: string | null }) {
+  const [open, setOpen] = useState(true)
   return (
     <div className="proto-fold">
       <button type="button" className="iv-turn__line iv-turn__line--toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -237,14 +402,18 @@ function Fold({ renderRow }: FoldProps) {
         </span>
         <span className="iv-turn__rule" />
       </button>
-      {open && <div className="proto-fold-list">{TASKS.map((t) => renderRow(t))}</div>}
+      {open && (
+        <div className="proto-fold-list">
+          {TASKS.map((t) => (
+            <TaskRow key={t.id} task={t} onOpen={onOpen} active={activeId === t.id} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
-const Item = ({ children }: { children: ReactNode }) => (
-  <div className="iv-transcript__item">{children}</div>
-)
+const Item = ({ children }: { children: ReactNode }) => <div className="iv-transcript__item">{children}</div>
 
 function Transcript({ fold }: { fold: ReactNode }) {
   return (
@@ -258,13 +427,13 @@ function Transcript({ fold }: { fold: ReactNode }) {
           </Block>
         </Item>
         <Item>
-          <p className="proto-prose">
-            I'll have a subagent review the runner while I start the end-to-end tests and the dev server. I'll pick up when they report back.
-          </p>
-        </Item>
-        <Item>
           <div className="iv-turn">
             <div className="iv-turn__line">
+              <span className="iv-turn__lead">
+                <span className="iv-turn__mark" data-outcome="answered">
+                  <Icon name="check" size={14} />
+                </span>
+              </span>
               <span className="iv-turn__label">Worked for 2m 10s · 5 tool calls</span>
               <span className="iv-turn__rule" />
             </div>
@@ -273,7 +442,7 @@ function Transcript({ fold }: { fold: ReactNode }) {
         <Item>{fold}</Item>
         <Item>
           <p className="proto-prose">
-            The subagent is reading the runner and the tests are running. When they report back I'll fix the double stop and run the full check.
+            A subagent is reviewing the runner while the end-to-end tests and the dev server run. I'll pick up when they report back.
           </p>
         </Item>
       </div>
@@ -285,7 +454,7 @@ function Composer() {
   return (
     <div className="proto-composer-column">
       <div className="proto-composer">
-        <span className="proto-placeholder">Message Claude, or wait for the tasks…</span>
+        <span className="proto-placeholder">Ask, build, or paste an image…</span>
         <span className="proto-send">
           <Icon name="send" size={14} />
         </span>
@@ -320,9 +489,9 @@ function useEscape(onClose: () => void) {
 function DetailHeader({ task, onClose }: { task: Task; onClose: () => void }) {
   return (
     <div className="proto-detail-head">
-      <TaskIcon task={task} />
+      <Icon name={taskIcon(task)} size={14} />
       <span className="proto-detail-title">{task.name}</span>
-      <span className="proto-detail-meta">{task.kind === "agent" ? `${task.model} · ` : ""}running {task.since}</span>
+      <TaskMeta task={task} />
       <button type="button" className="proto-ghost" onClick={onClose} aria-label="Close">
         <Icon name="x" size={14} />
       </button>
@@ -343,7 +512,9 @@ function ApprovalSheet() {
       <div className="proto-approval-actions">
         <span className="proto-hint">↑↓ Navigate · Enter Select · Esc Deny</span>
         <span className="proto-btn">Deny</span>
-        <span className="proto-btn" data-primary>Allow</span>
+        <span className="proto-btn" data-primary>
+          Allow
+        </span>
       </div>
     </div>
   )
@@ -351,8 +522,8 @@ function ApprovalSheet() {
 
 export function Sheet() {
   const [open, setOpen] = useState<Task | null>(null)
-  const [approval, setApproval] = useState(true)
-  const [height, setHeight] = useState(280)
+  const [approval, setApproval] = useState(false)
+  const [height, setHeight] = useState(320)
   useEscape(() => setOpen(null))
   const drag = (e: React.PointerEvent<HTMLDivElement>) => {
     const startY = e.clientY
@@ -370,20 +541,14 @@ export function Sheet() {
       <label className="proto-demo">
         <input type="checkbox" checked={approval} onChange={(e) => setApproval(e.target.checked)} /> Approval pending
       </label>
-      <Transcript
-        fold={
-          <Fold
-            renderRow={(t) => <TaskRow key={t.id} task={t} onOpen={setOpen} active={open?.id === t.id} />}
-          />
-        }
-      />
+      <Transcript fold={<Fold onOpen={setOpen} activeId={open?.id ?? null} />} />
       <div className="proto-dock">
         {open && (
           <div className="proto-sheet" data-stacked={approval || undefined} style={{ height }} key={open.id}>
-            <div className="proto-grip" onPointerDown={drag} onDoubleClick={() => setHeight(280)} role="separator" aria-orientation="horizontal" aria-label="Resize" />
+            <div className="proto-grip" onPointerDown={drag} onDoubleClick={() => setHeight(320)} role="separator" aria-orientation="horizontal" aria-label="Resize" />
             <DetailHeader task={open} onClose={() => setOpen(null)} />
             <div className="proto-sheet-body">
-              <Body task={open} />
+              <Detail task={open} />
             </div>
           </div>
         )}
@@ -394,7 +559,6 @@ export function Sheet() {
   )
 }
 
-const FILES = ["session-runs.ts", "session-lock.ts"]
 const CODE = [
   "export function setStatus(run: Run, status: Status) {",
   "  if (run.status === status) return",
@@ -409,54 +573,87 @@ const CODE = [
   "}",
 ]
 
-type Tab = { kind: "file"; name: string } | { kind: "task"; task: Task }
-const tabKey = (t: Tab) => (t.kind === "file" ? `f:${t.name}` : `t:${t.task.id}`)
+type CardTab = { kind: "file"; name: string } | { kind: "task"; task: Task }
+const tabKey = (t: CardTab) => (t.kind === "file" ? `f:${t.name}` : `t:${t.task.id}`)
 
-export function SidePane() {
-  const [tabs, setTabs] = useState<Tab[]>(FILES.map((name) => ({ kind: "file", name })))
-  const [sel, setSel] = useState<string>("f:session-runs.ts")
+export function CardTabs() {
+  const [tabs, setTabs] = useState<CardTab[]>([
+    { kind: "file", name: "session-runs.ts" },
+    { kind: "file", name: "session-lock.ts" },
+  ])
+  const [sel, setSel] = useState("f:session-runs.ts")
   const openTask = (task: Task) => {
-    const tab: Tab = { kind: "task", task }
+    const tab: CardTab = { kind: "task", task }
     setTabs((ts) => (ts.some((t) => tabKey(t) === tabKey(tab)) ? ts : [...ts, tab]))
     setSel(tabKey(tab))
   }
   const close = (key: string) => {
-    setTabs((ts) => ts.filter((t) => tabKey(t) !== key))
-    if (sel === key) setSel(tabKey(tabs[0]!) === key ? tabKey(tabs[1]!) : tabKey(tabs[0]!))
+    const rest = tabs.filter((t) => tabKey(t) !== key)
+    setTabs(rest)
+    if (sel === key && rest[0]) setSel(tabKey(rest[rest.length - 1]!))
   }
   const current = tabs.find((t) => tabKey(t) === sel)
   return (
     <Window
       pane={
-        <aside className="proto-pane">
-          <div className="proto-pane-tabs" role="tablist">
-            {tabs.map((t) => (
-              <span key={tabKey(t)} role="tab" className="proto-pane-tab" data-active={tabKey(t) === sel || undefined} onClick={() => setSel(tabKey(t))}>
-                {t.kind === "file" ? <Icon name="file" size={14} /> : <span className="proto-tab-dot" />}
-                <span>{t.kind === "file" ? t.name : t.task.kind === "agent" ? "Subagent" : t.task.command.split(" ").slice(0, 2).join(" ")}</span>
-                <button type="button" className="proto-tab-close" aria-label="Close" onClick={(e) => { e.stopPropagation(); close(tabKey(t)) }}>
-                  <Icon name="x" size={12} />
-                </button>
-              </span>
-            ))}
-          </div>
-          <div className="proto-pane-body">
-            {current?.kind === "file" && (
-              <pre className="proto-code">{CODE.map((l, i) => `${String(i + 1).padStart(2)}  ${l}`).join("\n")}</pre>
-            )}
-            {current?.kind === "task" && <Body key={current.task.id} task={current.task} />}
-          </div>
-        </aside>
+        tabs.length > 0 && (
+          <aside className="proto-pane">
+            <div className="proto-pane-tabs" role="tablist">
+              {tabs.map((t) => (
+                <span key={tabKey(t)} role="tab" className="proto-pane-tab" data-active={tabKey(t) === sel || undefined} onClick={() => setSel(tabKey(t))}>
+                  {t.kind === "file" ? <Icon name="file" size={14} /> : <span className="proto-tab-dot" />}
+                  <span>{t.kind === "file" ? t.name : t.task.name}</span>
+                  <button
+                    type="button"
+                    className="proto-tab-close"
+                    aria-label="Close"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      close(tabKey(t))
+                    }}
+                  >
+                    <Icon name="x" size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+            {current?.kind === "task" && <DetailHeader task={current.task} onClose={() => close(sel)} />}
+            <div className="proto-pane-body">
+              {current?.kind === "file" && <pre className="proto-code">{CODE.map((l, i) => `${String(i + 1).padStart(2)}  ${l}`).join("\n")}</pre>}
+              {current?.kind === "task" && <Detail key={current.task.id} task={current.task} />}
+            </div>
+          </aside>
+        )
       }
     >
-      <Transcript
-        fold={
-          <Fold
-            renderRow={(t) => <TaskRow key={t.id} task={t} onOpen={openTask} active={sel === `t:${t.id}`} />}
-          />
-        }
-      />
+      <Transcript fold={<Fold onOpen={openTask} activeId={sel.startsWith("t:") ? sel.slice(2) : null} />} />
       <Composer />
     </Window>
+  )
+}
+
+export function Dialog() {
+  const [open, setOpen] = useState<Task | null>(null)
+  useEscape(() => setOpen(null))
+  return (
+    <>
+      <Window>
+        <Transcript fold={<Fold onOpen={setOpen} activeId={open?.id ?? null} />} />
+        <Composer />
+      </Window>
+      {open && (
+        <>
+          <div className="proto-backdrop" onClick={() => setOpen(null)} />
+          <div className="proto-dialog" role="dialog" aria-modal="true" aria-label={open.name}>
+            <DetailHeader task={open} onClose={() => setOpen(null)} />
+            <div className="proto-dialog-body">
+              <div className="proto-dialog-column">
+                <Detail task={open} />
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
