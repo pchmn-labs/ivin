@@ -15,11 +15,10 @@ export const deleteSession = (sessionId: string) =>
     const tabs = yield* TabStore
     const session = yield* store.findById(sessionId)
     if (!session) return yield* new SessionNotFound({ sessionId })
-    yield* (yield* SessionRuns).stop(sessionId)
     const { projectPath } = session
     const order = (yield* tabs.listByProject(projectPath)).map((tab) => tab.sessionId)
     const selected = yield* tabs.selectedOf(projectPath)
-    yield* store.delete(sessionId)
+    yield* (yield* SessionRuns).close(sessionId, store.delete(sessionId))
     yield* (yield* ImageStore).removeSession(sessionId)
     yield* removeTargetAnnotations({ _tag: "session", sessionId })
     if (selected === sessionId) {

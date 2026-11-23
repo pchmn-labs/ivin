@@ -11,8 +11,8 @@ export const archiveSession = (sessionId: string) =>
     const store = yield* SessionStore
     const session = yield* store.findById(sessionId)
     if (!session) return yield* new SessionNotFound({ sessionId })
-    yield* (yield* SessionRuns).stop(sessionId)
-    yield* store.setArchivedAt(sessionId, yield* DateTime.now)
+    const at = yield* DateTime.now
+    yield* (yield* SessionRuns).close(sessionId, store.setArchivedAt(sessionId, at))
     yield* removeTab(sessionId)
     yield* (yield* SessionFeed).publish(sessionId)
     yield* (yield* WorktreeCleanup).afterTabsClosed(session.projectPath, [sessionId])

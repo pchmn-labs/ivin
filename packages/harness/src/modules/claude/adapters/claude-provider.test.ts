@@ -1,6 +1,7 @@
 import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { Effect, Stream } from "effect"
 import { expect, test, vi } from "vitest"
 import { HarnessProvider } from "../../../shared/harness-provider.ts"
@@ -36,6 +37,44 @@ real(
     expect(outputs.some((o) => o.type === "delta")).toBe(true)
     expect(outputs.find((o) => o.type === "assistant_text")).toMatchObject({ text: "pong" })
     expect(outputs.some((o) => o.type === "usage")).toBe(true)
+  },
+  60_000,
+)
+
+real(
+  "the real claude CLI ends an interrupted turn with an interruption and idle, and keeps its process",
+  async () => {
+    const cwd = mkdtempSync(join(tmpdir(), "ivin-claude-"))
+    const outputs = await Effect.runPromise(
+      Effect.gen(function* () {
+        const harness = yield* (yield* HarnessProvider).start({
+          sessionId: "s1",
+          cwd,
+          options: { model: "haiku", effort: "low", permissionMode: "manual" },
+          providerSessionId: null,
+        })
+        yield* harness.send({
+          id: crypto.randomUUID(),
+          text: "Count from 1 to 500, one number per line.",
+          images: [],
+        })
+        const seen: HarnessOutput[] = []
+        yield* Stream.runForEach(
+          Stream.takeUntil(harness.events, (o) => o.type === "status" && o.status === "idle"),
+          (output) =>
+            Effect.suspend(() => {
+              seen.push(output)
+              return output.type === "delta" && seen.filter((o) => o.type === "delta").length === 1
+                ? harness.interrupt
+                : Effect.void
+            }),
+        )
+        return seen
+      }).pipe(Effect.provide(layerClaude), Effect.scoped),
+    )
+
+    expect(outputs.some((o) => o.type === "interruption")).toBe(true)
+    expect(outputs.at(-1)).toMatchObject({ type: "status", status: "idle" })
   },
   60_000,
 )

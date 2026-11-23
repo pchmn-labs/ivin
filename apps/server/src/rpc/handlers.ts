@@ -91,34 +91,33 @@ import { listBranches } from "../modules/worktree/usecases/list-branches.ts"
 import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
-export const layerServices = Layer.mergeAll(
-  layerWorktreeCleanup,
-  layerImageCompression,
-  layerFirstMessageReading,
-).pipe(
-  Layer.provideMerge(Layer.mergeAll(layerSessionRuns, layerCurrentSettings)),
-  Layer.provideMerge(layerSessionFeed),
-  Layer.provideMerge(layerOriginFetch),
-  Layer.provideMerge(layerSharedFolderWatch),
-  Layer.provideMerge(
-    Layer.mergeAll(
-      layerGitCli,
-      layerFsFolderReader,
-      layerFsFolderWatcher,
-      layerFsFileReader,
-      layerFsFileWriter,
-      layerSqliteSessionStore,
-      layerSqliteTabStore,
-      layerSqliteTranscriptStore,
-      layerFsImageStore,
-      layerItemFeed,
-      layerSqliteAnnotationStore,
-      layerAnnotationFeed,
+export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
+  Layer.mergeAll(layerWorktreeCleanup, layerImageCompression, layerFirstMessageReading).pipe(
+    Layer.provideMerge(Layer.mergeAll(sessionRuns, layerCurrentSettings)),
+    Layer.provideMerge(layerSessionFeed),
+    Layer.provideMerge(layerOriginFetch),
+    Layer.provideMerge(layerSharedFolderWatch),
+    Layer.provideMerge(
+      Layer.mergeAll(
+        layerGitCli,
+        layerFsFolderReader,
+        layerFsFolderWatcher,
+        layerFsFileReader,
+        layerFsFileWriter,
+        layerSqliteSessionStore,
+        layerSqliteTabStore,
+        layerSqliteTranscriptStore,
+        layerFsImageStore,
+        layerItemFeed,
+        layerSqliteAnnotationStore,
+        layerAnnotationFeed,
+      ),
     ),
-  ),
-  Layer.provideMerge(layerFsProjectTrust),
-  Layer.provideMerge(layerSqliteProjectStore),
-)
+    Layer.provideMerge(layerFsProjectTrust),
+    Layer.provideMerge(layerSqliteProjectStore),
+  )
+
+export const layerServices = layerServicesWith(layerSessionRuns)
 
 type Handlers = Record<string, (...args: never[]) => unknown>
 
@@ -180,7 +179,8 @@ export const handlers = Rpcs.toLayer(
       "session.delete": ({ sessionId }) => deleteSession(sessionId),
       "session.rename": ({ sessionId, title, by }) => renameSession(sessionId, title, by),
       "session.sendMessage": ({ sessionId, messageId, text, images = [], workingFolder }) =>
-        sendMessage(sessionId, messageId, text, images, workingFolder),
+        // A message the server accepted is sent even when the client stops waiting.
+        Effect.uninterruptible(sendMessage(sessionId, messageId, text, images, workingFolder)),
       "session.pickWorkingFolder": ({ sessionId, workingFolder }) =>
         pickWorkingFolder(sessionId, workingFolder),
       "session.answerApproval": ({ sessionId, requestId, allow }) =>

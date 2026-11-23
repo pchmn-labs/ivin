@@ -1,6 +1,6 @@
 import type { HarnessRunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
-import { Cause, type Duration, Effect, Layer, Queue, Stream } from "effect"
+import { Cause, Deferred, type Duration, Effect, Layer, Queue, Stream } from "effect"
 import {
   HarnessError,
   HarnessProvider,
@@ -58,6 +58,13 @@ export interface ScriptedOptions {
   readonly cycle?: boolean
   readonly closeDelay?: Duration.Input
   readonly startFailure?: string
+  // `start` completes `reached` once its process exists, then waits for `release`.
+  readonly startGate?: {
+    readonly reached: Deferred.Deferred<void>
+    readonly release: Deferred.Deferred<void>
+  }
+  // The interrupt is recorded but the agent keeps its turn.
+  readonly ignoreInterrupt?: boolean
   readonly starts?: StartInput[]
   readonly responded?: RequestAnswer[]
   // Announces a provider session id on start, as an adapter does when it learns one.
@@ -91,6 +98,8 @@ export const layerScripted = (
     cycle = false,
     closeDelay = 0,
     startFailure,
+    startGate,
+    ignoreInterrupt = false,
     reportSession = false,
     runOptions = scriptedRunOptions,
     completeText,
@@ -123,6 +132,10 @@ export const layerScripted = (
                 Effect.andThen(Queue.shutdown(queue)),
               ),
           )
+          if (startGate) {
+            yield* Deferred.succeed(startGate.reached, undefined)
+            yield* Deferred.await(startGate.release)
+          }
           if (reportSession)
             yield* Queue.offer(queue, {
               type: "provider_session",
@@ -190,6 +203,7 @@ export const layerScripted = (
               }),
             interrupt: Effect.suspend(() => {
               interrupted.push(sessionId)
+              if (ignoreInterrupt) return Effect.void
               paused = null
               return Queue.offerAll(queue, [
                 { type: "interruption", raw: null },
