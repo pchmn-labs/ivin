@@ -29,6 +29,7 @@ import { SidebarTabs } from "./sidebar-tabs.tsx"
 import { SESSIONS_TAB, showSidebarTab, sidebarOpenAtom } from "./sidebar.ts"
 import { Slot } from "./slot-renderer.tsx"
 import { ResizeHandle } from "../core/components/resize-handle/resize-handle.tsx"
+import { restartServer } from "../modules/server/adapters/desktop-server.ts"
 import { connectionAtom } from "../modules/server/atoms/connection.ts"
 import { useCommandHandler } from "../modules/command/hooks/use-command-handler.ts"
 import { KeybindingsFileProblem } from "../modules/keybinding/ui/keybindings-file-problem.tsx"
@@ -100,10 +101,14 @@ export function App() {
     projectPath !== null,
   )
 
-  // The desktop app does not restart a lost server, so a retry cannot work.
-  const serverLost = connection.state === "failed" && (
+  const serverLost = (connection.state === "failed" || connection.state === "restarting") && (
     <div className="iv-app__alert">
-      <ErrorMessage message={connection.text} />
+      <ErrorMessage
+        message={connection.text}
+        {...(connection.canRestart && {
+          action: { label: "Restart", onSelect: () => void restartServer() },
+        })}
+      />
     </div>
   )
 

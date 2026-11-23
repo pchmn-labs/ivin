@@ -9,7 +9,8 @@ import "./settings-button.css"
 export function SettingsButton() {
   const registry = useContext(RegistryContext)
   const hint = useKeyHint("Settings", "settings.open")
-  const lost = useAtomValue(connectionAtom).state === "failed"
+  const { state } = useAtomValue(connectionAtom)
+  const lost = state === "failed" || state === "restarting"
   return (
     <span className="iv-settings-button">
       <IconButton

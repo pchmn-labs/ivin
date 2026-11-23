@@ -7,7 +7,7 @@ description: Launch ivin to show it to the user or to screenshot it yourself. Us
 
 ## The user sees it
 
-Run `pnpm dev` in the background, then tell the user the app is up so they switch to it themselves.
+Run `pnpm dev` in the background, then tell the user the app is up so they switch to it themselves. It keeps its own data (`ivin-dev`, `~/.ivin-dev`) and starts empty: it never shows the installed app's sessions.
 
 To try a session by hand, open `ivin-playground`, a folder beside the main checkout, as the project (`git init` it when missing). A session runs a real agent in its project folder, leaving its files and its Claude Code history there, so the playground keeps them out of the ivin repo.
 

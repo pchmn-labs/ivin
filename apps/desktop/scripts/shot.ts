@@ -4,6 +4,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeTempDir } from "../e2e/launch-app.ts"
+import { descendantsOf } from "../e2e/processes.ts"
 import { sendMessage } from "../e2e/session-helpers.ts"
 
 const desktopDir = join(dirname(fileURLToPath(import.meta.url)), "..")
@@ -356,6 +357,15 @@ try {
   await window.getByRole("group", { name: "Projects" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("strip-layout")
+  const [server] = descendantsOf(app.process().pid!).filter((proc) =>
+    proc.command.includes("node.mojom.NodeService"),
+  )
+  process.kill(server!.pid, "SIGKILL")
+  await window
+    .getByRole("alert")
+    .getByText(/Restarting it/)
+    .waitFor()
+  await shoot("server-restarting")
 } finally {
   await app.close()
 }

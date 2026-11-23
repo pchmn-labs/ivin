@@ -36,40 +36,47 @@ export const makeFakeClaudeBin = (): string => {
 
 export const claudeConfigDir = (userDataDir: string) => join(userDataDir, "claude")
 
-export const launchPackagedApp = (
-  userDataDir: string,
-  options: {
-    readonly fakeClaudeBin?: string
-    readonly harness?: "scripted" | "scripted-approval"
-    // Replaces the app's PATH, to show it needs nothing from it.
-    readonly path?: string
-  } = {},
-): Promise<ElectronApplication> => {
+export interface LaunchOptions {
+  readonly fakeClaudeBin?: string
+  readonly harness?: "scripted" | "scripted-approval"
+  // Replaces the app's PATH, to show it needs nothing from it.
+  readonly path?: string
+  // False shows the window, as a user's launch does.
+  readonly background?: boolean
+}
+
+export const packagedLaunch = (userDataDir: string, options: LaunchOptions = {}) => {
   if (!existsSync(packagedExecutable)) {
     throw new Error(`Packaged app not found at ${packagedExecutable}: run pnpm package first`)
   }
-  return electron.launch({
+  const common = {
+    ...process.env,
+    IVIN_HOME: join(userDataDir, ".ivin"),
+    ...(options.background === false ? {} : { IVIN_BACKGROUND: "1" }),
+  }
+  return {
     executablePath: packagedExecutable,
     args: [`--user-data-dir=${userDataDir}`],
     env: options.fakeClaudeBin
       ? {
-          ...process.env,
-          IVIN_HOME: join(userDataDir, ".ivin"),
-          IVIN_BACKGROUND: "1",
+          ...common,
           IVIN_HARNESS: "claude",
           // ivin installs its skill there: never in the real ~/.claude.
           CLAUDE_CONFIG_DIR: claudeConfigDir(userDataDir),
           PATH: `${options.fakeClaudeBin}${delimiter}${process.env["PATH"] ?? ""}`,
         }
       : {
-          ...process.env,
-          IVIN_HOME: join(userDataDir, ".ivin"),
-          IVIN_BACKGROUND: "1",
+          ...common,
           IVIN_HARNESS: options.harness ?? "scripted",
           ...(options.path !== undefined && { PATH: options.path }),
         },
-  })
+  }
 }
+
+export const launchPackagedApp = (
+  userDataDir: string,
+  options: LaunchOptions = {},
+): Promise<ElectronApplication> => electron.launch(packagedLaunch(userDataDir, options))
 
 // The settings page is the one place that names the server's version.
 export const openServerVersion = async (window: Page) => {
