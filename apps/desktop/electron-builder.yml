@@ -9,6 +9,7 @@ files:
     filter: ["main.js", "preload.cjs"]
   - from: ../server/dist
     to: server
+    filter: ["**/*", "!pnpm/**"]
   - from: ../../packages/ui/dist
     to: renderer
   - package.json
@@ -17,6 +18,8 @@ extraResources:
     to: cli
   - from: ../server/skills
     to: skills
+  - from: ../server/dist/pnpm
+    to: pnpm
   - from: ../../plugins
     to: plugins
     filter: ["**/*", "!**/*.ts", "!**/*.tsx"]

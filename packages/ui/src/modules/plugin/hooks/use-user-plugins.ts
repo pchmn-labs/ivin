@@ -1,6 +1,6 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { UiPlugin } from "@ivin/plugin-api/ui"
 import type { ImportBundle } from "../adapters/plugin-bundle.ts"
 import type { UiPluginEntry } from "../atoms/activate-plugin.ts"
@@ -16,6 +16,10 @@ export function useUserPlugins(importBundle: ImportBundle) {
   const listed = AsyncResult.isSuccess(result) ? result.value : null
   const report = useAtomSet(reportPluginFailureAtom)
   const [plugins, setPlugins] = useState(NONE)
+  const shown = useRef(NONE)
+
+  // Started once per bundle, so a longer list neither imports nor reports a plugin twice.
+  const loads = useRef(new Map<string, Promise<UiPluginEntry | null>>())
 
   useEffect(() => {
     if (listed === null) return
@@ -30,15 +34,23 @@ export function useUserPlugins(importBundle: ImportBundle) {
       } catch (error) {
         reason = `Could not load its UI half: ${messageOf(error)}`
       }
-      if (!stopped) report({ id, reason })
+      report({ id, reason })
       return null
     }
-    void Promise.all(
-      listed.flatMap((plugin) =>
-        plugin._tag === "compiled" ? [load(plugin.id, plugin.bundle)] : [],
-      ),
-    ).then((entries) => {
-      if (!stopped) setPlugins(entries.filter((entry) => entry !== null))
+    const entries = listed.flatMap((plugin) => {
+      if (plugin._tag !== "compiled") return []
+      const key = `${plugin.id}\0${plugin.bundle}`
+      const started = loads.current.get(key) ?? load(plugin.id, plugin.bundle)
+      loads.current.set(key, started)
+      return [started]
+    })
+    void Promise.all(entries).then((loaded) => {
+      if (stopped) return
+      const next = loaded.filter((entry) => entry !== null)
+      const current = shown.current
+      if (current.length === next.length && current.every((entry, i) => entry === next[i])) return
+      shown.current = next
+      setPlugins(next)
     })
     return () => {
       stopped = true
@@ -48,7 +60,8 @@ export function useUserPlugins(importBundle: ImportBundle) {
   const dropFailedPlugin = useCallback(
     (id: string, error: unknown) => {
       report({ id, reason: `Its activate function threw: ${messageOf(error)}` })
-      setPlugins((current) => current.filter((plugin) => plugin.manifest.id !== id))
+      shown.current = shown.current.filter((plugin) => plugin.manifest.id !== id)
+      setPlugins(shown.current)
     },
     [report],
   )

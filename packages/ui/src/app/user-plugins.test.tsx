@@ -121,3 +121,18 @@ test("a bundle that fails to import, exports no activate, or throws in activate 
     )
   expect(server.pluginFailures).toHaveLength(3)
 })
+
+test("a plugin listed later, once its dependencies install, loads beside those already loaded", async () => {
+  const { server } = await renderWith(
+    [],
+    importFromSource({ "a.js": textBundle("first plugin"), "b.js": textBundle("second plugin") }),
+    (server) =>
+      server.userPlugins.push({ _tag: "compiled", id: "first", name: "First", bundle: "a.js" }),
+  )
+  await expect.element(page.getByText("first plugin")).toBeVisible()
+
+  server.addUserPlugin({ _tag: "compiled", id: "second", name: "Second", bundle: "b.js" })
+
+  await expect.element(page.getByText("second plugin")).toBeVisible()
+  await expect.element(page.getByText("first plugin")).toBeVisible()
+})

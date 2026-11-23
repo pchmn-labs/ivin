@@ -11,6 +11,7 @@ import {
 import { socketPathOf, withServer } from "./connection.ts"
 import { doctor } from "./doctor.ts"
 import { link } from "./link.ts"
+import { pluginLock } from "./plugin-lock.ts"
 import { pluginLogs } from "./plugin-logs.ts"
 import { sessionAnnotate } from "./session-annotate.ts"
 import { sessionRename } from "./session-rename.ts"
@@ -22,6 +23,7 @@ const commands: readonly Command[] = [
   sessionAnnotate,
   sessionRename,
   link,
+  pluginLock,
   pluginLogs,
   settingsGet,
   settingsSet,

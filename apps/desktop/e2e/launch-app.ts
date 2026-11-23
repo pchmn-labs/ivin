@@ -36,6 +36,8 @@ export const launchPackagedApp = (
   options: {
     readonly fakeClaudeBin?: string
     readonly harness?: "scripted" | "scripted-approval"
+    // Replaces the app's PATH, to show it needs nothing from it.
+    readonly path?: string
   } = {},
 ): Promise<ElectronApplication> => {
   if (!existsSync(packagedExecutable)) {
@@ -59,6 +61,7 @@ export const launchPackagedApp = (
           IVIN_HOME: join(userDataDir, ".ivin"),
           IVIN_BACKGROUND: "1",
           IVIN_HARNESS: options.harness ?? "scripted",
+          ...(options.path !== undefined && { PATH: options.path }),
         },
   })
 }

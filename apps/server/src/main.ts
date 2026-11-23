@@ -47,6 +47,7 @@ const {
     home: homePath,
     images: imagesPath,
     skill: skillPath,
+    pnpm: pnpmPath,
     "cli-command": cliCommandPath,
   },
 } = parseArgs({
@@ -56,6 +57,7 @@ const {
     home: { type: "string" },
     images: { type: "string" },
     skill: { type: "string" },
+    pnpm: { type: "string" },
     "cli-command": { type: "string" },
   },
   strict: false,
@@ -75,6 +77,8 @@ if (typeof imagesPath !== "string") fail("Missing --images <path>, the folder of
 const imageFolder = imagesPath as string
 if (typeof skillPath !== "string") fail("Missing --skill <path>, the folder of ivin's skill")
 const skillFolder = skillPath as string
+if (typeof pnpmPath !== "string") fail("Missing --pnpm <path>, the folder of the pnpm ivin ships")
+const pnpmFolder = pnpmPath as string
 const loginShell = process.env["SHELL"] || "/bin/zsh"
 const layerShellCommand =
   typeof cliCommandPath === "string"
@@ -144,7 +148,7 @@ const startup = Effect.gen(function* () {
           layerLogger,
           layerFsKeybindingsFile(ivinHome),
           layerFsSettingsFile(ivinHome),
-          layerFsUserPlugins(ivinHome),
+          layerFsUserPlugins(ivinHome, pnpmFolder),
           layerShellCommand,
         ),
       ),
