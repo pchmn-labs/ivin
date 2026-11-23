@@ -32,6 +32,19 @@ function Shell({ sidebar = true, children }: { sidebar?: boolean; children: Reac
   )
 }
 
+function CardShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="proto-window">
+      <div className="proto-sidebar">
+        <div className="proto-row" data-active>Fix the login redirect</div>
+        <div className="proto-row">Add rate limiting</div>
+        <div className="proto-row">Migrate to Drizzle</div>
+      </div>
+      <div className="proto-card">{children}</div>
+    </div>
+  )
+}
+
 function Skeleton() {
   return (
     <div className="proto-chat" aria-hidden>
@@ -84,7 +97,7 @@ function ArchiveDialog({ variant, running, onClose }: { variant: 1 | 2 | 3; runn
     // Sentence: one description line, the files under it
     return (
       <Dialog open onOpenChange={onClose} title={title} actions={actions}
-        description={running ? "The agent is working and stops. These files have unsaved edits, which are lost:" : "These files have unsaved edits, which are lost:"}>
+        description={running ? "Archiving this session will stop the working agent and lose the unsaved edits to these files:" : "Archiving this session will lose the unsaved edits to these files:"}>
         {files}
       </Dialog>
     )
@@ -157,15 +170,15 @@ function make(variant: 1 | 2 | 3) {
               </div>
             </Shell>
           ) : (
-            <Shell>
-              <div className="proto-bar"><ErrorMessage message="This session could not be drawn: Cannot read properties of undefined (reading 'title')." onRetry={() => {}} action={{ label: "Reload window", onSelect: () => {} }} /></div>
-              <Skeleton />
-            </Shell>
+            <CardShell>
+              <div className="proto-card-row"><ErrorMessage message="This part of the window could not be drawn. The sidebar still works." onRetry={() => {}} action={{ label: "Reload window", onSelect: () => {} }} /></div>
+              <div className="proto-card-body"><Skeleton /></div>
+            </CardShell>
           )
         )}
-        {scene === "transcript" && (
+        {scene === "transcript" && variant !== 3 && (
           <Shell>
-            {variant === 1 && (
+            {variant !== 3 && (<>{variant === 1 && (
               <div className="proto-center">
                 <ErrorMessage message="The transcript could not be loaded." onRetry={() => {}} />
               </div>
@@ -180,13 +193,14 @@ function make(variant: 1 | 2 | 3) {
                 <span style={{ color: "var(--iv-text-faint)", fontSize: "var(--iv-text-xs)" }}>Or: “This session no longer exists.”</span>
               </div>
             )}
-            {variant === 3 && (
-              <>
-                <div className="proto-bar"><ErrorMessage message="The transcript could not be loaded." onRetry={() => {}} /></div>
-                <Skeleton />
-              </>
-            )}
+            </>)}
           </Shell>
+        )}
+        {scene === "transcript" && variant === 3 && (
+          <CardShell>
+            <div className="proto-card-row"><ErrorMessage message="The transcript could not be loaded." onRetry={() => {}} /></div>
+            <div className="proto-card-body"><Skeleton /></div>
+          </CardShell>
         )}
       </>
     )

@@ -34,3 +34,7 @@ body { overflow: hidden; background: var(--iv-bg); color: var(--iv-text); }
 .proto-section { display: flex; flex-direction: column; gap: 4px; }
 .proto-label { color: var(--iv-text-faint); font-size: var(--iv-text-xs); font-weight: 500; }
 .proto-box { padding: 8px 10px; border: 1px solid var(--iv-border); border-radius: var(--iv-radius-md); background: var(--iv-bg-subtle); }
+
+.proto-card { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--iv-border); border-radius: 10px; background: var(--iv-bg); }
+.proto-card-row { display: flex; align-items: center; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--iv-border); background: var(--iv-bg-card); flex: none; }
+.proto-card-body { flex: 1; min-height: 0; }
