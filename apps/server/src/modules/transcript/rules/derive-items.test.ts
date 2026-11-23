@@ -1,9 +1,9 @@
 import type { TranscriptEvent } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
-import { applyEvent, deriveItems, emptyItemState, replay } from "./derive-items.ts"
+import { applyEvent, emptyItemState, replay } from "./derive-items.ts"
 
 const kindOf = (name: string) => (name === "list_files" ? "search" : "other")
-const derive = (all: TranscriptEvent[]) => deriveItems(all, kindOf)
+const derive = (all: TranscriptEvent[]) => replay(all, kindOf).items
 
 type Body = Record<string, unknown> & { type: TranscriptEvent["type"] }
 

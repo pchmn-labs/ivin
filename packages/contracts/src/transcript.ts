@@ -103,7 +103,7 @@ const QuestionAnswerBody = Schema.Struct({
   requestId: Schema.String,
   answers: Schema.NullOr(Schema.Array(QuestionAnswer)),
 })
-// The run ended before the user answered request `requestId`.
+// Request `requestId`'s turn or run ended before the user answered it.
 const RequestUnansweredBody = Schema.Struct({
   type: Schema.Literal("request_unanswered"),
   requestId: Schema.String,

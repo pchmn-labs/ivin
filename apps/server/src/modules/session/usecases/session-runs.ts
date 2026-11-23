@@ -202,7 +202,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           let streamed: StreamedBlock | null = null
           const writing = yield* Semaphore.make(1)
 
-          const write = (event: HarnessEvent, id?: string, touch = true) =>
+          const write = (event: HarnessEvent, id?: string, { touch = true } = {}) =>
             Effect.gen(function* () {
               const at = yield* DateTime.now
               sequence += 1
@@ -263,18 +263,19 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
               }),
             )
 
-          const closeOpenRequests = (touch: boolean) =>
-            Effect.suspend(() =>
-              Effect.forEach(
-                [...itemState.openRequests.keys()],
-                (requestId) =>
-                  write({ type: "request_unanswered", requestId, raw: null }, undefined, touch),
-                { discard: true },
-              ),
-            )
+          // Not the user's activity, so the session keeps its place in the sidebar.
+          const writeUnanswered = Effect.suspend(() =>
+            Effect.forEach(
+              [...itemState.openRequests.keys()],
+              (requestId) =>
+                write({ type: "request_unanswered", requestId, raw: null }, undefined, {
+                  touch: false,
+                }),
+              { discard: true },
+            ),
+          )
 
-          // A request left open when its turn or run ends can no longer be answered.
-          const closeRequests = (touch = true) => writing.withPermits(1)(closeOpenRequests(touch))
+          const closeRequests = writing.withPermits(1)(writeUnanswered)
 
           const turnStatus = (status: "running" | "idle") =>
             writing.withPermits(1)(
@@ -282,7 +283,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
                 status === "running" && itemState.openRequests.size > 0
                   ? Effect.void
                   : status === "idle"
-                    ? closeOpenRequests(true).pipe(Effect.andThen(setStatus(session.id, "idle")))
+                    ? writeUnanswered.pipe(Effect.andThen(setStatus(session.id, "idle")))
                     : setStatus(session.id, "working"),
               ),
             )
@@ -332,7 +333,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           const end = Effect.suspend(() => {
             if (runs.get(session.id) === run) runs.delete(session.id)
             return guarded("stop agent", Scope.close(scope, Exit.void)).pipe(
-              Effect.andThen(guarded("close open requests", writer.closeRequests())),
+              Effect.andThen(guarded("close open requests", writer.closeRequests)),
               Effect.andThen(
                 guarded("move pending messages to unread", sessions.markPendingUnread(session.id)),
               ),
@@ -536,23 +537,15 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
             : Effect.void
         })
 
+      const closeRequestsLeftOpen = (sessionId: string) =>
+        Effect.gen(function* () {
+          const session = yield* sessions.findById(sessionId)
+          if (session) yield* (yield* makeWriter(session)).closeRequests
+        })
+
       yield* Effect.forEach(
         leftRunning,
-        (sessionId) =>
-          guarded(
-            "close requests left open",
-            sessions
-              .findById(sessionId)
-              .pipe(
-                Effect.flatMap((session) =>
-                  session
-                    ? makeWriter(session).pipe(
-                        Effect.flatMap((writer) => writer.closeRequests(false)),
-                      )
-                    : Effect.void,
-                ),
-              ),
-          ),
+        (sessionId) => guarded("close requests left open", closeRequestsLeftOpen(sessionId)),
         { discard: true },
       )
 

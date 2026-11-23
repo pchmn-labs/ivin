@@ -3,7 +3,6 @@ import { Effect } from "effect"
 import { ITEMS_VERSION, replay } from "../rules/derive-items.ts"
 import { TranscriptStore } from "./transcript-store.ts"
 
-// Derives the session's stored items from its events when they predate the current rules.
 export const ensureItems = (sessionId: string) =>
   Effect.gen(function* () {
     const store = yield* TranscriptStore

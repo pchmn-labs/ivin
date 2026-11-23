@@ -5,7 +5,7 @@ import type {
   TranscriptItem,
 } from "@ivin/contracts/transcript"
 import { DateTime, Effect, Layer } from "effect"
-import type { DatabaseSync } from "node:sqlite"
+import type { DatabaseSync, SQLInputValue } from "node:sqlite"
 import { Database } from "../../../shared/adapters/database.ts"
 import type { ItemState } from "../rules/derive-items.ts"
 import { TranscriptStore } from "../usecases/transcript-store.ts"
@@ -33,6 +33,7 @@ const toEvent = (row: EventRow): TranscriptEvent =>
 
 const toItem = (row: { payload: string }) => JSON.parse(row.payload) as TranscriptItem
 
+type UserMessageEvent = Extract<TranscriptEvent, { type: "user_message" }>
 type OpenToolCall = Extract<TranscriptItem, { type: "tool_call" }>
 type OpenRequest = Extract<TranscriptItem, { type: "approval" | "question" }>
 
@@ -78,12 +79,13 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
     const writeItem = (item: TranscriptItem) =>
       upsertItem.run(item.id, item.sessionId, item.position, item.type, JSON.stringify(item))
 
-    const readEvents = (sessionId: string) => {
+    const readEvents = (sessionId: string, type: TranscriptEvent["type"] | null = null) => {
       const rows = db
         .prepare(
-          `SELECT ${EVENT_COLUMNS} FROM transcript_events WHERE session_id = ? ORDER BY sequence`,
+          `SELECT ${EVENT_COLUMNS} FROM transcript_events
+           WHERE session_id = ? AND (? IS NULL OR type = ?) ORDER BY sequence`,
         )
-        .all(sessionId) as unknown as EventRow[]
+        .all(sessionId, type, type) as unknown as EventRow[]
       const images = compressedImages(db, sessionId)
       return rows
         .map(toEvent)
@@ -93,6 +95,9 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             : event,
         )
     }
+
+    const readItems = (sql: string, ...params: SQLInputValue[]) =>
+      (db.prepare(sql).all(...params) as { payload: string }[]).map(toItem)
 
     return {
       append: ({ id, sessionId, sequence, at, ...body }, { item, openMessageId }) =>
@@ -121,24 +126,12 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             .get(sessionId) as { sequence: number | null }
           return row.sequence ?? 0
         }),
-      events: (sessionId) => Effect.sync(() => readEvents(sessionId)),
       userMessages: (sessionId) =>
-        Effect.sync(() => {
-          const rows = db
-            .prepare(
-              `SELECT ${EVENT_COLUMNS} FROM transcript_events
-               WHERE session_id = ? AND type = 'user_message' ORDER BY sequence`,
-            )
-            .all(sessionId) as unknown as EventRow[]
-          const images = compressedImages(db, sessionId)
-          return rows
-            .map(toEvent)
-            .flatMap((event) =>
-              event.type === "user_message"
-                ? [{ ...event, ...(event.images && { images: images(event.images) }) }]
-                : [],
-            )
-        }),
+        Effect.sync(() =>
+          readEvents(sessionId, "user_message").filter(
+            (event): event is UserMessageEvent => event.type === "user_message",
+          ),
+        ),
       ensureItems: (sessionId, version, derive) =>
         Effect.sync(() => {
           const stored = db
@@ -159,27 +152,23 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
         }),
       itemsPage: (sessionId, position, before, after) =>
         Effect.sync(() => {
-          const earlier = (
-            db
-              .prepare(
-                `SELECT payload FROM transcript_items
-                 WHERE session_id = ? AND position < ? ORDER BY position DESC LIMIT ?`,
-              )
-              .all(sessionId, position ?? Number.MAX_SAFE_INTEGER, before + 1) as {
-              payload: string
-            }[]
-          ).map(toItem)
+          const earlier = readItems(
+            `SELECT payload FROM transcript_items
+             WHERE session_id = ? AND position < ? ORDER BY position DESC LIMIT ?`,
+            sessionId,
+            position ?? Number.MAX_SAFE_INTEGER,
+            before + 1,
+          )
           const later =
             position === null
               ? []
-              : (
-                  db
-                    .prepare(
-                      `SELECT payload FROM transcript_items
-                       WHERE session_id = ? AND position >= ? ORDER BY position LIMIT ?`,
-                    )
-                    .all(sessionId, position, after + 1) as { payload: string }[]
-                ).map(toItem)
+              : readItems(
+                  `SELECT payload FROM transcript_items
+                   WHERE session_id = ? AND position >= ? ORDER BY position LIMIT ?`,
+                  sessionId,
+                  position,
+                  after + 1,
+                )
           const items = [...earlier.slice(0, before).toReversed(), ...later.slice(0, after)]
           const images = compressedImages(db, sessionId)
           return {
@@ -194,24 +183,19 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
         }),
       itemState: (sessionId) =>
         Effect.sync((): ItemState => {
-          const open = (
-            db
-              .prepare(
-                `SELECT payload FROM transcript_items WHERE session_id = ? AND (
-                   (type = 'tool_call' AND payload ->> '$.status' = 'running')
-                   OR (type = 'approval' AND payload ->> '$.decision' IS NULL)
-                   OR (type = 'question' AND payload ->> '$.status' = 'open')
-                 ) ORDER BY position`,
-              )
-              .all(sessionId) as { payload: string }[]
-          ).map(toItem)
-          const message = db
-            .prepare(
-              `SELECT i.payload FROM transcript_item_states s
-               JOIN transcript_items i ON i.id = s.open_message_id WHERE s.session_id = ?`,
-            )
-            .get(sessionId) as { payload: string } | undefined
-          const openMessage = message ? toItem(message) : null
+          const open = readItems(
+            `SELECT payload FROM transcript_items WHERE session_id = ? AND (
+               (type = 'tool_call' AND payload ->> '$.status' = 'running')
+               OR (type = 'approval' AND payload ->> '$.decision' IS NULL)
+               OR (type = 'question' AND payload ->> '$.status' = 'open')
+             ) ORDER BY position`,
+            sessionId,
+          )
+          const [openMessage] = readItems(
+            `SELECT i.payload FROM transcript_item_states s
+             JOIN transcript_items i ON i.id = s.open_message_id WHERE s.session_id = ?`,
+            sessionId,
+          )
           return {
             openMessage: openMessage?.type === "message" ? openMessage : null,
             openToolCalls: new Map(

@@ -193,8 +193,3 @@ export const replay = (
   }
   return { items: [...byId.values()].toSorted((a, b) => a.position - b.position), state }
 }
-
-export const deriveItems = (
-  events: readonly TranscriptEvent[],
-  toolKind: (name: string) => ToolKind,
-): TranscriptItem[] => replay(events, toolKind).items
