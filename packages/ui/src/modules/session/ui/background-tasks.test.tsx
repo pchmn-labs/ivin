@@ -126,12 +126,15 @@ test("a session in background folds its tasks under the last turn, and its steps
   await expect.element(page.getByText("Both run in the background.")).toBeVisible()
 })
 
-test("the fold goes once the agent works again", async () => {
+test("the fold stays while the agent works again with tasks running, and goes with the last task", async () => {
   const server = await mountSession()
   await expect.element(line()).toBeVisible()
 
   server.setStatus("s1", "working")
+  server.setBackgroundTasks("s1", [tests])
 
+  await expect.element(line()).toHaveTextContent("1 task in background")
+  server.setBackgroundTasks("s1", [])
   await expect.poll(() => page.getByTestId("background-line").query()).toBeNull()
 })
 

@@ -64,7 +64,7 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
             sessionId={sessionId}
             live={isRunning(status)}
             sessionGone={session === undefined && sessionsLoaded}
-            background={status === "in_background" ? (session?.backgroundTasks ?? []) : []}
+            background={session?.backgroundTasks ?? []}
           />
         </div>
       )}

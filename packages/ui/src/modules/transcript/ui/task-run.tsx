@@ -1,9 +1,10 @@
-import { useAtomValue } from "@effect/atom-react"
-import { useMemo, useState } from "react"
+import { useAtom, useAtomValue } from "@effect/atom-react"
+import { useMemo } from "react"
 import { CodeBlock } from "../../../core/components/code-block/code-block.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { taskStepsOf, type TaskItem } from "../atoms/background-tasks.ts"
+import { foldsOf } from "../atoms/folds.ts"
 import { useTaskOutput } from "../hooks/use-task-output.ts"
 import { duration, earlierSteps, turnWork, type TurnWork as Work } from "../rules/turns.ts"
 import { EarlierStepsLine, ElapsedClock, StepView } from "./turn-work.tsx"
@@ -21,10 +22,12 @@ export function AgentRun({
   const steps = useAtomValue(taskStepsOf(sessionId)(task.toolCallId))
   const work = useMemo(() => turnWork(task.id, steps, steps), [task.id, steps])
   const running = task.status === "running"
-  const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map())
+  // The preview and the sheet draw the same steps, each with its own folds.
+  const [folds, setFolds] = useAtom(foldsOf(sessionId))
+  const scope = lastOnly ? "peek" : "sheet"
   const toggle = (key: string, open: boolean) => setFolds(new Map(folds).set(key, !open))
   const earlier = lastOnly ? earlierSteps(work, true) : []
-  const earlierKey = `${task.id}:earlier`
+  const earlierKey = `${scope}:${task.id}:earlier`
   const earlierOpen = folds.get(earlierKey) ?? false
   const firstShown = earlierOpen ? 0 : earlier.length
 
@@ -43,7 +46,8 @@ export function AgentRun({
           {work.steps.slice(firstShown).map((step, shownIndex) => {
             const index = firstShown + shownIndex
             const current = running && index === work.steps.length - 1
-            const open = folds.get(step.id) ?? (lastOnly ? current : true)
+            const stepKey = `${scope}:${step.id}`
+            const open = folds.get(stepKey) ?? (lastOnly ? current : true)
             return (
               <StepView
                 key={step.id}
@@ -52,7 +56,7 @@ export function AgentRun({
                 open={open}
                 current={current}
                 live={false}
-                onToggle={() => toggle(step.id, open)}
+                onToggle={() => toggle(stepKey, open)}
               />
             )
           })}

@@ -38,7 +38,6 @@ export class TranscriptStore extends Context.Service<
       before: number,
       after: number,
     ) => Effect.Effect<TranscriptPage>
-    // The items whose `parentToolCallId` is `toolCallId`, by position.
     readonly itemsOfTask: (
       sessionId: string,
       toolCallId: string,

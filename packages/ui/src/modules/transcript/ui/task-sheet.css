@@ -7,7 +7,7 @@
   display: flex;
   flex-direction: column;
   height: var(--iv-task-sheet-height, 340px);
-  min-height: 120px;
+  min-height: 160px;
   /* Leaves the title bar, the tabs and the composer on screen in a short window. */
   max-height: calc(100dvh - 280px);
   border: 1px solid var(--iv-border-strong);

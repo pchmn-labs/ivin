@@ -18,7 +18,6 @@ export interface ItemState {
   readonly openMessage: MessageItem | null
   readonly openToolCalls: ReadonlyMap<string, ToolCallItem>
   readonly openRequests: ReadonlyMap<string, ApprovalItem | QuestionItem>
-  // The tasks that started and did not end yet, by task id.
   readonly openTasks: ReadonlyMap<string, TaskItem>
 }
 

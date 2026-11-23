@@ -139,7 +139,6 @@ export type TaskKind = typeof TaskKind.Type
 const TaskStartedBody = Schema.Struct({
   type: Schema.Literal("task_started"),
   taskId: Schema.String,
-  // The tool call that started the task.
   toolCallId: Schema.String,
   kind: TaskKind,
   description: Schema.String,
@@ -300,12 +299,9 @@ export const ToolKind = Schema.Literals([
 ])
 export type ToolKind = typeof ToolKind.Type
 
-// Set on a step of a background subagent: the call that started it.
-const itemParent = { parentToolCallId: Schema.optional(Schema.String) }
-
 export const MessageItem = Schema.Struct({
   ...itemFields,
-  ...itemParent,
+  ...parentToolCallId,
   type: Schema.Literal("message"),
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
@@ -316,7 +312,7 @@ export const ThinkingItem = Schema.Struct({
   ...itemFields,
   type: Schema.Literal("thinking"),
   text: Schema.String,
-  ...itemParent,
+  ...parentToolCallId,
 })
 export const ToolCallItem = Schema.Struct({
   ...itemFields,
@@ -327,7 +323,7 @@ export const ToolCallItem = Schema.Struct({
   input: Schema.Unknown,
   status: Schema.Literals(["running", "done", "error"]),
   output: Schema.NullOr(Schema.String),
-  ...itemParent,
+  ...parentToolCallId,
 })
 
 export const ApprovalItem = Schema.Struct({
