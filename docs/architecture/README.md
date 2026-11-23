@@ -288,6 +288,8 @@ What is contained, and by what:
 
 No sandbox in v1: plugins are local code chosen by the user, as in VS Code or Obsidian. The plugin host isolates failures, not permissions.
 
+What a manifest's `permissions` limits is `ctx`, never the plugin's code ([ADR-0011](../adr/0011-a-plugin-declares-the-harness-exec-and-fetch-calls-it-makes.md)): `harness` (hooks such as `beforeSpawn`), `exec` (program names) and `fetch` (hosts, `*.host` or `*`) list the calls a server half may make, and an undeclared call is refused. A server half can still import `node:fs` or `node:net`, and `ctx.commands.run` runs another plugin's command with that plugin's permissions. A UI half has no `fetch`: the renderer's Content Security Policy refuses other origins. Built so far: the manifest reading (`plugin/rules/manifest.ts`) and the check (`plugin/rules/permissions.ts`); not yet enforced, since `ctx` for server halves, `ctx.fetch` and the trust prompt wait for the plugin host. The built-in plugins have UI halves only and declare none.
+
 ### Server API (`server.ts`)
 
 ```ts
