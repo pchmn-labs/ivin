@@ -79,3 +79,14 @@ body {
   background: var(--iv-bg-active);
   color: var(--iv-text-faint);
 }
+
+.proto-indent {
+  padding-left: 22px;
+}
+.proto-mark-row {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  min-width: 0;
+  color: var(--iv-text-muted);
+}

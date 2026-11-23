@@ -4,12 +4,12 @@ import "../../src/core/theme/tokens.css"
 import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
-import { Asked, Content, Sentence } from "./variants.tsx"
+import { Dashed, NoIcon, Square } from "./variants.tsx"
 
 const VARIANTS = [
-  { name: "Content", Component: Content },
-  { name: "Sentence", Component: Sentence },
-  { name: "Asked", Component: Asked },
+  { name: "Square", Component: Square },
+  { name: "Dashed circle", Component: Dashed },
+  { name: "None", Component: NoIcon },
 ]
 
 const requested = Number.parseInt(new URLSearchParams(location.search).get("v") ?? "", 10)

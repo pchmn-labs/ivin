@@ -1,4 +1,5 @@
-import { useState, type ReactNode } from "react"
+import { CircleDashed } from "@phosphor-icons/react"
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { Block } from "../../src/core/components/block/block.tsx"
 import { Icon, type IconName } from "../../src/core/components/icon/icon.tsx"
 import { Stack } from "../../src/core/components/stack/stack.tsx"
@@ -123,6 +124,10 @@ const Item = ({ children }: { children: ReactNode }) => (
 const Dot = () => <span className="iv-turn__dot"> · </span>
 
 export function Session({ records }: { records: Records }) {
+  const scroll = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    scroll.current?.scrollTo({ top: scroll.current.scrollHeight })
+  }, [])
   return (
     <div className="proto-window">
       <header className="proto-titlebar">
@@ -130,7 +135,7 @@ export function Session({ records }: { records: Records }) {
       </header>
       <main className="proto-main">
         <div className="iv-transcript">
-          <div className="proto-scroll">
+          <div className="proto-scroll" ref={scroll}>
             <div className="iv-transcript__column">
               <Item>
                 <Block tone="bubble">
@@ -226,96 +231,80 @@ export function Session({ records }: { records: Records }) {
 const STOPPED = "The agent stopped while it waited, so it can no longer take your answer."
 const STOPPED_MANY = "The agent stopped while it waited, so it can no longer take your answers."
 
-function TwoLines({
-  icon,
-  children,
+type Mark = "square" | "dashed" | "none"
+
+function MarkIcon({ mark }: { mark: Mark }) {
+  if (mark === "square") return <Icon name="square" size={14} />
+  if (mark === "dashed") return <CircleDashed className="iv-icon" size={14} weight="regular" />
+  return null
+}
+
+function Unanswered({
+  mark,
+  head,
+  lines = [],
   reason,
 }: {
-  icon: IconName
-  children: ReactNode
+  mark: Mark
+  head: ReactNode
+  lines?: ReadonlyArray<string>
   reason: string
 }) {
   return (
     <Stack gap={0}>
-      <Stack direction="row" gap={2} align="center">
-        <Icon name={icon} size={14} />
+      <span className="proto-mark-row">
+        <MarkIcon mark={mark} />
         <Text size="sm" tone="muted" truncate>
-          {children}
+          {head}
         </Text>
-      </Stack>
-      <span className="proto-reason">
-        <Text size="xs" tone="faint">
-          {reason}
-        </Text>
+      </span>
+      <span className={mark === "none" ? undefined : "proto-indent"}>
+        <Stack gap={0}>
+          {lines.map((line) => (
+            <Text key={line} size="sm" tone="muted">
+              {line}
+            </Text>
+          ))}
+          <Text size="xs" tone="faint">
+            {reason}
+          </Text>
+        </Stack>
       </span>
     </Stack>
   )
 }
 
-const Command = () => (
-  <Text as="span" size="sm" mono>
-    {COMMAND}
-  </Text>
-)
-
-const More = () => (
-  <Text as="span" size="sm" tone="faint">
-    {" "}
-    +{QUESTIONS.length - 1} more
-  </Text>
-)
-
-// 1. Content: "Not answered:" then what was asked, the command or the first question.
-export const Content = () => (
+const withMark = (mark: Mark) => () => (
   <Session
     records={{
       approval: (
-        <TwoLines icon="clock" reason={STOPPED}>
-          Not answered: <Command />
-        </TwoLines>
+        <Unanswered
+          mark={mark}
+          reason={STOPPED}
+          head={
+            <>
+              Not answered:{" "}
+              <Text as="span" size="sm" mono>
+                {COMMAND}
+              </Text>
+            </>
+          }
+        />
       ),
       questions: (
-        <TwoLines icon="clock" reason={STOPPED_MANY}>
-          Not answered: {QUESTIONS[0]!.question}
-          <More />
-        </TwoLines>
+        <Unanswered
+          mark={mark}
+          head="Not answered:"
+          lines={QUESTIONS.map((q) => q.question)}
+          reason={STOPPED_MANY}
+        />
       ),
     }}
   />
 )
 
-// 2. Sentence: one plain sentence naming the request and its state.
-export const Sentence = () => (
-  <Session
-    records={{
-      approval: (
-        <TwoLines icon="clock" reason={STOPPED}>
-          The approval to run <Command /> was not answered
-        </TwoLines>
-      ),
-      questions: (
-        <TwoLines icon="clock" reason={STOPPED_MANY}>
-          The agent's {QUESTIONS.length} questions were not answered
-        </TwoLines>
-      ),
-    }}
-  />
-)
-
-// 3. Asked: the same first line as an answered record, the state on the second line.
-export const Asked = () => (
-  <Session
-    records={{
-      approval: (
-        <TwoLines icon="question" reason={`Not answered. ${STOPPED}`}>
-          Asked to run <Command />
-        </TwoLines>
-      ),
-      questions: (
-        <TwoLines icon="question" reason={`Not answered. ${STOPPED_MANY}`}>
-          Asked {QUESTIONS.length} questions: {QUESTIONS.map((q) => q.question).join(" ")}
-        </TwoLines>
-      ),
-    }}
-  />
-)
+// The stop mark of "Stopped after".
+export const Square = withMark("square")
+// A circle that never filled in; would join the icon list.
+export const Dashed = withMark("dashed")
+export const NoIcon = withMark("none")
