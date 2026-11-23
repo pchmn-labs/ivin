@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react"
 import { Block } from "../../src/core/components/block/block.tsx"
 import { CodeBlock } from "../../src/core/components/code-block/code-block.tsx"
 import { Disclosure } from "../../src/core/components/disclosure/disclosure.tsx"
@@ -488,6 +488,20 @@ function useEscape(onClose: () => void) {
   })
 }
 
+// A Details pill switches the task rather than closing the sheet.
+function useClickOutside(ref: RefObject<HTMLElement | null>, active: boolean, onClose: () => void) {
+  useEffect(() => {
+    if (!active) return
+    const h = (e: PointerEvent) => {
+      const target = e.target as Element
+      if (ref.current?.contains(target) || target.closest(".proto-pill, .proto-picker, .proto-demo")) return
+      onClose()
+    }
+    document.addEventListener("pointerdown", h)
+    return () => document.removeEventListener("pointerdown", h)
+  })
+}
+
 // The row of tabs is the files card's own row, so both read the same.
 function DetailHeader({ task, onSelect, onClose }: { task: Task; onSelect: (t: Task) => void; onClose: () => void }) {
   return (
@@ -534,7 +548,9 @@ function ApprovalSheet() {
 export function Sheet() {
   const [open, setOpen] = useState<Task | null>(null)
   const [approval, setApproval] = useState(false)
+  const sheet = useRef<HTMLDivElement>(null)
   useEscape(() => setOpen(null))
+  useClickOutside(sheet, open !== null, () => setOpen(null))
   return (
     <Window>
       <label className="proto-demo">
@@ -543,7 +559,7 @@ export function Sheet() {
       <Transcript fold={<Fold onOpen={setOpen} activeId={open?.id ?? null} />} />
       <div className="proto-dock" data-task-sheet={open ? "" : undefined}>
         {open && (
-          <div className="proto-sheet">
+          <div className="proto-sheet" ref={sheet}>
             <ResizeHandle
               label="Resize the task sheet"
               edge="top"
