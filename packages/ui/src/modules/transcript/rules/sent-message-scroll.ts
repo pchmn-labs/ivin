@@ -120,7 +120,7 @@ const rowsChanged = (
     seen,
     sent: olderLoaded && state.sent ? { ...state.sent, top: undefined } : state.sent,
   }
-  if (previous === null || previous.turn === turn || turn === undefined || !view) {
+  if (!turnChanged(state, turn) || turn === undefined || previous === null || !view) {
     return { state: next }
   }
   // A message revealed by loading older items sits before the previous last row.
@@ -160,11 +160,13 @@ const withRoom = (
   return { state: { ...state, mode, room, roomLeft }, room }
 }
 
+// A new last turn, which rows-changed sends to unless older items revealed it.
+export const turnChanged = (state: SentMessageScroll, turn: string | undefined) =>
+  state.seen !== null && turn !== undefined && turn !== state.seen.turn
+
 // Virtuoso reads followOutput in the render that adds the sent message, before any event is handled.
-export const mayFollowEnd = (state: SentMessageScroll, turn: string | undefined) => {
-  const sending = state.seen !== null && turn !== undefined && turn !== state.seen.turn
-  return !state.roomLeft && !sending
-}
+export const mayFollowEnd = (state: SentMessageScroll, turn: string | undefined) =>
+  !state.roomLeft && !turnChanged(state, turn)
 
 // Measuring the view forces a layout, so it waits until there is a message to place.
 export const needsMeasurement = (state: SentMessageScroll) =>

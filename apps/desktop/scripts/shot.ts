@@ -93,7 +93,10 @@ try {
         box.y + box.height <= view.y + view.height
       )
     }
-    while (!(await inView())) await window.mouse.wheel(0, -200)
+    for (let wheel = 0; !(await inView()); wheel++) {
+      if (wheel === 50) throw new Error("The transcript never scrolled up to its target")
+      await window.mouse.wheel(0, -200)
+    }
   }
 
   await shoot("new-session")

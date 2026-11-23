@@ -5,6 +5,7 @@ import {
   needsMeasurement,
   nextSentMessageScroll,
   sentMessagePlace as placeOf,
+  turnChanged,
   type Measurement,
   type SentMessageEvent,
   type SentMessagePlace,
@@ -123,7 +124,8 @@ export function useSentMessageScroll({
   }, [dispatch])
 
   useLayoutEffect(() => {
-    dispatch({ type: "rows-changed", loaded, turn: turnMessageId, rows, view: measure() })
+    const view = turnChanged(model.current, turnMessageId) ? measure() : undefined
+    dispatch({ type: "rows-changed", loaded, turn: turnMessageId, rows, view })
   }, [loaded, turnMessageId, rows, dispatch])
 
   // On mount only: the view opens once at the restored place, then follows the transcript.
