@@ -461,6 +461,8 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           // The session moved or changed run options since the run started: its next turn resumes with them.
           return (existing?.end ?? Effect.void).pipe(
             Effect.andThen(makeWriter(session)),
+            // Requests an earlier run left open, such as before runs closed theirs, die with it.
+            Effect.tap((writer) => writer.closeRequests),
             Effect.flatMap((writer) =>
               startRun(session, writer).pipe(
                 Effect.catchTag("HarnessError", (error) =>

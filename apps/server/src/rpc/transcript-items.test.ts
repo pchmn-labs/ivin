@@ -326,3 +326,30 @@ test("a server started on a session left waiting for an approval leaves it unans
   expect(item).toMatchObject({ requestId: "r1", decision: "unanswered" })
   expect(session).toMatchObject({ status: "idle", waitingFor: null })
 })
+
+test("a new run leaves unanswered, before its first turn ends, the requests an earlier run left open", async () => {
+  const db = newDatabase()
+  const sessionId = await withServer(db, [], (client) =>
+    client["session.create"]({ projectPath: "/p" }).pipe(Effect.map((session) => session.id)),
+  )
+  // As a server from before requests were closed left it.
+  db.prepare(
+    `INSERT INTO transcript_events (id, session_id, sequence, type, at, payload) VALUES
+       ('e1', ?, 1, 'user_message', 1, '{"type":"user_message","text":"go"}'),
+       ('e2', ?, 2, 'approval_request', 2, ?)`,
+  ).run(sessionId, sessionId, JSON.stringify({ ...approval("r1"), raw: undefined }))
+
+  const item = await withServer(db, [[running, said("again")]], (client) =>
+    Effect.gen(function* () {
+      yield* client["session.sendMessage"]({ sessionId, messageId: "m2", text: "again" })
+      const page = yield* until(everything(client, sessionId), (page) =>
+        page.items.some(
+          (item) => item.type === "message" && item.text === "again" && item.role === "assistant",
+        ),
+      )
+      return page.items.find((item) => item.type === "approval")
+    }),
+  )
+
+  expect(item).toMatchObject({ requestId: "r1", decision: "unanswered" })
+})
