@@ -4,12 +4,13 @@ import "../../src/core/theme/tokens.css"
 import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
-import { Rail, Strip, Switcher, TopRow } from "./variants.tsx"
+import { toggleConnection } from "./shared.tsx"
+import { DotBadges, GearAtEnd, GearOnTop, Rail } from "./variants.tsx"
 
 const VARIANTS = [
-  { name: "Strip", Component: Strip },
-  { name: "Switcher", Component: Switcher },
-  { name: "Top row", Component: TopRow },
+  { name: "Gear on top", Component: GearOnTop },
+  { name: "Gear at the end", Component: GearAtEnd },
+  { name: "Dot badges", Component: DotBadges },
   { name: "Rail (today)", Component: Rail },
 ]
 
@@ -62,6 +63,7 @@ function Harness() {
       if (num >= 1 && num <= VARIANTS.length) select(num - 1)
       else if (e.key === "ArrowRight") select(currentRef.current + 1)
       else if (e.key === "ArrowLeft") select(currentRef.current - 1)
+      else if (e.key === "c" || e.key === "C") toggleConnection()
     }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)

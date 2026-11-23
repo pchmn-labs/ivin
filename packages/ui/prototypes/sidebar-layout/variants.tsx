@@ -3,7 +3,7 @@ import { IconButton } from "../../src/core/components/button/button.tsx"
 import { Icon } from "../../src/core/components/icon/icon.tsx"
 import { Tooltip } from "../../src/core/components/tooltip/tooltip.tsx"
 import { ProjectCreature } from "../../src/modules/project/ui/project-creature.tsx"
-import { waitingCount } from "./data.ts"
+import { projectLabel, waitingCount } from "./data.ts"
 import {
   App,
   Card,
@@ -16,6 +16,7 @@ import {
   ShellControls,
   SidebarTabs,
   WorkingPanel,
+  useConnected,
   useShell,
   type Shell,
 } from "./shared.tsx"
@@ -94,7 +95,54 @@ export function Rail() {
   )
 }
 
-export function Strip() {
+interface StripOptions {
+  // Where the Settings button and the connection dot go.
+  readonly settings: "top" | "end"
+  readonly badge: "count" | "dot"
+  readonly size: "md" | "sm"
+  readonly arrows: boolean
+}
+
+function GearWithStatus() {
+  const on = useConnected()
+  return (
+    <span className="proto-gear">
+      <SettingsButton />
+      {!on && <span className="proto-gear__dot" aria-hidden="true" />}
+    </span>
+  )
+}
+
+function StripProject({ shell, i, o }: { shell: Shell; i: number; o: StripOptions }) {
+  const p = shell.projects[i]!
+  const w = waitingCount(p)
+  return (
+    <div className="iv-project-rail__item" data-project-index={i}>
+      <Tooltip side="top" content={projectLabel(p)}>
+        <button
+          type="button"
+          className="iv-project-rail__project proto-strip__project"
+          data-size={o.size}
+          aria-label={projectLabel(p)}
+          aria-current={i === shell.index}
+          onClick={() => shell.select(i)}
+        >
+          <ProjectCreature name={p.name} size={o.size === "sm" ? 12 : 16} />
+        </button>
+      </Tooltip>
+      {w > 0 &&
+        (o.badge === "dot" ? (
+          <span className="proto-badge-dot" aria-hidden="true" />
+        ) : (
+          <span className="proto-badge-sm" aria-hidden="true">
+            {w}
+          </span>
+        ))}
+    </div>
+  )
+}
+
+function StripLayout(o: StripOptions) {
   const shell = useShell()
   const scroller = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
@@ -107,44 +155,54 @@ export function Strip() {
     const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches
     if (d !== 0) box.scrollBy({ left: d, behavior: reduce ? "auto" : "smooth" })
   }, [shell.index])
+  const top =
+    o.settings === "top" ? (
+      <ShellControls
+        extra={
+          <span className="proto-top-extra">
+            <GearWithStatus />
+          </span>
+        }
+      />
+    ) : undefined
   return (
     <App
       shell={shell}
       card={
-        <Card>
+        <Card top={top}>
           <div className="iv-project-column proto-fill">
             <SelectHead shell={shell} />
             <SidebarTabs shell={shell} />
           </div>
           <WorkingPanel shell={shell} />
-          <div className="proto-strip">
-            <IconButton
-              icon="arrow-left"
-              label="Previous project"
-              tooltip="Previous project ⌃⌘["
-              size="sm"
-              disabled={shell.index === 0}
-              onClick={() => shell.step(-1)}
-            />
+          <div className="proto-strip" data-size={o.size}>
+            {o.arrows && (
+              <IconButton
+                icon="arrow-left"
+                label="Previous project"
+                tooltip="Previous project ⌃⌘["
+                size="sm"
+                disabled={shell.index === 0}
+                onClick={() => shell.step(-1)}
+              />
+            )}
             <div className="proto-strip__scroll" ref={scroller} role="group" aria-label="Projects">
               {shell.projects.map((p, i) => (
-                <ProjectButton key={p.name} shell={shell} i={i} size={16} side="top" className="iv-project-rail__project proto-strip__project" />
+                <StripProject key={p.name} shell={shell} i={i} o={o} />
               ))}
               <IconButton icon="plus" label="Open folder…" size="sm" />
             </div>
-            <IconButton
-              icon="arrow-right"
-              label="Next project"
-              tooltip="Next project ⌃⌘]"
-              size="sm"
-              disabled={shell.index === shell.projects.length - 1}
-              onClick={() => shell.step(1)}
-            />
-            <span className="proto-divider" aria-hidden="true" />
-            <SettingsButton />
-            <span className="proto-dot">
-              <Connection />
-            </span>
+            {o.arrows && (
+              <IconButton
+                icon="arrow-right"
+                label="Next project"
+                tooltip="Next project ⌃⌘]"
+                size="sm"
+                disabled={shell.index === shell.projects.length - 1}
+                onClick={() => shell.step(1)}
+              />
+            )}
+            {o.settings === "end" && <GearWithStatus />}
           </div>
         </Card>
       }
@@ -152,91 +210,6 @@ export function Strip() {
   )
 }
 
-export function Switcher() {
-  const shell = useShell()
-  return (
-    <App
-      shell={shell}
-      card={
-        <Card>
-          <div className="iv-project-column proto-fill">
-            <SelectHead shell={shell} others />
-            <SidebarTabs shell={shell} />
-          </div>
-          <WorkingPanel shell={shell} />
-          <div className="proto-foot">
-            <Connection />
-            <span className="proto-foot__label">Connected</span>
-            <SettingsButton />
-          </div>
-        </Card>
-      }
-    />
-  )
-}
-
-export function TopRow() {
-  const shell = useShell()
-  const row = useRef<HTMLDivElement>(null)
-  useLayoutEffect(() => {
-    row.current
-      ?.querySelector(`[data-project-index="${shell.index}"]`)
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" })
-  }, [shell.index])
-  return (
-    <App
-      shell={shell}
-      card={
-        <Card
-          top={
-            <ShellControls
-              extra={
-                <span className="proto-top-extra">
-                  <Connection />
-                  <SettingsButton />
-                </span>
-              }
-            />
-          }
-        >
-          <div className="iv-project-column proto-fill">
-            <div className="proto-toprow">
-              <div className="proto-toprow__scroll" ref={row} role="group" aria-label="Projects">
-                {shell.projects.map((p, i) => {
-                  const on = i === shell.index
-                  const w = waitingCount(p)
-                  return (
-                    <div key={p.name} className="iv-project-rail__item" data-project-index={i}>
-                      <Tooltip side="bottom" content={w ? `${p.name} · ${w} waiting for you` : p.name}>
-                        <button
-                          type="button"
-                          className="proto-pill"
-                          aria-current={on}
-                          aria-label={p.name}
-                          onClick={() => shell.select(i)}
-                        >
-                          <ProjectCreature name={p.name} size={16} />
-                          {on && <span className="proto-pill__name">{p.name}</span>}
-                        </button>
-                      </Tooltip>
-                      {w > 0 && (
-                        <span className="iv-project-rail__badge" aria-hidden="true">
-                          {w}
-                        </span>
-                      )}
-                    </div>
-                  )
-                })}
-                <IconButton icon="plus" label="Open folder…" size="sm" />
-              </div>
-              <NewSession />
-              <ProjectActions />
-            </div>
-            <SidebarTabs shell={shell} />
-          </div>
-          <WorkingPanel shell={shell} />
-        </Card>
-      }
-    />
-  )
-}
+export const GearOnTop = () => <StripLayout settings="top" badge="count" size="md" arrows />
+export const GearAtEnd = () => <StripLayout settings="end" badge="count" size="sm" arrows={false} />
+export const DotBadges = () => <StripLayout settings="top" badge="dot" size="sm" arrows={false} />

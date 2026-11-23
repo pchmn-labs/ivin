@@ -1,5 +1,5 @@
 import { Menu as BaseMenu } from "@base-ui/react/menu"
-import { useEffect, useState, type ReactElement, type ReactNode } from "react"
+import { useEffect, useState, useSyncExternalStore, type ReactElement, type ReactNode } from "react"
 import { Button, IconButton } from "../../src/core/components/button/button.tsx"
 import { Disclosure } from "../../src/core/components/disclosure/disclosure.tsx"
 import { Icon } from "../../src/core/components/icon/icon.tsx"
@@ -72,11 +72,26 @@ export function ShellControls({ extra }: { extra?: ReactNode }) {
   )
 }
 
-export const Connection = () => (
-  <Tooltip content="Connected to the server">
-    <span className="iv-connection" data-state="connected" tabIndex={-1} />
-  </Tooltip>
-)
+let connected = true
+const listeners = new Set<() => void>()
+export const toggleConnection = () => {
+  connected = !connected
+  listeners.forEach((l) => l())
+}
+export const useConnected = () =>
+  useSyncExternalStore(
+    (l) => (listeners.add(l), () => listeners.delete(l)),
+    () => connected,
+  )
+
+export function Connection() {
+  const on = useConnected()
+  return (
+    <Tooltip content={on ? "Connected to the server" : "Lost the server. Reconnecting…"}>
+      <span className="iv-connection" data-state={on ? "connected" : "failed"} tabIndex={-1} />
+    </Tooltip>
+  )
+}
 
 export const SettingsButton = () => (
   <IconButton icon="gear" label="Settings" tooltip="Settings ⌘," size="sm" />

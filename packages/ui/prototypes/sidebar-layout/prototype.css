@@ -106,3 +106,28 @@ body { overflow: hidden; background: var(--iv-bg); color: var(--iv-text); }
 .proto-nowrap { flex: none; white-space: nowrap; }
 .proto-toprow__scroll, .proto-strip__scroll { scroll-padding-inline: var(--iv-space-2); }
 .proto-pill[aria-current="true"] { padding-right: 12px; }
+
+/* Strip riffs */
+.proto-strip { gap: var(--iv-space-half); }
+.proto-strip__project.iv-project-rail__project[data-size="md"] { width: 28px; height: 24px; }
+.proto-strip__project.iv-project-rail__project[data-size="sm"] { width: 24px; height: 24px; border-radius: var(--iv-radius-md); }
+.proto-strip[data-size="sm"] .proto-strip__scroll { gap: var(--iv-space-half); }
+.proto-badge-sm {
+  position: absolute; top: -3px; right: -3px;
+  min-width: 13px; height: 13px; padding: 0 3px; box-sizing: border-box;
+  border-radius: var(--iv-radius-pill); background: var(--iv-attention);
+  box-shadow: 0 0 0 1.5px var(--iv-bg-card); color: var(--iv-bg-card);
+  font-size: 9px; line-height: 13px; font-weight: var(--iv-weight-semibold);
+  font-variant-numeric: tabular-nums; text-align: center; pointer-events: none;
+}
+.proto-badge-dot {
+  position: absolute; top: 1px; right: 1px; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--iv-attention);
+  box-shadow: 0 0 0 1.5px var(--iv-bg-card); pointer-events: none;
+}
+.proto-gear { position: relative; display: inline-grid; }
+.proto-gear__dot {
+  position: absolute; top: 3px; right: 3px; width: 6px; height: 6px;
+  border-radius: 50%; background: var(--iv-danger);
+  box-shadow: 0 0 0 1.5px var(--iv-bg-card); pointer-events: none;
+}
