@@ -40,6 +40,9 @@ describe("readPermissions", () => {
     ["a host with a path", { fetch: ["api.github.com/v3"] }, "ivin.permissions.fetch"],
     ["a wildcard in the middle", { fetch: ["api.*.com"] }, "ivin.permissions.fetch"],
     ["a bare *.", { fetch: ["*."] }, "ivin.permissions.fetch"],
+    ["an inherited key", { constructor: ["gh"] }, "ivin.permissions.constructor"],
+    ["a program with a space", { exec: ["gh "] }, "ivin.permissions.exec"],
+    ["a program with a wildcard", { exec: ["g*"] }, "ivin.permissions.exec"],
   ])("%s is invalid", (_name, value, reason) => {
     const reading = readPermissions(value)
     expect(reading.kind).toBe("invalid")
@@ -117,6 +120,11 @@ describe("permits fetch", () => {
     expect(permits(permissions, fetch("https://evil.test/")).allowed).toBe(true)
   })
 
+  test("an unreadable URL is refused without echoing it", () => {
+    const verdict = permits(declared({ fetch: ["*"] }), fetch("not a url?token=secret"))
+    expect(verdict).toEqual({ allowed: false, missing: "fetch: a URL ivin cannot read" })
+  })
+
   test.each(["file:///etc/passwd", "ftp://api.github.com/", "not a url", "data:text/plain,x"])(
     "%s is refused even with *",
     (url) => {
@@ -124,7 +132,7 @@ describe("permits fetch", () => {
     },
   )
 
-  test("a redirect target is checked like any other URL", () => {
+  test("a URL on another host is refused, which is how a redirect target is checked", () => {
     const permissions = declared({ fetch: ["api.github.com"] })
     expect(permits(permissions, fetch("https://api.github.com/a")).allowed).toBe(true)
     expect(permits(permissions, fetch("https://evil.test/landing")).allowed).toBe(false)

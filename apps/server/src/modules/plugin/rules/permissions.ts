@@ -47,7 +47,8 @@ const readList = (
 const acceptsHook = (entry: string) =>
   HARNESS_HOOKS.includes(entry) ? null : `"${entry}" is not a hook (${HARNESS_HOOKS.join(", ")}).`
 
-const acceptsBinary = () => null
+const acceptsBinary = (entry: string) =>
+  entry === "*" || !/[\s*]/.test(entry) ? null : `"${entry}" is not a program name or "*".`
 
 const acceptsHost = (entry: string) =>
   entry === "*" || HOST.test(entry)
@@ -58,7 +59,7 @@ export const readPermissions = (value: unknown): PermissionsReading => {
   if (value === undefined) return { kind: "valid", permissions: NO_PERMISSIONS }
   if (!isRecord(value)) return invalid("ivin.permissions in package.json must be an object.")
   for (const key of Object.keys(value)) {
-    if (!(key in NO_PERMISSIONS)) {
+    if (!Object.hasOwn(NO_PERMISSIONS, key)) {
       return invalid(`ivin.permissions.${key} is not a permission (harness, exec, fetch).`)
     }
   }
@@ -82,7 +83,6 @@ const allowedHost = (declared: readonly string[], host: string): boolean =>
       (entry.startsWith("*.") && host.endsWith(entry.slice(1).toLowerCase())),
   )
 
-// One entry per ctx member, so a member added later declares its permission here.
 const checks: {
   readonly [M in PluginCall["member"]]: (
     permissions: Permissions,
@@ -102,7 +102,7 @@ const checks: {
     try {
       parsed = new URL(url)
     } catch {
-      return { allowed: false, missing: `fetch: ${url}` }
+      return { allowed: false, missing: "fetch: a URL ivin cannot read" }
     }
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
       return { allowed: false, missing: `fetch: ${parsed.protocol}` }

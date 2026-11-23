@@ -14,7 +14,7 @@ A plugin lists in the `permissions` of its manifest (the `ivin` key of its `pack
 
 - `harness` names hooks. It accepts no `"*"`: a plugin names each hook it takes.
 - `exec` names programs, matched against the name as given to `ctx.exec`. A path (`./gh`, `/tmp/gh`) matches only when that exact path is declared.
-- `fetch` names hosts. `*.github.com` matches the subdomains of `github.com`, not `github.com` itself, nor `github.com.evil.test`, nor `evilgithub.com`. A host is compared after the URL is parsed, and again after each redirect.
+- `fetch` names hosts. `*.github.com` matches the subdomains of `github.com`, not `github.com` itself, nor `github.com.evil.test`, nor `evilgithub.com`. A host is compared after the URL is parsed, and again after each redirect. The port is not part of the match.
 - `exec` and `fetch` accept `"*"` for any program and any host. The trust prompt spells it out ("Runs any program", "Connects to any host") and lists it first.
 - A manifest with no `permissions` declares none: the plugin's `ctx` refuses all three calls.
 
@@ -32,4 +32,4 @@ The permissions limit `ctx` only. A server half is Node code and can import `nod
 ## Consequences
 
 - Built-in plugins declare the permissions they use; a plugin with none (all of today's) declares none.
-- A change of a trusted project plugin's permissions changes its content hash, so it asks for trust again.
+- A change of a trusted project plugin's permissions changes its content hash, so it will ask for trust again.
