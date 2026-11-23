@@ -16,6 +16,7 @@ export function useUserPlugins(importBundle: ImportBundle) {
   const listed = AsyncResult.isSuccess(result) ? result.value : null
   const report = useAtomSet(reportPluginFailureAtom)
   const [plugins, setPlugins] = useState(NONE)
+  const shown = useRef(NONE)
 
   // Started once per bundle, so a longer list neither imports nor reports a plugin twice.
   const loads = useRef(new Map<string, Promise<UiPluginEntry | null>>())
@@ -44,7 +45,12 @@ export function useUserPlugins(importBundle: ImportBundle) {
       return [started]
     })
     void Promise.all(entries).then((loaded) => {
-      if (!stopped) setPlugins(loaded.filter((entry) => entry !== null))
+      if (stopped) return
+      const next = loaded.filter((entry) => entry !== null)
+      const current = shown.current
+      if (current.length === next.length && current.every((entry, i) => entry === next[i])) return
+      shown.current = next
+      setPlugins(next)
     })
     return () => {
       stopped = true
@@ -54,7 +60,8 @@ export function useUserPlugins(importBundle: ImportBundle) {
   const dropFailedPlugin = useCallback(
     (id: string, error: unknown) => {
       report({ id, reason: `Its activate function threw: ${messageOf(error)}` })
-      setPlugins((current) => current.filter((plugin) => plugin.manifest.id !== id))
+      shown.current = shown.current.filter((plugin) => plugin.manifest.id !== id)
+      setPlugins(shown.current)
     },
     [report],
   )
