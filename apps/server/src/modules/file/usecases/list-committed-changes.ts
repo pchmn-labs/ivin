@@ -1,10 +1,8 @@
 import type { Change, CommittedChangeList } from "@ivin/contracts/file"
-import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
 import { Context, Effect, Layer } from "effect"
-import { SessionStore } from "../../session/usecases/session-store.ts"
 import { type CommitRange, Git, type Tips } from "../../worktree/usecases/git.ts"
-import { FolderReader } from "./folder-reader.ts"
 import { gitFailed } from "./git-failed.ts"
+import { rootOf } from "./list-changes.ts"
 
 type Unlisted = Exclude<CommittedChangeList, { kind: "listed" }>
 
@@ -29,7 +27,7 @@ export class CommittedListings extends Context.Service<
   }
 >()("ivin/server/CommittedListings") {}
 
-const keyOf = ({ head, base, target }: Tips) => `${head} ${base} ${target}`
+const keyOf = ({ head, base, baseCommit }: Tips) => `${head} ${base} ${baseCommit}`
 
 export const layerCommittedListings = Layer.sync(CommittedListings)(() => {
   const listings = new Map<string, { readonly key: string; readonly listing: CommittedListing }>()
@@ -76,10 +74,7 @@ const listBetween = (sessionId: string, root: string, head: string) =>
 
 export const committedChangesOf = (sessionId: string) =>
   Effect.gen(function* () {
-    const session = yield* (yield* SessionStore).findById(sessionId)
-    if (session === null) return yield* new SessionNotFound({ sessionId })
-    const root = yield* (yield* FolderReader).realPath(session.workingFolder)
-    if (root === null) return yield* new WorkingFolderDeleted({ sessionId })
+    const root = yield* rootOf(sessionId)
     const tips = yield* (yield* Git).tips(root)
     if (tips === null) return yield* listBetween(sessionId, root, "HEAD")
     const cache = yield* CommittedListings

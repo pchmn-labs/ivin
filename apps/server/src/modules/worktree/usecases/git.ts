@@ -22,7 +22,7 @@ export interface Tips {
   readonly head: string
   // `origin/<name>` and its commit, from `refs/remotes/origin/HEAD`.
   readonly base: string
-  readonly target: string
+  readonly baseCommit: string
 }
 
 export class Git extends Context.Service<

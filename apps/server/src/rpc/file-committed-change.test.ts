@@ -301,6 +301,20 @@ test("a new commit gives a new committed listing in the same server", async () =
   expect(pathsOf(after)).toEqual(["first.ts", "second.ts"])
 })
 
+test("a fetch that moves origin's default branch gives a new committed listing", async () => {
+  commit(project, { "feature.ts": "f\n" })
+
+  const [before, after] = await committedChangesAcross(project, [
+    () => {
+      git(project, "push", "--quiet", "origin", "feature:main")
+      git(project, "fetch", "--quiet", "origin")
+    },
+  ])
+
+  expect(pathsOf(before)).toEqual(["feature.ts"])
+  expect(pathsOf(after)).toEqual([])
+})
+
 test("origin's default branch moved to another branch gives a new committed listing", async () => {
   commit(upstream, { "release.ts": "r\n" })
   git(upstream, "push", "--quiet", "origin", "main:release")

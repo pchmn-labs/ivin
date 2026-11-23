@@ -7,7 +7,7 @@ import { ChangeFeed } from "./change-feed.ts"
 import { FolderReader } from "./folder-reader.ts"
 import { gitFailed } from "./git-failed.ts"
 
-const rootOf = (sessionId: string) =>
+export const rootOf = (sessionId: string) =>
   Effect.gen(function* () {
     const session = yield* (yield* SessionStore).findById(sessionId)
     if (session === null) return yield* new SessionNotFound({ sessionId })
@@ -26,6 +26,7 @@ export const sharedChangesOf = (sessionId: string) =>
     return { root, listing }
   })
 
+// Never shared: a discard acts on what is on disk now.
 export const changesOf = (sessionId: string) =>
   Effect.gen(function* () {
     const root = yield* rootOf(sessionId)

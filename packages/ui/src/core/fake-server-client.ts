@@ -119,9 +119,8 @@ export interface FakeServer {
   readonly setUserKeybindings: (state: UserKeybindings) => void
   // Makes the next call of this RPC die, as a lost connection would.
   readonly failNextCall: (rpc: string) => void
-  // Makes the next call of this RPC wait until `release` is called, or die as `failNextCall`.
-  // How many times this RPC was called.
   readonly callsOf: (rpc: string) => number
+  // Makes the next call of this RPC wait until `release` is called, or die as `failNextCall`.
   readonly holdNextCall: (rpc: string) => {
     readonly release: () => void
     readonly fail: () => void

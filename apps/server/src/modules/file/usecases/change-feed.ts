@@ -9,6 +9,10 @@ import { makeSharedStreams } from "./shared-streams.ts"
 const BATCH_WINDOW = "100 millis"
 const BATCH_SIZE = 50_000
 
+interface Feed {
+  batch: number
+}
+
 interface Listed {
   readonly batch: number
   readonly fiber: Fiber.Fiber<ChangeListing | null, GitError>
@@ -34,7 +38,7 @@ export const layerChangeFeed = Layer.effect(ChangeFeed)(
     const scope = yield* Effect.scope
     // Global, so a listing of a closed feed never matches a batch of the one opened after it.
     let lastBatch = 0
-    const batches = new Map<string, number>()
+    const feedsByRoot = new Map<string, Feed>()
     const listings = new Map<string, Listed>()
 
     const watchFolderAt = (folder: string) =>
@@ -52,13 +56,14 @@ export const layerChangeFeed = Layer.effect(ChangeFeed)(
           gitDir === null || isWithin(root, gitDir)
             ? Stream.empty
             : (yield* watchFolderAt(gitDir)).pipe(Stream.map((path) => `.git/${path}`))
-        batches.set(root, ++lastBatch)
-        yield* Effect.addFinalizer(() =>
-          Effect.sync(() => {
-            batches.delete(root)
-            listings.delete(root)
-          }),
-        )
+        const feed: Feed = { batch: ++lastBatch }
+        feedsByRoot.set(root, feed)
+        const end = Effect.sync(() => {
+          if (feedsByRoot.get(root) !== feed) return
+          feedsByRoot.delete(root)
+          listings.delete(root)
+        })
+        yield* Effect.addFinalizer(() => end)
 
         // Folders found ignored: a change under one costs no git call.
         const ignoredFolders = new Set<string>()
@@ -92,7 +97,9 @@ export const layerChangeFeed = Layer.effect(ChangeFeed)(
           Stream.mapEffect(changeOf),
           Stream.flattenIterable,
           // Before any reader gets the batch, so a listing it asks for next is new.
-          Stream.tap(() => Effect.sync(() => batches.set(root, ++lastBatch))),
+          Stream.tap(() => Effect.sync(() => (feed.batch = ++lastBatch))),
+          // A feed that ended sends no batch, so its last listing would never be read again.
+          Stream.ensuring(end),
         )
       })
 
@@ -102,7 +109,7 @@ export const layerChangeFeed = Layer.effect(ChangeFeed)(
       subscribe: feeds.subscribe,
       listChanges: (root) =>
         Effect.gen(function* () {
-          const batch = batches.get(root)
+          const batch = feedsByRoot.get(root)?.batch
           if (batch === undefined) return yield* git.listChanges(root)
           let listed = listings.get(root)
           if (listed?.batch !== batch) {

@@ -113,8 +113,8 @@ const diffBase = (folder: string) =>
     Effect.map((head) => (head === null ? EMPTY_TREE : "HEAD")),
   )
 
-// The folder's path in its repository and HEAD's commit, in one process but before the first commit.
-const prefixAndBase = (folder: string) =>
+// HEAD's commit, null outside a repository; one process except before the first commit.
+const diffBaseInRepository = (folder: string) =>
   orNull(git(folder, ["rev-parse", "--show-prefix", "HEAD"])).pipe(
     Effect.flatMap((out) => {
       if (out !== null) return Effect.succeed({ base: out.split("\n")[1] ?? EMPTY_TREE })
@@ -138,7 +138,7 @@ const listChanges = (folder: string, given?: CommitRange) =>
   Effect.gen(function* () {
     let range = given
     if (range === undefined) {
-      const found = yield* prefixAndBase(folder)
+      const found = yield* diffBaseInRepository(folder)
       if (found === null) return null
       range = { from: found.base }
     } else if ((yield* orNull(git(folder, ["rev-parse", "--show-prefix"]))) === null) return null
@@ -336,8 +336,8 @@ const methods: Untrusted = {
       ]),
     ).pipe(
       Effect.map((out) => {
-        const [head, target, base] = out?.trim().split("\n") ?? []
-        return head && target && base ? { head, target, base } : null
+        const [head, baseCommit, base] = out?.trim().split("\n") ?? []
+        return head && baseCommit && base ? { head, base, baseCommit } : null
       }),
     ),
   hasCommit: (folder) => diffBase(folder).pipe(Effect.map((base) => base === "HEAD")),

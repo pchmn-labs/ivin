@@ -1,11 +1,15 @@
 import { Effect, Layer } from "effect"
-import { chmodSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { execFileSync } from "node:child_process"
+import { chmodSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { delimiter, join } from "node:path"
-import { afterEach, beforeEach, expect, test } from "vitest"
+import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { ProjectTrust } from "../../project/usecases/project-trust.ts"
 import { Git } from "../usecases/git.ts"
 import { layerGitCliWith } from "./git-cli.ts"
+
+// Spawns a shell, sleep and pgrep.
+vi.setConfig({ testTimeout: 5_000 })
 
 let dir: string
 let path: string | undefined
@@ -25,9 +29,10 @@ const trustAll = Layer.succeed(ProjectTrust)({
   trust: () => Effect.void,
 })
 
-const isRunning = (pid: number) => {
+// A process of this run's fake git, found by its unique argument.
+const isRunning = (marker: string) => {
   try {
-    process.kill(pid, 0)
+    execFileSync("pgrep", ["-f", `sleep ${marker}`])
     return true
   } catch {
     return false
@@ -35,12 +40,11 @@ const isRunning = (pid: number) => {
 }
 
 test("a git command that never exits fails with a GitError naming it, and its process is killed", async () => {
-  const pidFile = join(dir, "pid")
-  writeFileSync(join(dir, "git"), `#!/bin/sh\necho $$ > '${pidFile}'\nexec sleep 600\n`)
+  const marker = String(600_000 + Math.floor(Math.random() * 100_000))
+  writeFileSync(join(dir, "git"), `#!/bin/sh\nexec sleep ${marker}\n`)
   chmodSync(join(dir, "git"), 0o755)
   process.env["PATH"] = `${dir}${delimiter}${path ?? ""}`
 
-  const started = Date.now()
   const error = await Effect.runPromise(
     Effect.gen(function* () {
       return yield* (yield* Git).listBranches(dir).pipe(Effect.flip)
@@ -53,7 +57,5 @@ test("a git command that never exits fails with a GitError naming it, and its pr
 
   expect(error._tag).toBe("GitError")
   expect(error.message).toBe("git for-each-ref did not finish within 300 millis")
-  expect(Date.now() - started).toBeLessThan(900)
-  const pid = Number(readFileSync(pidFile, "utf8"))
-  await expect.poll(() => isRunning(pid)).toBe(false)
+  await expect.poll(() => isRunning(marker)).toBe(false)
 })

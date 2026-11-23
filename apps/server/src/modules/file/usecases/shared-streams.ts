@@ -26,7 +26,7 @@ export const makeSharedStreams = <A, E>(
       )
       const shared: Shared<A> = { readers: 0, ended: false, items, scope }
       yield* Stream.runForEach(source, (item) => PubSub.publish(items, item)).pipe(
-        Effect.catch((error) => Effect.logWarning(`stopped watching ${key}`, error)),
+        Effect.catch((error) => Effect.logWarning(`stopped reading ${key}`, error)),
         Effect.ensuring(
           Effect.suspend(() => {
             shared.ended = true
