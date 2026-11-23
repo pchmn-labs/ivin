@@ -1,12 +1,5 @@
 import type { StateSnapshot } from "react-virtuoso"
-
-export interface SentMessagePlace {
-  readonly id: string
-  // Unknown while the view was still scrolling to the message.
-  readonly top: number | undefined
-  readonly room: number
-  readonly userScrolled: boolean
-}
+import type { SentMessagePlace } from "./sent-message-scroll.ts"
 
 export interface TranscriptPlace {
   readonly firstIndex: number

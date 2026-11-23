@@ -189,6 +189,41 @@ export const demoQuestionScript: readonly (readonly HarnessOutput[])[] = [
   demoQuestionTurn,
 ]
 
+// Streams its answer around an approval, for the sent message's place while the sheet opens and closes.
+const demoTypecheckTurn: readonly HarnessOutput[] = [
+  { type: "status", status: "running", raw: null },
+  { type: "delta", kind: "assistant_text", text: "I'll run the type checker " },
+  { type: "delta", kind: "assistant_text", text: "over the orders folder." },
+  { type: "assistant_text", text: "I'll run the type checker over the orders folder.", raw: null },
+  {
+    type: "tool_call",
+    toolCallId: "demo-typecheck",
+    name: "Bash",
+    input: { command: "pnpm tsc --noEmit -p src/orders" },
+    raw: null,
+  },
+  {
+    type: "approval_request",
+    requestId: "demo-approval-typecheck",
+    toolCallId: "demo-typecheck",
+    name: "Bash",
+    input: { command: "pnpm tsc --noEmit -p src/orders" },
+    raw: null,
+  },
+  {
+    type: "tool_result",
+    toolCallId: "demo-typecheck",
+    output: "No errors",
+    isError: false,
+    raw: null,
+  },
+  { type: "delta", kind: "assistant_text", text: "The orders folder " },
+  { type: "delta", kind: "assistant_text", text: "type checks with no error." },
+  { type: "assistant_text", text: "The orders folder type checks with no error.", raw: null },
+  { type: "usage", ...demoUsage, raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
 // Reads the message sent while it waits on the approval, then waits on a second one.
 const demoSteerTurn: readonly ScriptedElement[] = [
   ...demoApprovalTurn.slice(0, demoApprovalTurn.findIndex((o) => o.type === "tool_result") + 1),
@@ -215,5 +250,6 @@ export const demoShotScript: readonly (readonly ScriptedElement[])[] = [
   demoTurn,
   demoWorkTurn,
   demoQuestionTurn,
+  demoTypecheckTurn,
   demoSteerTurn,
 ]

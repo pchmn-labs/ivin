@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react"
-import type { SentMessagePlace } from "../rules/transcript-place.ts"
+import {
+  initialSentMessageScroll,
+  mayFollowEnd,
+  needsMeasurement,
+  nextSentMessageScroll,
+  sentMessagePlace as placeOf,
+  turnChanged,
+  type Measurement,
+  type SentMessageEvent,
+  type SentMessagePlace,
+  type SentMessageScrollAction,
+} from "../rules/sent-message-scroll.ts"
 import { lastTurnMessageId, type TranscriptRow } from "../rules/turns.ts"
 
 // --iv-ease-out, cubic-bezier(0.22, 1, 0.36, 1), approximated as an ease-out quint.
@@ -9,6 +20,12 @@ const cssMs = (element: Element, token: string) =>
   Number.parseFloat(getComputedStyle(element).getPropertyValue(token)) || 0
 
 const USER_SCROLL_EVENTS = ["wheel", "touchmove", "keydown", "pointerdown"] as const
+
+const contentTop = (view: HTMLElement, element: Element) =>
+  view.scrollTop + element.getBoundingClientRect().top - view.getBoundingClientRect().top
+
+const minHeight = (footer: HTMLElement | null | undefined) =>
+  footer ? Number.parseFloat(getComputedStyle(footer).minHeight) : 0
 
 // Scrolls a message the user sends to the top of the transcript, with room under it for the answer.
 export function useSentMessageScroll({
@@ -22,93 +39,35 @@ export function useSentMessageScroll({
 }) {
   const root = useRef<HTMLDivElement>(null)
   const scroller = useRef<HTMLElement | null>(null)
-  const sentId = useRef<string | undefined>(undefined)
-  const sentTop = useRef<number | undefined>(undefined)
-  const scrolling = useRef(false)
-  const room = useRef(0)
+  const model = useRef(initialSentMessageScroll)
   const frame = useRef(0)
-  const userScrolled = useRef(false)
-  const [roomLeft, setRoomLeft] = useState(false)
-  const roomLeftNow = useRef(false)
-  // Null until loaded, so the turns already there when the transcript opens are not scrolled to.
-  const seen = useRef<{
-    turn: string | undefined
-    firstRow: string | undefined
-    lastRow: string | undefined
-  } | null>(null)
+  // Re-renders with the followOutput the model allows.
+  const [, setRoomLeft] = useState(false)
 
   const turnMessageId = lastTurnMessageId(rows)
 
   const footer = () => root.current?.querySelector<HTMLElement>(".iv-transcript__footer")
 
-  const hasRoomLeft = () => {
-    const end = footer()
-    return room.current > (end ? Number.parseFloat(getComputedStyle(end).minHeight) : 0)
+  const sentRow = (view: HTMLElement) => {
+    const id = model.current.sent?.id
+    return id ? view.querySelector(`[data-row-id="${CSS.escape(id)}"]`) : null
   }
 
-  const setRoom = useCallback((height: number) => {
-    room.current = Math.max(0, height)
-    roomLeftNow.current = hasRoomLeft()
-    setRoomLeft(roomLeftNow.current)
-    // Set on the transcript for its stylesheet to read, as resize-handle does.
-    root.current?.style.setProperty("--iv-transcript-room", `${room.current}px`)
-  }, [])
-
-  const sentRow = () => {
-    const id = sentId.current
-    return id ? scroller.current?.querySelector(`[data-row-id="${CSS.escape(id)}"]`) : null
-  }
-
-  const contentTop = (view: HTMLElement, element: Element) =>
-    view.scrollTop + element.getBoundingClientRect().top - view.getBoundingClientRect().top
-
-  const trackSentRowTop = (view: HTMLElement) => {
-    const row = sentRow()
-    if (row) sentTop.current = contentTop(view, row)
-    // Virtuoso unmounts the message once it scrolls out of view, so its last known place stands in.
-    return sentTop.current
-  }
-
-  const fitRoom = useCallback(() => {
+  const measure = (): Measurement | undefined => {
     const view = scroller.current
     const end = footer()
-    if (scrolling.current || !view || !end) return
-    const top = trackSentRowTop(view)
-    if (top === undefined) return
-    const held = hasRoomLeft()
-    setRoom(view.clientHeight - (contentTop(view, end) - top))
-    if (userScrolled.current) return
-    // The turn's rows can shrink before the room grows back, and the browser then scrolls up to fit.
-    if (hasRoomLeft()) view.scrollTop = top
-    // Virtuoso follows only from the end, and a row taller than the room leaves the view short of it.
-    // The next frame lets it measure the shrunk room first, or it misses that the view reached the end.
-    else if (held)
-      requestAnimationFrame(() => {
-        view.scrollTop = view.scrollHeight
-        // The browser sends its scroll event a frame later; a row added before then would not be followed.
-        view.dispatchEvent(new Event("scroll"))
-      })
-  }, [setRoom])
+    if (!view || !end) return undefined
+    const row = sentRow(view)
+    return {
+      viewHeight: view.clientHeight,
+      footerTop: contentTop(view, end),
+      footerMinHeight: minHeight(end),
+      messageTop: row ? contentTop(view, row) : undefined,
+    }
+  }
 
-  useLayoutEffect(() => {
-    if (!loaded) return
-    const previous = seen.current
-    seen.current = { turn: turnMessageId, firstRow: rows[0]?.id, lastRow: rows.at(-1)?.id }
-    // Older items loaded above move every row down.
-    if (previous && previous.firstRow !== seen.current.firstRow) sentTop.current = undefined
-    if (previous === null || previous.turn === turnMessageId || !turnMessageId) return
-    // A message revealed by loading older items sits before the previous last row.
-    const index = rows.findIndex((row) => row.id === turnMessageId)
-    const lastIndex = rows.findIndex((row) => row.id === previous.lastRow)
-    const view = scroller.current
-    if (index <= lastIndex || !view) return
-
-    sentId.current = turnMessageId
-    sentTop.current = undefined
-    userScrolled.current = false
+  const animateToMessage = (view: HTMLElement) => {
     cancelAnimationFrame(frame.current)
-    scrolling.current = true
-    setRoom(view.clientHeight)
     const duration = matchMedia("(prefers-reduced-motion: reduce)").matches
       ? 0
       : cssMs(view, "--iv-duration-base")
@@ -116,45 +75,72 @@ export function useSentMessageScroll({
     let started: number | undefined
     frame.current = requestAnimationFrame(function step(now) {
       started ??= now
-      const row = sentRow()
+      const row = sentRow(view)
       // Until the virtual list draws the message, the list's end is the closest known target.
-      const target = row
-        ? view.scrollTop + row.getBoundingClientRect().top - view.getBoundingClientRect().top
-        : view.scrollHeight - view.clientHeight
+      const target = row ? contentTop(view, row) : view.scrollHeight - view.clientHeight
       const progress = duration === 0 ? 1 : Math.min(1, (now - started) / duration)
       view.scrollTop = from + (target - from) * easeOut(progress)
       if (progress < 1 || (!row && now - started < 1000)) {
         frame.current = requestAnimationFrame(step)
         return
       }
-      scrolling.current = false
-      if (row) fitRoom()
-      else setRoom(0)
+      dispatch({ type: "scroll-ended", view: measure() })
     })
-  }, [loaded, turnMessageId, rows, setRoom, fitRoom])
+  }
+
+  const scroll = (action: SentMessageScrollAction) => {
+    const view = scroller.current
+    if (!view) return
+    switch (action.type) {
+      case "animate-to-message":
+        return animateToMessage(view)
+      case "jump":
+        view.scrollTop = action.top
+        return
+      case "end":
+        // The next frame lets Virtuoso measure the shrunk room first, or it misses that the view reached the end.
+        requestAnimationFrame(() => {
+          view.scrollTop = view.scrollHeight
+          // The browser sends its scroll event a frame later; a row added before then would not be followed.
+          view.dispatchEvent(new Event("scroll"))
+        })
+    }
+  }
+
+  const dispatch = useCallback((event: SentMessageEvent) => {
+    const step = nextSentMessageScroll(model.current, event)
+    model.current = step.state
+    setRoomLeft(step.state.roomLeft)
+    // Set on the transcript for its stylesheet to read, as resize-handle does.
+    if (step.room !== undefined)
+      root.current?.style.setProperty("--iv-transcript-room", `${step.room}px`)
+    if (step.scroll) scroll(step.scroll)
+  }, [])
+
+  const fitRoom = useCallback(() => {
+    if (!needsMeasurement(model.current)) return
+    const view = measure()
+    if (view) dispatch({ type: "measured", view })
+  }, [dispatch])
+
+  useLayoutEffect(() => {
+    const view = turnChanged(model.current, turnMessageId) ? measure() : undefined
+    dispatch({ type: "rows-changed", loaded, turn: turnMessageId, rows, view })
+  }, [loaded, turnMessageId, rows, dispatch])
 
   // On mount only: the view opens once at the restored place, then follows the transcript.
   useLayoutEffect(() => {
-    if (!restored) return
-    sentId.current = restored.id
-    sentTop.current = restored.top
-    userScrolled.current = restored.userScrolled
-    setRoom(restored.room)
+    dispatch({ type: "opened", place: restored, footerMinHeight: minHeight(footer()) })
   }, [])
 
-  // Only while room is left under the message: past that, the list's own scroll position says it all.
-  const sentMessagePlace = useCallback((): SentMessagePlace | undefined => {
-    const id = sentId.current
-    if (id === undefined || !roomLeftNow.current) return undefined
-    return { id, top: sentTop.current, room: room.current, userScrolled: userScrolled.current }
-  }, [])
+  const sentMessagePlace = useCallback(() => placeOf(model.current), [])
 
   useEffect(
     () => () => {
       cancelAnimationFrame(frame.current)
-      scrolling.current = false
+      dispatch({ type: "scroll-cancelled" })
     },
-    [],
+    [dispatch],
   )
 
   useEffect(() => {
@@ -165,9 +151,7 @@ export function useSentMessageScroll({
     return () => observer.disconnect()
   }, [loaded, rows.length === 0, fitRoom])
 
-  const onUserScroll = useCallback(() => {
-    userScrolled.current = true
-  }, [])
+  const onUserScroll = useCallback(() => dispatch({ type: "user-scrolled" }), [dispatch])
 
   const scrollerRef = useCallback(
     (element: HTMLElement | Window | null) => {
@@ -179,13 +163,11 @@ export function useSentMessageScroll({
     [onUserScroll],
   )
 
-  // Virtuoso reads followOutput for the render that adds the sent message, before the effect above leaves room.
-  const sending =
-    seen.current !== null && turnMessageId !== undefined && turnMessageId !== seen.current.turn
   // Any value but false lets Virtuoso scroll to the end, past the room left under the sent message.
   // A new function each render re-arms its scroll to the end for a row that grows once measured.
-  const followOutput =
-    roomLeft || sending ? false : (atBottom: boolean) => atBottom && ("auto" as const)
+  const followOutput = mayFollowEnd(model.current, turnMessageId)
+    ? (atBottom: boolean) => atBottom && ("auto" as const)
+    : false
 
   return { root, scrollerRef, followOutput, fitRoom, sentMessagePlace }
 }

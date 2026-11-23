@@ -1,4 +1,4 @@
-import { _electron as electron } from "@playwright/test"
+import { _electron as electron, type Locator } from "@playwright/test"
 import { execFileSync } from "node:child_process"
 import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
@@ -75,6 +75,28 @@ try {
     const path = join(outDir, `${String(written.length + 1).padStart(2, "0")}-${name}.png`)
     await window.screenshot({ path })
     written.push(path)
+  }
+
+  // The virtual list draws only the rows near the view, so a row above it is reached by scrolling.
+  const scrollUpTo = async (target: Locator) => {
+    const transcript = window.getByTestId("transcript")
+    await transcript.hover()
+    const inView = async () => {
+      const [box, view] = await Promise.all([
+        target.boundingBox({ timeout: 100 }).catch(() => null),
+        transcript.boundingBox(),
+      ])
+      return (
+        box !== null &&
+        view !== null &&
+        box.y >= view.y &&
+        box.y + box.height <= view.y + view.height
+      )
+    }
+    for (let wheel = 0; !(await inView()); wheel++) {
+      if (wheel === 50) throw new Error("The transcript never scrolled up to its target")
+      await window.mouse.wheel(0, -200)
+    }
   }
 
   await shoot("new-session")
@@ -157,16 +179,15 @@ try {
   await window.getByRole("listbox", { name: "Permissions" }).waitFor({ state: "detached" })
   await sendMessage(window, "The order list crashes on an empty page, can you fix it?")
   await window.getByText("pnpm test src/orders", { exact: false }).last().waitFor()
-  await window
-    .getByText(/^Worked for/)
-    .last()
-    .waitFor()
+  // The answer is taller than the view, so the transcript follows its end, past the turn's label.
+  await scrollUpTo(window.getByText(/^Worked for/).last())
   await window.waitForTimeout(300)
   await shoot("turn-folded")
   await window.getByText("export function OrderList({", { exact: false }).last().hover()
   await window.getByRole("button", { name: "Copy" }).last().waitFor()
   await window.waitForTimeout(300)
   await shoot("answer-code-copy")
+  await scrollUpTo(window.getByTestId("turn-line").last())
   await window.getByTestId("turn-line").last().click()
   await window.getByTestId("turn-step").first().waitFor()
   await window.waitForTimeout(300)
@@ -186,6 +207,16 @@ try {
   await window.getByText("Thanks, I'll write them that way.").waitFor()
   await window.waitForTimeout(300)
   await shoot("question-answered")
+  await sendMessage(window, "Does the orders folder type check?")
+  await window.getByText("Approval needed").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("sent-message-approval")
+  await window.getByRole("radio", { name: "Allow" }).focus()
+  await window.keyboard.press("Enter")
+  await window.getByText("Approval needed").waitFor({ state: "detached" })
+  await window.getByText("The orders folder type checks with no error.").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("sent-message-after-approval")
   await sendMessage(window, "Run the tests")
   await window.getByText("Approval needed").waitFor()
   await shoot("approval")
