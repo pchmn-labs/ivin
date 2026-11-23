@@ -106,9 +106,9 @@ export interface FakeServer {
   readonly holdNextFetch: () => { readonly release: () => void; readonly fail: () => void }
   // Makes every pickBranch fail as git would, with this message; null picks again.
   readonly failCheckoutWith: (gitMessage: string | null) => void
-  // Makes every sendMessage fail as git would, storing this message; null sends again.
   // Makes `worktree.list` and `worktree.listBranches` fail with git's output, until null.
   readonly failListingWith: (gitMessage: string | null) => void
+  // Makes every sendMessage fail as git would, storing this message; null sends again.
   readonly failWorktreeWith: (gitMessage: string | null) => void
   // Makes the next sendMessage wait until `release` is called, or fail.
   readonly holdNextSend: () => { readonly release: () => void; readonly fail: () => void }

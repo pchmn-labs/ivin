@@ -37,6 +37,7 @@ export const checkoutChange = (sessionId: string) =>
           sessionId,
           message: error.message,
           blockedByLocalChanges: isBlockedByLocalChanges(error.message),
+          ...(error.stash !== undefined && { stash: error.stash }),
         }),
     }
   })
@@ -78,11 +79,7 @@ export const stashAround = <A, E extends GitError, R>(
               Effect.orElseSucceed(() => false),
             ))
           if (restored) return yield* Effect.fail(error)
-          return yield* Effect.fail(
-            new GitError({
-              message: `${error.message}\nYour changes are in the stash "${message}": run git stash pop to get them back.`,
-            }),
-          )
+          return yield* Effect.fail(new GitError({ message: error.message, stash: message }))
         }),
       ),
     )

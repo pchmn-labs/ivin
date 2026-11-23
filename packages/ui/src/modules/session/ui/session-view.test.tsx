@@ -556,7 +556,7 @@ test("a worktree list git cannot read shows a message with a retry in the workin
   await picker().click()
 
   await expect
-    .element(page.getByText("ivin could not list this project's worktrees."))
+    .element(page.getByText(/^ivin could not list this project's worktrees\./))
     .toBeVisible()
   server.failListingWith(null)
   await page.getByRole("button", { name: "Retry" }).click()

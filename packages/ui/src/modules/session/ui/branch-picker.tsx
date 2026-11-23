@@ -43,6 +43,7 @@ export function BranchPicker({
   const listFailure = AsyncResult.isFailure(listed)
     ? listBranchesFailure(Cause.squash(listed.cause))
     : null
+  const shownFailure = failure ?? listFailure
   const list = AsyncResult.getOrElse(listed, () => null)
   const branches = list?.branches ?? []
   const fetch = list?.fetch ?? "fetching"
@@ -142,15 +143,15 @@ export function BranchPicker({
         </>
       )}
     >
-      {(failure ?? listFailure) && (
+      {shownFailure && (
         <div className="iv-branch-picker__failure">
           <ErrorMessage
-            message={(failure ?? listFailure)!.text}
+            message={shownFailure!.text}
             {...(failure === null && { onRetry: refresh })}
           />
-          {(failure ?? listFailure)!.gitMessage !== null && (
+          {shownFailure!.gitMessage !== null && (
             <pre className="iv-branch-picker__git" data-testid="branch-picker-git-message">
-              {(failure ?? listFailure)!.gitMessage}
+              {shownFailure!.gitMessage}
             </pre>
           )}
         </div>

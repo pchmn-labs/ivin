@@ -5,7 +5,10 @@ import type { Branches, WorktreeEntry } from "../rules/git-output.ts"
 import type { WorktreeState } from "../rules/worktree-removal.ts"
 
 // `message` is git's own output.
-export class GitError extends Data.TaggedError("GitError")<{ readonly message: string }> {}
+export class GitError extends Data.TaggedError("GitError")<{
+  readonly message: string
+  readonly stash?: string
+}> {}
 
 // No `to`: the working folder.
 export interface CommitRange {

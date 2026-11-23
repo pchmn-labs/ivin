@@ -174,6 +174,8 @@ export class GitRefused extends Schema.TaggedError<GitRefused>()("GitRefused", {
   sessionId: Schema.String,
   message: Schema.String,
   blockedByLocalChanges: Schema.Boolean,
+  // The stash that still holds the user's changes after the step failed.
+  stash: Schema.optional(Schema.String),
 }) {}
 
 export const LocalChangesChoice = Schema.Union([
