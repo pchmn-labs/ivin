@@ -42,7 +42,7 @@ test("the socket answers an RPC the ivin command calls", async () => {
   })
 
   expect(answer).toMatchObject({ _tag: "Exit", requestId: "1", exit: { _tag: "Success" } })
-}, 10_000)
+})
 
 test("the socket refuses an RPC only the window calls", async () => {
   const answer = await withCliServer(async (socketPath) => {
@@ -54,7 +54,7 @@ test("the socket refuses an RPC only the window calls", async () => {
   })
 
   expect(answer).toMatchObject({ _tag: "Exit", requestId: "1", exit: { _tag: "Failure" } })
-}, 10_000)
+})
 
 test("a line that is not JSON is dropped and the next request is answered", async () => {
   const answer = await withCliServer(async (socketPath) => {
@@ -67,7 +67,7 @@ test("a line that is not JSON is dropped and the next request is answered", asyn
   })
 
   expect(answer).toMatchObject({ _tag: "Exit", requestId: "2", exit: { _tag: "Success" } })
-}, 10_000)
+})
 
 test("a line longer than the limit closes the connection", async () => {
   await withCliServer(async (socketPath) => {
@@ -76,4 +76,4 @@ test("a line longer than the limit closes the connection", async () => {
     socket.write("x".repeat(2 * 1024 * 1024))
     await closed(socket)
   })
-}, 10_000)
+})

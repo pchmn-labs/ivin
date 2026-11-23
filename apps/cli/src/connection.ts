@@ -49,7 +49,7 @@ const open = (socketPath: string) =>
     (socket) => Effect.sync(() => socket.destroy()),
   )
 
-// Bounds the memory a peer that never sends a newline takes; plugin logs are the longest answers.
+// Longer lines close the connection; a plugin's log is the longest answer.
 const maxLineLength = 64 * 1024 * 1024
 
 // One JSON message per line, as the server frames them.
@@ -59,14 +59,15 @@ const portOf = (socket: Socket) => ({
     socket.setEncoding("utf8")
     socket.on("data", (chunk: string) => {
       buffered += chunk
-      if (buffered.length > maxLineLength && !buffered.includes("\n")) return socket.destroy()
       let end = buffered.indexOf("\n")
       while (end !== -1) {
         const line = buffered.slice(0, end)
         buffered = buffered.slice(end + 1)
+        if (line.length > maxLineLength) return socket.destroy()
         if (line !== "") handler(line)
         end = buffered.indexOf("\n")
       }
+      if (buffered.length > maxLineLength) socket.destroy()
     })
   },
   postMessage: (data: string) => {

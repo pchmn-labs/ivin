@@ -30,6 +30,7 @@ export const Rpcs = ServerRpcs.merge(
 
 type AnyRpc = RpcGroup.Rpcs<typeof Rpcs>
 
+// A new `ivin` command adds the RPCs it calls here.
 const cliSocketTags = [
   "annotation.add",
   "plugin.lock",
@@ -42,7 +43,6 @@ const cliSocketTags = [
 
 const isCliSocketTag = (tag: string) => (cliSocketTags as ReadonlyArray<string>).includes(tag)
 
-// Every agent can reach the socket, so it serves only what the `ivin` command calls.
 export const CliSocketRpcs = Rpcs.omit(
   ...([...Rpcs.requests.keys()].filter((tag) => !isCliSocketTag(tag)) as AnyRpc["_tag"][]),
 ) as unknown as RpcGroup.RpcGroup<
