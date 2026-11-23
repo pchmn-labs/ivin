@@ -9,7 +9,7 @@ test("the sessions of every open project are listed, project by project in their
   registry.mount(openSessionsAtom)
   registry.mount(openProjectAtom)
   registry.mount(createSessionAtom)
-  registry.set(openProjectAtom, "/b")
+  registry.set(openProjectAtom, { path: "/b" })
   for (const projectPath of ["/b", "/a", "/elsewhere"]) {
     registry.set(createSessionAtom, { projectPath, model: "sonnet" })
   }

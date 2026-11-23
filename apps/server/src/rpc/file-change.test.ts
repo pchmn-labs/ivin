@@ -23,6 +23,7 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
+import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
 
 // Real git: several commands per call, slower when the suite runs other git tests beside it.
@@ -73,6 +74,7 @@ type Client = Effect.Success<ReturnType<typeof makeClient>>
 const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E, Scope.Scope>) => {
   const db = new DatabaseSync(":memory:")
   Effect.runSync(runMigrations(db))
+  trustEveryFolder(db)
   return Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),

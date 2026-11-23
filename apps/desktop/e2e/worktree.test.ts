@@ -37,6 +37,7 @@ test("a session started in a new worktree shows its branch in the composer and t
       dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [path] })
     }, project)
     await window.getByRole("button", { name: "Open folder…" }).click()
+    await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).click()
     await expect(window.getByTestId("project-name")).toHaveText("my-project")
     await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
 

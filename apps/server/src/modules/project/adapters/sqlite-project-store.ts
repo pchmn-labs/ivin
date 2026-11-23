@@ -60,6 +60,15 @@ export const layerSqliteProjectStore = Layer.effect(ProjectStore)(
              ON CONFLICT (id) DO UPDATE SET selected_project_path = excluded.selected_project_path`,
           ).run(path)
         }),
+      trust: (path) =>
+        Effect.sync(() => {
+          db.prepare("INSERT OR IGNORE INTO trusted_folders (path) VALUES (?)").run(path)
+        }),
+      trustedFolders: Effect.sync(() =>
+        (db.prepare("SELECT path FROM trusted_folders").all() as unknown as { path: string }[]).map(
+          (row) => row.path,
+        ),
+      ),
     }
   }),
 )

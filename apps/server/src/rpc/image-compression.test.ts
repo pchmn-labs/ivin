@@ -16,6 +16,7 @@ import { ImageCompression } from "../modules/transcript/usecases/image-compressi
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
+import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
 
 const turn: readonly HarnessOutput[] = [
@@ -98,6 +99,7 @@ const withServer = <A, E>(
 const newDatabase = () => {
   const db = new DatabaseSync(":memory:")
   Effect.runSync(runMigrations(db))
+  trustEveryFolder(db)
   return db
 }
 

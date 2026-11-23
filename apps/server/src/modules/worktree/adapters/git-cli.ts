@@ -11,6 +11,8 @@ import {
   parseWorktreeList,
   underOpenedPath,
 } from "../rules/git-output.ts"
+import { FolderTrust } from "../../project/usecases/folder-trust.ts"
+import { withOverrides } from "../rules/git-overrides.ts"
 import { hasOwnCommits, isSquashMerged, mergeAddsNothing } from "../rules/merge-state.ts"
 import { type CommitRange, Git, GitError } from "../usecases/git.ts"
 
@@ -37,11 +39,25 @@ const runGit = (
     readonly succeedsOn?: ReadonlyArray<number>
   } = {},
 ) =>
+  Effect.gen(function* () {
+    if (!(yield* (yield* FolderTrust).isTrusted(cwd)))
+      return yield* new GitError({
+        message: `${cwd} is in no trusted project, so ivin runs no git command in it.`,
+      })
+    return yield* spawnGit(cwd, args, input, maxBuffer, succeedsOn)
+  })
+
+const spawnGit = (
+  cwd: string,
+  args: readonly string[],
+  input: string | undefined,
+  maxBuffer: number,
+  succeedsOn: ReadonlyArray<number>,
+) =>
   Effect.callback<string, GitError | OutputTooLong>((resume, signal) => {
     const child = execFile(
       "git",
-      // ivin uses no fsmonitor, and a repository's config must not make a status run its command.
-      ["-c", "core.fsmonitor=false", ...args],
+      withOverrides(args),
       // A fetch must never wait on a credential prompt nobody can answer.
       { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer },
       (error, stdout) => {
@@ -119,7 +135,7 @@ const diffOf = (folder: string, change: Change, limit: number, range?: CommitRan
     })
   }).pipe(Effect.catchTag("OutputTooLong", () => Effect.succeed(null)))
 
-const orNull = <A>(effect: Effect.Effect<A, GitError>) =>
+const orNull = <A, R>(effect: Effect.Effect<A, GitError, R>) =>
   effect.pipe(Effect.orElseSucceed(() => null))
 
 const patchIds = (cwd: string, patches: string) =>
@@ -159,7 +175,27 @@ const isMergedInto = (folder: string, target: string) =>
     return { merged: hasCommits && (yield* squashMerged(folder, base, target)), hasCommits }
   })
 
-export const layerGitCli = Layer.succeed(Git)({
+type GitShape = Git["Service"]
+type Untrusted = {
+  readonly [K in keyof GitShape]: GitShape[K] extends (
+    ...args: infer A
+  ) => Effect.Effect<infer S, infer E>
+    ? (...args: A) => Effect.Effect<S, E, FolderTrust>
+    : never
+}
+
+const trusting = (methods: Untrusted, trust: FolderTrust["Service"]) =>
+  Object.fromEntries(
+    Object.entries(methods).map(([name, method]) => [
+      name,
+      (...args: never[]) =>
+        (method as (...args: never[]) => Effect.Effect<unknown, unknown, FolderTrust>)(
+          ...args,
+        ).pipe(Effect.provideService(FolderTrust, trust)),
+    ]),
+  ) as unknown as GitShape
+
+const methods: Untrusted = {
   listWorktrees: (repo) =>
     git(repo, ["worktree", "list", "--porcelain"]).pipe(
       Effect.map((out) => underOpenedPath(parseWorktreeList(out), repo, realpathSync(repo))),
@@ -285,4 +321,10 @@ export const layerGitCli = Layer.succeed(Git)({
           ...untracked.map((change) => change.path),
         ])
     }),
-})
+}
+
+export const layerGitCli = Layer.effect(Git)(
+  Effect.gen(function* () {
+    return trusting(methods, yield* FolderTrust)
+  }),
+)

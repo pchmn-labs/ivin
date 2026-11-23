@@ -8,6 +8,10 @@ The terms ivin's code, docs and tickets use.
 A folder, or a `.code-workspace` holding several folders, with its settings. Several projects are open at once in a window, in order; one is selected, and each has its own tab bar.
 _Avoid_: workspace, repo
 
+**Trusted project**:
+A project folder the user has said ivin may run git and sessions in, asked the first time the folder is opened. The trust covers the project's worktrees, and is never asked again for that folder.
+_Avoid_: safe folder, allowed folder
+
 **Checkout**:
 The project folder's own git working copy, as opposed to its worktrees.
 

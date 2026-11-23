@@ -12,6 +12,7 @@ const openProject = async (app: ElectronApplication, name: string) => {
   }, path)
   const window = await app.firstWindow()
   await window.getByRole("button", { name: "Open folder…" }).click()
+  await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).click()
   await expect(window.getByTestId("project-name")).toHaveText(name)
 }
 

@@ -16,6 +16,7 @@ import { expect, test } from "vitest"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { migrations, runMigrations } from "../shared/adapters/migrations.ts"
+import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
@@ -39,6 +40,7 @@ type Client = Effect.Success<ReturnType<typeof makeClient>>
 const newDatabase = () => {
   const db = new DatabaseSync(":memory:")
   Effect.runSync(runMigrations(db))
+  trustEveryFolder(db)
   return db
 }
 
@@ -124,6 +126,7 @@ test("a session stored before sessions recorded their harness runs on claude", a
      VALUES ('s', '/p', '/p', 't', 0, 0)`,
   ).run()
   Effect.runSync(runMigrations(db))
+  trustEveryFolder(db)
 
   const listed = await withServer(db, [], [], (client) =>
     client["session.list"]({ projectPath: "/p" }),

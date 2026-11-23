@@ -23,9 +23,20 @@ export class ProjectNotFound extends Schema.TaggedError<ProjectNotFound>()("Proj
   path: Schema.String,
 }) {}
 
+// The folder is in no trusted project, and the call did not carry the user's trust.
+export class ProjectNotTrusted extends Schema.TaggedError<ProjectNotTrusted>()(
+  "ProjectNotTrusted",
+  { path: Schema.String },
+) {}
+
 export const ProjectRpcs = RpcGroup.make(
   // Opens the folder at the end of the list, or keeps its place if already open, and selects it.
-  Rpc.make("project.open", { payload: { path: Schema.String }, success: OpenProjects }),
+  // `trust` records the user's trust in the folder first.
+  Rpc.make("project.open", {
+    payload: { path: Schema.String, trust: Schema.optionalKey(Schema.Boolean) },
+    success: OpenProjects,
+    error: ProjectNotTrusted,
+  }),
   // Closes the project's tabs too; its sessions are kept.
   Rpc.make("project.close", {
     payload: { path: Schema.String },

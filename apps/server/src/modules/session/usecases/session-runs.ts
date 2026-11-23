@@ -14,13 +14,13 @@ import type {
   ImageData,
 } from "@ivin/contracts/transcript"
 import {
+  HarnessError,
   HarnessProvider,
   type ApprovalDecision,
-  type HarnessError,
   type QuestionAnswers,
   type RequestAnswer,
 } from "@ivin/harness"
-import { Context, DateTime, Effect, Exit, Layer, Scope, Semaphore, Stream } from "effect"
+import { Context, Data, DateTime, Effect, Exit, Layer, Scope, Semaphore, Stream } from "effect"
 import { applyEvent, emptyItemState } from "../../transcript/rules/derive-items.ts"
 import {
   applyDelta,
@@ -29,6 +29,7 @@ import {
   type StreamedBlock,
 } from "../../transcript/rules/streamed-block.ts"
 import { logError } from "../../log/usecases/log-error.ts"
+import { FolderTrust } from "../../project/usecases/folder-trust.ts"
 import { ItemFeed } from "../../transcript/usecases/item-feed.ts"
 import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
@@ -86,6 +87,10 @@ export class SessionRuns extends Context.Service<
   }
 >()("ivin/server/SessionRuns") {}
 
+class FolderNotTrusted extends Data.TaggedError("FolderNotTrusted")<{
+  readonly folder: string
+}> {}
+
 interface ActiveRun {
   readonly cwd: string
   readonly options: RunOptions
@@ -109,6 +114,7 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
     const feed = yield* ItemFeed
     const sessionFeed = yield* SessionFeed
     const git = yield* Git
+    const trust = yield* FolderTrust
     const runs = new Map<string, ActiveRun>()
     const starting = yield* Semaphore.make(1)
 
@@ -238,6 +244,9 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
 
     const startRun = (session: Session, writer: Effect.Success<ReturnType<typeof makeWriter>>) =>
       Effect.gen(function* () {
+        // The harness would run the folder's own hooks and servers, such as `.claude/settings.json`'s.
+        if (!(yield* trust.isTrusted(session.workingFolder)))
+          return yield* new FolderNotTrusted({ folder: session.workingFolder })
         const scope = yield* Scope.make()
         const storedProviderSessionId = yield* sessions.providerSessionId(session.id)
         const options = runOptionsOf(session)
@@ -354,6 +363,18 @@ export const layerSessionRuns = Layer.effect(SessionRuns)(
             Effect.andThen(makeWriter(session)),
             Effect.flatMap((writer) =>
               startRun(session, writer).pipe(
+                Effect.catchTag("FolderNotTrusted", ({ folder }) =>
+                  writer.record(userMessageEvent(message), message.id).pipe(
+                    Effect.andThen(
+                      writer.fail(
+                        new HarnessError({
+                          message: `${folder} is in no trusted project, so ivin does not start the agent in it.`,
+                        }),
+                      ),
+                    ),
+                    Effect.as(null),
+                  ),
+                ),
                 Effect.catchTag("HarnessError", (error) =>
                   writer
                     .record(userMessageEvent(message), message.id)

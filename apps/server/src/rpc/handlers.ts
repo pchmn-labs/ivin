@@ -31,6 +31,7 @@ import { lockPlugin } from "../modules/plugin/usecases/lock-plugin.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
+import { layerFsFolderTrust } from "../modules/project/adapters/fs-folder-trust.ts"
 import { layerSqliteProjectStore } from "../modules/project/adapters/sqlite-project-store.ts"
 import { closeProject } from "../modules/project/usecases/close-project.ts"
 import { listProjects } from "../modules/project/usecases/list-projects.ts"
@@ -106,7 +107,6 @@ export const layerServices = Layer.mergeAll(
       layerFsFolderWatcher,
       layerFsFileReader,
       layerFsFileWriter,
-      layerSqliteProjectStore,
       layerSqliteSessionStore,
       layerSqliteTabStore,
       layerSqliteTranscriptStore,
@@ -116,6 +116,8 @@ export const layerServices = Layer.mergeAll(
       layerAnnotationFeed,
     ),
   ),
+  Layer.provideMerge(layerFsFolderTrust),
+  Layer.provideMerge(layerSqliteProjectStore),
 )
 
 type Handlers = Record<string, (...args: never[]) => unknown>
@@ -156,7 +158,7 @@ export const handlers = Rpcs.toLayer(
       "setting.watch": () => watchSettings,
       "setting.get": ({ path }) => getSetting(path),
       "setting.set": ({ path, value }) => setSetting(path, value),
-      "project.open": ({ path }) => openProject(path),
+      "project.open": ({ path, trust }) => openProject(path, trust),
       "project.close": ({ path }) => closeProject(path),
       "project.select": ({ path }) => selectProject(path),
       "project.list": () => listProjects,

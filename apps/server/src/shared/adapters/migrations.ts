@@ -196,6 +196,12 @@ export const migrations: readonly Migration[] = [
     version: 20,
     sql: "ALTER TABLE sessions ADD COLUMN waiting_for TEXT",
   },
+  {
+    version: 21,
+    // ivin already ran git in every saved project.
+    sql: `CREATE TABLE trusted_folders (path TEXT PRIMARY KEY);
+    INSERT INTO trusted_folders (path) SELECT path FROM projects`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>
