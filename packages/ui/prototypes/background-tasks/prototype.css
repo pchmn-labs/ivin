@@ -132,3 +132,20 @@ button.proto-task { cursor: default; }
 @media (prefers-reduced-motion: reduce) { .proto-dialog, .proto-backdrop, .proto-sheet, .proto-pane { animation: none; } }
 .proto-pane-tab span:not(.proto-tab-dot) { max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
 .proto-sheet-body > .iv-code-block .iv-code-block__text, .proto-pane-body > .iv-code-block .iv-code-block__text, .proto-dialog-column > .iv-code-block .iv-code-block__text { max-height: none; }
+
+/* The task sheet floats over the transcript, on top of the approval and the composer, at their width. */
+.proto-dock { position: relative; }
+.proto-dock .proto-sheet { position: absolute; bottom: 100%; left: var(--iv-space-6); right: var(--iv-space-6); z-index: 3; height: var(--proto-task-sheet-height, 340px); margin: 0; border: 1px solid var(--iv-border-strong); border-bottom: 0; border-radius: 10px 10px 0 0; box-shadow: none; animation: proto-sheet-in 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+.proto-dock[data-task-sheet] .proto-approval { border-top-left-radius: 0; border-top-right-radius: 0; }
+.proto-dock[data-task-sheet] .proto-composer { border-top-left-radius: 0; border-top-right-radius: 0; }
+.proto-detail-head { gap: var(--iv-space-2); padding: 0 var(--iv-space-2) 0 var(--iv-space-2); }
+.proto-detail-tabs { display: flex; flex: 1; min-width: 0; gap: 2px; overflow-x: auto; scrollbar-width: none; }
+.proto-detail-tab { display: flex; flex: none; align-items: center; gap: 6px; height: var(--iv-sub-view-tab-height); max-width: 240px; padding: 0 var(--iv-space-2); border: 0; border-radius: var(--iv-radius-md); background: none; color: var(--iv-text-muted); font: inherit; font-size: var(--iv-text-sm); font-weight: var(--iv-weight-medium); }
+.proto-detail-tab span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.proto-detail-tab:hover { background: var(--iv-bg-hover); }
+.proto-detail-tab[aria-selected="true"] { background: var(--iv-bg-active); color: var(--iv-text); }
+.proto-detail-tab .iv-icon, .proto-detail-tab svg { flex: none; color: var(--iv-text-faint); }
+.proto-dialog { right: auto; left: 50%; width: min(860px, calc(100vw - 96px)); max-width: none; margin: 0; transform: translateX(-50%); animation: proto-dialog-in-c 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+@keyframes proto-dialog-in-c { from { opacity: 0; transform: translateX(-50%) scale(0.97); } }
+.proto-dialog-body { padding: var(--iv-space-4) var(--iv-space-5) var(--iv-space-6); }
+.proto-dialog-body > .iv-code-block .iv-code-block__text { max-height: none; }

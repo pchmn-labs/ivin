@@ -4,11 +4,10 @@ import "../../src/core/theme/tokens.css"
 import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
-import { CardTabs, Dialog, Sheet } from "./variants.tsx"
+import { Dialog, Sheet } from "./variants.tsx"
 
 const VARIANTS = [
   { name: "Fold + sheet", Component: Sheet },
-  { name: "Fold + card tab", Component: CardTabs },
   { name: "Fold + dialog", Component: Dialog },
 ]
 

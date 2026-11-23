@@ -6,6 +6,7 @@ import { HarnessMark } from "../../src/core/components/harness-mark/harness-mark
 import { Icon, type IconName } from "../../src/core/components/icon/icon.tsx"
 import { Stack } from "../../src/core/components/stack/stack.tsx"
 import { Text } from "../../src/core/components/text/text.tsx"
+import { ResizeHandle } from "../../src/core/components/resize-handle/resize-handle.tsx"
 import { Tooltip } from "../../src/core/components/tooltip/tooltip.tsx"
 import "../../src/core/components/block/block.css"
 import "../../src/modules/session/ui/session-mark.css"
@@ -486,11 +487,24 @@ function useEscape(onClose: () => void) {
   })
 }
 
-function DetailHeader({ task, onClose }: { task: Task; onClose: () => void }) {
+function DetailHeader({ task, onSelect, onClose }: { task: Task; onSelect: (t: Task) => void; onClose: () => void }) {
   return (
     <div className="proto-detail-head">
-      <Icon name={taskIcon(task)} size={14} />
-      <span className="proto-detail-title">{task.name}</span>
+      <div className="proto-detail-tabs" role="tablist" aria-label="Tasks in background">
+        {TASKS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={t.id === task.id}
+            className="proto-detail-tab"
+            onClick={() => onSelect(t)}
+          >
+            <Icon name={taskIcon(t)} size={14} />
+            <span>{t.name}</span>
+          </button>
+        ))}
+      </div>
       <TaskMeta task={task} />
       <button type="button" className="proto-ghost" onClick={onClose} aria-label="Close">
         <Icon name="x" size={14} />
@@ -498,8 +512,6 @@ function DetailHeader({ task, onClose }: { task: Task; onClose: () => void }) {
     </div>
   )
 }
-
-const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
 
 function ApprovalSheet() {
   return (
@@ -523,111 +535,33 @@ function ApprovalSheet() {
 export function Sheet() {
   const [open, setOpen] = useState<Task | null>(null)
   const [approval, setApproval] = useState(false)
-  const [height, setHeight] = useState(320)
   useEscape(() => setOpen(null))
-  const drag = (e: React.PointerEvent<HTMLDivElement>) => {
-    const startY = e.clientY
-    const start = height
-    const move = (ev: PointerEvent) => setHeight(clamp(start + startY - ev.clientY, 120, window.innerHeight - 360))
-    const up = () => {
-      window.removeEventListener("pointermove", move)
-      window.removeEventListener("pointerup", up)
-    }
-    window.addEventListener("pointermove", move)
-    window.addEventListener("pointerup", up)
-  }
   return (
     <Window>
       <label className="proto-demo">
         <input type="checkbox" checked={approval} onChange={(e) => setApproval(e.target.checked)} /> Approval pending
       </label>
       <Transcript fold={<Fold onOpen={setOpen} activeId={open?.id ?? null} />} />
-      <div className="proto-dock">
+      <div className="proto-dock" data-task-sheet={open ? "" : undefined}>
         {open && (
-          <div className="proto-sheet" data-stacked={approval || undefined} style={{ height }} key={open.id}>
-            <div className="proto-grip" onPointerDown={drag} onDoubleClick={() => setHeight(320)} role="separator" aria-orientation="horizontal" aria-label="Resize" />
-            <DetailHeader task={open} onClose={() => setOpen(null)} />
+          <div className="proto-sheet">
+            <ResizeHandle
+              label="Resize the task sheet"
+              edge="top"
+              property="--proto-task-sheet-height"
+              name="proto-task-sheet"
+              min={160}
+              max={(sheet) => (sheet.parentElement?.getBoundingClientRect().top ?? 400) - 48}
+            />
+            <DetailHeader task={open} onSelect={setOpen} onClose={() => setOpen(null)} />
             <div className="proto-sheet-body">
-              <Detail task={open} />
+              <Detail key={open.id} task={open} />
             </div>
           </div>
         )}
         {approval && <ApprovalSheet />}
         <Composer />
       </div>
-    </Window>
-  )
-}
-
-const CODE = [
-  "export function setStatus(run: Run, status: Status) {",
-  "  if (run.status === status) return",
-  "  run.status = status",
-  "  publish(run.sessionId, { type: \"status\", status })",
-  "}",
-  "",
-  "export function stopRun(run: Run) {",
-  "  const tasks = run.tasks.slice()",
-  "  for (const task of tasks) task.stop()",
-  "  run.child.kill()",
-  "}",
-]
-
-type CardTab = { kind: "file"; name: string } | { kind: "task"; task: Task }
-const tabKey = (t: CardTab) => (t.kind === "file" ? `f:${t.name}` : `t:${t.task.id}`)
-
-export function CardTabs() {
-  const [tabs, setTabs] = useState<CardTab[]>([
-    { kind: "file", name: "session-runs.ts" },
-    { kind: "file", name: "session-lock.ts" },
-  ])
-  const [sel, setSel] = useState("f:session-runs.ts")
-  const openTask = (task: Task) => {
-    const tab: CardTab = { kind: "task", task }
-    setTabs((ts) => (ts.some((t) => tabKey(t) === tabKey(tab)) ? ts : [...ts, tab]))
-    setSel(tabKey(tab))
-  }
-  const close = (key: string) => {
-    const rest = tabs.filter((t) => tabKey(t) !== key)
-    setTabs(rest)
-    if (sel === key && rest[0]) setSel(tabKey(rest[rest.length - 1]!))
-  }
-  const current = tabs.find((t) => tabKey(t) === sel)
-  return (
-    <Window
-      pane={
-        tabs.length > 0 && (
-          <aside className="proto-pane">
-            <div className="proto-pane-tabs" role="tablist">
-              {tabs.map((t) => (
-                <span key={tabKey(t)} role="tab" className="proto-pane-tab" data-active={tabKey(t) === sel || undefined} onClick={() => setSel(tabKey(t))}>
-                  {t.kind === "file" ? <Icon name="file" size={14} /> : <span className="proto-tab-dot" />}
-                  <span>{t.kind === "file" ? t.name : t.task.name}</span>
-                  <button
-                    type="button"
-                    className="proto-tab-close"
-                    aria-label="Close"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      close(tabKey(t))
-                    }}
-                  >
-                    <Icon name="x" size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-            {current?.kind === "task" && <DetailHeader task={current.task} onClose={() => close(sel)} />}
-            <div className="proto-pane-body">
-              {current?.kind === "file" && <pre className="proto-code">{CODE.map((l, i) => `${String(i + 1).padStart(2)}  ${l}`).join("\n")}</pre>}
-              {current?.kind === "task" && <Detail key={current.task.id} task={current.task} />}
-            </div>
-          </aside>
-        )
-      }
-    >
-      <Transcript fold={<Fold onOpen={openTask} activeId={sel.startsWith("t:") ? sel.slice(2) : null} />} />
-      <Composer />
     </Window>
   )
 }
@@ -645,11 +579,9 @@ export function Dialog() {
         <>
           <div className="proto-backdrop" onClick={() => setOpen(null)} />
           <div className="proto-dialog" role="dialog" aria-modal="true" aria-label={open.name}>
-            <DetailHeader task={open} onClose={() => setOpen(null)} />
+            <DetailHeader task={open} onSelect={setOpen} onClose={() => setOpen(null)} />
             <div className="proto-dialog-body">
-              <div className="proto-dialog-column">
-                <Detail task={open} />
-              </div>
+              <Detail key={open.id} task={open} />
             </div>
           </div>
         </>
