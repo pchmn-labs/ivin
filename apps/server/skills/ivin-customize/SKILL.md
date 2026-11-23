@@ -1,6 +1,6 @@
 ---
 name: ivin-customize
-description: Use the `ivin` command to tell ivin, the app this session runs in, about the session's work and to read or change ivin's settings. Use when the subject of the session's work becomes clear or changes, to give the session a title; when the user asks to link a pull request, merge request or issue to this session; when you create, review, resolve or reference one; when you want to attach a fact to this session; when the user asks to change an ivin setting; or when an `ivin` command fails.
+description: Use the `ivin` command to tell ivin, the app this session runs in, about the session's work and to read or change ivin's settings. Use when the session's work moves to another subject, to retitle the session; when the user asks to link a pull request, merge request or issue to this session; when you create, review, resolve or reference one; when you want to attach a fact to this session; when the user asks to change an ivin setting; or when an `ivin` command fails.
 ---
 
 # The `ivin` command
@@ -15,12 +15,7 @@ Every command takes `--help`, and `--json` to print `{ "ok": true, … }` or `{ 
 ivin session rename "<title>"
 ```
 
-ivin shows the title on the session's tab and in its sidebar. Until you set one, it is the first line of the user's first message, which often says little about the work.
-
-Run it, without being asked:
-
-- once the subject of the work is clear, usually after your first answer;
-- again only when the work moves to another subject, not at each step.
+ivin shows the title on the session's tab and in its sidebar, and names the session itself from the user's first message. Run it, without being asked, only when the work moves to another subject than that message's, not at each step.
 
 Write a few words, under 60 characters, that name the work as the user would look for it among their tabs: `Fix tab drag reorder`, `Review PR #42: settings page`. No trailing period, no "Session about…". When the user named the session themselves, the command fails and says so: keep their title and do not retry.
 

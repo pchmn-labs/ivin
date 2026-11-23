@@ -10,6 +10,7 @@ import { HarnessError, HarnessProvider, type HarnessRun } from "../../../shared/
 import { approvalResponseLine, questionResponseLine } from "../rules/control-response.ts"
 import { claudeArgs } from "../rules/claude-args.ts"
 import { claudeRunOptions } from "../rules/run-options.ts"
+import { completeTextWithClaude } from "./complete-text.ts"
 import { findOnPath } from "./find-on-path.ts"
 import { listClaudeModels } from "./list-models.ts"
 import { controlRequestInput, decodeClaudeLine } from "../rules/decode-claude-line.ts"
@@ -23,6 +24,7 @@ const EVENT_BUFFER = 64
 const STDERR_LIMIT = 8_192
 const DEFAULT_KILL_GRACE: Duration.Input = "2 seconds"
 const LIST_MODELS_TIMEOUT: Duration.Input = "10 seconds"
+const COMPLETE_TEXT_TIMEOUT: Duration.Input = "30 seconds"
 
 const spawnClaude = (
   sessionId: string,
@@ -81,6 +83,7 @@ export const layerClaudeWith = (
       runOptions: listedRunOptions(listTimeout),
       program: Effect.sync(() => ({ name: "claude", path: findOnPath("claude") })),
       skillsFolder: claudeSkillsFolder(process.env, homedir()),
+      completeText: (prompt) => completeTextWithClaude(prompt, COMPLETE_TEXT_TIMEOUT),
       toolActivity,
       toolKind,
       start: ({ sessionId, cwd, options, providerSessionId }) =>

@@ -63,6 +63,7 @@ export interface ScriptedOptions {
   // Announces a provider session id on start, as an adapter does when it learns one.
   readonly reportSession?: boolean
   readonly runOptions?: HarnessRunOptions
+  readonly completeText?: (prompt: string) => Effect.Effect<string, HarnessError>
 }
 
 const offered = (value: string, name: string) => ({ value, name, description: null })
@@ -92,6 +93,7 @@ export const layerScripted = (
     startFailure,
     reportSession = false,
     runOptions = scriptedRunOptions,
+    completeText,
   }: ScriptedOptions = {},
 ) =>
   Layer.sync(HarnessProvider)(() => {
@@ -102,6 +104,7 @@ export const layerScripted = (
       runOptions: Effect.succeed(runOptions),
       program: Effect.succeed(null),
       skillsFolder: null,
+      completeText: completeText ?? null,
       // Scripts replay recorded Claude output.
       toolActivity,
       toolKind,

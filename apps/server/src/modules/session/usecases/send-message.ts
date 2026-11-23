@@ -9,6 +9,7 @@ import { ImageStore } from "../../transcript/usecases/image-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { titleFromMessage } from "../rules/session-title.ts"
 import { checkWorkingFolder } from "./check-working-folder.ts"
+import { FirstMessageReading } from "./first-message-reading.ts"
 import { moveToExistingWorktree, moveToNewWorktree } from "./move-working-folder.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
@@ -48,6 +49,7 @@ export const sendMessage = (
     const title = titleFromMessage(text)
     if (title !== "") yield* store.setTitleIfUnset(sessionId, title)
     const session = (yield* store.findById(sessionId)) ?? found
+    if (!found.started && title !== "") yield* (yield* FirstMessageReading).read(session, text)
     yield* (yield* ImageStore).save(sessionId, images)
     yield* runs.send(session, { id: messageId, text, images })
     return (yield* store.findById(sessionId)) ?? session

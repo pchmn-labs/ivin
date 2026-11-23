@@ -64,10 +64,18 @@ export const IssueAnnotationData = Schema.Struct({
 })
 export type IssueAnnotationData = typeof IssueAnnotationData.Type
 
+// A number without its repository: the forge's plugin turns it into a link.
+export const CitationAnnotationData = Schema.Struct({
+  kind: Schema.Literals(["issue", "pr"]),
+  number: Schema.Int.check(Schema.isGreaterThan(0)),
+})
+export type CitationAnnotationData = typeof CitationAnnotationData.Type
+
 // The kinds shared by several plugins, each with the data field that is its key.
 export const annotationKinds = {
   pr: { data: PrAnnotationData, key: "url" },
   issue: { data: IssueAnnotationData, key: "url" },
+  citation: { data: CitationAnnotationData, key: "number" },
 } as const
 export type AnnotationKinds = typeof annotationKinds
 export type AnnotationDataOf<K extends string> = K extends keyof AnnotationKinds

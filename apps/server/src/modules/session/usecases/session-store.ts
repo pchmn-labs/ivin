@@ -20,6 +20,8 @@ export class SessionStore extends Context.Service<
     readonly rename: (id: string, title: string, by: RenamedBy) => Effect.Effect<boolean>
     // No-op once the title was set by a first message or a rename.
     readonly setTitleIfUnset: (id: string, title: string) => Effect.Effect<void>
+    // False, title unchanged, unless the title is still the first message's.
+    readonly replaceMessageTitle: (id: string, title: string) => Effect.Effect<boolean>
     readonly providerSessionId: (id: string) => Effect.Effect<string | null>
     readonly setProviderSessionId: (id: string, providerSessionId: string) => Effect.Effect<void>
     readonly setRunOptions: (

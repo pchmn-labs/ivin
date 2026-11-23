@@ -147,6 +147,15 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             "UPDATE sessions SET title = ?, title_source = 'message' WHERE id = ? AND title_source IS NULL",
           ).run(title, id)
         }),
+      replaceMessageTitle: (id, title) =>
+        Effect.sync(
+          () =>
+            db
+              .prepare(
+                "UPDATE sessions SET title = ?, title_source = 'generated' WHERE id = ? AND title_source = 'message'",
+              )
+              .run(title, id).changes > 0,
+        ),
       providerSessionId: (id) =>
         Effect.sync(() => {
           const row = db
