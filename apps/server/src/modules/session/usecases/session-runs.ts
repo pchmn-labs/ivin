@@ -147,6 +147,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
       const feed = yield* ItemFeed
       const sessionFeed = yield* SessionFeed
       const git = yield* Git
+      const trust = yield* ProjectTrust
       const runs = new Map<string, ActiveRun>()
       const layerScope = yield* Effect.scope
       const locks = new Map<string, Semaphore.Semaphore>()
@@ -519,6 +520,8 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
               if (!session || session.archivedAt !== null) {
                 return yield* new SessionNotFound({ sessionId: given.id })
               }
+              if (!(yield* trust.isTrusted(session.workingFolder)))
+                return yield* new ProjectNotTrusted({ path: session.workingFolder })
               const working = runs.get(session.id)
               if (working?.busy()) {
                 yield* sessions.addPendingMessage(session.id, unsent(message))

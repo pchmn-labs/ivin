@@ -17,6 +17,7 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServicesWith } from "./handlers.ts"
+import { trustEveryFolder } from "./trust-every-folder.ts"
 
 const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
 const running: HarnessOutput = { type: "status", status: "running", raw: null }
@@ -30,6 +31,7 @@ type Client = Effect.Success<ReturnType<typeof makeClient>>
 const newDatabase = () => {
   const db = new DatabaseSync(":memory:")
   Effect.runSync(runMigrations(db))
+  trustEveryFolder(db)
   return db
 }
 
