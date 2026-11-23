@@ -2,7 +2,7 @@ import { useId } from "react"
 import type { SessionMarkProps } from "@ivin/plugin-api/ui"
 import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { HARNESSES } from "../rules/harnesses.ts"
-import { statusLabel } from "../rules/status-label.ts"
+import { statusLabel } from "@ivin/plugin-api/ui"
 import "./session-mark.css"
 
 function ExclamationDisc() {

@@ -1,7 +1,7 @@
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { imageDataUrl } from "../../transcript/rules/image-url.ts"
 import { ImageThumbnail } from "../../transcript/ui/image-thumbnail.tsx"
-import type { DraftImage } from "../rules/draft.ts"
+import type { DraftImage } from "@ivin/plugin-api/ui"
 import "./draft-images.css"
 
 export function DraftImages({

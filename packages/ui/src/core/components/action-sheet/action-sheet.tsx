@@ -15,6 +15,7 @@ export function ActionSheet({
   aside,
   hint,
   keys,
+  note,
   actions,
   children,
   "data-testid": testId,
@@ -46,15 +47,16 @@ export function ActionSheet({
       </div>
       {children}
       {hint === undefined ? null : <p className="iv-action-sheet__hint">{hint}</p>}
-      {keys === undefined && actions === undefined ? null : (
+      {keys === undefined && note === undefined && actions === undefined ? null : (
         <div className="iv-action-sheet__foot">
           <p className="iv-action-sheet__keys">
-            {keys?.map(({ key, label }) => (
-              <span key={key} className="iv-action-sheet__key">
-                <kbd>{key}</kbd>
-                {label}
-              </span>
-            ))}
+            {note ??
+              keys?.map(({ key, label }) => (
+                <span key={key} className="iv-action-sheet__key">
+                  <kbd>{key}</kbd>
+                  {label}
+                </span>
+              ))}
           </p>
           {actions}
         </div>

@@ -1,9 +1,10 @@
 import { createElement } from "react"
-import type { ComponentType, ReactElement, ReactNode } from "react"
+import type { ComponentType, ReactElement, ReactNode, Ref } from "react"
 import type { ChangeStatus, GitFileStatus } from "@ivin/contracts/file"
-import type { Session } from "@ivin/contracts/session"
-import type { ImageRef } from "@ivin/contracts/transcript"
+import type { HarnessRunOptions, RunOptions, Session } from "@ivin/contracts/session"
+import type { ImageRef, RunOption } from "@ivin/contracts/transcript"
 import { useHost } from "./host-context.ts"
+import type { Draft, SessionLocationLabel } from "./host-context.ts"
 
 export type IconName =
   | "archive"
@@ -140,6 +141,8 @@ export interface TextProps {
   readonly italic?: boolean
   readonly preWrap?: boolean
   readonly truncate?: boolean
+  // Cuts the text after this many lines.
+  readonly lines?: 3
   readonly title?: string
   readonly role?: string
   readonly "data-testid"?: string
@@ -153,7 +156,8 @@ export interface StackProps {
   readonly justify?: "start" | "center" | "end" | "between"
   readonly wrap?: boolean
   readonly grow?: boolean
-  readonly as?: "div" | "span" | "ul" | "li" | "section"
+  readonly as?: "div" | "span" | "ul" | "li" | "section" | "nav"
+  readonly "aria-label"?: string
   readonly "data-testid"?: string
   readonly children?: ReactNode
 }
@@ -251,6 +255,8 @@ export interface ActionSheetProps {
   readonly hint?: string
   // A footer: the key hints on the left, the actions on the right.
   readonly keys?: ReadonlyArray<{ readonly key: string; readonly label: string }>
+  // Faint text on the footer's left, in place of the key hints.
+  readonly note?: string
   readonly actions?: ReactNode
   readonly children?: ReactNode
   readonly "data-testid"?: string
@@ -448,6 +454,94 @@ export interface QuickPickProps {
   readonly footer?: string
 }
 
+// Calls Enter `onSubmit` and Escape `onEscape`.
+export interface TextFieldProps {
+  readonly label: string
+  readonly value: string
+  readonly onChange: (value: string) => void
+  readonly onSubmit?: () => void
+  readonly onEscape?: () => void
+  readonly onBlur?: () => void
+  readonly autoFocus?: boolean
+  readonly placeholder?: string
+  readonly "data-testid"?: string
+}
+
+// The contributions of another slot, drawn inside this one.
+export interface SlotComponentProps {
+  readonly slot: string
+  readonly props: object
+  readonly tool?: string
+}
+
+// `compact`: the branch alone, or the label when there is no branch, as a sidebar row shows it.
+export interface SessionLocationProps {
+  readonly location: SessionLocationLabel
+  readonly compact?: boolean
+}
+
+// The session's location, with the working folder picker before its first message and the
+// branch picker after.
+export interface SessionLocationPickerProps {
+  readonly session: Session
+}
+
+// Asks where a session whose working folder was deleted goes on.
+export interface PickWorkingFolderProps {
+  readonly session: Session
+}
+
+export interface RunOptionsMenuState {
+  readonly open: boolean
+  readonly start: RunOption
+}
+
+export interface RunOptionsMenuProps {
+  readonly session: Session
+  readonly offered: HarnessRunOptions | null
+  // The options that last worked, when the agent failed after a change; marks what changed.
+  readonly previous: RunOptions | null
+  readonly state: RunOptionsMenuState
+  readonly onStateChange: (state: RunOptionsMenuState) => void
+  readonly onChange: (options: Partial<RunOptions>) => void
+}
+
+export interface MessageFieldHandle {
+  readonly focus: () => void
+  // Whether the target is inside this field's text.
+  readonly holds: (target: EventTarget | null) => boolean
+}
+
+// The text of a message with its images: pasted or dropped images are checked against the
+// session's harness and added to the draft; `footer` goes under the text, inside the frame.
+export interface MessageFieldProps {
+  readonly ref?: Ref<MessageFieldHandle>
+  readonly sessionId: string
+  readonly draft: Draft
+  readonly onDraftChange: (update: (current: Draft) => Draft) => void
+  // Why images were refused, or null once a later paste or removal clears it.
+  readonly onRefusal: (message: string | null) => void
+  readonly label: string
+  readonly placeholder: string
+  readonly footer?: ReactNode
+}
+
+// The composer's column: an alert, the sheets above the field, the field, then the status line.
+export interface ComposerFrameProps {
+  // The keybinding area of the whole frame, such as "composer".
+  readonly area?: string
+  readonly alert?: ReactNode
+  // Sheets that sit on the field's top edge.
+  readonly sheets?: ReactNode
+  // The start of the status line.
+  readonly location?: ReactNode
+  // The end of the status line.
+  readonly status?: ReactNode
+  // Read by screen readers as the session's state changes.
+  readonly announce?: string
+  readonly children?: ReactNode
+}
+
 export interface HostComponents {
   readonly Button: ComponentType<ButtonProps>
   readonly IconButton: ComponentType<IconButtonProps>
@@ -478,6 +572,14 @@ export interface HostComponents {
   readonly ChangeList: ComponentType<ChangeListProps>
   readonly SearchField: ComponentType<SearchFieldProps>
   readonly QuickPick: ComponentType<QuickPickProps>
+  readonly TextField: ComponentType<TextFieldProps>
+  readonly Slot: ComponentType<SlotComponentProps>
+  readonly SessionLocation: ComponentType<SessionLocationProps>
+  readonly SessionLocationPicker: ComponentType<SessionLocationPickerProps>
+  readonly PickWorkingFolder: ComponentType<PickWorkingFolderProps>
+  readonly RunOptionsMenu: ComponentType<RunOptionsMenuProps>
+  readonly MessageField: ComponentType<MessageFieldProps>
+  readonly ComposerFrame: ComponentType<ComposerFrameProps>
 }
 
 const hostComponent =
@@ -514,3 +616,10 @@ export const ProjectMark = hostComponent((c) => c.ProjectMark)
 export const Tree = hostComponent((c) => c.Tree)
 export const SearchField = hostComponent((c) => c.SearchField)
 export const QuickPick = hostComponent((c) => c.QuickPick)
+export const TextField = hostComponent((c) => c.TextField)
+export const SessionLocation = hostComponent((c) => c.SessionLocation)
+export const SessionLocationPicker = hostComponent((c) => c.SessionLocationPicker)
+export const PickWorkingFolder = hostComponent((c) => c.PickWorkingFolder)
+export const RunOptionsMenu = hostComponent((c) => c.RunOptionsMenu)
+export const MessageField = hostComponent((c) => c.MessageField)
+export const ComposerFrame = hostComponent((c) => c.ComposerFrame)

@@ -1,0 +1,63 @@
+.iv-composer {
+  width: 100%;
+  max-width: var(--iv-content-width);
+  margin: 0 auto;
+  padding: 0 var(--iv-space-6) var(--iv-space-1);
+}
+
+/* Lets the picker shrink to the room the transcript leaves, so its button stays on screen. */
+.iv-composer:has(.iv-pick-working-folder) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.iv-composer__statusline {
+  display: flex;
+  margin-top: var(--iv-space-1);
+  justify-content: space-between;
+  gap: var(--iv-space-4);
+  min-height: var(--iv-space-6);
+  align-items: center;
+  padding: 0 var(--iv-space-2);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}
+
+.iv-composer__status-slot {
+  margin-left: auto;
+  flex: none;
+}
+
+.iv-composer__alert {
+  padding-bottom: var(--iv-space-2);
+}
+
+.iv-composer:has(.iv-action-sheet) .iv-message-field {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.iv-composer:has(.iv-action-sheet[data-tone="danger"]) .iv-message-field {
+  border-top-color: color-mix(in srgb, var(--iv-danger) 40%, transparent);
+}
+
+.iv-composer:has(.iv-action-sheet[data-tone="attention"]) .iv-message-field {
+  border-top-style: dashed;
+  border-top-color: var(--iv-attention-outline);
+}
+
+/* A sheet under an attention sheet joins it, and the field then meets that sheet's plain edge. */
+.iv-composer__sheets:has(.iv-action-sheet[data-tone="attention"])
+  .iv-action-sheet:not([data-tone="attention"]) {
+  border-top: 1px dashed var(--iv-attention-outline);
+  border-radius: 0;
+}
+
+.iv-composer:has(.iv-action-sheet[data-tone="attention"]):has(
+    .iv-action-sheet:not([data-tone="attention"])
+  )
+  .iv-message-field {
+  border-top-style: solid;
+  border-top-color: var(--iv-border-strong);
+}

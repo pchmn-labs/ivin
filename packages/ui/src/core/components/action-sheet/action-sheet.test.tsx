@@ -64,3 +64,16 @@ test("the aside sits in the title row and the footer holds the key hints and the
   expect(footer?.textContent).toContain("Navigate")
   await expect.element(sheet.getByRole("button", { name: "Decline" })).toBeVisible()
 })
+
+test("a note takes the place of the key hints, beside the actions", async () => {
+  await render(
+    <ActionSheet
+      title="Sent"
+      note="Read once the turn ends."
+      actions={<button type="button">Send now</button>}
+    />,
+  )
+  const sheet = page.getByRole("group", { name: "Sent" })
+  await expect.element(sheet.getByText("Read once the turn ends.")).toBeVisible()
+  await expect.element(sheet.getByRole("button", { name: "Send now" })).toBeVisible()
+})

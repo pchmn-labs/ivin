@@ -4,6 +4,7 @@ import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
 import { hostComponents } from "../../../packages/ui/src/app/host-components.ts"
+import { testUiHost } from "../../../packages/ui/src/core/test-ui-host.ts"
 import { makeTestSession, testDateTime } from "../../../packages/ui/src/core/test-session.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { Session, SlotProps, TranscriptItem, UiContext, UiHost } from "@ivin/plugin-api/ui"
@@ -59,6 +60,7 @@ const mountPanel = async (
   const opened: string[] = []
   const answers: Array<{ sessionId: string; requestId: string; allow: boolean }> = []
   const host: UiHost = {
+    ...testUiHost,
     useSession: () => undefined,
     useSessions: () => sessions,
     useProjects: () => ({ projects, selectedPath: "/shop" }),

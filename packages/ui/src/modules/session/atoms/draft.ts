@@ -1,6 +1,7 @@
 import { strongFamily } from "@ivin/state/strong-family"
 import { Atom } from "effect/reactivity"
-import { type Draft, emptyDraft } from "../rules/draft.ts"
+import type { Draft } from "@ivin/plugin-api/ui"
+import { emptyDraft } from "../rules/draft.ts"
 
 // Kept alive so a draft survives a session switch, which unmounts the composer.
 export const draftOf = strongFamily((_sessionId: string) =>

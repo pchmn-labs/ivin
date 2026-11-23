@@ -78,3 +78,11 @@
 .iv-text--attention {
   color: var(--iv-attention);
 }
+
+.iv-text--lines-3 {
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}

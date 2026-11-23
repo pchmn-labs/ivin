@@ -2,8 +2,8 @@ import { Atom, type AtomRegistry } from "effect/reactivity"
 import { archivedViewOpenAtom } from "../modules/session/atoms/archived-view.ts"
 import { readStoredSidebarTab, storeSidebarTab } from "./stored-sidebar-tab.ts"
 
-// The list column's own tab; the others are `sidebar.panel` contributions, by contribution id.
-export const SESSIONS_TAB = "sessions"
+// The built-in `sessions` plugin's panel, or the panel that replaces it.
+export const SESSIONS_TAB = "sessions/panel"
 
 export const sidebarOpenAtom = Atom.make(true).pipe(Atom.keepAlive)
 

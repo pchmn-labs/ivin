@@ -2,10 +2,10 @@ import { createContext, useContext } from "react"
 import type { Annotation } from "@ivin/contracts/annotation"
 import type { Change, FolderEntry, GitStatusEntry } from "@ivin/contracts/file"
 import type { OpenProjects } from "@ivin/contracts/project"
-import type { Session } from "@ivin/contracts/session"
+import type { HarnessRunOptions, RunOptions, Session } from "@ivin/contracts/session"
 import type { Settings } from "@ivin/contracts/setting"
 import type { Tab } from "@ivin/contracts/tab"
-import type { QuestionAnswer, TranscriptItem } from "@ivin/contracts/transcript"
+import type { ImageData, QuestionAnswer, TranscriptItem } from "@ivin/contracts/transcript"
 import type { HostComponents, MenuItem } from "./components.ts"
 
 export interface ActionFailure {
@@ -56,6 +56,24 @@ export interface DiscardFailure extends ActionFailure {
   readonly gitMessage: string | null
 }
 
+export interface DraftImage extends ImageData {
+  readonly name: string
+}
+
+// `images` keeps every image pasted since the last send, so undoing a deleted marker brings its image back.
+export interface Draft {
+  readonly text: string
+  readonly images: ReadonlyArray<DraftImage>
+}
+
+export interface SessionLocationLabel {
+  readonly kind: "checkout" | "worktree" | "folder"
+  readonly label: string
+  // Null when there is none yet, or outside a git repository.
+  readonly branch: string | null
+  readonly deleted?: true
+}
+
 export interface UiHost {
   readonly useSession: (sessionId: string) => Session | undefined
   // Every open project's sessions, project by project in their order, each newest activity first.
@@ -65,6 +83,8 @@ export interface UiHost {
   readonly useSelectedSessionId: () => string | null
   // The selected project's tabs, in tab bar order.
   readonly useTabs: () => ReadonlyArray<Tab>
+  // False until the selected project's tabs first arrive from the server.
+  readonly useTabsLoaded: () => boolean
   // Selects the session's project and its tab, opening one if it has none.
   readonly useOpenTab: () => (sessionId: string) => void
   readonly useTranscript: (sessionId: string) => ReadonlyArray<TranscriptItem>
@@ -82,6 +102,31 @@ export interface UiHost {
     readonly requestId: string
     readonly answers: ReadonlyArray<QuestionAnswer> | null
   }) => Promise<ActionFailure | undefined>
+  readonly useRenameSession: () => (session: Session, title: string) => void
+  // Where the session works: its checkout, a worktree, or a folder outside git.
+  readonly useSessionLocation: (session: Session) => SessionLocationLabel
+  // The unsent message of the session's composer, kept across session switches.
+  readonly useDraft: (
+    sessionId: string,
+  ) => readonly [Draft, (update: (current: Draft) => Draft) => void]
+  // Sends the draft's text and the images its markers name; the first message also starts the
+  // session in the working folder picked in its status line.
+  readonly useSendMessage: (
+    sessionId: string,
+  ) => (draft: Draft) => Promise<ActionFailure | undefined>
+  readonly useInterruptSession: (sessionId: string) => () => void
+  // Stops the turn so the agent reads the session's pending messages now.
+  readonly useSendNow: (sessionId: string) => () => void
+  // The models, efforts and permission modes the session's harness offers; null until the server
+  // answers, or when the session runs on another harness than the server's.
+  readonly useOfferedRunOptions: (sessionId: string) => HarnessRunOptions | null
+  readonly useSetRunOptions: (
+    sessionId: string,
+  ) => (options: Partial<RunOptions>) => Promise<ActionFailure | undefined>
+  // Runs `run` for the command while mounted and `enabled`, in place of its other handlers.
+  readonly useCommandHandler: (commandId: string, run: () => void, enabled?: boolean) => void
+  // `title` followed by the command's key, as a tooltip shows it: "Send (↵)".
+  readonly useKeyHint: (title: string, commandId: string) => string
   // Archive and Delete for the session's menu, and the last of them that failed.
   readonly useSessionActions: (session: Session) => {
     readonly items: ReadonlyArray<MenuItem>

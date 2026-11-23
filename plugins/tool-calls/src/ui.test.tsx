@@ -4,6 +4,7 @@ import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
 import { hostComponents } from "../../../packages/ui/src/app/host-components.ts"
+import { testUiHost } from "../../../packages/ui/src/core/test-ui-host.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { SlotProps, ToolCallItem, UiContext } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
@@ -22,6 +23,7 @@ const mount = async (item: ToolCallItem) => {
   }
   activate(ctx)
   const host = {
+    ...testUiHost,
     useSession: () => undefined,
     useSessions: () => [],
     useProjects: () => ({ projects: [], selectedPath: null }),

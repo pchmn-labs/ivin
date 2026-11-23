@@ -1,5 +1,6 @@
 import { expect, test } from "vitest"
-import { type Draft, type DraftImage, draftImages, nextImageNumber } from "./draft.ts"
+import type { Draft, DraftImage } from "@ivin/plugin-api/ui"
+import { draftImages, nextImageNumber } from "./draft.ts"
 
 const image = (number: number): DraftImage => ({
   id: `i${number}`,

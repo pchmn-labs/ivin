@@ -11,6 +11,7 @@ import { SessionView } from "./session-view.tsx"
 
 const mount = async (extraBranches = 0) => {
   const server = makeFakeServer()
+  server.openProject("/p")
   server.sessions.set("s1", makeTestSession({ id: "s1", title: "t" }))
   server.branches.push(
     { name: "main", remote: false, worktreePath: "/p" },

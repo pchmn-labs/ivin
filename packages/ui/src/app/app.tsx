@@ -154,7 +154,7 @@ export function App() {
                   }
                 />
                 <ProjectColumn project={current}>
-                  <SidebarTabs project={current} />
+                  <SidebarTabs />
                 </ProjectColumn>
               </div>
               <div className="iv-app__bottom">

@@ -9,9 +9,9 @@ import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { isRunning } from "../rules/is-running.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
-import { statusLabel } from "../rules/status-label.ts"
+import { statusLabel } from "@ivin/plugin-api/ui"
 import { ImageViewer } from "../../transcript/ui/image-viewer.tsx"
-import { Composer } from "./composer.tsx"
+import { Slot } from "../../../app/slot-renderer.tsx"
 import "./session-view.css"
 
 function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
@@ -62,7 +62,7 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
           </Text>
         </div>
       )}
-      <Composer key={sessionId} projectPath={projectPath} sessionId={sessionId} />
+      <Slot key={sessionId} slot="session.composer" props={{ sessionId }} />
       <ImageViewer sessionId={sessionId} />
     </div>
   )

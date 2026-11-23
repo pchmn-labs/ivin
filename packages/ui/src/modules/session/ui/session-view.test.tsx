@@ -8,7 +8,7 @@ import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { type FakeCheckout, makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
-import { SessionList } from "./session-list.tsx"
+import { SidebarTabs } from "../../../app/sidebar-tabs.tsx"
 import { SessionView } from "./session-view.tsx"
 
 // The composer's field is a contenteditable, whose lines innerText keeps.
@@ -17,6 +17,7 @@ const composerText = () =>
 
 test("the transcript renders through the plugins and the status line shows the usage", async () => {
   const server = makeFakeServer()
+  server.openProject("/p")
   const base = { sessionId: "s1" }
   server.seedItems("s1", [
     {
@@ -112,6 +113,7 @@ const mountSession = async (
   harness: Harness = "claude",
 ) => {
   const server = makeFakeServer()
+  server.openProject("/p")
   const at = DateTime.makeUnsafe(0)
   server.sessions.set("s1", {
     id: "s1",
@@ -310,7 +312,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionList projectPath="/p" projectName="p" />
+        <SidebarTabs />
         <SessionView projectPath="/p" sessionId="s1" />
       </PluginsProvider>
     </RegistryProvider>,
@@ -443,7 +445,7 @@ test("Escape closes an open menu without interrupting the session", async () => 
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <SessionList projectPath="/p" projectName="p" />
+        <SidebarTabs />
         <SessionView projectPath="/p" sessionId="s1" />
       </PluginsProvider>
     </RegistryProvider>,

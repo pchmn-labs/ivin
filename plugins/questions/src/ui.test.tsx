@@ -4,6 +4,7 @@ import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
 import { hostComponents } from "../../../packages/ui/src/app/host-components.ts"
+import { testUiHost } from "../../../packages/ui/src/core/test-ui-host.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type {
   QuestionItem,
@@ -40,6 +41,7 @@ const mount = async (
   const Record = slots["transcript.question"] as ComponentType<SlotProps["transcript.question"]>
   const Sheet = slots["composer.above"] as ComponentType<SlotProps["composer.above"]>
   const host: UiHost = {
+    ...testUiHost,
     useSession: () => undefined,
     useSessions: () => [],
     useProjects: () => ({ projects: [], selectedPath: null }),

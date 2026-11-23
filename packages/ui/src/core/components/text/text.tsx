@@ -12,6 +12,7 @@ export function Text({
   italic = false,
   preWrap = false,
   truncate = false,
+  lines,
   children,
   ...rest
 }: TextProps) {
@@ -24,6 +25,7 @@ export function Text({
     italic && "iv-text--italic",
     preWrap && "iv-text--pre-wrap",
     truncate && "iv-text--truncate",
+    lines !== undefined && `iv-text--lines-${lines}`,
   ]
     .filter(Boolean)
     .join(" ")

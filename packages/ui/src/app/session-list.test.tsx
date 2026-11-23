@@ -4,9 +4,11 @@ import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import { makeFakeServer } from "../../../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../../../core/server-client.ts"
-import { SessionList } from "./session-list.tsx"
+import { makeFakeServer } from "../core/fake-server-client.ts"
+import { serverClientLayerAtom } from "../core/server-client.ts"
+import { builtinPlugins } from "./builtin-plugins.ts"
+import { PluginsProvider } from "./plugin-host.tsx"
+import { SidebarTabs } from "./sidebar-tabs.tsx"
 
 const setup = async (
   titles: ReadonlyArray<string>,
@@ -46,7 +48,9 @@ const setup = async (
   const list = options.holdTabs ? server.holdNextTabList() : null
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <SessionList projectPath="/p" projectName="p" />
+      <PluginsProvider plugins={builtinPlugins}>
+        <SidebarTabs />
+      </PluginsProvider>
     </RegistryProvider>,
   )
   return Object.assign(server, { list })

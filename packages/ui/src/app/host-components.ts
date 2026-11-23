@@ -25,6 +25,14 @@ import { SessionMarkdown } from "../modules/file/ui/session-markdown.tsx"
 import { ProjectCreature } from "../modules/project/ui/project-creature.tsx"
 import { RelativeTime } from "../modules/session/ui/relative-time.tsx"
 import { SessionMark } from "../modules/session/ui/session-mark.tsx"
+import { ComposerFrame } from "../modules/session/ui/composer-frame.tsx"
+import { MessageField } from "../modules/session/ui/message-field.tsx"
+import { PickWorkingFolder } from "../modules/session/ui/pick-working-folder.tsx"
+import { RunOptionsMenu } from "../modules/session/ui/run-options-menu.tsx"
+import { SessionLocation } from "../modules/session/ui/session-location.tsx"
+import { SessionLocationPicker } from "../modules/session/ui/session-location-picker.tsx"
+import { HostTextField } from "./host-text-field.tsx"
+import { HostSlot } from "./slot-renderer.tsx"
 import { MessageImages } from "../modules/transcript/ui/message-images.tsx"
 import { MessageText } from "../modules/transcript/ui/message-text.tsx"
 
@@ -58,4 +66,12 @@ export const hostComponents = {
   ChangeList,
   SearchField,
   QuickPick,
+  TextField: HostTextField,
+  Slot: HostSlot,
+  SessionLocation,
+  SessionLocationPicker,
+  PickWorkingFolder,
+  RunOptionsMenu,
+  MessageField,
+  ComposerFrame,
 } satisfies HostComponents

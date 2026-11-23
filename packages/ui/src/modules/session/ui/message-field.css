@@ -1,0 +1,22 @@
+.iv-message-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-2);
+  padding: var(--iv-space-2);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+  transition:
+    border-color var(--iv-duration-fast) ease-out,
+    background-color var(--iv-duration-fast) ease-out;
+}
+
+.iv-message-field:focus-within {
+  border-color: color-mix(in srgb, var(--iv-focus-ring) 45%, var(--iv-border-strong));
+}
+
+.iv-message-field[data-dragging] {
+  border-style: dashed;
+  border-color: var(--iv-accent);
+  background: color-mix(in srgb, var(--iv-accent) 6%, var(--iv-bg-raised));
+}
