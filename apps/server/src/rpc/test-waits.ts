@@ -16,7 +16,6 @@ export const forkWatch = <A, E, R, B, E2, R2>(
     return fiber
   })
 
-// Reads until `done` holds, or fails the test after `timeout` ms.
 export const until = <A, E>(
   read: Effect.Effect<A, E>,
   done: (value: A) => boolean,
