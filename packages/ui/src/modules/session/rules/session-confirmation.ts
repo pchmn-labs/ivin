@@ -1,6 +1,6 @@
 import type { Session } from "@ivin/contracts/session"
 import { fileName } from "../../file/rules/file-name.ts"
-import { isRunning } from "./is-running.ts"
+import { isAgentBusy } from "./is-running.ts"
 
 export type Confirmation =
   | {
@@ -25,7 +25,7 @@ const unsavedPathsOfConfirmation = (confirmation: Confirmation): ReadonlyArray<s
 export const needsConfirmation = (confirmation: Confirmation): boolean => {
   if (unsavedPathsOfConfirmation(confirmation).length > 0 || confirmation.action === "delete")
     return true
-  return confirmation.action === "archive" && isRunning(confirmation.session.status)
+  return confirmation.action === "archive" && isAgentBusy(confirmation.session.status)
 }
 
 // A project's files carry their session's title once several sessions have edits.
@@ -57,7 +57,7 @@ export const confirmationText = (
       confirm: "Close project and lose edits",
     }
   }
-  const running = isRunning(confirmation.session.status)
+  const running = isAgentBusy(confirmation.session.status)
   const title = confirmation.session.title
   if (confirmation.action === "delete") {
     const effects = [

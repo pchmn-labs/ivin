@@ -199,3 +199,30 @@ test("a session waiting on questions shows a question mark and the first questio
   await expect.element(page.getByTestId("working-question")).toHaveTextContent("Which runner?")
   expect(page.getByRole("button", { name: /^Allow/ }).query()).toBeNull()
 })
+
+test("a session in background runs under Running with its first task and how many others", async () => {
+  await mountPanel(
+    [
+      makeTestSession({
+        id: "rests",
+        title: "Fix the double stop",
+        projectPath: "/shop",
+        status: "in_background",
+        statusChangedAt: minutesAgo(2),
+        backgroundTasks: [
+          { taskId: "k1", kind: "agent", description: "Review the diff" },
+          { taskId: "k2", kind: "command", description: "End-to-end tests" },
+          { taskId: "k3", kind: "command", description: "Dev server" },
+        ],
+      }),
+    ],
+    null,
+  )
+
+  const running = group("Running")
+  await expect.element(running.getByText("Fix the double stop")).toBeVisible()
+  await expect
+    .element(running.getByTestId("working-background"))
+    .toHaveTextContent("[bg] Review the diff +2")
+  await expect.element(running.getByText("In background")).toBeInTheDocument()
+})

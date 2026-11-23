@@ -31,6 +31,7 @@ const setup = async () => {
     relaunchFailure: null,
     pendingMessages: [],
     unreadMessages: [],
+    backgroundTasks: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,

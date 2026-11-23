@@ -25,7 +25,9 @@ export const checkoutChange = (sessionId: string) =>
       (other) =>
         other.id !== sessionId &&
         inCheckout(other) &&
-        (other.status === "working" || other.status === "waiting"),
+        (other.status === "working" ||
+          other.status === "waiting" ||
+          other.status === "in_background"),
     )
     if (busy) return yield* new CheckoutInUse({ sessionId })
     yield* fetchOriginQuietly(session.projectPath)

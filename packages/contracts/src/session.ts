@@ -1,13 +1,15 @@
 import { Effect, Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
-import { ImageData, ImageRef, QuestionAnswer } from "./transcript.ts"
+import { ImageData, ImageRef, QuestionAnswer, TaskKind } from "./transcript.ts"
 import { ProjectNotTrusted } from "./project.ts"
 
 // `waiting`: the agent waits on the user, such as an approval or an answer to its questions.
+// `in_background`: no turn runs, but a subagent or a command the agent started still does.
 export const SessionStatus = Schema.Literals([
   "preparing_worktree",
   "working",
   "waiting",
+  "in_background",
   "idle",
   "failed",
 ])
@@ -16,6 +18,14 @@ export type SessionStatus = typeof SessionStatus.Type
 // What a `waiting` session waits on; null in every other status.
 export const WaitingFor = Schema.NullOr(Schema.Literals(["approval", "question"]))
 export type WaitingFor = typeof WaitingFor.Type
+
+// A task the agent runs in the background, as the session lists it while it runs.
+export const BackgroundTask = Schema.Struct({
+  taskId: Schema.String,
+  kind: TaskKind,
+  description: Schema.String,
+})
+export type BackgroundTask = typeof BackgroundTask.Type
 
 export const Harness = Schema.Literals(["claude", "codex", "acp", "scripted"])
 export type Harness = typeof Harness.Type
@@ -88,6 +98,8 @@ export const Session = Schema.Struct({
   unreadMessages: Schema.Array(PendingMessage),
   status: SessionStatus,
   waitingFor: WaitingFor,
+  // In the order they started; empty once the agent stops.
+  backgroundTasks: Schema.Array(BackgroundTask),
   statusChangedAt: Schema.DateTimeUtcFromMillis,
   createdAt: Schema.DateTimeUtcFromMillis,
   lastActivityAt: Schema.DateTimeUtcFromMillis,
@@ -291,10 +303,17 @@ export const SessionRpcs = RpcGroup.make(
     error: Schema.Union([SessionNotFound, SessionWorking, CheckoutRefused]),
   }),
   // Stops the running turn; the agent keeps its process and the events received so far.
+  // A session in background has no turn: the agent stops, which ends its tasks.
   Rpc.make("session.interrupt", {
     payload: { sessionId: Schema.String },
     success: Session,
     error: SessionNotFound,
+  }),
+  // What a running background command has written so far, its end if it is long; null when the
+  // agent no longer runs it, then its item holds the output it ended with.
+  Rpc.make("session.taskOutput", {
+    payload: { sessionId: Schema.String, taskId: Schema.String },
+    success: Schema.NullOr(Schema.String),
   }),
   // Stops the running turn so the agent starts a new one with the pending messages.
   Rpc.make("session.sendNow", {

@@ -38,6 +38,10 @@ export class TranscriptStore extends Context.Service<
       before: number,
       after: number,
     ) => Effect.Effect<TranscriptPage>
+    readonly itemsOfTask: (
+      sessionId: string,
+      toolCallId: string,
+    ) => Effect.Effect<readonly TranscriptItem[]>
     readonly usageTotal: (sessionId: string) => Effect.Effect<SessionUsage>
     readonly itemState: (sessionId: string) => Effect.Effect<ItemState>
   }

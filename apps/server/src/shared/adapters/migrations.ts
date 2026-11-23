@@ -219,6 +219,10 @@ export const migrations: readonly Migration[] = [
     );
     UPDATE transcript_events SET payload = json_remove(payload, '$.raw')`,
   },
+  {
+    version: 23,
+    sql: "ALTER TABLE sessions ADD COLUMN background_tasks TEXT NOT NULL DEFAULT '[]'",
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

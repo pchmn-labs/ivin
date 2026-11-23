@@ -36,7 +36,11 @@ import {
   Semaphore,
   Stream,
 } from "effect"
-import { applyEvent, unansweredEvents } from "../../transcript/rules/derive-items.ts"
+import {
+  applyEvent,
+  stoppedTaskEvents,
+  unansweredEvents,
+} from "../../transcript/rules/derive-items.ts"
 import {
   applyDelta,
   blockAfterEvent,
@@ -95,7 +99,7 @@ export class SessionRuns extends Context.Service<
       session: Session,
       answer: QuestionAnswers,
     ) => Effect.Effect<void, QuestionNotOpen>
-    // No-op with no run.
+    // No-op with no run. With only background tasks running, stops the agent and so its tasks.
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
     // Stops the turn so the agent takes the pending messages as the next one; no-op without any.
     readonly sendNow: (sessionId: string) => Effect.Effect<void>
@@ -106,6 +110,8 @@ export class SessionRuns extends Context.Service<
       sessionId: string,
       effect: Effect.Effect<A, E, R>,
     ) => Effect.Effect<A, E, R>
+    // The end of a running background command's output, as the agent writes it; null with no such task.
+    readonly taskOutput: (sessionId: string, taskId: string) => Effect.Effect<string | null>
     // True from the agent's start until it stops, idle between turns included.
     readonly isRunning: (sessionId: string) => Effect.Effect<boolean>
     // Appends to the transcript with or without a run.
@@ -118,7 +124,9 @@ interface ActiveRun {
   readonly options: RunOptions
   readonly busy: () => boolean
   readonly turn: () => number
+  readonly hasTasks: () => boolean
   readonly turnStarted: Effect.Effect<void>
+  readonly taskFile: (taskId: string) => string | undefined
   readonly record: (event: HarnessEvent, id?: string) => Effect.Effect<void>
   readonly send: (message: UserMessage) => Effect.Effect<void, HarnessError>
   // False when no request of the answer's kind is open under its id.
@@ -212,11 +220,13 @@ export const layerSessionRunsWith = (
             Effect.gen(function* () {
               const at = yield* DateTime.now
               sequence += 1
+              // A subagent's step is no part of the text the agent is streaming.
+              const stepOfTask = "parentToolCallId" in event && event.parentToolCallId !== undefined
               const reserved =
-                event.type === "assistant_text" || event.type === "thinking"
+                !stepOfTask && (event.type === "assistant_text" || event.type === "thinking")
                   ? finishedEventId(streamed, event.type)
                   : undefined
-              streamed = blockAfterEvent(streamed, event)
+              if (!stepOfTask) streamed = blockAfterEvent(streamed, event)
               const { raw: _raw, ...body } = event
               const stored = {
                 ...body,
@@ -239,6 +249,19 @@ export const layerSessionRunsWith = (
               yield* sessionFeed.publish(session.id)
             })
 
+          const syncTasks = Effect.suspend(() =>
+            sessions
+              .setBackgroundTasks(
+                session.id,
+                [...itemState.openTasks.values()].map(({ taskId, kind, description }) => ({
+                  taskId,
+                  kind,
+                  description,
+                })),
+              )
+              .pipe(Effect.andThen(sessionFeed.publish(session.id))),
+          )
+
           const record = (event: HarnessEvent, id?: string) =>
             writing.withPermits(1)(
               write(event, id).pipe(
@@ -247,7 +270,9 @@ export const layerSessionRunsWith = (
                     ? setStatus(session.id, "waiting", "approval")
                     : event.type === "question_request"
                       ? setStatus(session.id, "waiting", "question")
-                      : Effect.void,
+                      : event.type === "task_started" || event.type === "task_ended"
+                        ? syncTasks
+                        : Effect.void,
                 ),
               ),
             )
@@ -281,7 +306,25 @@ export const layerSessionRunsWith = (
             ),
           )
 
-          const closeRequests = writing.withPermits(1)(writeUnanswered)
+          // A run that ends takes its tasks with it.
+          const writeStoppedTasks = Effect.suspend(() =>
+            itemState.openTasks.size === 0
+              ? Effect.void
+              : Effect.forEach(
+                  stoppedTaskEvents(itemState),
+                  (event) => write(event, undefined, { touch: false }),
+                  { discard: true },
+                ).pipe(Effect.andThen(syncTasks)),
+          )
+
+          const closeRequests = writing.withPermits(1)(
+            writeUnanswered.pipe(Effect.andThen(writeStoppedTasks)),
+          )
+
+          // A turn that ends leaves the session in background while a task still runs.
+          const afterTurn = Effect.suspend(() =>
+            setStatus(session.id, itemState.openTasks.size > 0 ? "in_background" : "idle"),
+          )
 
           const turnStatus = (status: "running" | "idle") =>
             writing.withPermits(1)(
@@ -289,10 +332,34 @@ export const layerSessionRunsWith = (
                 status === "running" && itemState.openRequests.size > 0
                   ? Effect.void
                   : status === "idle"
-                    ? writeUnanswered.pipe(Effect.andThen(setStatus(session.id, "idle")))
+                    ? writeUnanswered.pipe(Effect.andThen(afterTurn))
                     : setStatus(session.id, "working"),
               ),
             )
+
+          // The last task ending with no turn running leaves nothing to show: the session is idle.
+          const afterTaskEnded = (turnOpen: boolean) =>
+            writing.withPermits(1)(
+              Effect.suspend(() =>
+                turnOpen || itemState.openTasks.size > 0
+                  ? Effect.void
+                  : setStatus(session.id, "idle"),
+              ),
+            )
+
+          const afterTaskStarted = (turnOpen: boolean) =>
+            writing.withPermits(1)(
+              Effect.suspend(() =>
+                turnOpen || itemState.openRequests.size > 0
+                  ? Effect.void
+                  : setStatus(session.id, "in_background"),
+              ),
+            )
+
+          const openTask = (taskId: string) => itemState.openTasks.get(taskId)
+          const hasOpenTasks = () => itemState.openTasks.size > 0
+          const runsTask = (toolCallId: string) =>
+            [...itemState.openTasks.values()].some((task) => task.toolCallId === toolCallId)
 
           const stream = (delta: HarnessDelta) =>
             writing.withPermits(1)(
@@ -318,7 +385,20 @@ export const layerSessionRunsWith = (
 
           const hasOpenRequests = () => itemState.openRequests.size > 0
 
-          return { record, decide, turnStatus, stream, fail, closeRequests, hasOpenRequests }
+          return {
+            record,
+            decide,
+            turnStatus,
+            afterTaskStarted,
+            afterTaskEnded,
+            openTask,
+            hasOpenTasks,
+            runsTask,
+            stream,
+            fail,
+            closeRequests,
+            hasOpenRequests,
+          }
         })
 
       const buildRun = (
@@ -371,8 +451,8 @@ export const layerSessionRunsWith = (
                     idleTimer = null
                     if (runs.get(session.id) !== run || busy || turn !== idleTurn) return
                     const pending = yield* sessions.pendingMessages(session.id)
-                    if (pending.length > 0 || writer.hasOpenRequests()) {
-                      // Re-checked after another limit: neither ends with a turn of its own.
+                    if (pending.length > 0 || writer.hasOpenRequests() || writer.hasOpenTasks()) {
+                      // Re-checked after another limit: none of them ends with a turn of its own.
                       return yield* startIdleTimer
                     }
                     yield* stopRun(session.id)
@@ -390,6 +470,8 @@ export const layerSessionRunsWith = (
           ).pipe(Effect.provideService(Git, git), Effect.provideService(SessionStore, sessions))
 
           let providerSessionId = storedProviderSessionId
+          // The file each running task writes its output to, until the run ends.
+          const taskFiles = new Map<string, string>()
           let busy = false
           let turn = 0
           let firstTurn: { readonly message: string; error: string | null } | null = null
@@ -412,8 +494,34 @@ export const layerSessionRunsWith = (
               yield* writer.record(userMessageEvent(message, steer), message.id)
               if (!steer) yield* setStatus(session.id, "working")
             })
+          const endedTask = (output: Extract<HarnessOutput, { type: "task_ended" }>) =>
+            Effect.gen(function* () {
+              const task = writer.openTask(output.taskId)
+              // A notification for a task this run never listed, such as a foreground subagent.
+              if (task === undefined) return
+              const path = taskFiles.get(output.taskId)
+              taskFiles.delete(output.taskId)
+              const final =
+                task.kind === "command" && path !== undefined
+                  ? yield* provider.readTaskOutput(path)
+                  : null
+              yield* writer.record({ ...output, output: final })
+              yield* writer.afterTaskEnded(busy)
+            })
           const handle = (output: HarnessOutput) => {
             if (output.type === "delta") return writer.stream(output)
+            if (output.type === "task_output_file") {
+              taskFiles.set(output.taskId, output.path)
+              return Effect.void
+            }
+            if (output.type === "task_ended") return endedTask(output)
+            // Steps of a subagent the turn waits for are the tool call's own business, not a task's.
+            if ("parentToolCallId" in output && output.parentToolCallId !== undefined) {
+              return writer.runsTask(output.parentToolCallId) ? writer.record(output) : Effect.void
+            }
+            if (output.type === "task_started") {
+              return writer.record(output).pipe(Effect.andThen(writer.afterTaskStarted(busy)))
+            }
             if (output.type === "message_read") return readMessage(output.messageId)
             if (output.type === "provider_session") {
               if (output.providerSessionId === providerSessionId) return Effect.void
@@ -467,7 +575,9 @@ export const layerSessionRunsWith = (
             options,
             busy: () => busy,
             turn: () => turn,
+            hasTasks: writer.hasOpenTasks,
             turnStarted: follower.turnStarted,
+            taskFile: (taskId) => taskFiles.get(taskId),
             record: writer.record,
             send: (message) =>
               Effect.suspend(() => {
@@ -665,6 +775,8 @@ export const layerSessionRunsWith = (
             Effect.gen(function* () {
               const run = runs.get(sessionId)
               if (!run) return
+              // No turn to stop: the tasks run in the agent, so the agent stops.
+              if (!run.busy() && run.hasTasks()) return yield* endInterrupted(sessionId, run)
               if ((yield* sessions.pendingMessages(sessionId)).length === 0) {
                 return yield* interruptTurn(sessionId, run)
               }
@@ -684,6 +796,11 @@ export const layerSessionRunsWith = (
         stop: (sessionId) => locked(sessionId, stopRun(sessionId)),
         close: (sessionId, effect) =>
           locked(sessionId, stopRun(sessionId).pipe(Effect.andThen(effect))),
+        taskOutput: (sessionId, taskId) =>
+          Effect.suspend(() => {
+            const path = runs.get(sessionId)?.taskFile(taskId)
+            return path === undefined ? Effect.succeed(null) : provider.readTaskOutput(path)
+          }),
         isRunning: (sessionId) => Effect.sync(() => runs.has(sessionId)),
         record: (session, event) =>
           locked(

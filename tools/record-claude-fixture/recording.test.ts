@@ -18,6 +18,7 @@ test("a bare fixture name records one cheap, tool-less run that ends at the resu
     name: "plain-answer",
     steps: [{ wait: null, action: { type: "send", text: "hi" } }],
     until: { type: "result", subtype: null },
+    untilWait: null,
     keep: [],
     allow: [],
     deny: [],
@@ -67,6 +68,13 @@ test("an initialize step can end the run at its answer and keep only that line",
   expect(recording.keep).toEqual([{ type: "control_response", subtype: null }])
 })
 
+test("a wait after the last step holds the end line until it is seen", () => {
+  const recording = parsed("later", "--send", "go", "--wait", "system/task_notification")
+
+  expect(recording.steps).toHaveLength(1)
+  expect(recording.untilWait).toEqual({ type: "system", subtype: "task_notification" })
+})
+
 test.each([
   [["--send", "hi"], /fixture name/],
   [["../escape", "--send", "hi"], /fixture name/],
@@ -75,7 +83,6 @@ test.each([
   [["name", "--send", "hi", "--permission-mode", "acceptEdits"], /acceptEdits/],
   [["name", "--send", "hi", "--permission-mode", "auto"], /auto/],
   [["name", "--send", "hi", "--dangerously-skip-permissions"], /Unknown option/],
-  [["name", "--send", "hi", "--wait", "10ms"], /--wait must come before a step/],
   [["name", "--send", "hi", "--max-turns", "0"], /--max-turns/],
   [["name", "--send"], /--send needs a value/],
 ])("%j is refused", (argv, message) => {

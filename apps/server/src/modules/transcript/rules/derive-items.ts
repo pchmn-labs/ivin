@@ -9,6 +9,7 @@ type MessageItem = Extract<TranscriptItem, { type: "message" }>
 type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
 type QuestionItem = Extract<TranscriptItem, { type: "question" }>
+type TaskItem = Extract<TranscriptItem, { type: "task" }>
 
 // Bump when a change to these rules alters items already stored, so they are derived again.
 export const ITEMS_VERSION = 1
@@ -17,12 +18,14 @@ export interface ItemState {
   readonly openMessage: MessageItem | null
   readonly openToolCalls: ReadonlyMap<string, ToolCallItem>
   readonly openRequests: ReadonlyMap<string, ApprovalItem | QuestionItem>
+  readonly openTasks: ReadonlyMap<string, TaskItem>
 }
 
 export const emptyItemState: ItemState = {
   openMessage: null,
   openToolCalls: new Map(),
   openRequests: new Map(),
+  openTasks: new Map(),
 }
 
 const openRequest = (state: ItemState, item: ApprovalItem | QuestionItem): ItemState => ({
@@ -60,7 +63,20 @@ export const applyEvent = (
       }
       return { state: { ...state, openMessage: null }, item }
     }
+    // A subagent's steps never join the agent's own open message, nor close it.
     case "assistant_text": {
+      if (event.parentToolCallId) {
+        const item: MessageItem = {
+          ...base,
+          type: "message",
+          role: "assistant",
+          text: event.text,
+          images: [],
+          steer: false,
+          parentToolCallId: event.parentToolCallId,
+        }
+        return { state, item }
+      }
       const item: MessageItem = state.openMessage
         ? { ...state.openMessage, text: `${state.openMessage.text}\n\n${event.text}` }
         : {
@@ -74,8 +90,13 @@ export const applyEvent = (
       return { state: { ...state, openMessage: item }, item }
     }
     case "thinking": {
-      const item: TranscriptItem = { ...base, type: "thinking", text: event.text }
-      return { state: { ...state, openMessage: null }, item }
+      const item: TranscriptItem = {
+        ...base,
+        type: "thinking",
+        text: event.text,
+        ...(event.parentToolCallId ? { parentToolCallId: event.parentToolCallId } : {}),
+      }
+      return { state: event.parentToolCallId ? state : { ...state, openMessage: null }, item }
     }
     case "tool_call": {
       const item: ToolCallItem = {
@@ -87,9 +108,11 @@ export const applyEvent = (
         input: event.input,
         status: "running",
         output: null,
+        ...(event.parentToolCallId ? { parentToolCallId: event.parentToolCallId } : {}),
       }
       const openToolCalls = new Map(state.openToolCalls).set(event.toolCallId, item)
-      return { state: { ...state, openMessage: null, openToolCalls }, item }
+      const openMessage = event.parentToolCallId ? state.openMessage : null
+      return { state: { ...state, openMessage, openToolCalls }, item }
     }
     case "tool_result": {
       const call = state.openToolCalls.get(event.toolCallId)
@@ -169,6 +192,34 @@ export const applyEvent = (
       const item: TranscriptItem = { ...base, type: "interruption" }
       return { state: { ...state, openMessage: null }, item }
     }
+    case "task_started": {
+      const item: TaskItem = {
+        ...base,
+        type: "task",
+        taskId: event.taskId,
+        toolCallId: event.toolCallId,
+        kind: event.kind,
+        description: event.description,
+        status: "running",
+        summary: null,
+        output: null,
+      }
+      const openTasks = new Map(state.openTasks).set(event.taskId, item)
+      return { state: { ...state, openTasks }, item }
+    }
+    case "task_ended": {
+      const task = state.openTasks.get(event.taskId)
+      if (!task) return { state, item: null }
+      const item: TaskItem = {
+        ...task,
+        status: event.outcome,
+        summary: event.summary,
+        output: event.output,
+      }
+      const openTasks = new Map(state.openTasks)
+      openTasks.delete(event.taskId)
+      return { state: { ...state, openTasks }, item }
+    }
     case "working_folder":
     case "run_option": {
       const { id: _id, sessionId: _s, sequence: _q, at: _at, ...change } = event
@@ -223,3 +274,26 @@ export const unansweredEvents = (state: ItemState): HarnessEvent[] =>
       },
     ]
   })
+
+// Ends each open task as stopped, and fails the calls its subagent left running, so none spins for good.
+export const stoppedTaskEvents = (state: ItemState): HarnessEvent[] =>
+  [...state.openTasks.values()].flatMap((task): HarnessEvent[] => [
+    ...[...state.openToolCalls.values()]
+      .filter((call) => call.parentToolCallId === task.toolCallId)
+      .map((call): HarnessEvent => ({
+        type: "tool_result",
+        toolCallId: call.toolCallId,
+        output: "Stopped.",
+        isError: true,
+        parentToolCallId: task.toolCallId,
+        raw: null,
+      })),
+    {
+      type: "task_ended",
+      taskId: task.taskId,
+      outcome: "stopped",
+      summary: "",
+      output: null,
+      raw: null,
+    },
+  ])

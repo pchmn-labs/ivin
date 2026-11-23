@@ -1,0 +1,59 @@
+.iv-task-sheet {
+  position: absolute;
+  bottom: 100%;
+  left: var(--iv-space-6);
+  right: var(--iv-space-6);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  height: var(--iv-task-sheet-height, 340px);
+  min-height: 160px;
+  /* Leaves the title bar, the tabs and the composer on screen in a short window. */
+  max-height: calc(100dvh - 280px);
+  border: 1px solid var(--iv-border-strong);
+  border-bottom: 0;
+  border-radius: var(--iv-radius-lg) var(--iv-radius-lg) 0 0;
+  background: var(--iv-bg-raised);
+  animation: iv-sheet-in var(--iv-duration-base) var(--iv-ease-out) both;
+}
+
+/* The drag line stops before the rounded corners, with rounded ends. */
+.iv-task-sheet > .iv-resize-handle[data-edge="top"]::after {
+  right: var(--iv-radius-lg);
+  left: var(--iv-radius-lg);
+  border-radius: var(--iv-radius-pill);
+}
+
+.iv-task-sheet__row {
+  padding-right: var(--iv-space-1);
+}
+
+.iv-task-sheet__row .iv-task-meta {
+  margin: 0 var(--iv-space-1);
+}
+
+/* A task's tab has no close button of its own, so it takes the same room on both sides. */
+.iv-sub-view-card__tab.iv-task-sheet__tab {
+  padding: 0 var(--iv-space-3);
+}
+
+.iv-task-sheet__close {
+  margin-right: 0;
+}
+
+.iv-task-sheet__body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--iv-space-3) var(--iv-space-3) var(--iv-space-4);
+  overflow-y: auto;
+}
+
+.iv-task-sheet__body .iv-code-block__text {
+  max-height: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-task-sheet {
+    animation: none;
+  }
+}

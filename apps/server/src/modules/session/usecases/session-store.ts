@@ -1,4 +1,5 @@
 import type {
+  BackgroundTask,
   RelaunchFailure,
   RenamedBy,
   RunOptions,
@@ -60,6 +61,10 @@ export class SessionStore extends Context.Service<
       status: SessionStatus,
       at: Session["statusChangedAt"],
       waitingFor?: WaitingFor,
+    ) => Effect.Effect<void>
+    readonly setBackgroundTasks: (
+      id: string,
+      tasks: readonly BackgroundTask[],
     ) => Effect.Effect<void>
     // No run survives a connection, so a session left working or waiting is idle again, its pending messages unread.
     readonly resetRunning: Effect.Effect<readonly string[]>

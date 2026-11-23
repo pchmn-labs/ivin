@@ -67,6 +67,8 @@ export class HarnessProvider extends Context.Service<
     // One prompt, one reply, from a small model, outside any session; null for a harness that has none.
     readonly completeText: ((prompt: string) => Effect.Effect<string, HarnessError>) | null
     readonly start: (input: StartInput) => Effect.Effect<HarnessRun, HarnessError, Scope.Scope>
+    // The end of a file the agent writes a background task's output to; empty when it cannot be read.
+    readonly readTaskOutput: (path: string) => Effect.Effect<string>
     readonly toolActivity: (call: ToolUse, result: ToolOutcome) => ToolActivity
     readonly toolKind: (name: string) => ToolKind
   }

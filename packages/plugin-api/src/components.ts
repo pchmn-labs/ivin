@@ -126,7 +126,7 @@ export interface DialogProps {
 }
 
 export interface TooltipProps {
-  readonly content: string
+  readonly content: ReactNode
   // A faint line above the content.
   readonly label?: string
   // Monospace and wrapped, for a command or a path.
@@ -227,6 +227,8 @@ export interface SessionMarkProps {
   readonly harness: Session["harness"]
   // Draws "?" in place of "!" on a session waiting on the agent's questions.
   readonly waitingFor?: Session["waitingFor"]
+  // Listed in a tooltip over the mark of a session in background.
+  readonly tasks?: Session["backgroundTasks"]
 }
 
 // "now", "5 min", "3 d"…, kept current while shown.

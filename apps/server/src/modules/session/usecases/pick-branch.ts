@@ -10,7 +10,12 @@ import { Git } from "../../worktree/usecases/git.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
 
-const BUSY = new Set<Session["status"]>(["preparing_worktree", "working", "waiting"])
+const BUSY = new Set<Session["status"]>([
+  "preparing_worktree",
+  "working",
+  "waiting",
+  "in_background",
+])
 
 export const pickBranch = (sessionId: string, name: string, remote: boolean) =>
   Effect.gen(function* () {

@@ -88,6 +88,8 @@ export interface ScriptedOptions {
   readonly reportSession?: boolean
   readonly runOptions?: HarnessRunOptions
   readonly completeText?: (prompt: string) => Effect.Effect<string, HarnessError>
+  // What reading a task's output file gives, by path.
+  readonly taskOutputs?: Readonly<Record<string, string>>
 }
 
 const offered = (value: string, name: string) => ({ value, name, description: null })
@@ -120,6 +122,7 @@ export const layerScripted = (
     reportSession = false,
     runOptions = scriptedRunOptions,
     completeText,
+    taskOutputs = {},
   }: ScriptedOptions = {},
 ) =>
   Layer.sync(HarnessProvider)(() => {
@@ -131,6 +134,7 @@ export const layerScripted = (
       program: Effect.succeed(null),
       skillsFolder: null,
       completeText: completeText ?? null,
+      readTaskOutput: (path) => Effect.succeed(taskOutputs[path] ?? ""),
       // Scripts replay recorded Claude output.
       toolActivity,
       toolKind,

@@ -20,6 +20,7 @@ export const makeTestSession = (
   relaunchFailure: null,
   pendingMessages: [],
   unreadMessages: [],
+  backgroundTasks: [],
   status: "idle",
   statusChangedAt: DateTime.makeUnsafe(0),
   createdAt: DateTime.makeUnsafe(0),

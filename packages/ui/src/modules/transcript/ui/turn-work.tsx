@@ -22,7 +22,7 @@ import {
 } from "../rules/turns.ts"
 import "./turn-work.css"
 
-function ElapsedClock({ since }: { since: number }) {
+export function ElapsedClock({ since }: { since: number }) {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000)
@@ -31,7 +31,7 @@ function ElapsedClock({ since }: { since: number }) {
   return <span data-testid="turn-clock">{duration(now - since)}</span>
 }
 
-function Failed({ count }: { count: number }) {
+export function Failed({ count }: { count: number }) {
   if (count === 0) return null
   return (
     <>
@@ -41,7 +41,7 @@ function Failed({ count }: { count: number }) {
   )
 }
 
-function StepView({
+export function StepView({
   step,
   sessionId,
   open,
@@ -159,7 +159,7 @@ function TurnLine({ work, live }: { work: Work; live: boolean }): ReactNode {
   )
 }
 
-function EarlierStepsLine({
+export function EarlierStepsLine({
   steps,
   open,
   onToggle,

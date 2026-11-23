@@ -40,6 +40,7 @@ const mountApp = async (
       relaunchFailure: null,
       pendingMessages: [],
       unreadMessages: [],
+      backgroundTasks: [],
       status: "idle",
       statusChangedAt: at,
       createdAt: at,

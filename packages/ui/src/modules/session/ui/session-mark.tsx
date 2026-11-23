@@ -1,4 +1,6 @@
 import { useId } from "react"
+import { Icon } from "../../../core/components/icon/icon.tsx"
+import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import type { SessionMarkProps } from "@ivin/plugin-api/ui"
 import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { HARNESSES } from "../rules/harnesses.ts"
@@ -37,9 +39,22 @@ function QuestionDisc() {
   )
 }
 
-export function SessionMark({ status, harness, waitingFor = null }: SessionMarkProps) {
-  const asks = status === "waiting" && waitingFor === "question"
+function TaskList({ tasks }: { tasks: NonNullable<SessionMarkProps["tasks"]> }) {
   return (
+    <ul className="iv-session-mark__tasks">
+      {tasks.map((task) => (
+        <li key={task.taskId}>
+          <Icon name={task.kind === "agent" ? "robot" : "terminal"} size={12} />
+          <span>{task.description}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+export function SessionMark({ status, harness, waitingFor = null, tasks = [] }: SessionMarkProps) {
+  const asks = status === "waiting" && waitingFor === "question"
+  const mark = (
     <span
       className="iv-session-mark"
       data-status={status}
@@ -53,5 +68,15 @@ export function SessionMark({ status, harness, waitingFor = null }: SessionMarkP
         {asks ? "Waiting for your answer" : statusLabel(status)}
       </span>
     </span>
+  )
+  if (status !== "in_background" || tasks.length === 0) return mark
+  return (
+    <Tooltip
+      side="bottom"
+      label={tasks.length === 1 ? "1 task in background" : `${tasks.length} tasks in background`}
+      content={<TaskList tasks={tasks} />}
+    >
+      {mark}
+    </Tooltip>
   )
 }
