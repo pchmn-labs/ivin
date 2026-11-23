@@ -21,10 +21,32 @@ const OPTIONS = [
 
 const firstLine = (text: string) => text.split("\n", 1)[0] ?? ""
 
+function UnansweredRecord({ input }: { input: string }) {
+  return (
+    <Stack direction="row" gap={2} align="start">
+      <Text size="sm" tone="muted">
+        <Icon name="circle-alert" size={14} />
+      </Text>
+      <Stack gap={0}>
+        <Text size="sm" tone="muted" truncate title={input} data-testid="approval-decision">
+          Not answered:{" "}
+          <Text as="span" size="sm" mono>
+            {firstLine(input)}
+          </Text>
+        </Text>
+        <Text size="xs" tone="faint">
+          The agent stopped while it waited, so it can no longer take your answer.
+        </Text>
+      </Stack>
+    </Stack>
+  )
+}
+
 function ApprovalRecord({ item }: SlotProps["transcript.approval"]) {
-  // An allowed call shows as its tool row; only a denial needs a trace.
-  if (item.decision !== "deny") return null
   const input = formatToolInput(item.name, item.input)
+  if (item.decision === "unanswered") return <UnansweredRecord input={input} />
+  // An allowed call shows as its tool row.
+  if (item.decision !== "deny") return null
   return (
     <Stack direction="row" gap={2} align="center">
       <Icon name="x" size={14} />

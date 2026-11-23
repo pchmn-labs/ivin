@@ -217,7 +217,7 @@ test("an approval cannot be answered through a question's request id", async () 
   expect(error._tag).toBe("ApprovalNotOpen")
 })
 
-test("after a server restart the questions stay open in the transcript, and answering them says they are no longer waited on", async () => {
+test("after a server restart the questions are not answered, the session is idle, and answering them says they are no longer waited on", async () => {
   const db = newDatabase()
   const sessionId = await withServer(db, [[running, asked]], (client) => askQuestions(client))
 
@@ -236,7 +236,7 @@ test("after a server restart the questions stay open in the transcript, and answ
 
   expect(after).toMatchObject({
     status: "idle",
-    item: { status: "open" },
+    item: { status: "unanswered" },
     error: "QuestionNotOpen",
   })
 })

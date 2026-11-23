@@ -2,7 +2,10 @@ import { expect, test } from "vitest"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { pendingApproval } from "./pending-approval.ts"
 
-const approval = (id: string, decision: "allow" | "deny" | null): TranscriptItem => ({
+const approval = (
+  id: string,
+  decision: "allow" | "deny" | "unanswered" | null,
+): TranscriptItem => ({
   id,
   sessionId: "s",
   position: 0,
@@ -21,7 +24,7 @@ test("the pending approval is the last unanswered one", () => {
   ).toBe("c")
 })
 
-test("a transcript whose approvals are all answered has none pending", () => {
-  expect(pendingApproval([approval("a", "deny")])).toBeUndefined()
+test("a transcript whose approvals are all answered or left unanswered has none pending", () => {
+  expect(pendingApproval([approval("a", "deny"), approval("b", "unanswered")])).toBeUndefined()
   expect(pendingApproval([])).toBeUndefined()
 })

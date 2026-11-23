@@ -79,7 +79,7 @@ test("a pending approval docks a sheet with the command and the two options", as
 })
 
 test("no pending approval means no sheet", async () => {
-  await mount([approval("allow")])
+  await mount([approval("allow"), approval("unanswered", "r2")])
   await expect.element(page.getByTestId("approval-sheet")).not.toBeInTheDocument()
 })
 
@@ -166,6 +166,18 @@ test("a denied approval leaves one line and an allowed one leaves none", async (
   await mount([approval("allow")])
   expect(page.getByTestId("approval-decision").query()).toBeNull()
   await expect.element(page.getByRole("radio", { name: "Allow" })).not.toBeInTheDocument()
+})
+
+test("an unanswered approval leaves its command and says the agent can no longer take the answer, with no sheet", async () => {
+  await mount([approval("unanswered")])
+  const record = page.getByTestId("approval-decision")
+  await expect.element(record).toHaveTextContent("Not answered: pnpm test")
+  await expect
+    .element(
+      page.getByText("The agent stopped while it waited, so it can no longer take your answer."),
+    )
+    .toBeVisible()
+  await expect.element(page.getByTestId("approval-sheet")).not.toBeInTheDocument()
 })
 
 test("a failed answer shows its message, and Retry sends the same answer", async () => {

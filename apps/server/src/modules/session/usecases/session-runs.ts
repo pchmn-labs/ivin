@@ -35,7 +35,7 @@ import {
   Semaphore,
   Stream,
 } from "effect"
-import { applyEvent, emptyItemState } from "../../transcript/rules/derive-items.ts"
+import { applyEvent, unansweredEvents } from "../../transcript/rules/derive-items.ts"
 import {
   applyDelta,
   blockAfterEvent,
@@ -44,6 +44,7 @@ import {
 } from "../../transcript/rules/streamed-block.ts"
 import { logError, logFailure } from "../../log/usecases/log-error.ts"
 import { ProjectTrust } from "../../project/usecases/project-trust.ts"
+import { ensureItems } from "../../transcript/usecases/ensure-items.ts"
 import { ItemFeed } from "../../transcript/usecases/item-feed.ts"
 import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
@@ -159,7 +160,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           return lock.withPermits(1)(effect)
         })
 
-      yield* sessions.resetRunning
+      const leftRunning = yield* sessions.resetRunning
 
       // Closed together: one scope after another would add every agent's kill grace.
       yield* Effect.addFinalizer(() =>
@@ -192,12 +193,16 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
 
       const makeWriter = (session: Session) =>
         Effect.gen(function* () {
+          yield* ensureItems(session.id).pipe(
+            Effect.provideService(HarnessProvider, provider),
+            Effect.provideService(TranscriptStore, transcript),
+          )
           let sequence = yield* transcript.lastSequence(session.id)
-          let itemState = emptyItemState
+          let itemState = yield* transcript.itemState(session.id)
           let streamed: StreamedBlock | null = null
           const writing = yield* Semaphore.make(1)
 
-          const write = (event: HarnessEvent, id?: string) =>
+          const write = (event: HarnessEvent, id?: string, { touch = true } = {}) =>
             Effect.gen(function* () {
               const at = yield* DateTime.now
               sequence += 1
@@ -206,17 +211,21 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
                   ? finishedEventId(streamed, event.type)
                   : undefined
               streamed = blockAfterEvent(streamed, event)
+              const { raw: _raw, ...body } = event
               const stored = {
-                ...event,
+                ...body,
                 id: id ?? reserved ?? crypto.randomUUID(),
                 sessionId: session.id,
                 sequence,
                 at,
               }
-              yield* transcript.append(stored)
-              yield* sessions.touch(session.id, at)
               const next = applyEvent(itemState, stored, provider.toolKind)
+              yield* transcript.append(stored, {
+                item: next.item,
+                openMessageId: next.state.openMessage?.id ?? null,
+              })
               itemState = next.state
+              if (touch) yield* sessions.touch(session.id, at)
               if (next.item) yield* feed.publish({ type: "upsert", item: next.item })
               yield* sessionFeed.publish(session.id)
             })
@@ -254,12 +263,25 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
               }),
             )
 
+          // Not the user's activity, so the session keeps its place in the sidebar.
+          const writeUnanswered = Effect.suspend(() =>
+            Effect.forEach(
+              unansweredEvents(itemState),
+              (event) => write(event, undefined, { touch: false }),
+              { discard: true },
+            ),
+          )
+
+          const closeRequests = writing.withPermits(1)(writeUnanswered)
+
           const turnStatus = (status: "running" | "idle") =>
             writing.withPermits(1)(
               Effect.suspend(() =>
                 status === "running" && itemState.openRequests.size > 0
                   ? Effect.void
-                  : setStatus(session.id, status === "idle" ? "idle" : "working"),
+                  : status === "idle"
+                    ? writeUnanswered.pipe(Effect.andThen(setStatus(session.id, "idle")))
+                    : setStatus(session.id, "working"),
               ),
             )
 
@@ -285,7 +307,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
               Effect.andThen(guarded("set failed status", setStatus(session.id, "failed"))),
             )
 
-          return { record, decide, turnStatus, stream, fail }
+          return { record, decide, turnStatus, stream, fail, closeRequests }
         })
 
       const buildRun = (
@@ -308,6 +330,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           const end = Effect.suspend(() => {
             if (runs.get(session.id) === run) runs.delete(session.id)
             return guarded("stop agent", Scope.close(scope, Exit.void)).pipe(
+              Effect.andThen(guarded("close open requests", writer.closeRequests)),
               Effect.andThen(
                 guarded("move pending messages to unread", sessions.markPendingUnread(session.id)),
               ),
@@ -435,6 +458,8 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           // The session moved or changed run options since the run started: its next turn resumes with them.
           return (existing?.end ?? Effect.void).pipe(
             Effect.andThen(makeWriter(session)),
+            // Requests an earlier run left open, such as before runs closed theirs, die with it.
+            Effect.tap((writer) => writer.closeRequests),
             Effect.flatMap((writer) =>
               startRun(session, writer).pipe(
                 Effect.catchTag("HarnessError", (error) =>
@@ -510,6 +535,18 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
             ? run.end.pipe(Effect.andThen(guarded("set idle status", setStatus(sessionId, "idle"))))
             : Effect.void
         })
+
+      const closeRequestsLeftOpen = (sessionId: string) =>
+        Effect.gen(function* () {
+          const session = yield* sessions.findById(sessionId)
+          if (session) yield* (yield* makeWriter(session)).closeRequests
+        })
+
+      yield* Effect.forEach(
+        leftRunning,
+        (sessionId) => guarded("close requests left open", closeRequestsLeftOpen(sessionId)),
+        { discard: true },
+      )
 
       return {
         send: (given, message) =>

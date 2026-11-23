@@ -2,7 +2,10 @@ import { expect, test } from "vitest"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { pendingQuestion } from "./pending-question.ts"
 
-const question = (id: string, status: "open" | "answered" | "declined"): TranscriptItem => ({
+const question = (
+  id: string,
+  status: "open" | "answered" | "declined" | "unanswered",
+): TranscriptItem => ({
   id,
   sessionId: "s",
   position: 0,
@@ -21,7 +24,13 @@ test("the pending question is the last one still open", () => {
   ).toBe("c")
 })
 
-test("a transcript whose questions are all answered or declined has none pending", () => {
-  expect(pendingQuestion([question("a", "answered"), question("b", "declined")])).toBeUndefined()
+test("a transcript whose questions are all answered, declined or left unanswered has none pending", () => {
+  expect(
+    pendingQuestion([
+      question("a", "answered"),
+      question("b", "declined"),
+      question("c", "unanswered"),
+    ]),
+  ).toBeUndefined()
   expect(pendingQuestion([])).toBeUndefined()
 })

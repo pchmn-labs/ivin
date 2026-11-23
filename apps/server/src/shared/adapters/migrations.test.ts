@@ -222,3 +222,22 @@ test("a stored title counts as the first message's when that message holds it, e
     { id: "named", title_source: "user" },
   ])
 })
+
+test("stored events lose their raw line and keep the rest of their payload", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 21)))
+  db.exec(
+    `INSERT INTO sessions (id, project_path, title, created_at, last_activity_at)
+     VALUES ('s', '/p', 't', 0, 0);
+     INSERT INTO transcript_events (id, session_id, sequence, type, at, payload) VALUES
+       ('e1', 's', 1, 'assistant_text', 0, '{"type":"assistant_text","text":"hi","raw":{"line":"x"}}'),
+       ('e2', 's', 2, 'interruption', 0, '{"type":"interruption","raw":null}')`,
+  )
+
+  Effect.runSync(runMigrations(db))
+
+  expect(db.prepare("SELECT payload FROM transcript_events ORDER BY sequence").all()).toEqual([
+    { payload: '{"type":"assistant_text","text":"hi"}' },
+    { payload: '{"type":"interruption"}' },
+  ])
+})
