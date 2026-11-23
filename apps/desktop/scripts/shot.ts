@@ -4,7 +4,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeTempDir } from "../e2e/launch-app.ts"
-import { sendMessage, startSession } from "../e2e/session-helpers.ts"
+import { sendMessage } from "../e2e/session-helpers.ts"
 
 const desktopDir = join(dirname(fileURLToPath(import.meta.url)), "..")
 const outDir = join(desktopDir, "shots")
@@ -70,12 +70,25 @@ export const formatTotal = (cents: number, currency = "EUR") =>
 
 const written: string[] = []
 try {
-  const window = await startSession(app, makeRepo)
+  const projectDir = join(makeTempDir("projects"), "my-project")
+  mkdirSync(projectDir)
+  makeRepo(projectDir)
+  const window = await app.firstWindow()
   const shoot = async (name: string) => {
     const path = join(outDir, `${String(written.length + 1).padStart(2, "0")}-${name}.png`)
     await window.screenshot({ path })
     written.push(path)
   }
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [path] })
+  }, projectDir)
+  await window.getByRole("button", { name: "Open folder…" }).click()
+  await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("trust-project")
+  await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).click()
+  await window.getByTestId("project-name").getByText("my-project").waitFor()
+  await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
 
   // The virtual list draws only the rows near the view, so a row above it is reached by scrolling.
   const scrollUpTo = async (target: Locator) => {
