@@ -223,42 +223,22 @@ export function Session({ records }: { records: Records }) {
   )
 }
 
-// 1. Trace: one muted line, the same shape as "Denied:" and "Declined the agent's questions".
-function TraceApproval() {
-  return (
-    <Stack direction="row" gap={2} align="center">
-      <Icon name="clock" size={14} />
-      <Text size="sm" tone="muted" truncate title={COMMAND}>
-        Not answered:{" "}
-        <Text as="span" size="sm" mono>
-          {COMMAND}
-        </Text>
-      </Text>
-    </Stack>
-  )
-}
+const STOPPED = "The agent stopped while it waited, so it can no longer take your answer."
+const STOPPED_MANY = "The agent stopped while it waited, so it can no longer take your answers."
 
-function TraceQuestions() {
-  return (
-    <Stack direction="row" gap={2} align="center">
-      <Icon name="clock" size={14} />
-      <Text size="sm" tone="muted">
-        Not answered: the agent's {QUESTIONS.length} questions
-      </Text>
-    </Stack>
-  )
-}
-
-export const Trace = () => (
-  <Session records={{ approval: <TraceApproval />, questions: <TraceQuestions /> }} />
-)
-
-// 2. Reason: the same line, and a faint second line saying why it closed (needs a cause on the event).
-function ReasonLine({ children, reason }: { children: ReactNode; reason: string }) {
+function TwoLines({
+  icon,
+  children,
+  reason,
+}: {
+  icon: IconName
+  children: ReactNode
+  reason: string
+}) {
   return (
     <Stack gap={0}>
       <Stack direction="row" gap={2} align="center">
-        <Icon name="clock" size={14} />
+        <Icon name={icon} size={14} />
         <Text size="sm" tone="muted" truncate>
           {children}
         </Text>
@@ -272,70 +252,70 @@ function ReasonLine({ children, reason }: { children: ReactNode; reason: string 
   )
 }
 
-export const Reason = () => (
+const Command = () => (
+  <Text as="span" size="sm" mono>
+    {COMMAND}
+  </Text>
+)
+
+const More = () => (
+  <Text as="span" size="sm" tone="faint">
+    {" "}
+    +{QUESTIONS.length - 1} more
+  </Text>
+)
+
+// 1. Content: "Not answered:" then what was asked, the command or the first question.
+export const Content = () => (
   <Session
     records={{
       approval: (
-        <ReasonLine reason="You stopped the turn before answering.">
-          Not answered:{" "}
-          <Text as="span" size="sm" mono>
-            {COMMAND}
-          </Text>
-        </ReasonLine>
+        <TwoLines icon="clock" reason={STOPPED}>
+          Not answered: <Command />
+        </TwoLines>
       ),
       questions: (
-        <ReasonLine reason="ivin restarted while the agent waited, so it can no longer take the answers.">
-          Not answered: the agent's {QUESTIONS.length} questions
-        </ReasonLine>
+        <TwoLines icon="clock" reason={STOPPED_MANY}>
+          Not answered: {QUESTIONS[0]!.question}
+          <More />
+        </TwoLines>
       ),
     }}
   />
 )
 
-// 3. Ledger: the request stays readable, with "not answered" where a tool row puts "failed".
-function LedgerApproval() {
-  return (
-    <Stack direction="row" gap={2} align="center">
-      <Icon name="question" size={14} />
-      <Text weight="medium">Approval</Text>
-      <Stack as="span" grow>
-        <Text size="sm" tone="muted" mono truncate>
-          {COMMAND}
-        </Text>
-      </Stack>
-      <Text size="sm" tone="faint">
-        not answered
-      </Text>
-    </Stack>
-  )
-}
+// 2. Sentence: one plain sentence naming the request and its state.
+export const Sentence = () => (
+  <Session
+    records={{
+      approval: (
+        <TwoLines icon="clock" reason={STOPPED}>
+          The approval to run <Command /> was not answered
+        </TwoLines>
+      ),
+      questions: (
+        <TwoLines icon="clock" reason={STOPPED_MANY}>
+          The agent's {QUESTIONS.length} questions were not answered
+        </TwoLines>
+      ),
+    }}
+  />
+)
 
-function LedgerQuestions() {
-  return (
-    <Stack gap={1}>
-      <Stack direction="row" gap={2} align="center">
-        <Icon name="question" size={14} />
-        <Text size="sm" weight="medium">
-          Asked {QUESTIONS.length} questions
-        </Text>
-        <Text size="sm" tone="faint">
-          · not answered
-        </Text>
-      </Stack>
-      {QUESTIONS.map(({ header, question }) => (
-        <Stack key={header} direction="row" gap={2} align="baseline">
-          <Text size="sm" tone="muted">
-            {header}
-          </Text>
-          <Text size="sm" tone="faint" truncate title={question}>
-            {question}
-          </Text>
-        </Stack>
-      ))}
-    </Stack>
-  )
-}
-
-export const Ledger = () => (
-  <Session records={{ approval: <LedgerApproval />, questions: <LedgerQuestions /> }} />
+// 3. Asked: the same first line as an answered record, the state on the second line.
+export const Asked = () => (
+  <Session
+    records={{
+      approval: (
+        <TwoLines icon="question" reason={`Not answered. ${STOPPED}`}>
+          Asked to run <Command />
+        </TwoLines>
+      ),
+      questions: (
+        <TwoLines icon="question" reason={`Not answered. ${STOPPED_MANY}`}>
+          Asked {QUESTIONS.length} questions: {QUESTIONS.map((q) => q.question).join(" ")}
+        </TwoLines>
+      ),
+    }}
+  />
 )
