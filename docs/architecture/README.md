@@ -288,6 +288,8 @@ What is contained, and by what:
 
 No sandbox in v1: plugins are local code chosen by the user, as in VS Code or Obsidian. The plugin host isolates failures, not permissions.
 
+A manifest's `permissions` list the `ctx` calls a server half may make, and ivin refuses the others; they never limit the plugin's code ([ADR-0011](../adr/0011-a-plugin-declares-the-harness-exec-and-fetch-calls-it-makes.md)). Built so far: the manifest reading (`plugin/rules/manifest.ts`) and the check (`plugin/rules/permissions.ts`). Not enforced yet: `ctx` for server halves, `ctx.fetch` and the trust prompt wait for the plugin host. The built-in plugins have UI halves only and declare none.
+
 ### Server API (`server.ts`)
 
 ```ts
