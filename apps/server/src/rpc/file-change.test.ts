@@ -290,6 +290,9 @@ test("listing and diffing changes runs none of the commands the repository's own
   git(project, "config", "core.fsmonitor", `echo fsmonitor >> ${ran}`)
   git(project, "config", "diff.shown.textconv", `echo textconv >> ${ran}; cat`)
   write(join(project, "notes.txt"), "two\n")
+  git(project, "diff")
+  expect(readFileSync(ran, "utf8")).toContain("textconv")
+  rmSync(ran)
 
   await changesIn(project)
   await diffIn(project, "notes.txt")

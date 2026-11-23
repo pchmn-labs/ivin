@@ -30,9 +30,9 @@ export const pickBranch = (sessionId: string, name: string, remote: boolean) =>
     ]).pipe(Effect.orDie)
     const pick = resolveBranchPick(
       { name, remote },
-      { workingFolder: session.workingFolder, ...branches, worktrees },
+      { workingFolder: session.workingFolder, branches, worktrees },
     )
-    if (pick.kind === "unknown") return yield* refused({ message: `No branch named ${name}` })
+    if (pick.kind === "unlisted") return yield* refused({ message: `No branch named ${name}` })
     if (pick.kind === "current") return session
     if (pick.kind === "checkout") {
       yield* git.checkout(session.workingFolder, pick.branch).pipe(Effect.mapError(refused))

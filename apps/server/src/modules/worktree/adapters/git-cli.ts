@@ -40,7 +40,7 @@ const runGit = (
   Effect.callback<string, GitError | OutputTooLong>((resume, signal) => {
     const child = execFile(
       "git",
-      // A repository's own config may name a command git runs on a mere status; this one is unused.
+      // ivin uses no fsmonitor, and a repository's config must not make a status run its command.
       ["-c", "core.fsmonitor=false", ...args],
       // A fetch must never wait on a credential prompt nobody can answer.
       { cwd, env: { ...process.env, GIT_TERMINAL_PROMPT: "0" }, maxBuffer },
@@ -79,16 +79,9 @@ const diffBase = (folder: string) =>
 // No optional locks: a diff that refreshed the index would fire the watcher that asked for it.
 // Literal pathspecs: a path such as `[id].ts` is a file name, not a pattern that matches `i.ts`.
 const LITERAL = "--literal-pathspecs"
-const DIFF = [
-  "--no-optional-locks",
-  LITERAL,
-  "diff",
-  "--no-color",
-  "--no-ext-diff",
-  "--no-textconv",
-  "--relative",
-  "-M",
-]
+// No diff driver: a repository's config must not make reading a diff run its command.
+const PLAIN_DIFF = ["--no-color", "--no-ext-diff", "--no-textconv"]
+const DIFF = ["--no-optional-locks", LITERAL, "diff", ...PLAIN_DIFF, "--relative", "-M"]
 
 const compared = (folder: string, range?: CommitRange) =>
   range === undefined
@@ -117,16 +110,7 @@ const diffOf = (folder: string, change: Change, limit: number, range?: CommitRan
     if (change.status === "untracked")
       return yield* runGit(
         folder,
-        [
-          "diff",
-          "--no-color",
-          "--no-ext-diff",
-          "--no-textconv",
-          "--no-index",
-          "--",
-          "/dev/null",
-          change.path,
-        ],
+        ["diff", ...PLAIN_DIFF, "--no-index", "--", "/dev/null", change.path],
         { maxBuffer: limit, succeedsOn: [1] },
       )
     const sides = yield* compared(folder, range)
@@ -143,9 +127,16 @@ const patchIds = (cwd: string, patches: string) =>
 
 const squashMerged = (folder: string, base: string, target: string) =>
   Effect.gen(function* () {
-    const diffArgs = ["--no-color", "--no-ext-diff", "--no-textconv", "--binary"]
+    const diffArgs = [...PLAIN_DIFF, "--binary"]
     const diff = yield* git(folder, ["diff", ...diffArgs, base, "HEAD"])
-    const log = yield* git(folder, ["log", "-p", ...diffArgs, "--no-merges", `${base}..${target}`])
+    const log = yield* git(folder, [
+      "log",
+      "-p",
+      ...diffArgs,
+      "--no-show-signature",
+      "--no-merges",
+      `${base}..${target}`,
+    ])
     return isSquashMerged(yield* patchIds(folder, diff), yield* patchIds(folder, log))
   })
 
