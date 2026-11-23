@@ -1,5 +1,6 @@
 import { useAtomValue } from "@effect/atom-react"
 import { Atom } from "effect/reactivity"
+import { NotificationViewport } from "../../../core/components/notification/notification.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
 import { HARNESSES } from "../../session/rules/harnesses.ts"
@@ -19,29 +20,41 @@ function SessionTab({ projectPath, sessionId }: { projectPath: string; sessionId
   )
   const fullWidth = subViews !== null && subViews.selected !== null && subViews.fullWidth
   const onSession = fullWidth && subViews.sessionTabSelected
+  const chatHidden = fullWidth && !onSession
   return (
-    <div
-      className="iv-tab-view__split"
-      data-full-width={fullWidth || undefined}
-      data-on-session={onSession || undefined}
-    >
+    <>
       <div
-        className="iv-tab-view__session"
-        role={fullWidth ? "tabpanel" : undefined}
-        aria-label={fullWidth ? "Session" : undefined}
-        // Kept mounted under a file, so the chat keeps its scroll and its draft.
-        inert={(fullWidth && !onSession) || undefined}
+        className="iv-tab-view__split"
+        data-full-width={fullWidth || undefined}
+        data-on-session={onSession || undefined}
       >
-        <SessionView projectPath={projectPath} sessionId={sessionId} />
+        <div
+          className="iv-tab-view__session"
+          role={fullWidth ? "tabpanel" : undefined}
+          aria-label={fullWidth ? "Session" : undefined}
+          // Kept mounted under a file, so the chat keeps its scroll and its draft.
+          inert={(fullWidth && !onSession) || undefined}
+        >
+          <SessionView
+            projectPath={projectPath}
+            sessionId={sessionId}
+            notifications={!chatHidden}
+          />
+        </div>
+        {session !== undefined && (
+          <SubViewCard
+            sessionId={sessionId}
+            workingFolder={session.workingFolder}
+            harnessMark={HARNESSES[session.harness].mark}
+          />
+        )}
       </div>
-      {session !== undefined && (
-        <SubViewCard
-          sessionId={sessionId}
-          workingFolder={session.workingFolder}
-          harnessMark={HARNESSES[session.harness].mark}
-        />
+      {chatHidden && (
+        <div className="iv-tab-view__notifications">
+          <NotificationViewport />
+        </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -56,6 +69,9 @@ export function TabView({ projectPath }: { projectPath: string }) {
     return (
       <div className="iv-tab-view iv-tab-view--empty">
         <Text tone="muted">No session open. Create one from the sidebar.</Text>
+        <div className="iv-tab-view__notifications">
+          <NotificationViewport />
+        </div>
       </div>
     )
   }

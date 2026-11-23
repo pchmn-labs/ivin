@@ -7,6 +7,11 @@ export const sessionActionFailureOf = Atom.family((_sessionId: string) =>
   Atom.make<string | null>(null).pipe(Atom.keepAlive),
 )
 
+// How many mounted components show the session's failure: with none, it has no place on screen.
+export const sessionActionFailureShownBy = Atom.family((_sessionId: string) =>
+  Atom.make(0).pipe(Atom.keepAlive),
+)
+
 // Clears the session's last failure, then records this action's, if it fails.
 export const recordingFailure =
   (action: SessionAction, sessionId: string) =>

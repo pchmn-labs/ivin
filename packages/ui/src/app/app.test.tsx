@@ -455,6 +455,85 @@ test("the keyboard alone archives the session on screen, opens the archived list
   await expect.element(page.getByText(/^Inactive sessions/)).toBeVisible()
 })
 
+test("a failed archive from the keyboard shows a notification, and its Retry archives again, with a second notification when that fails too", async () => {
+  const server = await mountApp()
+  server.failNextCall("session.archive")
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
+  await userEvent.keyboard(`{${mod}>}\\{/${mod}}`)
+  await expect.element(page.getByRole("complementary")).not.toBeInTheDocument()
+
+  await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
+  const notifications = page.getByRole("region", { name: "Notifications" })
+  await expect.element(notifications.getByText("The session was not archived.")).toBeVisible()
+  expect(server.sessions.get("s2")?.archivedAt).toBeNull()
+
+  server.failNextCall("session.archive")
+  await notifications.getByText("Retry").click()
+  await expect.element(notifications.getByText("The session was not archived.")).toBeVisible()
+  expect(server.sessions.get("s2")?.archivedAt).toBeNull()
+
+  await notifications.getByText("Retry").click()
+  await vi.waitFor(() => expect(server.sessions.get("s2")?.archivedAt).not.toBeNull())
+  await expect
+    .element(notifications.getByText("The session was not archived."))
+    .not.toBeInTheDocument()
+})
+
+test("notifications stack and stay when the session view is replaced", async () => {
+  const server = await mountApp()
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
+  await userEvent.keyboard(`{${mod}>}\\{/${mod}}`)
+  const notifications = page.getByRole("region", { name: "Notifications" })
+  const archiveFails = async () => {
+    server.failNextCall("session.archive")
+    await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
+  }
+
+  await archiveFails()
+  await expect.element(notifications.getByText("The session was not archived.")).toBeVisible()
+  await archiveFails()
+
+  await expect.poll(() => document.querySelectorAll(".iv-notification").length).toBe(2)
+})
+
+test("a failed archive from the keyboard shows no notification while the session's row shows it", async () => {
+  const server = await mountApp()
+  server.failNextCall("session.archive")
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
+
+  await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
+
+  const row = page.getByTestId("session-item").filter({ hasText: "Second" })
+  await expect.element(row.getByRole("alert")).toHaveTextContent("The session was not archived.")
+  await expect
+    .element(
+      page
+        .getByRole("region", { name: "Notifications" })
+        .getByText("The session was not archived."),
+    )
+    .not.toBeInTheDocument()
+})
+
+test("a failed archive from a session's menu shows no notification", async () => {
+  const server = await mountApp()
+  server.failNextCall("session.archive")
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
+
+  const row = page.getByTestId("session-item").filter({ hasText: "First" })
+  await row.hover()
+  await row.getByRole("button", { name: "Session actions" }).click()
+  await page.getByRole("menuitem", { name: "Archive" }).click()
+
+  await expect.element(row.getByRole("alert")).toHaveTextContent("The session was not archived.")
+  await expect
+    .element(
+      page
+        .getByRole("region", { name: "Notifications" })
+        .getByText("The session was not archived."),
+    )
+    .not.toBeInTheDocument()
+})
+
 test("archiving a working session from its tab asks first, then stops it and closes the tab", async () => {
   const server = await mountApp()
   server.setStatus("s1", "working")

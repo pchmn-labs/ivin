@@ -129,7 +129,17 @@ export interface SlotOptions {
 
 export interface CommandOptions {
   readonly title: string
-  readonly run: () => void
+  // A rejected promise shows its command's title as a notification.
+  readonly run: () => unknown
+}
+
+export type NotificationKind = "error" | "warning" | "info" | "success"
+
+export interface NotifyOptions {
+  // Defaults to "error".
+  readonly kind?: NotificationKind
+  readonly message: string
+  readonly action?: { readonly label: string; readonly onClick: () => void }
 }
 
 export interface KeybindingOptions {
@@ -161,6 +171,8 @@ export interface UiContext {
   readonly commands: {
     register: (id: string, command: CommandOptions) => void
   }
+  // A temporary notification in the session's chat, for what has no place of its own on screen.
+  readonly notify: (notification: NotifyOptions) => void
   // A default keybinding, which the user's ~/.ivin/keybindings.json can change.
   readonly keybindings: {
     add: (keybinding: KeybindingOptions) => void

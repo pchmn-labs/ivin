@@ -17,6 +17,7 @@ const mount = async (item: SlotProps["transcript.message"]["item"]) => {
     editorExtensions: { add: () => undefined },
     fileIcons: { add: () => undefined },
     fileUrl: (path) => path,
+    notify: () => undefined,
     sidebar: { showPanel: () => undefined },
   }
   activate(ctx)

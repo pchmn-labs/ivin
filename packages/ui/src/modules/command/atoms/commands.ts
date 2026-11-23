@@ -8,7 +8,7 @@ export interface Command {
 
 export interface CommandHandler {
   readonly commandId: string
-  readonly run: () => void
+  readonly run: () => unknown
   readonly pluginId: string | null
 }
 
