@@ -2,7 +2,8 @@ import { RegistryContext } from "@effect/atom-react"
 import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { VirtuosoHandle } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
-import { placeToRestore, type SentMessagePlace } from "../rules/transcript-place.ts"
+import type { SentMessagePlace } from "../rules/sent-message-scroll.ts"
+import { placeToRestore } from "../rules/transcript-place.ts"
 
 const END_SLACK = 2
 
