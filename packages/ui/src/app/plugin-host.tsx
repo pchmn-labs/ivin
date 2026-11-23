@@ -1,4 +1,10 @@
-import { RegistryContext, useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
+import {
+  RegistryContext,
+  useAtom,
+  useAtomRefresh,
+  useAtomSet,
+  useAtomValue,
+} from "@effect/atom-react"
 import { Cause, Effect, Exit } from "effect"
 import { AsyncResult, AtomRegistry } from "effect/reactivity"
 import {
@@ -15,6 +21,7 @@ import type { GitStatusEntry } from "@ivin/contracts/file"
 import type { SubView } from "@ivin/contracts/tab"
 import {
   UiHostProvider,
+  type ActionFailure,
   type CommittedChangeListing,
   type ChangeListing,
   type UiHost,
@@ -26,10 +33,24 @@ import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
 import { answerQuestionAtom } from "../modules/session/atoms/answer-question.ts"
 import { openSessionsAtom } from "../modules/session/atoms/open-sessions.ts"
 import { useSessionActions } from "../modules/session/hooks/use-session-actions.ts"
+import { useSessionLocation } from "../modules/session/hooks/use-session-location.ts"
+import { draftOf } from "../modules/session/atoms/draft.ts"
+import { interruptSessionAtom } from "../modules/session/atoms/interrupt-session.ts"
+import { renameSessionAtom } from "../modules/session/atoms/rename-session.ts"
+import { sendMessageAtom } from "../modules/session/atoms/send-message.ts"
+import { sendNowAtom } from "../modules/session/atoms/send-now.ts"
+import { setRunOptionsAtom } from "../modules/session/atoms/set-run-options.ts"
+import { workingFolderChoiceOf } from "../modules/session/atoms/working-folder-choice.ts"
+import { draftImages } from "../modules/session/rules/draft.ts"
 import {
   answerApprovalFailure,
   answerQuestionFailure,
+  sendMessageFailure,
+  setRunOptionsFailure,
 } from "../modules/session/rules/failure-message.ts"
+import { getHarnessAtom } from "../modules/server/atoms/get-harness.ts"
+import { useCommandHandler } from "../modules/command/hooks/use-command-handler.ts"
+import { useKeyHint } from "../modules/keybinding/hooks/use-key-hint.ts"
 import { tabsOf } from "../modules/tab/atoms/list-tabs.ts"
 import { openTabAtom } from "../modules/tab/atoms/open-tab.ts"
 import { selectedSessionIdAtom } from "../modules/tab/atoms/selected-session-id.ts"
@@ -85,12 +106,28 @@ const useSubViewOnScreen = (sessionId: string, kind: SubView["kind"]) => {
   return sessionTabSelected || selected?.kind !== kind ? null : selected.path
 }
 
+const useOpenSession = (sessionId: string) =>
+  useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)
+
+// The session may belong to another project than the one on screen, from the Working panel.
+const useSessionProjectPath = (sessionId: string) =>
+  useOpenSession(sessionId)?.projectPath ?? NO_PROJECT
+
+const failureOf = <A,>(
+  exit: Exit.Exit<A, unknown>,
+  describe: (error: unknown) => ActionFailure,
+): ActionFailure | undefined =>
+  Exit.isSuccess(exit) || Cause.hasInterruptsOnly(exit.cause)
+    ? undefined
+    : describe(Cause.squash(exit.cause))
+
 const host: UiHost = {
   useSessions: () => useAtomValue(openSessionsAtom),
   useProjects: () => useAtomValue(projectsAtom.value),
   useSelectedSessionId: () => useAtomValue(selectedSessionIdAtom),
-  useSession: (sessionId) => useAtomValue(openSessionsAtom).find((s) => s.id === sessionId),
+  useSession: useOpenSession,
   useTabs: () => useAtomValue(tabsOf(useProjectPath()).value).tabs,
+  useTabsLoaded: () => useAtomValue(tabsOf(useProjectPath()).loaded),
   useOpenTab: () => {
     const openTab = useAtomSet(openTabAtom)
     return (sessionId) => openTab({ sessionId })
@@ -101,9 +138,7 @@ const host: UiHost = {
     return useMemo(() => annotations.filter((a) => a.kind === kind), [annotations, kind])
   },
   useAnswerApproval: (sessionId) => {
-    // The session may belong to another project than the one on screen, from the Working panel.
-    const projectPath =
-      useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.projectPath ?? NO_PROJECT
+    const projectPath = useSessionProjectPath(sessionId)
     const answer = useAtomSet(answerApprovalAtom, { mode: "promiseExit" })
     return async ({ requestId, allow }) => {
       const exit = await answer({ projectPath, sessionId, requestId, allow })
@@ -111,8 +146,7 @@ const host: UiHost = {
     }
   },
   useAnswerQuestion: (sessionId) => {
-    const projectPath =
-      useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.projectPath ?? NO_PROJECT
+    const projectPath = useSessionProjectPath(sessionId)
     const answer = useAtomSet(answerQuestionAtom, { mode: "promiseExit" })
     return async ({ requestId, answers }) => {
       const exit = await answer({ projectPath, sessionId, requestId, answers })
@@ -120,6 +154,59 @@ const host: UiHost = {
     }
   },
   useSessionActions,
+  useRenameSession: () => {
+    const rename = useAtomSet(renameSessionAtom)
+    return (session, title) =>
+      rename({ projectPath: session.projectPath, sessionId: session.id, title })
+  },
+  useSessionLocation,
+  useDraft: (sessionId) => useAtom(draftOf(sessionId)),
+  useSendMessage: (sessionId) => {
+    const session = useOpenSession(sessionId)
+    const choice = useAtomValue(workingFolderChoiceOf(sessionId))
+    const send = useAtomSet(sendMessageAtom, { mode: "promiseExit" })
+    return async (draft) => {
+      const workingFolder = session !== undefined && !session.started ? choice : undefined
+      const exit = await send({
+        projectPath: session?.projectPath ?? NO_PROJECT,
+        sessionId,
+        text: draft.text,
+        images: draftImages(draft).map(({ id, number, mediaType, base64 }) => ({
+          id,
+          number,
+          mediaType,
+          base64,
+        })),
+        ...(workingFolder && { workingFolder }),
+      })
+      return failureOf(exit, sendMessageFailure)
+    }
+  },
+  useInterruptSession: (sessionId) => {
+    const projectPath = useSessionProjectPath(sessionId)
+    const interrupt = useAtomSet(interruptSessionAtom)
+    return () => interrupt({ projectPath, sessionId })
+  },
+  useSendNow: (sessionId) => {
+    const projectPath = useSessionProjectPath(sessionId)
+    const sendNow = useAtomSet(sendNowAtom)
+    return () => sendNow({ projectPath, sessionId })
+  },
+  useOfferedRunOptions: (sessionId) => {
+    const harness = useOpenSession(sessionId)?.harness
+    const server = AsyncResult.getOrElse(useAtomValue(getHarnessAtom), () => null)
+    return harness !== undefined && server?.id === harness ? server.runOptions : null
+  },
+  useSetRunOptions: (sessionId) => {
+    const projectPath = useSessionProjectPath(sessionId)
+    const set = useAtomSet(setRunOptionsAtom, { mode: "promiseExit" })
+    return async (options) =>
+      failureOf(await set({ projectPath, sessionId, options }), (error) =>
+        setRunOptionsFailure(error, options),
+      )
+  },
+  useCommandHandler,
+  useKeyHint,
   useListFolder: () => {
     const registry = useContext(RegistryContext)
     return useCallback(

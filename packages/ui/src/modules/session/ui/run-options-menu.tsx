@@ -1,4 +1,5 @@
-import type { HarnessRunOptions, RunOptions, Session } from "@ivin/contracts/session"
+import type { HarnessRunOptions, Session } from "@ivin/contracts/session"
+import type { RunOptionsMenuProps } from "@ivin/plugin-api/ui"
 import type { RunOption } from "@ivin/contracts/transcript"
 import {
   ColumnMenu,
@@ -20,11 +21,6 @@ import {
   usableEfforts,
 } from "../rules/run-options.ts"
 import "./run-options-menu.css"
-
-export interface RunOptionsMenuState {
-  readonly open: boolean
-  readonly start: RunOption
-}
 
 const COMMANDS: Record<RunOption, string> = {
   model: "composer.chooseModel",
@@ -94,16 +90,7 @@ export function RunOptionsMenu({
   state,
   onStateChange,
   onChange,
-}: {
-  session: Session
-  // Null until the server answers, or when the session runs on another harness than the server's.
-  offered: HarnessRunOptions | null
-  // The options that last worked, when the agent failed after a change.
-  previous: RunOptions | null
-  state: RunOptionsMenuState
-  onStateChange: (state: RunOptionsMenuState) => void
-  onChange: (options: Partial<RunOptions>) => void
-}) {
+}: RunOptionsMenuProps) {
   useCommandHandler(COMMANDS.model, () => onStateChange({ open: true, start: "model" }))
   useCommandHandler(COMMANDS.effort, () => onStateChange({ open: true, start: "effort" }))
   useCommandHandler(COMMANDS.permissionMode, () =>

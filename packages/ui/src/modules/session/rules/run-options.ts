@@ -45,30 +45,3 @@ export const shownRunOptions = (offered: HarnessRunOptions | null, options: RunO
     (option) =>
       option !== "effort" || offered === null || usableEfforts(offered, options.model).length > 0,
   ).map((option) => ({ option, name: nameOf(offered, option, options[option]) }))
-
-const changedRunOptions = (current: RunOptions, previous: RunOptions) =>
-  RUN_OPTIONS.filter((option) => current[option] !== previous[option])
-
-export const relaunchFailureText = (
-  offered: HarnessRunOptions | null,
-  current: RunOptions,
-  previous: RunOptions,
-) => {
-  const names = changedRunOptions(current, previous).map((option) =>
-    nameOf(offered, option, current[option]),
-  )
-  return names.length === 0
-    ? "The agent did not start after the change."
-    : `The agent did not start with ${names.join(", ")}.`
-}
-
-export const goBackLabel = (
-  offered: HarnessRunOptions | null,
-  current: RunOptions,
-  previous: RunOptions,
-) => {
-  const [only, ...others] = changedRunOptions(current, previous)
-  return only !== undefined && others.length === 0
-    ? `Back to ${nameOf(offered, only, previous[only])}`
-    : "Go back"
-}

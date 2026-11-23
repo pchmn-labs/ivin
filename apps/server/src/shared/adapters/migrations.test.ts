@@ -82,7 +82,7 @@ test("the connection is in WAL mode", async () => {
       Effect.gen(function* () {
         const db = yield* Database
         return db.prepare("PRAGMA journal_mode").get()
-      }).pipe(Effect.provide(layerDatabase(join(dir, "ivin.db"))), Effect.scoped),
+      }).pipe(Effect.provide(layerDatabase(join(dir, "ivin.db"), [])), Effect.scoped),
     )
     expect(mode).toEqual({ journal_mode: "wal" })
   } finally {

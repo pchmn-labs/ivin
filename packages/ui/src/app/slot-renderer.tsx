@@ -1,6 +1,6 @@
 import { useAtomValue } from "@effect/atom-react"
 import { Component, type ComponentType, type ReactNode } from "react"
-import type { SlotName, SlotProps } from "@ivin/plugin-api/ui"
+import type { SlotComponentProps, SlotName, SlotProps } from "@ivin/plugin-api/ui"
 import { contributionsAtom, type Contribution } from "../modules/plugin/atoms/contributions.ts"
 import { visibleContributions } from "../modules/plugin/rules/visible-contributions.ts"
 
@@ -69,4 +69,15 @@ export function Slot<S extends SlotName>({
   return visibleContributions(contributions, slot, tool).map((c) => (
     <SlotContribution key={c.id} contribution={c} props={props} />
   ))
+}
+
+// A plugin names the slot as a string, which the plugin API's `Slot` keeps typed.
+export function HostSlot({ slot, props, tool }: SlotComponentProps) {
+  return (
+    <Slot
+      slot={slot as SlotName}
+      props={props as SlotProps[SlotName]}
+      {...(tool !== undefined && { tool })}
+    />
+  )
 }

@@ -1,0 +1,45 @@
+import { defaultSettings } from "@ivin/contracts/setting"
+import type { UiHost } from "@ivin/plugin-api/ui"
+import { emptyDraft } from "../modules/session/rules/draft.ts"
+import { hostComponents } from "./host-components.ts"
+
+// A host with no session, project or file, for a plugin test to spread and override.
+export const testUiHost: UiHost = {
+  useSession: () => undefined,
+  useSessions: () => [],
+  useProjects: () => ({ projects: [], selectedPath: null }),
+  useSelectedSessionId: () => null,
+  useTabs: () => [],
+  useTabsLoaded: () => true,
+  useOpenTab: () => () => {},
+  useTranscript: () => [],
+  useAnnotations: () => [],
+  useAnswerApproval: () => async () => undefined,
+  useAnswerQuestion: () => async () => undefined,
+  useSessionActions: () => ({ items: [], failure: null }),
+  useRenameSession: () => () => {},
+  useSessionLocation: () => ({ kind: "folder", label: "", branch: null }),
+  useDraft: () => [emptyDraft, () => {}],
+  useSendMessage: () => async () => undefined,
+  useInterruptSession: () => () => {},
+  useSendNow: () => () => {},
+  useOfferedRunOptions: () => null,
+  useSetRunOptions: () => async () => undefined,
+  useCommandHandler: () => {},
+  useKeyHint: (title) => title,
+  useListFolder: () => async () => ({ kind: "listed", entries: [] }),
+  useOpenFile: () => async () => undefined,
+  useListFiles: () => async () => ({ kind: "listed", paths: [], truncated: false }),
+  useFolderChanges: () => {},
+  useGitStatus: () => [],
+  useFileOnScreen: () => null,
+  useChanges: () => ({ listing: { kind: "loading" }, retry: () => {} }),
+  useOpenDiff: () => async () => undefined,
+  useDiffOnScreen: () => null,
+  useSettings: () => defaultSettings,
+  useCommittedChanges: () => ({ listing: { kind: "loading" }, retry: () => {} }),
+  useOpenCommittedDiff: () => async () => undefined,
+  useCommittedDiffOnScreen: () => null,
+  useDiscardChanges: () => async () => undefined,
+  components: hostComponents,
+}

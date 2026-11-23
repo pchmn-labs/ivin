@@ -1,7 +1,7 @@
 import { type Ref, useEffect, useImperativeHandle, useLayoutEffect, useRef } from "react"
 import { imageDataUrl } from "../../transcript/rules/image-url.ts"
 import { imageMarker, messageParts } from "../../transcript/rules/message-parts.ts"
-import type { DraftImage } from "../rules/draft.ts"
+import type { DraftImage } from "@ivin/plugin-api/ui"
 import "../../transcript/ui/image-marker.css"
 import "./message-editor.css"
 

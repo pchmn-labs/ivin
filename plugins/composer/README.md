@@ -1,0 +1,7 @@
+# composer
+
+The composer under each session's transcript: a `session.composer` contribution (`composer/composer`), mounted again for each session. It keeps the session's draft through `useDraft`, sends it with `useSendMessage` (Enter through the `composer.send` command, or the Send button), and offers Interrupt in place of Send while the agent works and the field is empty. A failed send puts the message back and shows the host's message with Retry; an image the harness refuses and a run option change the server did not take show there too, one at a time.
+
+Above the field, in `ComposerFrame`'s sheets: the `composer.above` contributions, the messages sent while the agent works with Send now (`useSendNow`), and, when the agent did not start after a run option change, a sheet that names the change and offers the previous value back (`src/rules/relaunch-failure.ts`). The message of that failed start, and the messages the agent never read, come back into the draft (`src/rules/draft.ts`). Under the field, the status line holds the session's location with its pickers and the `composer.status` contributions. A session whose working folder was deleted shows `PickWorkingFolder` in place of the field.
+
+The field, the run options menu, the pickers and the layout are host components; this plugin decides what shows and what each control does. The `composer-alert`, `composer-pending`, `composer-relaunch-failure`, `composer-status` and `composer-session-status` test ids are read by tests.

@@ -1,9 +1,8 @@
-import { defaultSettings } from "../../../packages/contracts/src/setting.ts"
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
-import { hostComponents } from "../../../packages/ui/src/app/host-components.ts"
+import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
 import { makeTestSession } from "../../../packages/ui/src/core/test-session.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type { Session, SlotProps, UiContext, UiHost } from "@ivin/plugin-api/ui"
@@ -36,35 +35,15 @@ const mountSection = async (
   const opened: string[] = []
   const archived: string[] = []
   const host: UiHost = {
-    useSession: () => undefined,
+    ...testUiHost,
     useSessions: () => sessions,
     useProjects: () => ({ projects: [], selectedPath: "/p" }),
-    useSelectedSessionId: () => null,
     useTabs: () => openTabIds.map((sessionId) => ({ sessionId, projectPath: "/p" })),
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
-    useTranscript: () => [],
-    useAnnotations: () => [],
-    useAnswerApproval: () => async () => undefined,
-    useAnswerQuestion: () => async () => undefined,
-    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
-    useOpenFile: () => async () => undefined,
-    useListFiles: () => async () => ({ kind: "listed" as const, paths: [], truncated: false }),
-    useFolderChanges: () => undefined,
-    useGitStatus: () => [],
-    useFileOnScreen: () => null,
-    useChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
-    useOpenDiff: () => async () => undefined,
-    useDiffOnScreen: () => null,
-    useSettings: () => defaultSettings,
-    useCommittedChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
-    useOpenCommittedDiff: () => async () => undefined,
-    useCommittedDiffOnScreen: () => null,
-    useDiscardChanges: () => async () => undefined,
     useSessionActions: (session) => ({
       items: [{ label: "Archive", onSelect: () => void archived.push(session.id) }],
       failure: session.title === "Failed" ? "The session was not archived." : null,
     }),
-    components: hostComponents,
   }
   await render(
     <UiHostProvider host={host}>

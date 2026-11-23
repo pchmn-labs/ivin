@@ -1,9 +1,8 @@
-import { defaultSettings } from "../../../packages/contracts/src/setting.ts"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { ComponentType } from "react"
-import { hostComponents } from "../../../packages/ui/src/app/host-components.ts"
+import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type {
   ApprovalItem,
@@ -40,32 +39,9 @@ const mount = async (
   const Record = slots["transcript.approval"] as ComponentType<SlotProps["transcript.approval"]>
   const Sheet = slots["composer.above"] as ComponentType<SlotProps["composer.above"]>
   const host: UiHost = {
-    useSession: () => undefined,
-    useSessions: () => [],
-    useProjects: () => ({ projects: [], selectedPath: null }),
-    useSelectedSessionId: () => null,
-    useTabs: () => [],
-    useOpenTab: () => () => {},
+    ...testUiHost,
     useTranscript: () => items,
-    useAnnotations: () => [],
     useAnswerApproval: () => answer,
-    useAnswerQuestion: () => async () => undefined,
-    useListFolder: () => async () => ({ kind: "listed" as const, entries: [] }),
-    useOpenFile: () => async () => undefined,
-    useListFiles: () => async () => ({ kind: "listed" as const, paths: [], truncated: false }),
-    useFolderChanges: () => undefined,
-    useGitStatus: () => [],
-    useFileOnScreen: () => null,
-    useChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
-    useOpenDiff: () => async () => undefined,
-    useDiffOnScreen: () => null,
-    useSettings: () => defaultSettings,
-    useCommittedChanges: () => ({ listing: { kind: "loading" as const }, retry: () => {} }),
-    useOpenCommittedDiff: () => async () => undefined,
-    useCommittedDiffOnScreen: () => null,
-    useDiscardChanges: () => async () => undefined,
-    useSessionActions: () => ({ items: [], failure: null }),
-    components: hostComponents,
   }
   await render(
     <UiHostProvider host={host}>

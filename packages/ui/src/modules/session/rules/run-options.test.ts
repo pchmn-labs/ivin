@@ -1,12 +1,5 @@
 import { expect, test } from "vitest"
-import {
-  effortFor,
-  goBackLabel,
-  offeredValues,
-  relaunchFailureText,
-  shownRunOptions,
-  usableEfforts,
-} from "./run-options.ts"
+import { effortFor, offeredValues, shownRunOptions, usableEfforts } from "./run-options.ts"
 
 const value = (value: string, name: string) => ({ value, name, description: null })
 const model = (id: string, name: string, efforts: string[]) => ({
@@ -76,15 +69,4 @@ test("the trigger names the values, and leaves out the effort of a model that ta
   expect(names(offered, "big")).toEqual(["model=Big 2", "effort=Max", "permissionMode=Ask"])
   expect(names(offered, "tiny")).toEqual(["model=Tiny 1", "permissionMode=Ask"])
   expect(names(null, "big")).toEqual(["model=big", "effort=max", "permissionMode=ask"])
-})
-
-test("a failed relaunch names the changed values and offers the previous one back", () => {
-  const previous = { model: "big", effort: "low", permissionMode: "ask" }
-  const current = { ...previous, model: "mid" }
-
-  expect(relaunchFailureText(offered, current, previous)).toBe(
-    "The agent did not start with Mid 3.",
-  )
-  expect(goBackLabel(offered, current, previous)).toBe("Back to Big 2")
-  expect(goBackLabel(offered, { ...current, effort: "max" }, previous)).toBe("Go back")
 })

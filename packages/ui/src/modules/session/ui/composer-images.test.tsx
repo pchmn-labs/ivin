@@ -54,6 +54,7 @@ const view = (server: FakeServer, sessionId: string) => (
 
 const mount = async ({ lastImageNumber = 0 } = {}) => {
   const server = makeFakeServer()
+  server.openProject("/p")
   addSession(server, "s1", lastImageNumber)
   const screen = await render(view(server, "s1"))
   return { server, screen }
@@ -189,6 +190,7 @@ const seedTranscript = (server: FakeServer) => {
 
 test("a sent image opens full screen; the arrows move through the session's images and Escape returns to the thumbnail", async () => {
   const server = makeFakeServer()
+  server.openProject("/p")
   addSession(server, "s1", 3)
   seedTranscript(server)
   await render(view(server, "s1"))
@@ -216,6 +218,7 @@ test("a sent image opens full screen; the arrows move through the session's imag
 
 test("closing the full-screen view on another image puts the focus on that image's thumbnail", async () => {
   const server = makeFakeServer()
+  server.openProject("/p")
   addSession(server, "s1", 3)
   seedTranscript(server)
   await render(view(server, "s1"))
@@ -236,6 +239,7 @@ test("closing the full-screen view on another image puts the focus on that image
 
 test("the full-screen view draws the images of its strip only as they scroll into view", async () => {
   const server = makeFakeServer()
+  server.openProject("/p")
   addSession(server, "s1", 80)
   const numbers = Array.from({ length: 80 }, (_, i) => i + 1)
   server.seedItems("s1", [
@@ -266,6 +270,7 @@ test("the full-screen view draws the images of its strip only as they scroll int
 
 test("a marker in a sent message opens its image full screen", async () => {
   const server = makeFakeServer()
+  server.openProject("/p")
   addSession(server, "s1", 3)
   seedTranscript(server)
   await render(view(server, "s1"))
@@ -289,6 +294,7 @@ test("a marker in the composer opens the draft's images full screen", async () =
 
 test("hovering a marker in a sent message shows its image in a preview card", async () => {
   const server = makeFakeServer()
+  server.openProject("/p")
   addSession(server, "s1", 3)
   seedTranscript(server)
   await render(view(server, "s1"))

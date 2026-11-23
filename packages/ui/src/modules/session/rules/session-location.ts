@@ -1,13 +1,6 @@
+import type { SessionLocationLabel } from "@ivin/plugin-api/ui"
 import type { Session, WorkingFolderChoice } from "@ivin/contracts/session"
 import type { Worktree } from "@ivin/contracts/worktree"
-
-export interface WorkingFolderLabel {
-  readonly kind: "checkout" | "worktree" | "folder"
-  readonly label: string
-  // Null when there is none yet, or outside a git repository.
-  readonly branch: string | null
-  readonly deleted?: true
-}
 
 export const folderName = (path: string) => path.split("/").filter(Boolean).at(-1) ?? path
 
@@ -22,7 +15,7 @@ export const sessionLocation = (
     Partial<Pick<Session, "workingFolderDeleted">>,
   choice: WorkingFolderChoice,
   worktrees: ReadonlyArray<Worktree>,
-): WorkingFolderLabel => {
+): SessionLocationLabel => {
   if (session.workingFolderDeleted === true) {
     return { kind: "worktree", label: "Worktree deleted", branch: session.branch, deleted: true }
   }

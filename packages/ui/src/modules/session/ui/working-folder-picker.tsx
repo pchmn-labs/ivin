@@ -9,7 +9,8 @@ import { Icon } from "../../../core/components/icon/icon.tsx"
 import { newWorktreeBaseOf, worktreesOf } from "../../worktree/atoms/list-worktrees.ts"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
-import { folderName, newBranchLabel, type WorkingFolderLabel } from "../rules/session-location.ts"
+import type { SessionLocationLabel } from "@ivin/plugin-api/ui"
+import { folderName, newBranchLabel } from "../rules/session-location.ts"
 import { CheckoutSync } from "./checkout-sync.tsx"
 import { BranchPicker } from "./branch-picker.tsx"
 import "./working-folder-picker.css"
@@ -19,7 +20,7 @@ export function WorkingFolderPicker({
   location,
 }: {
   session: Session
-  location: WorkingFolderLabel
+  location: SessionLocationLabel
 }) {
   const [choice, setChoice] = useAtom(workingFolderChoiceOf(session.id))
   const worktreesAtom = worktreesOf(session.projectPath)

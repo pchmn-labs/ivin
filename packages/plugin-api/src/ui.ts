@@ -16,18 +16,32 @@ import type {
   GitStatusEntry,
 } from "@ivin/contracts/file"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
-import type { Session } from "@ivin/contracts/session"
+import type {
+  HarnessRunOptions,
+  OfferedValue,
+  RunOptions,
+  Session,
+  SessionStatus,
+} from "@ivin/contracts/session"
 import type { Settings } from "@ivin/contracts/setting"
 import type { Tab } from "@ivin/contracts/tab"
-import type { Question, QuestionAnswer, TranscriptItem } from "@ivin/contracts/transcript"
+import type {
+  Question,
+  QuestionAnswer,
+  RunOption,
+  TranscriptItem,
+} from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
 import type {
   ActionFailure,
   CommittedChangeListing,
   ChangeListing,
   DiscardFailure,
+  Draft,
+  DraftImage,
   FileListing,
   FolderListing,
+  SessionLocationLabel,
   UiHost,
 } from "./host-context.ts"
 
@@ -40,11 +54,16 @@ export type {
   FolderEntry,
   GitFileStatus,
   GitStatusEntry,
+  HarnessRunOptions,
   IssueAnnotationData,
+  OfferedValue,
   OpenProjects,
   PrAnnotationData,
   Project,
+  RunOption,
+  RunOptions,
   Session,
+  SessionStatus,
   Settings,
   Tab,
   TranscriptItem,
@@ -76,6 +95,8 @@ export interface SlotProps {
   "transcript.toolCall": { readonly item: ToolCallItem; readonly sessionId: string }
   "transcript.approval": { readonly item: ApprovalItem; readonly sessionId: string }
   "transcript.question": { readonly item: QuestionItem; readonly sessionId: string }
+  // The composer under the session's transcript, mounted again when the tab shows another session.
+  "session.composer": { readonly sessionId: string }
   "composer.status": { readonly sessionId: string }
   "composer.above": {
     readonly session: Session
@@ -166,11 +187,20 @@ export type {
   CommittedChangeListing,
   ChangeListing,
   DiscardFailure,
+  Draft,
+  DraftImage,
   FileListing,
   FolderListing,
+  SessionLocationLabel,
   UiHost,
 }
 export * from "./components.ts"
+
+export const Slot = <S extends SlotName>(props: {
+  readonly slot: S
+  readonly props: SlotProps[S]
+  readonly tool?: string
+}) => createElement(useHost().components.Slot, props)
 
 export const UiHostProvider = ({ host, children }: { host: UiHost; children?: ReactNode }) =>
   createElement(HostContext.Provider, { value: host }, children)
@@ -180,6 +210,7 @@ export const useSessions = () => useHost().useSessions()
 export const useProjects = () => useHost().useProjects()
 export const useSelectedSessionId = () => useHost().useSelectedSessionId()
 export const useTabs = () => useHost().useTabs()
+export const useTabsLoaded = () => useHost().useTabsLoaded()
 export const useOpenTab = () => useHost().useOpenTab()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
 export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
@@ -187,6 +218,18 @@ export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
 export const useAnswerQuestion = (sessionId: string) => useHost().useAnswerQuestion(sessionId)
 export const useSessionActions = (session: Session) => useHost().useSessionActions(session)
+export const useRenameSession = () => useHost().useRenameSession()
+export const useSessionLocation = (session: Session) => useHost().useSessionLocation(session)
+export const useDraft = (sessionId: string) => useHost().useDraft(sessionId)
+export const useSendMessage = (sessionId: string) => useHost().useSendMessage(sessionId)
+export const useInterruptSession = (sessionId: string) => useHost().useInterruptSession(sessionId)
+export const useSendNow = (sessionId: string) => useHost().useSendNow(sessionId)
+export const useOfferedRunOptions = (sessionId: string) => useHost().useOfferedRunOptions(sessionId)
+export const useSetRunOptions = (sessionId: string) => useHost().useSetRunOptions(sessionId)
+export const useCommandHandler = (commandId: string, run: () => void, enabled?: boolean) =>
+  useHost().useCommandHandler(commandId, run, enabled)
+export const useKeyHint = (title: string, commandId: string) =>
+  useHost().useKeyHint(title, commandId)
 export const useListFolder = () => useHost().useListFolder()
 export const useOpenFile = () => useHost().useOpenFile()
 export const useListFiles = () => useHost().useListFiles()
@@ -208,3 +251,4 @@ export const useDiscardChanges = () => useHost().useDiscardChanges()
 export { formatToolInput } from "./format-tool-input.ts"
 export { pendingApproval } from "./pending-approval.ts"
 export { pendingQuestion } from "./pending-question.ts"
+export { statusLabel } from "./status-label.ts"

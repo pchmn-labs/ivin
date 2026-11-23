@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import { Icon } from "../../../core/components/icon/icon.tsx"
-import type { WorkingFolderLabel } from "../rules/session-location.ts"
+import type { SessionLocationLabel } from "@ivin/plugin-api/ui"
 import "./session-location.css"
 
 const ICONS = { checkout: "folder", worktree: "worktree", folder: "folder" } as const
@@ -11,7 +11,7 @@ export function SessionLocation({
   title,
   branch,
 }: {
-  location: WorkingFolderLabel
+  location: SessionLocationLabel
   // Replaces the branch label, such as with a control to change it.
   branch?: ReactNode
   // The sidebar row shows the branch alone, or the label when there is no branch.

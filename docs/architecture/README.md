@@ -304,7 +304,7 @@ export const activate: ServerPlugin = (ctx) => {
 
 Plugins contribute React components to named **slots**. A slot receives typed props and renders every contribution in `order`; a contribution can declare `replaces` to take over a built-in one (e.g. a custom renderer for `Bash` tool calls). When several plugins replace the same contribution, one wins: the plugin from the most specific directory (project, then user, then built-in), then the lowest `order`; `ivin doctor` lists the losers.
 
-A contribution is named `<plugin id>/<name>` (`name` defaults to the slot name), and `replaces` holds that id. A `transcript.toolCall` contribution declares the tool it renders with `tool: "Bash"`, and one without `tool` matches every tool. Every matching contribution renders unless another shown one replaces it, so a `Bash` renderer sets `replaces: "tool-calls/default"`. Thinking has no slot: it goes through `transcript.message`. The host passes the hooks to `@ivin/plugin-api` through a provider (`UiHostProvider`), implemented over the UI's atoms, so the package never imports the UI.
+A contribution is named `<plugin id>/<name>` (`name` defaults to the slot name), and `replaces` holds that id. A `transcript.toolCall` contribution declares the tool it renders with `tool: "Bash"`, and one without `tool` matches every tool. Every matching contribution renders unless another shown one replaces it, so a `Bash` renderer sets `replaces: "tool-calls/default"`. Thinking has no slot: it goes through `transcript.message`. The host passes the hooks to `@ivin/plugin-api` through a provider (`UiHostProvider`), implemented over the UI's atoms, so the package never imports the UI. Which parts of the window are the app's frame and which are contributions is in [ADR-0009](../adr/0009-the-window-frame-stays-in-the-app-and-its-features-are-plugins.md).
 
 Transcript slots render inside a virtualised list and once per item, so they receive transcript items, not raw events, and must stay cheap.
 
@@ -315,14 +315,15 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 | `transcript.inline` | markdown node | inline code links, issue mentions |
 | `transcript.approval` | approval item (tool, input, decision), session id | allow or deny a tool the agent asks to run |
 | `transcript.question` | question item (questions, status, answers), session id | the questions the agent asked and the answers given |
+| `session.composer` | session id; mounted again for each session | the composer under the transcript (built in, `composer/composer`), which renders `composer.above` and `composer.status` itself |
 | `composer.status` | session id | tokens, cost, branch PR |
 | `composer.above` | session, `isEmptyComposer(target)` (lets a sheet take keys from the empty composer) | approval sheet (built in, `approvals/sheet`), question sheet (built in, `questions/sheet`), queued messages, detail sheets; an attention sheet squares the composer's top corners and dashes its top border |
 | `composer.suggest` | trigger char, query | `#` issues, `@../` paths, `/` commands |
 | `session.badge` | session | linked PR/issue icon in the sidebar and tabs |
 | `session.card` | session | hover card sections |
-| `sidebar.section` | — | Inactive sessions, custom sections; rendered under the selected project's sessions |
+| `sidebar.section` | — | Inactive sessions, custom sections; rendered by the Sessions panel under the selected project's sessions |
 | `sidebar.bottom` | — | Working panel; a panel across the bottom of the sidebar card, under the rail and the sessions, that the user resizes |
-| `sidebar.panel` | — | a tab of the sidebar's list column beside Sessions, named by the contribution's `title`, with its `badge` component after the name: Files (built in, `files/panel`), Changes (built in, `changes/panel`, its count as the badge) |
+| `sidebar.panel` | — | a tab of the sidebar's list column, named by the contribution's `title`, with its `badge` component after the name: Sessions (built in, `sessions/panel`, first by its `order` of -1), Files (built in, `files/panel`), Changes (built in, `changes/panel`, its count as the badge). The tab the user picked is kept by contribution id; a picked panel that another replaces shows its replacement, and one that is gone shows the first tab |
 | `window.overlay` | — | mounted once in the window while a project is open, for a popup a command opens: Go to file (built in, `files/goToFile`) |
 | `tab.decoration` | tab | git status colour, session icon |
 | `view` | params | a full tab view |
