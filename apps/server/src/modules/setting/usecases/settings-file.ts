@@ -1,4 +1,4 @@
-import { SettingsFileUnavailable } from "@ivin/contracts/setting"
+import type { SettingsFileUnavailable } from "@ivin/contracts/setting"
 import { Context, Effect, Layer, Semaphore, Stream, SubscriptionRef } from "effect"
 
 export class SettingsFile extends Context.Service<

@@ -18,6 +18,7 @@ import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { forkWatch } from "./test-waits.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 // The worktree tests push and merge two branches, around forty git commands.
@@ -176,15 +177,17 @@ test("watching a project's sessions streams an archived session's removal, then 
     Effect.gen(function* () {
       const session = yield* startSession(client)
       let removed = false
-      const watching = yield* client["session.watch"]({ projectPath: project }).pipe(
-        Stream.takeUntil((change) => {
-          if (change._tag === "removed") removed = true
-          return removed && change._tag === "changed"
-        }),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(
+        client["session.watch"]({ projectPath: project }),
+        (stream) =>
+          stream.pipe(
+            Stream.takeUntil((change) => {
+              if (change._tag === "removed") removed = true
+              return removed && change._tag === "changed"
+            }),
+            Stream.runCollect,
+          ),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["session.archive"]({ sessionId: session.id })
       yield* client["session.restore"]({ sessionId: session.id })
       return yield* Fiber.join(watching)
@@ -242,12 +245,14 @@ test("watching a project's sessions streams a deleted session's removal", async 
   const changes = await withServer((client) =>
     Effect.gen(function* () {
       const session = yield* startSession(client)
-      const watching = yield* client["session.watch"]({ projectPath: project }).pipe(
-        Stream.takeUntil((change) => change._tag === "removed"),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(
+        client["session.watch"]({ projectPath: project }),
+        (stream) =>
+          stream.pipe(
+            Stream.takeUntil((change) => change._tag === "removed"),
+            Stream.runCollect,
+          ),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["session.delete"]({ sessionId: session.id })
       return { session, changes: yield* Fiber.join(watching) }
     }),

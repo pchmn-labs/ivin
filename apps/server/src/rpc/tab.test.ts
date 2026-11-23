@@ -10,6 +10,7 @@ import { runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { until } from "./test-waits.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { mkdtempSync } from "node:fs"
@@ -84,7 +85,8 @@ test("a new tab goes at the end of its project's bar and is selected; reopening 
       for (let i = 0; i < 3; i++) ids.push((yield* newSession(client, "/a/first")).id)
       let bar
       for (const sessionId of ids) bar = yield* client["tab.open"]({ sessionId })
-      return { ids, bar: bar!, again: yield* client["tab.open"]({ sessionId: ids[0]! }) }
+      if (bar === undefined) return yield* Effect.die("no tab opened")
+      return { ids, bar, again: yield* client["tab.open"]({ sessionId: ids[0]! }) }
     }),
   )
 
@@ -227,16 +229,6 @@ test("tabs, their order and each project's selected tab are back after a restart
 const running: HarnessOutput = { type: "status", status: "running", raw: null }
 const working = [running, { type: "assistant_text", text: "Working", raw: null }] as const
 
-const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 200; attempt++) {
-      const value = yield* read
-      if (done(value)) return value
-      yield* Effect.sleep("5 millis")
-    }
-    return yield* Effect.die("The condition was never met")
-  })
-
 const statusOf = (client: Client, sessionId: string) =>
   client["session.list"]({ projectPath: "/a/first" }).pipe(
     Effect.map((sessions) => sessions.find((s) => s.id === sessionId)?.status),
@@ -266,10 +258,13 @@ const closeWorkingTab = (
             settingsAre(current.settings.tabs.stopAgentOnClose, current.problem?.reason ?? null),
         )
         const [sessionId] = yield* barOf(client, 1)
-        yield* client["session.sendMessage"]({ sessionId: sessionId!, messageId: "m1", text: "go" })
+        yield* client["session.sendMessage"]({
+          sessionId: sessionId!,
+          messageId: "m1",
+          text: "go",
+        })
         yield* until(statusOf(client, sessionId!), (status) => status === "working")
         const tabs = yield* client["tab.close"]({ sessionId: sessionId! })
-        yield* Effect.sleep("20 millis")
         return {
           sessionId: sessionId!,
           tabs,
@@ -326,7 +321,11 @@ test("closing a project stops the agents of its tabs", async () => {
     (client) =>
       Effect.gen(function* () {
         const [sessionId] = yield* barOf(client, 1)
-        yield* client["session.sendMessage"]({ sessionId: sessionId!, messageId: "m1", text: "go" })
+        yield* client["session.sendMessage"]({
+          sessionId: sessionId!,
+          messageId: "m1",
+          text: "go",
+        })
         yield* until(statusOf(client, sessionId!), (status) => status === "working")
         yield* client["project.close"]({ path: "/a/first" })
         yield* until(statusOf(client, sessionId!), (status) => status === "idle")

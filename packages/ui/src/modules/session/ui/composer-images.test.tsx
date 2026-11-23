@@ -1,7 +1,7 @@
 import { RegistryProvider } from "@effect/atom-react"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { DateTime } from "effect"
-import { expect, test } from "vitest"
+import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { builtinPlugins } from "../../../app/builtin-plugins.ts"
@@ -262,9 +262,9 @@ test("the full-screen view draws the images of its strip only as they scroll int
   await expect
     .element(page.getByRole("dialog").getByRole("heading"))
     .toHaveTextContent("Image #1 · 1 of 80")
-  await new Promise((resolve) => setTimeout(resolve, 300))
 
   const strip = page.getByRole("dialog").element().querySelector(".iv-image-viewer__strip")!
+  await vi.waitFor(() => expect(strip.querySelectorAll("img").length).toBeGreaterThan(0))
   expect(strip.querySelectorAll("button")).toHaveLength(80)
   expect(strip.querySelectorAll("img").length).toBeLessThan(40)
 })

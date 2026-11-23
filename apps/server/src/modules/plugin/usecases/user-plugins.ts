@@ -1,5 +1,6 @@
 import type { PluginNotLocked } from "@ivin/contracts/plugin"
-import { Context, Data, Effect } from "effect"
+import type { Effect } from "effect"
+import { Context, Data } from "effect"
 
 export class PluginNotCompiled extends Data.TaggedError("PluginNotCompiled")<{
   readonly reason: string

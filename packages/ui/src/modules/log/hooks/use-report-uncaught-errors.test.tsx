@@ -71,6 +71,14 @@ test("an error thrown by a plugin is not reported", async () => {
     }),
   )
 
-  await new Promise((resolve) => setTimeout(resolve, 50))
-  expect(server.errorReports).toEqual([])
+  // Reports reach the server in order, so the second one arriving shows the first was dropped.
+  window.dispatchEvent(
+    new ErrorEvent("error", {
+      error: new Error("app bug"),
+      message: "app bug",
+      filename: "http://localhost/src/app/app.tsx",
+    }),
+  )
+  await vi.waitFor(() => expect(server.errorReports).toHaveLength(1))
+  expect(server.errorReports).toMatchObject([{ message: "app bug" }])
 })

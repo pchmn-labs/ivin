@@ -47,7 +47,7 @@ function ArchivedRow({ session }: { session: Session }) {
               label={`Delete ${session.title}`}
               tooltip="Delete"
               size="sm"
-              onClick={() => request("delete", session)}
+              onClick={() => void request("delete", session)}
             />
           </>
         }
@@ -87,7 +87,7 @@ export function ArchivedSessionList({
   }
   useCommandHandler("session.delete", () => {
     const session = focusedSession()
-    if (session) request("delete", session)
+    if (session) void request("delete", session)
   })
 
   const ids = sessions.map((session) => session.id).join(" ")

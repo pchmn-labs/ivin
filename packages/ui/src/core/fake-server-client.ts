@@ -1,4 +1,8 @@
-import { DateTime, Effect, Layer, PubSub, Stream } from "effect"
+import { DateTime, Effect, Layer, PubSub, type Schema, Stream } from "effect"
+import { RpcClient, RpcServer } from "effect/rpc"
+import { Rpcs } from "@ivin/contracts/rpcs"
+import { layerClientProtocolMessagePort } from "@ivin/state/rpc-client-protocol"
+import { layerProtocolMessagePort } from "@ivin/state/rpc-server-protocol"
 import {
   type Annotation,
   type AnnotationChange,
@@ -24,7 +28,7 @@ import {
 } from "@ivin/contracts/file"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
-import type { PluginFailure, UserPlugin } from "@ivin/contracts/plugin"
+import { PluginNotFound, type PluginFailure, type UserPlugin } from "@ivin/contracts/plugin"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type {
   Harness,
@@ -36,7 +40,12 @@ import type {
   SessionStatus,
   WorkingFolderChoice,
 } from "@ivin/contracts/session"
-import { defaultSettings, SettingsFileInvalid, type UserSettings } from "@ivin/contracts/setting"
+import {
+  defaultSettings,
+  SettingPathUnknown,
+  SettingsFileInvalid,
+  type UserSettings,
+} from "@ivin/contracts/setting"
 import type { ProjectTabs, SubView, TabSubViews } from "@ivin/contracts/tab"
 import type {
   ImageData,
@@ -95,8 +104,8 @@ export interface FakeServer {
   readonly readPendingMessages: (sessionId: string) => void
   readonly sentMessages: ReadonlyArray<{
     readonly text: string
-    readonly images?: ReadonlyArray<ImageData>
-    readonly workingFolder?: WorkingFolderChoice
+    readonly images?: ReadonlyArray<ImageData> | undefined
+    readonly workingFolder?: WorkingFolderChoice | undefined
   }>
   readonly pickedFolders: ReadonlyArray<WorkingFolderChoice>
   // What `worktree.list` returns, for every project.
@@ -437,9 +446,17 @@ export const makeFakeServer = (
       }
     })
 
-  const client = {
+  const client = Rpcs.of({
     "server.getVersion": () => Effect.succeed({ version: "0.0.0" }),
     "server.getHarness": () => Effect.succeed({ id: harness, runOptions }),
+    "server.doctor": () =>
+      Effect.sync(() => ({
+        version: "0.0.0",
+        settings: { path: "~/.ivin/settings.json", problem: userSettings.problem },
+        keybindings: { path: "~/.ivin/keybindings.json", problem: userKeybindings.problem },
+        harness: { id: harness, program: null },
+        skill: null,
+      })),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
     "plugin.list": () =>
       Stream.unwrap(
@@ -451,6 +468,10 @@ export const makeFakeServer = (
       ),
     "plugin.reportFailure": (failure: PluginFailure) =>
       Effect.sync(() => void pluginFailures.push(failure)),
+    "plugin.lock": ({ id }) =>
+      userPlugins.some((plugin) => plugin.id === id)
+        ? Effect.void
+        : Effect.fail(new PluginNotFound({ id })),
     "plugin.readLog": ({ id }: { id: string }) =>
       Effect.sync(() => pluginFailures.filter((f) => f.id === id).map((f) => f.reason)),
     "keybinding.watch": () =>
@@ -474,6 +495,16 @@ export const makeFakeServer = (
         ),
       ),
     // Refuses while the file has a problem, as the server cannot edit a file it cannot parse.
+    "setting.get": ({ path }) =>
+      Effect.suspend(() => {
+        let value: unknown = userSettings.settings
+        for (const key of path === null ? [] : path.split(".")) {
+          value = (value as Record<string, unknown> | undefined)?.[key]
+        }
+        return value === undefined
+          ? Effect.fail(new SettingPathUnknown({ path: path ?? "", knownPaths: [] }))
+          : Effect.succeed(value as Schema.Json)
+      }),
     "setting.set": ({ path, value }: { path: string; value: unknown }) =>
       userSettings.problem !== null
         ? Effect.fail(
@@ -722,13 +753,7 @@ export const makeFakeServer = (
         sessions.set(sessionId, renamed)
         return renamed
       }),
-    "session.sendMessage": (input: {
-      sessionId: string
-      messageId: string
-      text: string
-      images?: ReadonlyArray<ImageData>
-      workingFolder?: WorkingFolderChoice
-    }) =>
+    "session.sendMessage": (input) =>
       Effect.flatMap(
         Effect.promise(async () => {
           sentMessages.push(input)
@@ -1041,13 +1066,7 @@ export const makeFakeServer = (
         : Effect.fail(new WorktreeGitFailed({ projectPath, gitMessage: listingFailure })),
     "worktree.newBase": () => Effect.succeed("origin/main"),
     "worktree.checkoutStatus": () => Effect.sync(checkoutStatus),
-    "session.switchToDefaultBranch": ({
-      sessionId,
-      localChanges,
-    }: {
-      sessionId: string
-      localChanges?: LocalChangesChoice
-    }): Effect.Effect<Session, CheckoutHasLocalChanges> =>
+    "session.switchToDefaultBranch": ({ sessionId, localChanges }) =>
       checkout.dirty && !localChanges
         ? Effect.fail(new CheckoutHasLocalChanges({ sessionId }))
         : Effect.sync(() => {
@@ -1055,13 +1074,7 @@ export const makeFakeServer = (
             Object.assign(checkout, { branch: checkout.defaultBranch, behind: 0, dirty: false })
             return saveSession({ ...sessions.get(sessionId)!, branch: checkout.branch })
           }),
-    "session.fastForward": ({
-      sessionId,
-      stash,
-    }: {
-      sessionId: string
-      stash?: boolean
-    }): Effect.Effect<Session, GitRefused> =>
+    "session.fastForward": ({ sessionId, stash }) =>
       checkout.dirty && checkout.pullRefusal !== null && stash !== true
         ? Effect.fail(
             new GitRefused({
@@ -1283,7 +1296,7 @@ export const makeFakeServer = (
           )
         }),
       ),
-  }
+  })
 
   const calls = new Map<string, number>()
   const failingClient = Object.fromEntries(
@@ -1311,7 +1324,41 @@ export const makeFakeServer = (
   )
 
   const fake: FakeServer = {
-    layer: Layer.succeed(ServerClient)(failingClient as unknown as ServerClient["Service"]),
+    layer: Layer.effect(ServerClient)(
+      Effect.gen(function* () {
+        // Replies sent in the same tick arrive together, async: a client registers a call after sending it.
+        // The server listens a tick after the layer is built, so early requests wait for it.
+        let toServer: ((data: unknown) => void) | null = null
+        const early: Array<unknown> = []
+        let toClient: (data: unknown) => void = () => {}
+        const outbox: Array<unknown> = []
+        const serverLayer = RpcServer.layer(Rpcs, { disableFatalDefects: true }).pipe(
+          Layer.provide(Rpcs.toLayer(failingClient as typeof client)),
+          Layer.provide(
+            layerProtocolMessagePort({
+              onMessage: (handler) => {
+                toServer = handler
+                early.splice(0).forEach(handler)
+              },
+              postMessage: (data) => {
+                if (outbox.push(data) === 1) {
+                  queueMicrotask(() => outbox.splice(0).forEach((reply) => toClient(reply)))
+                }
+              },
+            }),
+          ),
+        )
+        yield* Layer.build(serverLayer)
+        return yield* RpcClient.make(Rpcs).pipe(
+          Effect.provide(
+            layerClientProtocolMessagePort({
+              onMessage: (handler) => void (toClient = handler),
+              postMessage: (data) => (toServer ? toServer(data) : early.push(data)),
+            }),
+          ),
+        )
+      }),
+    ),
     sessions,
     errorReports,
     userPlugins,

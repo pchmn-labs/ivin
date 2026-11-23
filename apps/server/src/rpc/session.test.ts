@@ -11,6 +11,7 @@ import {
 } from "@ivin/harness"
 import { Effect, Fiber, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
+import { TestClock } from "effect/testing"
 import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
@@ -18,6 +19,7 @@ import { Database } from "../shared/adapters/database.ts"
 import { migrations, runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { forkWatch, until } from "./test-waits.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { mkdtempSync } from "node:fs"
@@ -44,6 +46,24 @@ const newDatabase = () => {
   return db
 }
 
+const serverLayer = (
+  db: DatabaseSync,
+  turns: readonly (readonly ScriptedElement[])[],
+  sent: ScriptedSend[],
+  options: ScriptedOptions,
+) =>
+  handlers.pipe(
+    Layer.provide(layerServices),
+    Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
+    Layer.provide(Layer.succeed(Database)(db)),
+    Layer.provide(
+      Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+    ),
+    Layer.provide(layerKeybindingsFileOf([])),
+    Layer.provide(layerSettingsFileOf([])),
+    Layer.provide(layerScripted(turns, { reportSession: true, ...options, sent })),
+  )
+
 const withServer = <A, E>(
   db: DatabaseSync,
   turns: readonly (readonly ScriptedElement[])[],
@@ -54,19 +74,21 @@ const withServer = <A, E>(
   Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted(turns, { reportSession: true, ...options, sent })),
-        ),
-      ),
+      Effect.provide(serverLayer(db, turns, sent, options)),
+      Effect.scoped,
+    ),
+  )
+
+const withTestClock = <A, E>(
+  db: DatabaseSync,
+  turns: readonly (readonly ScriptedElement[])[],
+  use: (client: Client) => Effect.Effect<A, E, TestClock.TestClock>,
+) =>
+  Effect.runPromise(
+    makeClient().pipe(
+      Effect.flatMap(use),
+      Effect.provide(serverLayer(db, turns, [], {})),
+      Effect.provide(TestClock.layer()),
       Effect.scoped,
     ),
   )
@@ -75,24 +97,18 @@ const endOfTranscript = (client: Client, sessionId: string) =>
   client["transcript.getItems"]({ sessionId, position: null, before: 100, after: 100 })
 
 const untilItems = (client: Client, sessionId: string, count: number) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 200; attempt++) {
-      const page = yield* endOfTranscript(client, sessionId)
-      const done = page.items.at(-1)
-      if (page.items.length >= count && done?.type === "message" && done.text.endsWith("a.txt."))
-        return page
-      yield* Effect.sleep("5 millis")
-    }
-    return yield* Effect.die("The scripted turn never reached the transcript")
+  until(endOfTranscript(client, sessionId), (page) => {
+    const done = page.items.at(-1)
+    return page.items.length >= count && done?.type === "message" && done.text.endsWith("a.txt.")
   })
 
 test("a created session is listed for its project, newest activity first", async () => {
-  const sessions = await withServer(newDatabase(), [turn], [], (client) =>
+  const sessions = await withTestClock(newDatabase(), [turn], (client) =>
     Effect.gen(function* () {
       const first = yield* client["session.create"]({ projectPath: "/p/one" })
       const second = yield* client["session.create"]({ projectPath: "/p/one" })
       yield* client["session.create"]({ projectPath: "/p/other" })
-      yield* Effect.sleep("5 millis")
+      yield* TestClock.adjust("1 second")
       yield* client["session.sendMessage"]({ sessionId: first.id, messageId: "m1", text: "hello" })
       return { first, second, listed: yield* client["session.list"]({ projectPath: "/p/one" }) }
     }),
@@ -316,11 +332,10 @@ test("watching a session starts with the last items as a page, then streams upse
       const session = yield* client["session.create"]({ projectPath: "/p" })
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
       yield* untilItems(client, session.id, 4)
-      const watching = yield* client["transcript.watchItems"]({
-        sessionId: session.id,
-        before: 2,
-      }).pipe(Stream.take(6), Stream.runCollect, Effect.forkChild)
-      yield* Effect.sleep("20 millis")
+      const watching = yield* forkWatch(
+        client["transcript.watchItems"]({ sessionId: session.id, before: 2 }),
+        (stream) => stream.pipe(Stream.take(6), Stream.runCollect),
+      )
       yield* client["session.sendMessage"]({
         sessionId: session.id,
         messageId: "m2",
@@ -346,28 +361,30 @@ test("an item reaches a watcher only after its events are in the database", asyn
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
       const stored = (sql: string, ...args: string[]) => db.prepare(sql).get(...args) !== undefined
-      const watching = yield* client["transcript.watchItems"]({
-        sessionId: session.id,
-        before: 10,
-      }).pipe(
-        Stream.drop(1),
-        Stream.take(5),
-        Stream.map((change) => {
-          if (change.type !== "upsert") return false
-          const { item } = change
-          const row = stored("SELECT 1 FROM transcript_events WHERE id = ?", item.id)
-          return item.type === "tool_call" && item.status === "done"
-            ? row &&
-                stored(
-                  "SELECT 1 FROM transcript_events WHERE session_id = ? AND type = 'tool_result'",
-                  session.id,
-                )
-            : row
+      const watching = yield* forkWatch(
+        client["transcript.watchItems"]({
+          sessionId: session.id,
+          before: 10,
         }),
-        Stream.runCollect,
-        Effect.forkChild,
+        (stream) =>
+          stream.pipe(
+            Stream.drop(1),
+            Stream.take(5),
+            Stream.map((change) => {
+              if (change.type !== "upsert") return false
+              const { item } = change
+              const row = stored("SELECT 1 FROM transcript_events WHERE id = ?", item.id)
+              return item.type === "tool_call" && item.status === "done"
+                ? row &&
+                    stored(
+                      "SELECT 1 FROM transcript_events WHERE session_id = ? AND type = 'tool_result'",
+                      session.id,
+                    )
+                : row
+            }),
+            Stream.runCollect,
+          ),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
       return yield* Fiber.join(watching)
     }),
@@ -410,20 +427,22 @@ test("deltas reach a watcher under the id of the stored item, and are never stor
   const { changes, reloaded } = await withServer(db, [streamingTurn], [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
-      const watching = yield* client["transcript.watchItems"]({
-        sessionId: session.id,
-        before: 10,
-      }).pipe(
-        Stream.takeUntil(
-          (change) =>
-            change.type === "upsert" &&
-            change.item.type === "message" &&
-            change.item.text.endsWith("Done."),
-        ),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(
+        client["transcript.watchItems"]({
+          sessionId: session.id,
+          before: 10,
+        }),
+        (stream) =>
+          stream.pipe(
+            Stream.takeUntil(
+              (change) =>
+                change.type === "upsert" &&
+                change.item.type === "message" &&
+                change.item.text.endsWith("Done."),
+            ),
+            Stream.runCollect,
+          ),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
       const changes = yield* Fiber.join(watching)
       return { changes, reloaded: yield* endOfTranscript(client, session.id) }
@@ -476,17 +495,19 @@ test("a status between a block's deltas and its finished event keeps the reserve
   const { deltas, upsert } = await withServer(newDatabase(), [turnWithStatus], [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
-      const watching = yield* client["transcript.watchItems"]({
-        sessionId: session.id,
-        before: 10,
-      }).pipe(
-        Stream.takeUntil(
-          (c) => c.type === "upsert" && c.item.type === "message" && c.item.text === "Hi",
-        ),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(
+        client["transcript.watchItems"]({
+          sessionId: session.id,
+          before: 10,
+        }),
+        (stream) =>
+          stream.pipe(
+            Stream.takeUntil(
+              (c) => c.type === "upsert" && c.item.type === "message" && c.item.text === "Hi",
+            ),
+            Stream.runCollect,
+          ),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
       const changes = yield* Fiber.join(watching)
       return {
@@ -502,16 +523,6 @@ test("a status between a block's deltas and its finished event keeps the reserve
 const running: HarnessOutput = { type: "status", status: "running", raw: null }
 const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
 const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
-
-const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 200; attempt++) {
-      const value = yield* read
-      if (done(value)) return value
-      yield* Effect.sleep("5 millis")
-    }
-    return yield* Effect.die("The condition was never met")
-  })
 
 const statusOf = (client: Client, projectPath: string, sessionId: string) =>
   client["session.list"]({ projectPath }).pipe(
@@ -582,7 +593,11 @@ test("a harness error is stored as an error item and fails the session, and the 
     (client) =>
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p" })
-        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "go",
+        })
         const status = yield* until(statusOf(client, "/p", session.id), (s) => s === "failed")
         const page = yield* endOfTranscript(client, session.id)
         yield* client["session.sendMessage"]({
@@ -673,14 +688,14 @@ test("watching a project's sessions streams each status and title change", async
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
       yield* client["session.create"]({ projectPath: "/other" })
-      const watching = yield* client["session.watch"]({ projectPath: "/p" }).pipe(
-        Stream.filter((change) => change._tag === "changed"),
-        Stream.map((change) => change.session),
-        Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(client["session.watch"]({ projectPath: "/p" }), (stream) =>
+        stream.pipe(
+          Stream.filter((change) => change._tag === "changed"),
+          Stream.map((change) => change.session),
+          Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
+          Stream.runCollect,
+        ),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
       return yield* Fiber.join(watching)
     }),
@@ -696,14 +711,14 @@ test("a session's status keeps the time it changed until it changes again", asyn
   const changes = await withServer(newDatabase(), [turn], [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
-      const watching = yield* client["session.watch"]({ projectPath: "/p" }).pipe(
-        Stream.filter((change) => change._tag === "changed"),
-        Stream.map((change) => change.session),
-        Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(client["session.watch"]({ projectPath: "/p" }), (stream) =>
+        stream.pipe(
+          Stream.filter((change) => change._tag === "changed"),
+          Stream.map((change) => change.session),
+          Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
+          Stream.runCollect,
+        ),
       )
-      yield* Effect.sleep("20 millis")
       yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
       return yield* Fiber.join(watching)
     }),
@@ -748,7 +763,11 @@ test("closing the server closes the agent of every run", async () => {
     (client) =>
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p" })
-        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "go",
+        })
         expect(closed).toEqual([])
         return session.id
       }),
@@ -873,7 +892,11 @@ test("a session resumes with the provider session id stored by an earlier server
     (client) =>
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p" })
-        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "go",
+        })
         yield* untilItems(client, session.id, 4)
         return session.id
       }),
@@ -888,14 +911,7 @@ test("a session resumes with the provider session id stored by an earlier server
     (client) =>
       Effect.gen(function* () {
         yield* client["session.sendMessage"]({ sessionId, messageId: "m2", text: "again" })
-        for (let attempt = 0; attempt < 200; attempt++) {
-          const page = yield* endOfTranscript(client, sessionId)
-          const last = page.items.at(-1)
-          if (page.items.length >= 8 && last?.type === "message" && last.text.endsWith("a.txt."))
-            return page
-          yield* Effect.sleep("5 millis")
-        }
-        return yield* Effect.die("The second turn never reached the transcript")
+        return yield* untilItems(client, sessionId, 8)
       }),
     { starts },
   )
@@ -924,13 +940,7 @@ const approvalTurn: readonly HarnessOutput[] = [
 ]
 
 const untilStatus = (client: Client, sessionId: string, status: string) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 200; attempt++) {
-      if ((yield* statusOf(client, "/p", sessionId)) === status) return
-      yield* Effect.sleep("5 millis")
-    }
-    return yield* Effect.die(`The session never reached ${status}`)
-  })
+  until(statusOf(client, "/p", sessionId), (current) => current === status)
 
 const askAndAnswer = async (allow: boolean) => {
   const db = newDatabase()
@@ -942,7 +952,11 @@ const askAndAnswer = async (allow: boolean) => {
     (client) =>
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p" })
-        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "go",
+        })
         yield* untilStatus(client, session.id, "waiting")
         yield* client["session.answerApproval"]({
           sessionId: session.id,
@@ -1031,7 +1045,11 @@ test("two concurrent answers to one request give one decision and one ApprovalNo
     (client) =>
       Effect.gen(function* () {
         const session = yield* client["session.create"]({ projectPath: "/p" })
-        yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
+        yield* client["session.sendMessage"]({
+          sessionId: session.id,
+          messageId: "m1",
+          text: "go",
+        })
         yield* untilStatus(client, session.id, "waiting")
         const answer = client["session.answerApproval"]({
           sessionId: session.id,
@@ -1065,7 +1083,7 @@ test("a turn that ends right after the answer leaves the session idle, not worki
         allow: true,
       })
       yield* untilItems(client, session.id, 5)
-      yield* Effect.sleep("30 millis")
+      yield* untilStatus(client, session.id, "idle")
       return yield* statusOf(client, "/p", session.id)
     }),
   )

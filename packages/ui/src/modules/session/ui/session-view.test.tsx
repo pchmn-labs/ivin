@@ -324,7 +324,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
   await page.getByRole("menuitem", { name: "Rename" }).click()
   await userEvent.keyboard("{Escape}")
   await expect.element(page.getByRole("textbox", { name: "Session title" })).not.toBeInTheDocument()
-  await new Promise((resolve) => setTimeout(resolve, 200))
+  expect(server.callsOf("session.interrupt")).toBe(0)
   expect(server.sessions.get("s1")?.status).toBe("working")
 })
 
@@ -371,7 +371,7 @@ test("Enter with the focus on the page body does not answer an approval", async 
   await expect.element(page.getByText("Approval needed")).toBeVisible()
   ;(document.activeElement as HTMLElement | null)?.blur()
   await userEvent.keyboard("{Enter}")
-  await new Promise((resolve) => setTimeout(resolve, 200))
+  expect(server.callsOf("session.answerApproval")).toBe(0)
   await expect.element(page.getByText("Approval needed")).toBeVisible()
 })
 
@@ -458,13 +458,13 @@ test("Escape closes an open menu without interrupting the session", async () => 
   await expect.element(page.getByRole("menuitem", { name: "Rename" })).toBeVisible()
   await userEvent.keyboard("{Escape}")
   await expect.element(page.getByRole("menuitem", { name: "Rename" })).not.toBeInTheDocument()
-  await new Promise((resolve) => setTimeout(resolve, 200))
+  expect(server.callsOf("session.interrupt")).toBe(0)
   expect(server.sessions.get("s1")?.status).toBe("working")
 })
 
 test("Enter on the focused Interrupt button presses it rather than running composer.send", async () => {
   await mountSession("working")
-  await page.getByRole("button", { name: "Interrupt" }).element().focus()
+  page.getByRole("button", { name: "Interrupt" }).element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
 })
@@ -797,7 +797,7 @@ test("a working folder picker with many worktrees scrolls its list in a short wi
   const list = page.getByRole("group", { name: "Working folder" }).element()
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight)
 
-  await page
+  page
     .getByRole("radio", { name: /Current checkout/ })
     .element()
     .focus()
@@ -992,7 +992,8 @@ test("messages sent while the agent works wait in a sheet on the composer, and S
   await sheet.getByRole("button", { name: "Send now" }).click()
 
   await expect.element(sheet).not.toBeInTheDocument()
-  await expect.element(page.getByText("also check the logs")).toBeVisible()
+  // The view scrolls to the last message sent, which pushes the first one above it.
+  await expect.element(page.getByText("and the config")).toBeVisible()
   await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toEqual([]))
 })
 

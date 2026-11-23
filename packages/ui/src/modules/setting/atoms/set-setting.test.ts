@@ -1,4 +1,5 @@
 import { defaultSettings } from "@ivin/contracts/setting"
+import { AsyncResult } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
 import { setSettingOf, shownSettingOf } from "./set-setting.ts"
@@ -11,7 +12,9 @@ const setup = async () => {
   registry.mount(watchedSettingsAtom)
   registry.mount(shownSettingOf(PATH))
   registry.mount(setSettingOf(PATH))
-  await vi.waitFor(() => expect(registry.get(shownSettingOf(PATH)).value).toBe(true))
+  await vi.waitFor(() =>
+    expect(AsyncResult.isSuccess(registry.get(watchedSettingsAtom))).toBe(true),
+  )
   return { registry, server }
 }
 

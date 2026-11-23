@@ -1,7 +1,7 @@
 import { RegistryProvider } from "@effect/atom-react"
 import type { FolderEntry } from "@ivin/contracts/file"
 import { DateTime } from "effect"
-import { afterEach, beforeEach, expect, test } from "vitest"
+import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
@@ -76,7 +76,13 @@ beforeEach(async () => {
   localStorage.clear()
   await page.viewport(1400, 800)
 })
-afterEach(() => localStorage.clear())
+afterEach(() => {
+  localStorage.clear()
+  vi.useRealTimers()
+})
+
+// Typed letters stop counting as one name once a second has passed.
+const pauseTyping = () => vi.setSystemTime(Date.now() + 1_000)
 
 test("Up and Down move, Home and End jump to the ends", async () => {
   await focusTree()
@@ -198,13 +204,13 @@ test("typing a name jumps to the next row that starts with it", async () => {
   await focusTree()
   await userEvent.keyboard("re")
   expect(active()).toBe("README.md")
-  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  pauseTyping()
   await userEvent.keyboard("f")
   expect(active()).toBe("file-00.ts")
-  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  pauseTyping()
   await userEvent.keyboard("f")
   expect(active()).toBe("file-01.ts")
-  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  pauseTyping()
   await userEvent.keyboard("file-12")
   expect(active()).toBe("file-12.ts")
   await expect.element(item("file-12.ts")).toBeVisible()
@@ -220,7 +226,7 @@ test("a space continues a name being typed, and opens the row otherwise", async 
   await userEvent.keyboard("a c")
   expect(active()).toBe("a c.md")
   await expect.element(openFiles()).not.toBeInTheDocument()
-  await new Promise((resolve) => setTimeout(resolve, 1_000))
+  pauseTyping()
   await userEvent.keyboard(" ")
   await expect.element(openFiles()).toBeVisible()
 })

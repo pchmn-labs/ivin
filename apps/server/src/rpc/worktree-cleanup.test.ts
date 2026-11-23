@@ -5,11 +5,19 @@ import { layerScripted } from "@ivin/harness"
 import { Effect, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
-import { afterEach, beforeEach, expect, test, vi } from "vitest"
+import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from "vitest"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
@@ -20,8 +28,8 @@ import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
-// Each test runs about twenty git commands, a fetch and a merge check among them.
-vi.setConfig({ testTimeout: 5000 })
+// Each test runs about forty git commands, 0.6 s alone but 10x slower while the whole suite runs.
+vi.setConfig({ testTimeout: 10_000 })
 
 const turn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: null },
@@ -47,22 +55,36 @@ const commit = (repo: string, file: string, text = file) => {
   git(repo, "commit", "--quiet", "-m", file)
 }
 
+let template: string
 let root: string
 let project: string
 let upstream: string
 
+beforeAll(() => {
+  template = realpathSync(mkdtempSync(join(tmpdir(), "ivin-cleanup-template-")))
+  const origin = join(template, "origin.git")
+  const first = join(template, "upstream")
+  git(template, "init", "--quiet", "--bare", "-b", "main", origin)
+  git(template, "init", "--quiet", "-b", "main", first)
+  commit(first, "first.txt")
+  git(first, "remote", "add", "origin", origin)
+  git(first, "push", "--quiet", "origin", "main")
+  git(template, "clone", "--quiet", origin, join(template, "project"))
+  writeFileSync(join(template, "project", ".git", "info", "exclude"), ".worktrees/\n")
+})
+
+afterAll(() => rmSync(template, { recursive: true, force: true }))
+
+// A copy of the template, with the remotes' paths pointing at the copy.
 beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-cleanup-")))
-  const origin = join(root, "origin.git")
+  cpSync(template, root, { recursive: true })
   upstream = join(root, "upstream")
   project = join(root, "project")
-  git(root, "init", "--quiet", "--bare", "-b", "main", origin)
-  git(root, "init", "--quiet", "-b", "main", upstream)
-  commit(upstream, "first.txt")
-  git(upstream, "remote", "add", "origin", origin)
-  git(upstream, "push", "--quiet", "origin", "main")
-  git(root, "clone", "--quiet", origin, project)
-  writeFileSync(join(project, ".git", "info", "exclude"), ".worktrees/\n")
+  for (const repo of [upstream, project]) {
+    const config = join(repo, ".git", "config")
+    writeFileSync(config, readFileSync(config, "utf8").replaceAll(template, root))
+  }
 })
 
 afterEach(() => rmSync(root, { recursive: true, force: true }))

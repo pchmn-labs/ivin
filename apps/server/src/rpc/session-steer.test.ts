@@ -21,6 +21,7 @@ import { runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { until } from "./test-waits.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 
@@ -71,16 +72,6 @@ const withServer = <A, E>(
       Effect.scoped,
     ),
   )
-
-const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 200; attempt++) {
-      const value = yield* read
-      if (done(value)) return value
-      yield* Effect.sleep("5 millis")
-    }
-    return yield* Effect.die("The condition was never met")
-  })
 
 const sessionOf = (client: Client, id: string) =>
   client["session.list"]({ projectPath: "/p" }).pipe(

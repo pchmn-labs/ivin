@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect"
-import { RpcClient, RpcMessage, RpcSerialization } from "effect/rpc"
+import type { RpcMessage } from "effect/rpc"
+import { RpcClient, RpcSerialization } from "effect/rpc"
 
 export interface RpcPort {
   readonly onMessage: (handler: (data: unknown) => void) => void
@@ -30,7 +31,7 @@ export const layerClientProtocolMessagePort = (port: RpcPort): Layer.Layer<RpcCl
           const defect: RpcMessage.FromServerEncoded = {
             _tag: "Defect",
             defect: "ivin's server stopped",
-          } as RpcMessage.FromServerEncoded
+          }
           for (const clientId of clientIds) run(writeResponse(clientId, defect))
         })
 

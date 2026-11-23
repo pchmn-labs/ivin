@@ -21,11 +21,13 @@ export function SettingsFileProblem({ problem }: { problem: Problem }) {
           settings below, the file's last valid ones.
         </Text>
         <div className="iv-settings-file-problem__actions">
-          <Button size="sm" icon="brackets-curly" onClick={file.open}>
+          <Button size="sm" icon="brackets-curly" onClick={() => void file.open()}>
             Open settings.json
           </Button>
         </div>
-        {file.failure !== null && <ErrorMessage message={file.failure} onRetry={file.open} />}
+        {file.failure !== null && (
+          <ErrorMessage message={file.failure} onRetry={() => void file.open()} />
+        )}
       </div>
     </div>
   )

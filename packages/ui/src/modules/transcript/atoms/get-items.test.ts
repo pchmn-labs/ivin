@@ -11,8 +11,7 @@ const setup = async () => {
   const transcript = transcriptOf("s1")
   registry.mount(transcript.view)
   await vi.waitFor(() => expect(registry.get(transcript.view).loaded).toBe(true))
-  const nextFrame = () => new Promise((resolve) => setTimeout(resolve, 50))
-  return { registry, server, transcript, nextFrame }
+  return { registry, server, transcript }
 }
 
 const delta = (itemId: string, text: string, position = 0) =>
@@ -26,29 +25,31 @@ const delta = (itemId: string, text: string, position = 0) =>
   }) as const
 
 test("deltas are applied in one write per frame, creating the item at its position", async () => {
-  const { registry, server, transcript, nextFrame } = await setup()
+  const { registry, server, transcript } = await setup()
   const writes = vi.fn()
   registry.subscribe(transcript.list.item("a"), writes)
 
   server.pushChange(delta("a", "Hel"))
   server.pushChange(delta("a", "lo"))
   server.pushChange(delta("a", "!"))
-  await nextFrame()
-  expect(registry.get(transcript.list.item("a"))).toMatchObject({
-    type: "message",
-    role: "assistant",
-    position: 0,
-    text: "Hello!",
-  })
+  await vi.waitFor(() =>
+    expect(registry.get(transcript.list.item("a"))).toMatchObject({
+      type: "message",
+      role: "assistant",
+      position: 0,
+      text: "Hello!",
+    }),
+  )
   expect(writes).toHaveBeenCalledTimes(1)
 
   server.pushChange(delta("a", " More"))
-  await nextFrame()
-  expect(registry.get(transcript.list.item("a"))).toMatchObject({ text: "Hello! More" })
+  await vi.waitFor(() =>
+    expect(registry.get(transcript.list.item("a"))).toMatchObject({ text: "Hello! More" }),
+  )
 })
 
 test("an upsert after deltas wins over the pending text", async () => {
-  const { registry, server, transcript, nextFrame } = await setup()
+  const { registry, server, transcript } = await setup()
   const stored: TranscriptItem = {
     id: "a",
     sessionId: "s1",
@@ -63,7 +64,11 @@ test("an upsert after deltas wins over the pending text", async () => {
 
   server.pushChange(delta("a", "stale"))
   server.pushChange({ type: "upsert", item: stored })
-  await nextFrame()
+  // Deltas flush in the order they came, so once this one shows, the stale ones had their turn.
+  server.pushChange(delta("b", "later", 1))
+  await vi.waitFor(() =>
+    expect(registry.get(transcript.list.item("b"))).toMatchObject({ text: "later" }),
+  )
   expect(registry.get(transcript.list.item("a"))).toEqual(stored)
 })
 
@@ -78,8 +83,6 @@ test("a feed that fails marks the transcript failed, and refreshing it loads the
   )
 
   registry.refresh(transcript.list.status)
-  await new Promise((r) => setTimeout(r, 200))
-  console.log("STEP2", server.callsOf("transcript.watchItems"), registry.get(transcript.view))
   await vi.waitFor(() =>
     expect(registry.get(transcript.view)).toMatchObject({ failed: false, loaded: true }),
   )

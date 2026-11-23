@@ -2,6 +2,7 @@ import { EditorState } from "@ivin/plugin-api/editor"
 import type { Atom, AtomRegistry } from "effect/reactivity"
 import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
 import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
+import { notify } from "../../../core/components/notification/notification-manager.ts"
 import { addCommandHandler } from "../../command/atoms/run-command.ts"
 import { defaultKeybindingsAtom } from "../../keybinding/atoms/keybindings.ts"
 import { pluginFileUrl } from "../rules/plugin-file-url.ts"
@@ -80,6 +81,7 @@ export const activatePlugin = (
         addCommandHandler(registry, id, run, pluginId)
       },
     },
+    notify,
     keybindings: {
       add: ({ key, command, when }) =>
         registry.set(defaultKeybindingsAtom, [

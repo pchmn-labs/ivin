@@ -23,6 +23,7 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServicesWith } from "./handlers.ts"
+import { until } from "./test-waits.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 
 const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
@@ -48,7 +49,7 @@ const newDatabase = () => {
   return db
 }
 
-// The scripted agent and the server's fibers run on the test clock; only the polling waits in real time.
+// The scripted agent and the server's fibers run on the test clock; TestClock.adjust returns once the fibers it woke have settled.
 const withServer = <A, E>(
   db: DatabaseSync,
   turns: readonly (readonly ScriptedElement[])[],
@@ -79,19 +80,6 @@ const withServer = <A, E>(
     ),
   )
 
-const realWait = (millis: number) =>
-  Effect.promise(() => new Promise<void>((resolve) => setTimeout(resolve, millis)))
-
-const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 400; attempt++) {
-      const value = yield* read
-      if (done(value)) return value
-      yield* realWait(5)
-    }
-    return yield* Effect.die("The condition was never met")
-  })
-
 const untilSession = (client: Client, id: string, done: (session: Session) => boolean) =>
   until(
     client["session.list"]({ projectPath: "/p" }).pipe(
@@ -119,9 +107,6 @@ const untilClosed = (closed: string[], sessionId: string) =>
     (all) => all.includes(sessionId),
   )
 
-// A stop that should not happen has had every chance to show by then.
-const settle = realWait(30)
-
 const send = (client: Client, sessionId: string, messageId: string) =>
   client["session.sendMessage"]({ sessionId, messageId, text: "go" })
 
@@ -135,7 +120,6 @@ test("an agent idle for the limit is stopped and its session stays idle, with no
       yield* untilSession(client, session.id, (s) => s.status === "idle")
       const before = typesOf(db, session.id)
       yield* TestClock.adjust("9 minutes")
-      yield* settle
       const early = [...closed]
       yield* TestClock.adjust("1 minute")
       yield* untilClosed(closed, session.id)
@@ -162,7 +146,7 @@ test("the next message after an idle stop starts a new agent with the stored pro
       yield* send(client, session.id, "m2")
       yield* untilCount(db, session.id, "assistant_text", 2)
       yield* untilSession(client, session.id, (s) => s.status === "idle")
-      return starts!.map((start) => start.providerSessionId)
+      return starts.map((start) => start.providerSessionId)
     }),
   )
   expect(result).toEqual([null, expect.stringMatching(/^scripted-/)])
@@ -182,7 +166,6 @@ test("a turn in progress keeps its agent running however long it lasts", async (
         yield* send(client, session.id, "m1")
         yield* untilCount(db, session.id, "assistant_text", 1)
         yield* TestClock.adjust("3 hours")
-        yield* settle
         return [...closed]
       }),
   )
@@ -203,7 +186,6 @@ test("an open approval keeps the agent running, and the count starts once the tu
         yield* send(client, session.id, "m1")
         yield* untilSession(client, session.id, (s) => s.status === "waiting")
         yield* TestClock.adjust("1 hour")
-        yield* settle
         const whileOpen = [...closed]
         yield* client["session.answerApproval"]({
           sessionId: session.id,
@@ -212,7 +194,6 @@ test("an open approval keeps the agent running, and the count starts once the tu
         })
         yield* untilSession(client, session.id, (s) => s.status === "idle")
         yield* TestClock.adjust("9 minutes")
-        yield* settle
         const early = [...closed]
         yield* TestClock.adjust("1 minute")
         yield* untilClosed(closed, session.id)
@@ -235,7 +216,6 @@ test("a pending message keeps the agent running", async () => {
         session.id,
       )
       yield* TestClock.adjust("1 hour")
-      yield* settle
       return [...closed]
     }),
   )
@@ -262,7 +242,6 @@ test("a turn the agent starts on its own restarts the count", async () => {
         yield* untilCount(db, session.id, "assistant_text", 2)
         yield* untilSession(client, session.id, (s) => s.status === "idle")
         yield* TestClock.adjust("6 minutes")
-        yield* settle
         const early = [...closed]
         yield* TestClock.adjust("4 minutes")
         yield* untilClosed(closed, session.id)
@@ -281,7 +260,6 @@ test("a limit of 0 never stops an agent", async () => {
       yield* send(client, session.id, "m1")
       yield* untilSession(client, session.id, (s) => s.status === "idle")
       yield* TestClock.adjust("30 days")
-      yield* settle
       return [...closed]
     }),
   )

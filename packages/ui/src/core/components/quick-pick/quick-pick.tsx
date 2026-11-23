@@ -20,7 +20,7 @@ function Label({ item }: { item: QuickPickItem }) {
   const marked = new Set(item.match)
   return (
     <span className="iv-quick-pick__label">
-      {[...item.label].map((char, index) =>
+      {Array.from(item.label).map((char, index) =>
         marked.has(index) ? (
           // oxlint-disable-next-line react/no-array-index-key
           <mark key={index} className="iv-quick-pick__match">

@@ -138,7 +138,7 @@ const cssAllowed: Case[] = [
   [
     `${ui}/core/components/menu/menu.css`,
     "the variables the component library sets",
-    `.a {\n  max-height: var(--available-height);\n  max-width: var(--available-width);\n  transform-origin: var(--transform-origin);\n}\n`,
+    `.a {\n  max-height: var(--available-height);\n  max-width: var(--available-width);\n  transform-origin: var(--transform-origin);\n  height: var(--toast-height);\n}\n`,
   ],
   [
     `${ui}/app/app.css`,

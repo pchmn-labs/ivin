@@ -3,9 +3,10 @@ import { AsyncResult } from "effect/reactivity"
 import { TranscriptView } from "../../transcript/ui/transcript-view.tsx"
 import { transcriptOf } from "../../transcript/atoms/get-items.ts"
 import { projectsAtom } from "../../project/atoms/list-projects.ts"
+import { NotificationViewport } from "../../../core/components/notification/notification.tsx"
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
-import { useRequestSessionAction } from "../hooks/use-session-actions.ts"
+import { useArchiveFromKey } from "../hooks/use-session-actions.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
 import { isAgentBusy, isRunning } from "../rules/is-running.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
@@ -17,7 +18,15 @@ import { openTaskOf } from "../../transcript/atoms/background-tasks.ts"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import "./session-view.css"
 
-function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionId: string }) {
+function OpenSession({
+  projectPath,
+  sessionId,
+  notifications,
+}: {
+  projectPath: string
+  sessionId: string
+  notifications: boolean
+}) {
   const sessions = sessionsOf(projectPath)
   const session = useAtomValue(sessions.item(sessionId))
   const sessionsLoaded = AsyncResult.isSuccess(
@@ -30,14 +39,8 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
   )?.name
   const taskOpen = useAtomValue(openTaskOf(sessionId)) !== null
   const interrupt = useAtomSet(interruptSessionAtom)
-  const requestAction = useRequestSessionAction()
-  useCommandHandler(
-    "session.archive",
-    () => {
-      if (session) requestAction("archive", session)
-    },
-    session !== undefined,
-  )
+  const archiveFromKey = useArchiveFromKey(session)
+  useCommandHandler("session.archive", archiveFromKey, session !== undefined)
   useCommandHandler(
     "session.interrupt",
     () => interrupt({ projectPath, sessionId }),
@@ -76,6 +79,11 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
           </Text>
         </div>
       )}
+      {notifications && (
+        <div className="iv-session-view__notifications">
+          <NotificationViewport />
+        </div>
+      )}
       <div className="iv-session-view__dock" data-task-sheet={taskOpen ? "" : undefined}>
         <TaskSheet sessionId={sessionId} />
         <Slot key={sessionId} slot="session.composer" props={{ sessionId }} />
@@ -88,10 +96,15 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
 export function SessionView({
   projectPath,
   sessionId,
+  notifications = true,
 }: {
   projectPath: string
   sessionId: string
+  // False while the chat is hidden under a full-width file, which draws the notifications itself.
+  notifications?: boolean
 }) {
   useAtomMount(sessionsOf(projectPath).ids)
-  return <OpenSession projectPath={projectPath} sessionId={sessionId} />
+  return (
+    <OpenSession projectPath={projectPath} sessionId={sessionId} notifications={notifications} />
+  )
 }

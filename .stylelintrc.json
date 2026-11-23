@@ -28,11 +28,11 @@
     "declaration-property-value-disallowed-list": [
       {
         "/.*/": [
-          "/[vV][aA][rR]\\(\\s*--(?!iv-|available-height(?![\\w-])|available-width(?![\\w-])|transform-origin(?![\\w-]))/"
+          "/[vV][aA][rR]\\(\\s*--(?!iv-|available-height(?![\\w-])|available-width(?![\\w-])|transform-origin(?![\\w-])|toast-[\\w-]+)/"
         ]
       },
       {
-        "message": "Unknown variable: read a --iv- token from core/theme/tokens.css, or a variable the component library sets (--available-height, --available-width, --transform-origin) (docs/conventions/ui.md#styles)"
+        "message": "Unknown variable: read a --iv- token from core/theme/tokens.css, or a variable the component library sets (--available-height, --available-width, --transform-origin, --toast-*) (docs/conventions/ui.md#styles)"
       }
     ]
   },

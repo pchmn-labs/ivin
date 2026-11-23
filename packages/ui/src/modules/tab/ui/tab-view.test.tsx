@@ -1,6 +1,6 @@
 import { RegistryProvider } from "@effect/atom-react"
 import { DateTime } from "effect"
-import { expect, test } from "vitest"
+import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
@@ -17,7 +17,7 @@ test("the empty message waits for the tab list to load", async () => {
       <TabView projectPath="/p" />
     </RegistryProvider>,
   )
-  await new Promise((resolve) => setTimeout(resolve, 100))
+  await vi.waitFor(() => expect(server.callsOf("tab.list")).toBe(1))
   expect(page.getByText(/No session open/).query()).toBeNull()
 
   list.release()

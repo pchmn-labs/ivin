@@ -72,7 +72,7 @@ test("a project whose sessions all have their tab closed says no session is open
 
 test("no empty message shows before the tab list has loaded", async () => {
   const server = await setup([], { holdTabs: true })
-  await new Promise((resolve) => setTimeout(resolve, 100))
+  await vi.waitFor(() => expect(server.callsOf("tab.list")).toBeGreaterThan(0))
   expect(page.getByText(/Start one with New session/).query()).toBeNull()
   server.list?.release()
   await expect.element(page.getByText(/No sessions in p yet/)).toBeVisible()

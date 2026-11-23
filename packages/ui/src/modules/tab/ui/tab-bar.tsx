@@ -50,7 +50,7 @@ function TabItem({
   // Read when the user closes, kept while the prompt fades out.
   const [unsaved, setUnsaved] = useState<ReadonlyArray<string>>([])
   const registry = useContext(RegistryContext)
-  const actions = useSessionActions(session)
+  const actions = useSessionActions(session, false)
   if (!session) return null
 
   const stopsAgent = settings.stopAgentOnClose && isAgentBusy(session.status)

@@ -1,4 +1,5 @@
-import ts from "typescript"
+// TypeScript 7 ships no JS compiler API, so the tool reads files through the 5.x alias.
+import ts from "typescript-compiler-api"
 
 export type ChangedLines = { added: number[]; removedAfter: number[] }
 export type ChangedFile = ChangedLines & { path: string; source: string }

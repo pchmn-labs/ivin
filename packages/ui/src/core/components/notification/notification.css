@@ -1,0 +1,132 @@
+.iv-notifications {
+  --iv-notification-gap: var(--iv-space-2);
+  --iv-notification-peek: 14px;
+
+  position: absolute;
+  z-index: 20;
+  bottom: var(--iv-space-6);
+  left: 50%;
+  width: min(460px, calc(100% - var(--iv-space-8)));
+  transform: translateX(-50%);
+}
+
+.iv-notification {
+  --iv-notification-scale: calc(max(0, 1 - (var(--toast-index) * 0.05)));
+  --iv-notification-height: var(--toast-frontmost-height, var(--toast-height));
+  --iv-notification-stacked-y: calc(
+    var(--toast-swipe-movement-y) - var(--toast-index) * var(--iv-notification-peek) -
+      (1 - var(--iv-notification-scale)) * var(--iv-notification-height)
+  );
+  --iv-notification-spread-y: calc(
+    var(--toast-offset-y) * -1 + var(--toast-index) * var(--iv-notification-gap) * -1 +
+      var(--toast-swipe-movement-y)
+  );
+
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  box-sizing: border-box;
+  height: var(--iv-notification-height);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--iv-notification-kind) 32%, var(--iv-border));
+  border-radius: var(--iv-radius-notification);
+  background: var(--iv-bg-raised);
+  box-shadow: var(--iv-shadow-raised);
+  transform: translateX(var(--toast-swipe-movement-x)) translateY(var(--iv-notification-stacked-y))
+    scale(var(--iv-notification-scale));
+  transform-origin: 50% 100%;
+  transition:
+    transform var(--iv-duration-slow) var(--iv-ease-out),
+    opacity var(--iv-duration-base) var(--iv-ease-out),
+    height var(--iv-duration-slow) var(--iv-ease-out);
+  user-select: none;
+}
+
+.iv-notification[data-type="error"] {
+  --iv-notification-kind: var(--iv-danger);
+}
+
+.iv-notification[data-type="warning"] {
+  --iv-notification-kind: var(--iv-attention);
+}
+
+.iv-notification[data-type="info"] {
+  --iv-notification-kind: var(--iv-text-muted);
+}
+
+.iv-notification[data-type="success"] {
+  --iv-notification-kind: var(--iv-accent);
+}
+
+/* Fills the gap between two spread notifications, so the pointer stays on the viewport. */
+.iv-notification::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  height: calc(var(--iv-notification-gap) + 1px);
+}
+
+.iv-notification[data-expanded] {
+  height: var(--toast-height);
+  transform: translateX(var(--toast-swipe-movement-x)) translateY(var(--iv-notification-spread-y));
+}
+
+.iv-notification[data-starting-style],
+.iv-notification[data-ending-style] {
+  opacity: 0;
+  transform: translateY(20px) scale(0.96);
+}
+
+.iv-notification[data-ending-style] {
+  transition-duration: var(--iv-duration-base);
+}
+
+.iv-notification[data-limited] {
+  opacity: 0;
+}
+
+.iv-notification__content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--iv-space-2);
+  padding: 13px var(--iv-space-2) 13px var(--iv-space-3);
+  transition: opacity var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.iv-notification__content[data-behind] {
+  opacity: 0;
+}
+
+.iv-notification__content[data-expanded] {
+  opacity: 1;
+}
+
+.iv-notification__icon {
+  display: inline-flex;
+  flex: none;
+  margin-top: 1px;
+  color: var(--iv-notification-kind);
+}
+
+.iv-notification__message {
+  flex: 1;
+  min-width: 0;
+  margin: 0 var(--iv-space-1) 0 0;
+  color: var(--iv-text);
+  font-size: var(--iv-text-md);
+  line-height: 18px;
+  overflow-wrap: anywhere;
+}
+
+.iv-notification__content .iv-button {
+  margin: -3px 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-notification {
+    transition: opacity var(--iv-duration-base) linear;
+  }
+}

@@ -6,6 +6,7 @@ import {
   useAtomValue,
 } from "@effect/atom-react"
 import { useCallback, useContext, useEffect, useRef } from "react"
+import { NotificationProvider } from "../core/components/notification/notification.tsx"
 import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { ProjectColumn } from "../modules/project/ui/project-column.tsx"
@@ -114,54 +115,91 @@ export function App() {
   )
 
   return (
-    <PluginsProvider plugins={builtinPlugins}>
-      {current === null || projectPath === null ? (
-        <div className="iv-app iv-app--empty" hidden={settingsOpen}>
-          <main className="iv-app__main">
-            <MainTopBar projectPath={null} controls={null} />
-            {serverLost}
-            <OpenFolderError />
-            <TrustProjectDialog />
-            <KeybindingsFileProblem />
-            <NoProject />
-          </main>
-        </div>
-      ) : (
-        <div
-          className="iv-app"
-          data-sidebar={sidebarOpen ? "open" : "closed"}
-          hidden={settingsOpen}
-        >
-          {sidebarOpen && (
-            <aside className="iv-app__card" aria-label="Projects and sessions">
-              <div className="iv-app__card-top" data-testid="sidebar-top-row">
-                <ShellControls
-                  projectPath={projectPath}
-                  sidebarOpen={sidebarOpen}
-                  onToggleSidebar={toggleSidebar}
-                  extra={<SettingsButton />}
-                />
-              </div>
-              <div className="iv-app__card-body" data-layout={layout}>
-                {layout === "rail" && <ProjectRail />}
-                <ProjectColumn project={current} projectMenu={layout === "strip"}>
-                  <SidebarTabs />
-                </ProjectColumn>
-              </div>
-              <div className="iv-app__bottom">
-                <ResizeHandle
-                  label="Resize the bottom panel"
-                  edge="top"
-                  property="--iv-sidebar-bottom-height"
-                  name="sidebar-bottom"
-                  min={BOTTOM_MIN}
-                  max={(element) => (element.parentElement?.clientHeight ?? 0) * BOTTOM_MAX_SHARE}
-                />
-                <div className="iv-app__bottom-scroll">
-                  <Slot slot="sidebar.bottom" props={{}} />
+    <NotificationProvider>
+      <PluginsProvider plugins={builtinPlugins}>
+        {current === null || projectPath === null ? (
+          <div className="iv-app iv-app--empty" hidden={settingsOpen}>
+            <main className="iv-app__main">
+              <MainTopBar projectPath={null} controls={null} />
+              {serverLost}
+              <OpenFolderError />
+              <TrustProjectDialog />
+              <KeybindingsFileProblem />
+              <NoProject />
+            </main>
+          </div>
+        ) : (
+          <div
+            className="iv-app"
+            data-sidebar={sidebarOpen ? "open" : "closed"}
+            hidden={settingsOpen}
+          >
+            {sidebarOpen && (
+              <aside className="iv-app__card" aria-label="Projects and sessions">
+                <div className="iv-app__card-top" data-testid="sidebar-top-row">
+                  <ShellControls
+                    projectPath={projectPath}
+                    sidebarOpen={sidebarOpen}
+                    onToggleSidebar={toggleSidebar}
+                    extra={<SettingsButton />}
+                  />
                 </div>
-              </div>
-              {layout === "strip" && <ProjectStrip />}
+                <div className="iv-app__card-body" data-layout={layout}>
+                  {layout === "rail" && <ProjectRail />}
+                  <ProjectColumn project={current} projectMenu={layout === "strip"}>
+                    <SidebarTabs />
+                  </ProjectColumn>
+                </div>
+                <div className="iv-app__bottom">
+                  <ResizeHandle
+                    label="Resize the bottom panel"
+                    edge="top"
+                    property="--iv-sidebar-bottom-height"
+                    name="sidebar-bottom"
+                    min={BOTTOM_MIN}
+                    max={(element) => (element.parentElement?.clientHeight ?? 0) * BOTTOM_MAX_SHARE}
+                  />
+                  <div className="iv-app__bottom-scroll">
+                    <Slot slot="sidebar.bottom" props={{}} />
+                  </div>
+                </div>
+                {layout === "strip" && <ProjectStrip />}
+                <ResizeHandle
+                  label="Resize the sidebar"
+                  edge="right"
+                  property="--iv-card-width"
+                  name="sidebar"
+                  min={CARD_MIN}
+                  max={() => CARD_MAX}
+                />
+              </aside>
+            )}
+            <main className="iv-app__main">
+              <MainTopBar
+                projectPath={projectPath}
+                controls={
+                  sidebarOpen ? null : { projectPath, sidebarOpen, onToggleSidebar: toggleSidebar }
+                }
+              />
+              {serverLost}
+              <OpenFolderError />
+              <TrustProjectDialog />
+              <StartSessionError projectPath={projectPath} />
+              <KeybindingsFileProblem />
+              <MainAreaBoundary projectPath={projectPath}>
+                <TabView projectPath={projectPath} />
+              </MainAreaBoundary>
+            </main>
+            <SessionActionDialog />
+            <Slot slot="window.overlay" props={{}} />
+          </div>
+        )}
+        {settingsOpen && (
+          // Focusable, so a click on the page keeps the keyboard in its area.
+          <div className="iv-app" data-keybinding-area="settings" tabIndex={-1}>
+            <aside className="iv-app__card" aria-label="Settings">
+              <div className="iv-app__card-top" />
+              <SettingsNav onClose={closeSettings} />
               <ResizeHandle
                 label="Resize the sidebar"
                 edge="right"
@@ -171,49 +209,14 @@ export function App() {
                 max={() => CARD_MAX}
               />
             </aside>
-          )}
-          <main className="iv-app__main">
-            <MainTopBar
-              projectPath={projectPath}
-              controls={
-                sidebarOpen ? null : { projectPath, sidebarOpen, onToggleSidebar: toggleSidebar }
-              }
-            />
-            {serverLost}
-            <OpenFolderError />
-            <TrustProjectDialog />
-            <StartSessionError projectPath={projectPath} />
-            <KeybindingsFileProblem />
-            <MainAreaBoundary projectPath={projectPath}>
-              <TabView projectPath={projectPath} />
-            </MainAreaBoundary>
-          </main>
-          <SessionActionDialog />
-          <Slot slot="window.overlay" props={{}} />
-        </div>
-      )}
-      {settingsOpen && (
-        // Focusable, so a click on the page keeps the keyboard in its area.
-        <div className="iv-app" data-keybinding-area="settings" tabIndex={-1}>
-          <aside className="iv-app__card" aria-label="Settings">
-            <div className="iv-app__card-top" />
-            <SettingsNav onClose={closeSettings} />
-            <ResizeHandle
-              label="Resize the sidebar"
-              edge="right"
-              property="--iv-card-width"
-              name="sidebar"
-              min={CARD_MIN}
-              max={() => CARD_MAX}
-            />
-          </aside>
-          <main className="iv-app__main">
-            <MainTopBar projectPath={null} controls={null} />
-            {serverLost}
-            <SettingsPage />
-          </main>
-        </div>
-      )}
-    </PluginsProvider>
+            <main className="iv-app__main">
+              <MainTopBar projectPath={null} controls={null} />
+              {serverLost}
+              <SettingsPage />
+            </main>
+          </div>
+        )}
+      </PluginsProvider>
+    </NotificationProvider>
   )
 }

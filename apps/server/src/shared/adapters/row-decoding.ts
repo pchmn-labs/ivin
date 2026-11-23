@@ -26,7 +26,10 @@ export const makeRowDecoding = () => {
         return true
       })
       return Effect.forEach(fresh, ({ what, key, error }) =>
-        logError(`decode ${what}`, new Error(`${what} ${key} does not match its schema: ${error}`)),
+        logError(
+          `decode ${what}`,
+          new Error(`${what} ${key} does not match its schema: ${String(error)}`),
+        ),
       ).pipe(Effect.as(result))
     })
 }

@@ -1,4 +1,5 @@
 import { DateTime } from "effect"
+import { AsyncResult } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
 import { projectsAtom } from "../../project/atoms/list-projects.ts"
@@ -174,7 +175,7 @@ test("the tab list is not loaded until the server answers", async () => {
   const list = server.holdNextTabList()
   const tabs = tabsOf(project)
   registry.mount(tabs.value)
-  await new Promise((resolve) => setTimeout(resolve, 20))
+  await vi.waitFor(() => expect(server.callsOf("tab.list")).toBe(1))
   expect(registry.get(tabs.loaded)).toBe(false)
 
   list.release()
@@ -189,7 +190,8 @@ test("a reorder before the tab list loads changes nothing and keeps the load", a
   registry.mount(reorderTabsAtom)
 
   registry.set(reorderTabsAtom, { projectPath: project, sessionIds: ["s2", "s1"] })
-  await new Promise((resolve) => setTimeout(resolve, 20))
+  await vi.waitFor(() => expect(AsyncResult.isSuccess(registry.get(reorderTabsAtom))).toBe(true))
+  expect(server.callsOf("tab.reorder")).toBe(0)
   list.release()
   await vi.waitFor(() =>
     expect(registry.get(tabs).tabs.map((t) => t.sessionId)).toEqual(["s1", "s2"]),
