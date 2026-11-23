@@ -149,3 +149,13 @@ button.proto-task { cursor: default; }
 @keyframes proto-dialog-in-c { from { opacity: 0; transform: translateX(-50%) scale(0.97); } }
 .proto-dialog-body { padding: var(--iv-space-4) var(--iv-space-5) var(--iv-space-6); }
 .proto-dialog-body > .iv-code-block .iv-code-block__text { max-height: none; }
+
+.proto-detail-row { padding-right: var(--iv-space-1); }
+.proto-detail-row .proto-task-meta { flex: none; margin: 0 var(--iv-space-1); }
+.proto-detail-tab { padding-right: var(--iv-space-3); }
+.proto-detail-close { margin-right: 0; }
+/* Keeps the drag line inside the sheet's rounded top corners. */
+.proto-sheet > .iv-resize-handle::after { right: var(--iv-radius-lg); left: var(--iv-radius-lg); }
+/* Over the transcript's column, at the composer's width. */
+.proto-dialog { position: absolute; top: var(--iv-space-2); bottom: var(--iv-space-6); left: 50%; right: auto; width: calc(min(var(--iv-content-width), 100%) - 2 * var(--iv-space-6)); inset-inline-start: 50%; margin: 0; overflow: hidden; background: var(--iv-bg-card); }
+.proto-main:has(.proto-dialog) { z-index: 11; }

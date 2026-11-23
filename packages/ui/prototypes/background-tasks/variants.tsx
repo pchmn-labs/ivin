@@ -10,6 +10,7 @@ import { ResizeHandle } from "../../src/core/components/resize-handle/resize-han
 import { Tooltip } from "../../src/core/components/tooltip/tooltip.tsx"
 import "../../src/core/components/block/block.css"
 import "../../src/modules/session/ui/session-mark.css"
+import "../../src/modules/tab/ui/sub-view-card.css"
 import "../../src/modules/transcript/ui/transcript-view.css"
 import "../../src/modules/transcript/ui/turn-work.css"
 
@@ -487,27 +488,25 @@ function useEscape(onClose: () => void) {
   })
 }
 
+// The row of tabs is the files card's own row, so both read the same.
 function DetailHeader({ task, onSelect, onClose }: { task: Task; onSelect: (t: Task) => void; onClose: () => void }) {
   return (
-    <div className="proto-detail-head">
-      <div className="proto-detail-tabs" role="tablist" aria-label="Tasks in background">
+    <div className="iv-sub-view-card__row proto-detail-row">
+      <div className="iv-sub-view-card__tabs" role="tablist" aria-label="Tasks in background">
         {TASKS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={t.id === task.id}
-            className="proto-detail-tab"
-            onClick={() => onSelect(t)}
-          >
-            <Icon name={taskIcon(t)} size={14} />
-            <span>{t.name}</span>
-          </button>
+          <div key={t.id} className="iv-sub-view-card__item" data-selected={t.id === task.id || undefined}>
+            <button type="button" role="tab" aria-selected={t.id === task.id} className="iv-sub-view-card__tab proto-detail-tab" onClick={() => onSelect(t)}>
+              <span className="iv-sub-view-card__icon" aria-hidden>
+                <Icon name={taskIcon(t)} size={14} />
+              </span>
+              <span className="iv-sub-view-card__name">{t.name}</span>
+            </button>
+          </div>
         ))}
       </div>
       <TaskMeta task={task} />
-      <button type="button" className="proto-ghost" onClick={onClose} aria-label="Close">
-        <Icon name="x" size={14} />
+      <button type="button" className="iv-sub-view-card__close proto-detail-close" onClick={onClose} aria-label="Close">
+        <Icon name="x" size={12} />
       </button>
     </div>
   )
@@ -570,11 +569,9 @@ export function Dialog() {
   const [open, setOpen] = useState<Task | null>(null)
   useEscape(() => setOpen(null))
   return (
-    <>
-      <Window>
-        <Transcript fold={<Fold onOpen={setOpen} activeId={open?.id ?? null} />} />
-        <Composer />
-      </Window>
+    <Window>
+      <Transcript fold={<Fold onOpen={setOpen} activeId={open?.id ?? null} />} />
+      <Composer />
       {open && (
         <>
           <div className="proto-backdrop" onClick={() => setOpen(null)} />
@@ -586,6 +583,6 @@ export function Dialog() {
           </div>
         </>
       )}
-    </>
+    </Window>
   )
 }
