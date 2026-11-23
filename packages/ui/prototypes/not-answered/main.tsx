@@ -4,12 +4,11 @@ import "../../src/core/theme/tokens.css"
 import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
-import { Dashed, NoIcon, Square } from "./variants.tsx"
+import { Circle, Triangle } from "./variants.tsx"
 
 const VARIANTS = [
-  { name: "Square", Component: Square },
-  { name: "Dashed circle", Component: Dashed },
-  { name: "None", Component: NoIcon },
+  { name: "Circle !", Component: Circle },
+  { name: "Triangle !", Component: Triangle },
 ]
 
 const requested = Number.parseInt(new URLSearchParams(location.search).get("v") ?? "", 10)

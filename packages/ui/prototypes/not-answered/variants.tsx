@@ -1,4 +1,4 @@
-import { CircleDashed } from "@phosphor-icons/react"
+import { Warning } from "@phosphor-icons/react"
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { Block } from "../../src/core/components/block/block.tsx"
 import { Icon, type IconName } from "../../src/core/components/icon/icon.tsx"
@@ -231,12 +231,11 @@ export function Session({ records }: { records: Records }) {
 const STOPPED = "The agent stopped while it waited, so it can no longer take your answer."
 const STOPPED_MANY = "The agent stopped while it waited, so it can no longer take your answers."
 
-type Mark = "square" | "dashed" | "none"
+type Mark = "circle" | "triangle"
 
 function MarkIcon({ mark }: { mark: Mark }) {
-  if (mark === "square") return <Icon name="square" size={14} />
-  if (mark === "dashed") return <CircleDashed className="iv-icon" size={14} weight="regular" />
-  return null
+  if (mark === "circle") return <Icon name="circle-alert" size={14} />
+  return <Warning className="iv-icon" size={14} weight="regular" />
 }
 
 function Unanswered({
@@ -258,11 +257,11 @@ function Unanswered({
           {head}
         </Text>
       </span>
-      <span className={mark === "none" ? undefined : "proto-indent"}>
+      <span className="proto-indent">
         <Stack gap={0}>
           {lines.map((line) => (
             <Text key={line} size="sm" tone="muted">
-              {line}
+              • {line}
             </Text>
           ))}
           <Text size="xs" tone="faint">
@@ -303,8 +302,7 @@ const withMark = (mark: Mark) => () => (
   />
 )
 
-// The stop mark of "Stopped after".
-export const Square = withMark("square")
-// A circle that never filled in; would join the icon list.
-export const Dashed = withMark("dashed")
-export const NoIcon = withMark("none")
+// Already in the icon list, red on a failed turn.
+export const Circle = withMark("circle")
+// Phosphor's Warning; would join the icon list.
+export const Triangle = withMark("triangle")
