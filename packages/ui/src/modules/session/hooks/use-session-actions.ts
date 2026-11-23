@@ -1,12 +1,15 @@
 import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { Session } from "@ivin/contracts/session"
 import type { MenuItem } from "@ivin/plugin-api/ui"
-import { useCallback, useContext } from "react"
+import { useCallback, useContext, useEffect } from "react"
 import { unsavedPathsOf } from "../../file/atoms/file-edit.ts"
 import { notifyCommandFailure } from "../../command/atoms/run-command.ts"
 import { CommandFailure } from "../../command/rules/command-failure.ts"
 import { archiveSessionAtom } from "../atoms/archive-session.ts"
-import { sessionActionFailureOf } from "../atoms/session-action-failure.ts"
+import {
+  sessionActionFailureOf,
+  sessionActionFailureShownBy,
+} from "../atoms/session-action-failure.ts"
 import { sessionConfirmationAtom } from "../atoms/session-confirmation.ts"
 import type { ConfirmedAction } from "../rules/session-action-failure.ts"
 import { needsConfirmation } from "../rules/session-confirmation.ts"
@@ -37,7 +40,7 @@ export function useArchiveFromKey(session: Session | undefined) {
       registry.set(failureOf, null)
       await request("archive", session)
       const failure = registry.get(failureOf)
-      if (failure === null) return
+      if (failure === null || registry.get(sessionActionFailureShownBy(session.id)) > 0) return
       const retry = () =>
         void attempt().catch((error: unknown) => {
           if (error instanceof CommandFailure) notifyCommandFailure(error)
@@ -50,12 +53,24 @@ export function useArchiveFromKey(session: Session | undefined) {
 }
 
 // No items while the session is not loaded.
-export function useSessionActions(session: Session | undefined): {
+// `showsFailure` is false for a caller that does not draw the failure.
+export function useSessionActions(
+  session: Session | undefined,
+  showsFailure = true,
+): {
   readonly items: ReadonlyArray<MenuItem>
   readonly failure: string | null
 } {
+  const registry = useContext(RegistryContext)
   const request = useRequestSessionAction()
   const failure = useAtomValue(sessionActionFailureOf(session?.id ?? ""))
+  const sessionId = session?.id
+  useEffect(() => {
+    if (sessionId === undefined || !showsFailure) return
+    const shownBy = sessionActionFailureShownBy(sessionId)
+    registry.set(shownBy, registry.get(shownBy) + 1)
+    return () => registry.set(shownBy, registry.get(shownBy) - 1)
+  }, [registry, sessionId, showsFailure])
   if (session === undefined) return { items: [], failure: null }
   return {
     items: [

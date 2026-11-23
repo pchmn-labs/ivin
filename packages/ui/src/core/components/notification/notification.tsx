@@ -1,5 +1,6 @@
 import { Toast } from "@base-ui/react/toast"
 import type { NotificationKind, NotifyOptions } from "@ivin/plugin-api/ui"
+import { createContext, type ReactNode, useContext } from "react"
 import { Icon, type IconName } from "../icon/icon.tsx"
 import { MOST_SHOWN, notificationManager, SHOWN_FOR } from "./notification-manager.ts"
 import "../button/button.css"
@@ -35,12 +36,23 @@ function Notifications() {
   ))
 }
 
-export function NotificationViewport() {
+const ProviderMounted = createContext(false)
+
+// Above the views that draw the viewport, so the notifications outlive a view that remounts.
+export function NotificationProvider({ children }: { children: ReactNode }) {
   return (
     <Toast.Provider toastManager={notificationManager} timeout={SHOWN_FOR} limit={MOST_SHOWN}>
-      <Toast.Viewport className="iv-notifications">
-        <Notifications />
-      </Toast.Viewport>
+      <ProviderMounted value>{children}</ProviderMounted>
     </Toast.Provider>
+  )
+}
+
+// Draws nothing outside a provider, so a view mounted alone, as a test does, needs none.
+export function NotificationViewport() {
+  if (!useContext(ProviderMounted)) return null
+  return (
+    <Toast.Viewport className="iv-notifications">
+      <Notifications />
+    </Toast.Viewport>
   )
 }

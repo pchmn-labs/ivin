@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import { NotificationViewport } from "./notification.tsx"
+import { NotificationProvider, NotificationViewport } from "./notification.tsx"
 import { notificationManager, notify, SHOWN_FOR } from "./notification-manager.ts"
 
 afterEach(() => {
@@ -12,7 +12,11 @@ afterEach(() => {
 const shown = (text: string) => page.getByRole("region", { name: "Notifications" }).getByText(text)
 
 async function mount() {
-  await render(<NotificationViewport />)
+  await render(
+    <NotificationProvider>
+      <NotificationViewport />
+    </NotificationProvider>,
+  )
 }
 
 test("a notification shows its message and goes away on its own", async () => {
