@@ -335,6 +335,17 @@ try {
   await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").waitFor()
   await window.waitForTimeout(300)
   await shoot("open-file")
+  await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").first().click()
+  await window.keyboard.type(" ")
+  await window.keyboard.press(
+    process.platform === "darwin" ? "Meta+Shift+Backspace" : "Control+Shift+Backspace",
+  )
+  await window.getByRole("dialog").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("archive-unsaved-edits")
+  await window.getByRole("dialog").getByRole("button", { name: "Cancel" }).click()
+  await window.getByRole("dialog").waitFor({ state: "detached" })
+  await window.keyboard.press(process.platform === "darwin" ? "Meta+S" : "Control+S")
   const card = window.getByRole("region", { name: "Open files" })
   await card.getByRole("button", { name: "Full width" }).click()
   await card.getByRole("button", { name: "Beside chat" }).waitFor()
