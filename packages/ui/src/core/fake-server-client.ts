@@ -120,6 +120,8 @@ export interface FakeServer {
   // Makes the next call of this RPC die, as a lost connection would.
   readonly failNextCall: (rpc: string) => void
   // Makes the next call of this RPC wait until `release` is called, or die as `failNextCall`.
+  // How many times this RPC was called.
+  readonly callsOf: (rpc: string) => number
   readonly holdNextCall: (rpc: string) => {
     readonly release: () => void
     readonly fail: () => void
@@ -1216,10 +1218,12 @@ export const makeFakeServer = (
       ),
   }
 
+  const calls = new Map<string, number>()
   const failingClient = Object.fromEntries(
     Object.entries(client).map(([rpc, call]) => [
       rpc,
       (...args: Array<unknown>) => {
+        calls.set(rpc, (calls.get(rpc) ?? 0) + 1)
         const run = () =>
           failing.delete(rpc)
             ? Effect.die(new Error(`${rpc} failed`))
@@ -1292,6 +1296,7 @@ export const makeFakeServer = (
     },
     failNextCall: (rpc) => void failing.add(rpc),
     untrustedProjects,
+    callsOf: (rpc) => calls.get(rpc) ?? 0,
     holdNextCall: (rpc) => {
       let settle!: (ok: boolean) => void
       holding.set(rpc, new Promise<boolean>((resolve) => (settle = resolve)))

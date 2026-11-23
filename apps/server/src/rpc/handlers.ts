@@ -15,12 +15,16 @@ import { layerFsFolderWatcher } from "../modules/file/adapters/fs-folder-watcher
 import { listFiles } from "../modules/file/usecases/list-files.ts"
 import { readGitStatus } from "../modules/file/usecases/read-git-status.ts"
 import { layerSharedFolderWatch } from "../modules/file/usecases/shared-folder-watch.ts"
+import { layerChangeFeed } from "../modules/file/usecases/change-feed.ts"
 import { watchFolder } from "../modules/file/usecases/watch-folder.ts"
 import { listFolder } from "../modules/file/usecases/list-folder.ts"
 import { readFile } from "../modules/file/usecases/read-file.ts"
 import { listChanges } from "../modules/file/usecases/list-changes.ts"
 import { readDiff } from "../modules/file/usecases/read-diff.ts"
-import { listCommittedChanges } from "../modules/file/usecases/list-committed-changes.ts"
+import {
+  layerCommittedListings,
+  listCommittedChanges,
+} from "../modules/file/usecases/list-committed-changes.ts"
 import { readCommittedDiff } from "../modules/file/usecases/read-committed-diff.ts"
 import { discardChanges } from "../modules/file/usecases/discard-changes.ts"
 import { writeFile } from "../modules/file/usecases/write-file.ts"
@@ -96,6 +100,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     Layer.provideMerge(Layer.mergeAll(sessionRuns, layerCurrentSettings)),
     Layer.provideMerge(layerSessionFeed),
     Layer.provideMerge(layerOriginFetch),
+    Layer.provideMerge(Layer.mergeAll(layerChangeFeed, layerCommittedListings)),
     Layer.provideMerge(layerSharedFolderWatch),
     Layer.provideMerge(
       Layer.mergeAll(
