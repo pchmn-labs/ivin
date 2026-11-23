@@ -34,6 +34,7 @@ const addSession = (server: FakeServer, id: string, lastImageNumber = 0) => {
     relaunchFailure: null,
     pendingMessages: [],
     unreadMessages: [],
+    backgroundTasks: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,

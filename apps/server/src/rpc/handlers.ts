@@ -82,6 +82,7 @@ import { setFullWidth } from "../modules/tab/usecases/set-full-width.ts"
 import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlite-transcript-store.ts"
 import { layerFsImageStore } from "../modules/transcript/adapters/fs-image-store.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
+import { TranscriptStore } from "../modules/transcript/usecases/transcript-store.ts"
 import { layerImageCompression } from "../modules/transcript/usecases/image-compression.ts"
 import { listImages } from "../modules/transcript/usecases/list-images.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
@@ -234,6 +235,8 @@ export const handlers = Rpcs.toLayer(
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),
       "transcript.watchUsage": ({ sessionId }) => watchUsage(sessionId),
+      "transcript.getTaskItems": ({ sessionId, toolCallId }) =>
+        TranscriptStore.use((store) => store.itemsOfTask(sessionId, toolCallId)),
       "transcript.listImages": ({ sessionId }) => listImages(sessionId),
     }),
   ),

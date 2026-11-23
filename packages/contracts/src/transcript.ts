@@ -462,6 +462,11 @@ export const TranscriptRpcs = RpcGroup.make(
     success: SessionUsage,
     stream: true,
   }),
+  // The steps of the background subagent started by tool call `toolCallId`, in order.
+  Rpc.make("transcript.getTaskItems", {
+    payload: { sessionId: Schema.String, toolCallId: Schema.String },
+    success: Schema.Array(TranscriptItem),
+  }),
   // Every image the user sent in the session, in transcript order.
   Rpc.make("transcript.listImages", {
     payload: { sessionId: Schema.String },

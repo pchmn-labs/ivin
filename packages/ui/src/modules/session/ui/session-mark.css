@@ -45,6 +45,50 @@
   animation: iv-spin var(--iv-duration-spin) linear infinite;
 }
 
+.iv-session-mark[data-status="in_background"] {
+  --iv-mark-overlay-size: 9px;
+}
+
+/* A dot that breathes: the agent rests on tasks, and no turn runs. */
+.iv-session-mark[data-status="in_background"] .iv-session-mark__overlay {
+  background: var(--iv-status-working);
+  animation: iv-background-pulse var(--iv-duration-pulse) ease-in-out infinite;
+}
+
+@keyframes iv-background-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--iv-accent) 45%, transparent);
+    opacity: 1;
+  }
+
+  50% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--iv-accent) 0%, transparent);
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-session-mark[data-status="in_background"] .iv-session-mark__overlay {
+    animation: none;
+  }
+}
+
+.iv-session-mark__tasks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.iv-session-mark__tasks li {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+}
+
 .iv-session-mark[data-status="waiting"] .iv-session-mark__overlay {
   color: var(--iv-status-waiting);
 }

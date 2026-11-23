@@ -19,6 +19,6 @@ export const workingSessions = <S extends WorkingSession>(
     )
   return {
     needsYou: listed.filter((s) => s.status === "waiting"),
-    running: listed.filter((s) => s.status === "working"),
+    running: listed.filter((s) => s.status === "working" || s.status === "in_background"),
   }
 }

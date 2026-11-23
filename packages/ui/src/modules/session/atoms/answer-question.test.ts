@@ -26,6 +26,7 @@ test("answering questions stores the answers on their item and updates the sessi
     relaunchFailure: null,
     pendingMessages: [],
     unreadMessages: [],
+    backgroundTasks: [],
     status: "waiting",
     statusChangedAt: at,
     createdAt: at,

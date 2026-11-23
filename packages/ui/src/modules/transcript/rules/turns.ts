@@ -27,7 +27,13 @@ export const transcriptRows = (all: ReadonlyArray<TranscriptItem>): TranscriptRo
   const turns: TranscriptItem[][] = []
   // The agent's questions show in place of the tool call that asked them.
   const asked = new Set(all.flatMap((item) => (item.type === "question" ? [item.toolCallId] : [])))
-  const items = all.filter((item) => item.type !== "tool_call" || !asked.has(item.toolCallId))
+  // A task shows in the fold, and a subagent's steps in the task's sheet, not in the turns.
+  const items = all.filter(
+    (item) =>
+      item.type !== "task" &&
+      !("parentToolCallId" in item && item.parentToolCallId !== undefined) &&
+      (item.type !== "tool_call" || !asked.has(item.toolCallId)),
+  )
   for (const item of items) {
     if (isUserMessage(item) || turns.length === 0) turns.push([item])
     else turns.at(-1)!.push(item)

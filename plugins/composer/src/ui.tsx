@@ -85,7 +85,10 @@ function Composer({ sessionId }: { sessionId: string }) {
   useTakeUnreadMessages(sessionId)
   const interrupt = useInterruptSession(sessionId)
   const session = useSession(sessionId)
-  const running = session?.status === "working" || session?.status === "waiting"
+  const running =
+    session?.status === "working" ||
+    session?.status === "waiting" ||
+    session?.status === "in_background"
   const preparing = session?.status === "preparing_worktree"
   const setRunOptions = useSetRunOptions(sessionId)
   const offered = useOfferedRunOptions(sessionId)

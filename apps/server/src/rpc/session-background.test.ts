@@ -269,6 +269,11 @@ test("a subagent's steps are stored under its call, and the steps of a call that
         expect(itemsOf(db, created.id, "tool_call")).toMatchObject([
           { toolCallId: "call-k1-ls", parentToolCallId: "call-k1" },
         ])
+        const steps = yield* client["transcript.getTaskItems"]({
+          sessionId: created.id,
+          toolCallId: "call-k1",
+        })
+        expect(steps).toMatchObject([{ type: "tool_call", toolCallId: "call-k1-ls" }])
       }),
   )
 })

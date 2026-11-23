@@ -308,3 +308,30 @@ test("questions asked before the turn's last tool call stay in its work, as a st
     ).steps[0]!.children.map((child) => child.id),
   ).toEqual(["q", "c1"])
 })
+
+test("a task and a subagent's steps are no part of the turns", () => {
+  const items: TranscriptItem[] = [
+    user("u1"),
+    call("c1", "agent"),
+    {
+      ...base("task"),
+      type: "task",
+      taskId: "k1",
+      toolCallId: "c1",
+      kind: "agent",
+      description: "Review",
+      status: "running",
+      summary: null,
+      output: null,
+    },
+    { ...(call("step", "command") as object), parentToolCallId: "c1" } as TranscriptItem,
+    { ...(text("step-text") as object), parentToolCallId: "c1" } as TranscriptItem,
+    text("answer"),
+  ]
+
+  const shown = new Set(
+    transcriptRows(items).flatMap((row) => (row.type === "work" ? row.turnIds : [row.id])),
+  )
+
+  expect(shown).toEqual(new Set(["u1", "c1", "answer"]))
+})

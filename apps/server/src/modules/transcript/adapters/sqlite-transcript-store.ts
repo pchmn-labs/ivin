@@ -216,6 +216,16 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             hasAfter: later.length > after,
           }
         }),
+      itemsOfTask: (sessionId, toolCallId) =>
+        decoding((report) =>
+          readItems(
+            report,
+            `SELECT id, payload FROM transcript_items
+             WHERE session_id = ? AND payload ->> '$.parentToolCallId' = ? ORDER BY position`,
+            sessionId,
+            toolCallId,
+          ),
+        ),
       usageTotal: (sessionId) =>
         Effect.sync(() => {
           const row = db
