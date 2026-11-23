@@ -10,7 +10,7 @@ It replaces a fork of MonoCode that grew to 167 commits, 54 features and 142 tou
 2. **Files and a CLI before tools.** Settings, themes and keybindings live in watched files, and they and session annotations are reachable through the `ivin` CLI. Agents already master files and shells, on every harness, with no injection. MCP comes later, only as an optimisation.
 3. **A broken plugin must not take the app down, and the app always recovers.** Agents write most plugins. Server halves run in their own process, which can be killed without touching running sessions; UI errors are contained to the plugin's slot where React allows it, and safe mode covers the rest. Errors are reported where the agent can read them.
 4. **Don't reinvent the harness layer.** Provider protocols come from T3 Code and MonoCode (both MIT, attribution kept in `NOTICE`).
-5. **Light and leak-free by default.** Every feature is built to hold only what it needs (see [Performance and memory](#performance-and-memory)). No memory, startup or leak check runs in CI yet.
+5. **Light and leak-free by default.** Every feature is built to hold only what it needs (see [Performance and memory](#performance-and-memory)).
 6. **Effect inside, plain TypeScript at the edge.** The core is written with Effect v4; the plugin API is functions, promises and React hooks.
 7. **No harness is special.** ivin runs sessions on several harnesses (Claude Code, Codex, ACP agents), and Claude Code is one implementation of the `HarnessProvider` port among them. Only a provider's own module in `packages/harness` knows a harness's protocol, flags, names or tools; everything else speaks of "the agent" and reads the session's harness when it must show its name, mark or run options.
 
@@ -72,7 +72,7 @@ Effect v4 is recent, so agents will often write v3 idioms in the core. That cost
 ```
 
 - **server** runs in an Electron `utilityProcess`, so a slow git call never freezes the window, and the same server can later run headless (remote machine, web client, mobile) like T3 Code's. Agent processes are its children, so nothing a plugin does may run inside it.
-- **plugin host** is a second `utilityProcess` that runs every plugin's server half. A plugin that loops or crashes takes the host down, not the server: sessions keep running, and the server restarts the host without the faulty plugin (see [Error isolation](#error-isolation)).
+- **plugin host** (not built yet) is a second `utilityProcess` that runs every plugin's server half. A plugin that loops or crashes takes the host down, not the server: sessions keep running, and the server restarts the host without the faulty plugin (see [Error isolation](#error-isolation)).
 - **main** stays thin: windows, OS integration, and the crash bookkeeping behind safe mode.
   The window never leaves the page it loaded: a web or mail link, clicked or opened in a new window, opens in the default browser through `shell.openExternal`, and any other navigation is dropped.
 - **One RPC contract, several transports.** `packages/contracts` defines every request and stream once with Effect `Schema`. The renderer reaches it over a `MessagePort`, the plugin host over another, the CLI over a unix socket (`~/.ivin/run/ivin.sock`, mode 0600, one JSON message per line, limited to the CLI's RPCs), and a headless client later over a WebSocket. Every CLI command is an RPC the UI can call. A handler that dies fails only its own request: the RPC server runs with `disableFatalDefects`, so the connection's other streams keep running. `~/.ivin` and its log folders are created readable by the user only (mode 0700).
@@ -90,7 +90,7 @@ apps/                 what runs: each has a `main` and is imported by nothing
       adapters/       Layers behind those ports: SQLite, child processes, file watchers, sockets
     shared/
     main.ts           composition root: the one place that knows every Layer
-  plugin-host/        entry of the plugin host process: loads server halves, implements `ctx` over RPC. Flat
+  plugin-host/        (not built yet) entry of the plugin host process: loads server halves, implements `ctx` over RPC. Flat
   cli/                `ivin` binary (thin RPC client). Flat, one file per command
 packages/             what is imported
   contracts/          Schema only, one file per subject: RPC, domain types, transcript events, plugin manifest
@@ -118,7 +118,7 @@ docs/
 
 ### Code layout
 
-The subject comes before the layer: a package with logic has one module per term of the domain model, named the same in `contracts`, `server` and `ui`, and what a test of a file needs decides its layer (`rules/`, `usecases/`, `atoms/`, `hooks/`, `ui/`, `adapters/`). Oxlint enforces that pure code imports nothing impure and that orchestration imports no adapter; every other direction is navigation. Packages too thin to have layers (`desktop`, `cli`, `plugin-host`, `contracts`, `state`, `plugin-api`) stay flat.
+The subject comes before the layer: a package with logic has one module per term of the domain model, named the same in `contracts`, `server` and `ui`, and what a test of a file needs decides its layer (`rules/`, `usecases/`, `atoms/`, `hooks/`, `ui/`, `adapters/`). Oxlint enforces that pure code imports nothing impure and that orchestration imports no adapter; every other direction is navigation. Packages too thin to have layers (`desktop`, `cli`, `contracts`, `state`, `plugin-api`) stay flat.
 
 The rules per package are in [`docs/conventions/`](../conventions/README.md), the reasons in [ADR-0001](../adr/0001-code-grouped-by-subject-and-layered-by-test.md).
 
@@ -281,7 +281,7 @@ What is contained, and by what:
 | UI contribution throws while rendering | its own error boundary shows "plugin `prs` failed — see `ivin plugin logs prs`" in place of the slot, and the error is written to the plugin's log |
 | UI editor extension is invalid, or a file icon function throws | the extension is checked once with `EditorState.create` when the plugin adds it, and each icon function is wrapped; the faulty one is turned off and reported to the plugin's log, and files open and icons draw without it |
 | Core UI throws while rendering | a boundary inside `RegistryProvider` shows the window's failure message with Retry and Reload window; Retry keeps every atom, so drafts and unsaved edits stay. A boundary around the session and file area, reset on a tab switch, shows the same message there while the sidebar keeps working. Both write the error to `ivin logs` |
-| UI contribution throws in an event handler or async code | caught by a window-level handler and written to `ivin logs`; attributing it to the plugin by its bundle URL, and writing it to the plugin's log, are not built yet |
+| UI contribution throws in an event handler or async code | caught by a window-level handler: an error from the app's own code is written to `ivin logs`, and one from a plugin's source is not logged yet. Attributing it to the plugin by its bundle URL, and its plugin log, are not built yet |
 | UI contribution blocks or loops the renderer | not containable in-process. Main sees the window unresponsive, reloads it with the plugins activated or reloaded last disabled, and says which |
 
 **Safe mode** is the recovery of last resort: main records each launch, and after a crash or hang during startup the next launch disables user and project plugins and reports it. `ivin --safe` forces it, and `ivin plugin disable <id>` works from the CLI even when the window is unusable.
@@ -314,7 +314,7 @@ export const activate: ServerPlugin = (ctx) => {
 
 ### UI API (`ui.tsx`)
 
-Plugins contribute React components to named **slots**. A slot receives typed props and renders every contribution in `order`; a contribution can declare `replaces` to take over a built-in one (e.g. a custom renderer for `Bash` tool calls). When several plugins replace the same contribution, it stays hidden and each of them renders, in `order`; nothing picks one.
+Plugins contribute React components to named **slots**. A slot receives typed props and renders every contribution in `order`; a contribution can declare `replaces` to take over a built-in one (e.g. a custom renderer for `Bash` tool calls). When several plugins replace the same contribution, the replaced contribution stays hidden and every plugin that replaces it renders, in `order`; ivin picks none.
 
 A contribution is named `<plugin id>/<name>` (`name` defaults to the slot name), and `replaces` holds that id. A `transcript.toolCall` contribution declares the tool it renders with `tool: "Bash"`, and one without `tool` matches every tool. Every matching contribution renders unless another shown one replaces it, so a `Bash` renderer sets `replaces: "tool-calls/default"`. Thinking has no slot: it goes through `transcript.message`. The host passes the hooks to `@ivin/plugin-api` through a provider (`UiHostProvider`), implemented over the UI's atoms, so the package never imports the UI. Which parts of the window are the app's frame and which are contributions is in [ADR-0009](../adr/0009-the-window-frame-stays-in-the-app-and-its-features-are-plugins.md).
 
