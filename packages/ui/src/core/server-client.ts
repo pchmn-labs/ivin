@@ -3,6 +3,7 @@ import { layerClientProtocolMessagePort } from "@ivin/state/rpc-client-protocol"
 import { Cause, Context, Effect, Layer, Stream } from "effect"
 import { RpcClient, RpcClientError } from "effect/rpc"
 import { Atom } from "effect/reactivity"
+import "./desktop-bridge.ts"
 import { errorReport } from "../modules/log/rules/error-report.ts"
 
 export class ServerClient extends Context.Service<
@@ -11,34 +12,48 @@ export class ServerClient extends Context.Service<
 >()("ivin/ui/ServerClient") {}
 
 // The preload answers this window message with a port to the server, see apps/desktop/src/preload.ts.
-const requestServerPort = () =>
+const requestServerPort = (signal: AbortSignal) =>
   new Promise<MessagePort>((resolve) => {
+    // The id keeps a client that is still waiting from taking the port the next one asked for.
+    const id = crypto.randomUUID()
     const onMessage = (event: MessageEvent) => {
       const [port] = event.ports
-      if (event.source !== window || event.data !== "ivin:rpc-port" || !port) return
+      const data = event.data as { type?: unknown; id?: unknown } | null
+      if (event.source !== window || data?.type !== "ivin:rpc-port" || data.id !== id || !port) {
+        return
+      }
       window.removeEventListener("message", onMessage)
       resolve(port)
     }
     window.addEventListener("message", onMessage)
-    window.postMessage("ivin:request-rpc-port", "*")
+    signal.addEventListener("abort", () => window.removeEventListener("message", onMessage))
+    window.postMessage({ type: "ivin:request-rpc-port", id }, "*")
   })
 
-const serverClientLayer = Layer.unwrap(
-  Effect.promise(requestServerPort).pipe(
-    Effect.map((port) =>
-      Layer.effect(ServerClient)(RpcClient.make(Rpcs)).pipe(
-        Layer.provide(
+// A new layer each time: layers are memoized by identity, and a restarted server needs a new port.
+export const makeServerClientLayer = () =>
+  Layer.effect(ServerClient)(
+    Effect.gen(function* () {
+      const port = yield* Effect.acquireRelease(Effect.promise(requestServerPort), (port) =>
+        Effect.sync(() => port.close()),
+      )
+      return yield* RpcClient.make(Rpcs).pipe(
+        Effect.provide(
           layerClientProtocolMessagePort({
             onMessage: (handler) => {
               port.onmessage = (event) => handler(event.data)
             },
             postMessage: (data) => port.postMessage(data),
+            onLost: (handler) => {
+              window.ivin.onServerState((state) => {
+                if (state.kind !== "running") handler()
+              })
+            },
           }),
         ),
-      ),
-    ),
-  ),
-)
+      )
+    }),
+  )
 
 const reportRpcFailures = (client: ServerClient["Service"]): ServerClient["Service"] => {
   const report = (action: string) => (cause: Cause.Cause<unknown>) =>
@@ -71,6 +86,6 @@ const reportingRpcFailures = <E, R>(layer: Layer.Layer<ServerClient, E, R>) =>
   ).pipe(Layer.provide(layer))
 
 // Tests replace this layer through the registry's initial values.
-export const serverClientLayerAtom = Atom.make(serverClientLayer)
+export const serverClientLayerAtom = Atom.make(makeServerClientLayer())
 
 export const serverRuntime = Atom.runtime((get) => reportingRpcFailures(get(serverClientLayerAtom)))

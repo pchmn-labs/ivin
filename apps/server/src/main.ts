@@ -23,12 +23,13 @@ import { layerFsUserPlugins } from "./modules/plugin/adapters/fs-user-plugins.ts
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
 import { layerFsSkillInstallation } from "./modules/skill/adapters/fs-skill-install.ts"
 import { layerServices } from "./rpc/handlers.ts"
-import { serveOverPort, serveOverSocket } from "./rpc/serve.ts"
+import { serveOverClosingPort, serveOverSocket } from "./rpc/serve.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
 import { ImageFolder } from "./modules/transcript/usecases/image-folder.ts"
 
 interface MainPort {
   on(event: "message", listener: (event: { data: unknown }) => void): void
+  on(event: "close", listener: () => void): void
   postMessage(data: string): void
   start(): void
 }
@@ -37,6 +38,7 @@ interface MainPort {
 const { parentPort } = process as unknown as {
   parentPort: {
     on(event: "message", listener: (event: { data: unknown; ports: MainPort[] }) => void): void
+    postMessage(message: unknown): void
   }
 }
 
@@ -124,7 +126,7 @@ const adoptLoginShellPath = Effect.gen(function* () {
 // Ports main posts before the database is ready wait here.
 let serve: ((port: MainPort) => void) | undefined
 const waiting: MainPort[] = []
-const launched: Fiber.Fiber<never, unknown>[] = []
+const launched = new Set<Fiber.Fiber<unknown, unknown>>()
 
 // Each port main hands over is one client; a window reload brings a new one.
 parentPort.on("message", ({ data, ports: [port] }) => {
@@ -155,17 +157,23 @@ const startup = Effect.gen(function* () {
     ),
   )
   serve = (port) => {
-    const server = serveOverPort(
-      {
-        onMessage: (handler) => port.on("message", (event) => handler(event.data)),
-        postMessage: (data) => port.postMessage(data),
-      },
-      { version: pkg.version },
-    ).pipe(Layer.provide(Layer.succeedContext(context)))
-    launched.push(Effect.runFork(Layer.launch(server)))
+    const fiber = Effect.runFork(
+      serveOverClosingPort(
+        {
+          onMessage: (handler) => port.on("message", (event) => handler(event.data)),
+          onClose: (handler) => port.on("close", handler),
+          postMessage: (data) => port.postMessage(data),
+        },
+        { version: pkg.version },
+      ).pipe(Effect.provide(Layer.succeedContext(context))),
+    )
+    launched.add(fiber)
+    fiber.addObserver(() => launched.delete(fiber))
     port.start()
   }
   waiting.splice(0).forEach(serve)
+  // Main restarts a server that stops, and waits for this before it says the window may connect.
+  parentPort.postMessage({ type: "ready" })
   // Without the socket the window still works; only `ivin` commands fail.
   yield* serveOverSocket(socketPath as string, { version: pkg.version }).pipe(
     Effect.provide(context),
@@ -179,11 +187,15 @@ const startup = Effect.gen(function* () {
   return yield* Effect.never
 }).pipe(Effect.scoped)
 
+// The log is where the window's message tells the user to look.
+const failAfterLogging = (message: string) =>
+  Effect.logError(message).pipe(Effect.andThen(Effect.sync(() => fail(message))))
+
 const startupFiber = Effect.runFork(
   startup.pipe(
+    Effect.catchTag("DatabaseSchemaTooNew", (error) => failAfterLogging(error.message)),
+    Effect.catchCause((cause) => failAfterLogging(Cause.pretty(cause))),
     Effect.provide(layerLogger),
-    Effect.catchTag("DatabaseSchemaTooNew", (error) => Effect.sync(() => fail(error.message))),
-    Effect.catchCause((cause) => Effect.sync(() => fail(Cause.pretty(cause)))),
   ),
 )
 

@@ -5,6 +5,7 @@ import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
+import { serverStateAtom } from "../modules/server/atoms/server-state.ts"
 import { App } from "./app.tsx"
 
 const openSessions = () => page.getByRole("tablist", { name: "Open sessions" })
@@ -378,6 +379,55 @@ test("a server that does not answer is reported in the window, without a raw err
     )
     .toBeVisible()
   expect(document.body.textContent).not.toContain("server.getVersion failed")
+})
+
+test("a restarting server is reported in the window", async () => {
+  const server = makeFakeServer()
+  const screen = await render(
+    <RegistryProvider
+      initialValues={[
+        [serverClientLayerAtom, server.layer],
+        [serverStateAtom, { kind: "restarting" }],
+      ]}
+    >
+      <App />
+    </RegistryProvider>,
+  )
+  await expect
+    .element(screen.getByRole("alert").getByText("ivin's server stopped. Restarting it…"))
+    .toBeVisible()
+  await expect.element(screen.getByRole("button", { name: "Restart" })).not.toBeInTheDocument()
+})
+
+test("a server that keeps stopping shows its log's path and a Restart button the keyboard reaches", async () => {
+  const server = makeFakeServer()
+  const restart = vi.fn(() => Promise.resolve())
+  Object.defineProperty(window, "ivin", { configurable: true, value: { restartServer: restart } })
+  await render(
+    <RegistryProvider
+      initialValues={[
+        [serverClientLayerAtom, server.layer],
+        [serverStateAtom, { kind: "gave-up", logPath: "/home/.ivin/logs/ivin.log" }],
+      ]}
+    >
+      <App />
+    </RegistryProvider>,
+  )
+  await expect
+    .element(
+      page
+        .getByRole("alert")
+        .getByText("ivin's server keeps stopping. Its log is at /home/.ivin/logs/ivin.log."),
+    )
+    .toBeVisible()
+
+  const button = page.getByRole("button", { name: "Restart" })
+  for (let tabs = 0; tabs < 40 && document.activeElement?.textContent !== "Restart"; tabs++) {
+    await userEvent.tab()
+  }
+  await expect.element(button).toHaveFocus()
+  await userEvent.keyboard("{Enter}")
+  expect(restart).toHaveBeenCalledOnce()
 })
 
 test("the keyboard alone archives the session on screen, opens the archived list and restores it", async () => {

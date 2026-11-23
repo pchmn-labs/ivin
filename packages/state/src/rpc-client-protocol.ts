@@ -4,6 +4,8 @@ import { RpcClient, RpcMessage, RpcSerialization } from "effect/rpc"
 export interface RpcPort {
   readonly onMessage: (handler: (data: unknown) => void) => void
   readonly postMessage: (data: string) => void
+  // Called when the server behind the port is gone: requests still waiting for an answer end with an error.
+  readonly onLost?: (handler: () => void) => void
 }
 
 export const layerClientProtocolMessagePort = (port: RpcPort): Layer.Layer<RpcClient.Protocol> => {
@@ -22,6 +24,14 @@ export const layerClientProtocolMessagePort = (port: RpcPort): Layer.Layer<RpcCl
           ) as ReadonlyArray<RpcMessage.FromServerEncoded>) {
             for (const clientId of clientIds) run(writeResponse(clientId, message))
           }
+        })
+
+        port.onLost?.(() => {
+          const defect: RpcMessage.FromServerEncoded = {
+            _tag: "Defect",
+            defect: "ivin's server stopped",
+          } as RpcMessage.FromServerEncoded
+          for (const clientId of clientIds) run(writeResponse(clientId, defect))
         })
 
         return {

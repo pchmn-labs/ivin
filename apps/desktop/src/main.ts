@@ -14,12 +14,29 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { delimiter, join } from "node:path"
 import { pathToFileURL } from "node:url"
-import { OPEN_SETTINGS_FILE, PICK_FOLDER, RPC_PORT_REQUEST, RPC_PORT_REPLY } from "./channels.ts"
+import {
+  GET_SERVER_STATE,
+  OPEN_SETTINGS_FILE,
+  PICK_FOLDER,
+  RESTART_SERVER,
+  RPC_PORT_REPLY,
+  RPC_PORT_REQUEST,
+  SERVER_STATE,
+} from "./channels.ts"
 import { writeCliCommand } from "./cli-command.ts"
 import { linkTarget } from "./link-target.ts"
 import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
 import { PLUGIN_SCHEME, pluginFile } from "./plugin-protocol.ts"
 import { PLUGIN_BUNDLE_SCHEME, pluginBundleFile } from "./plugin-bundle-protocol.ts"
+import { createRestartPolicy } from "./restart-policy.ts"
+
+// A dev build keeps its own data, so it never shares a database with the installed app.
+if (!app.isPackaged && !app.commandLine.hasSwitch("user-data-dir")) {
+  app.setPath("userData", join(app.getPath("appData"), "ivin-dev"))
+}
+// The lock is per userData folder, so it comes after the folder is set.
+const isFirstInstance = app.requestSingleInstanceLock()
+if (!isFirstInstance) app.quit()
 
 const devUrl = process.env["IVIN_DEV_URL"]
 const openInBackground = process.env["IVIN_BACKGROUND"] === "1"
@@ -52,7 +69,14 @@ process.on("uncaughtException", (error) => {
   process.exit(1)
 })
 
-let server: UtilityProcess
+type ServerState =
+  | { readonly kind: "running" }
+  | { readonly kind: "restarting" }
+  | { readonly kind: "gave-up"; readonly logPath: string }
+
+let server: UtilityProcess | null = null
+let serverState: ServerState = { kind: "running" }
+let startServer: (options?: { readonly manual: boolean }) => void = () => {}
 
 // Registered before ready: the window loads sent images and plugins' files straight from disk.
 protocol.registerSchemesAsPrivileged([
@@ -109,10 +133,12 @@ const createWindow = async () => {
 }
 
 // One channel per request: the renderer asks again after each reload.
-ipcMain.on(RPC_PORT_REQUEST, (event) => {
+ipcMain.on(RPC_PORT_REQUEST, (event, id: unknown) => {
+  // The window asks again once the restarted server is back.
+  if (!server) return
   const { port1, port2 } = new MessageChannelMain()
   server.postMessage({}, [port1])
-  event.sender.postMessage(RPC_PORT_REPLY, null, [port2])
+  event.sender.postMessage(RPC_PORT_REPLY, id, [port2])
 })
 
 ipcMain.handle(PICK_FOLDER, async (event) => {
@@ -127,23 +153,48 @@ ipcMain.handle(PICK_FOLDER, async (event) => {
 app.on("window-all-closed", () => app.quit())
 const SERVER_STOP_TIMEOUT_MS = 5_000
 let serverStopped = false
-let serverExited = false
+let quitting = false
+app.on("before-quit", () => {
+  quitting = true
+})
 app.on("will-quit", (event) => {
-  if (serverStopped || serverExited || !server) return
+  const stopping = server
+  if (serverStopped || !stopping) return
   event.preventDefault()
   serverStopped = true
   const timer = setTimeout(() => {
-    server.kill()
+    stopping.kill()
     app.quit()
   }, SERVER_STOP_TIMEOUT_MS)
-  server.once("exit", () => {
+  stopping.once("exit", () => {
     clearTimeout(timer)
     app.quit()
   })
-  server.postMessage({ type: "shutdown" })
+  stopping.postMessage({ type: "shutdown" })
 })
 
-const ivinHome = process.env["IVIN_HOME"] ?? join(homedir(), ".ivin")
+app.on("second-instance", () => {
+  if (openInBackground) return
+  const [window] = BrowserWindow.getAllWindows()
+  if (!window) return
+  if (window.isMinimized()) window.restore()
+  window.show()
+  window.focus()
+})
+
+const ivinHome = process.env["IVIN_HOME"] ?? join(homedir(), app.isPackaged ? ".ivin" : ".ivin-dev")
+const logPath = join(ivinHome, "logs", "ivin.log")
+
+const setServerState = (state: ServerState) => {
+  serverState = state
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(SERVER_STATE, state)
+}
+ipcMain.handle(GET_SERVER_STATE, () => serverState)
+ipcMain.handle(RESTART_SERVER, () => {
+  if (serverState.kind !== "gave-up") return
+  setServerState({ kind: "restarting" })
+  startServer({ manual: true })
+})
 
 ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
   const file = join(ivinHome, "settings.json")
@@ -161,6 +212,7 @@ ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
 })
 
 void app.whenReady().then(() => {
+  if (!isFirstInstance) return
   if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
   const imageFolder = join(app.getPath("userData"), "images")
   protocol.handle(IMAGE_SCHEME, (request) => {
@@ -183,25 +235,26 @@ void app.whenReady().then(() => {
   })
   const cliFolder = join(app.getPath("userData"), "bin")
   const cliCommand = writeCliCommand(cliFolder, process.execPath, cliEntry)
-  server = utilityProcess.fork(
-    serverEntry,
-    [
-      "--database",
-      join(app.getPath("userData"), "ivin.db"),
-      "--log",
-      join(ivinHome, "logs", "ivin.log"),
-      "--home",
-      ivinHome,
-      "--images",
-      imageFolder,
-      "--skill",
-      skillFolder,
-      "--pnpm",
-      pnpmFolder,
-      "--cli-command",
-      cliCommand,
-    ],
-    {
+  const serverArgs = [
+    "--database",
+    join(app.getPath("userData"), "ivin.db"),
+    "--log",
+    logPath,
+    "--home",
+    ivinHome,
+    "--images",
+    imageFolder,
+    "--skill",
+    skillFolder,
+    "--pnpm",
+    pnpmFolder,
+    "--cli-command",
+    cliCommand,
+  ]
+  let nextRestart = createRestartPolicy()
+  startServer = (options) => {
+    if (options?.manual) nextRestart = createRestartPolicy()
+    const started = utilityProcess.fork(serverEntry, serverArgs, {
       serviceName: "ivin-server",
       stdio: "inherit",
       env: {
@@ -209,10 +262,25 @@ void app.whenReady().then(() => {
         IVIN_SOCKET: join(ivinHome, "run", "ivin.sock"),
         PATH: [cliFolder, process.env["PATH"]].filter(Boolean).join(delimiter),
       },
-    },
-  )
-  server.once("exit", () => {
-    serverExited = true
-  })
+    })
+    server = started
+    let answered = false
+    started.on("message", (message: { type?: string }) => {
+      if (message.type !== "ready") return
+      answered = true
+      if (serverState.kind !== "running") setServerState({ kind: "running" })
+    })
+    started.once("exit", () => {
+      if (server === started) server = null
+      if (quitting || serverStopped) return
+      if (nextRestart(Date.now(), answered) === "give-up") {
+        setServerState({ kind: "gave-up", logPath })
+        return
+      }
+      setServerState({ kind: "restarting" })
+      startServer()
+    })
+  }
+  startServer()
   return createWindow()
 })
