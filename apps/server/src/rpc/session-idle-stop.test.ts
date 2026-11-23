@@ -283,7 +283,6 @@ test("an agent whose session is in background is not stopped for being idle", as
       yield* send(client, session.id, "m1")
       yield* untilSession(client, session.id, (s) => s.status === "in_background")
       yield* TestClock.adjust("1 hour")
-      yield* settle
       return [...closed]
     }),
   )
