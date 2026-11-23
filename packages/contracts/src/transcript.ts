@@ -38,25 +38,31 @@ const UserMessageBody = Schema.Struct({
   images: Schema.optional(Schema.Array(ImageRef)),
   steer: Schema.optional(Schema.Boolean),
 })
+// A step of a background subagent names the tool call that started it, and joins that task's run.
+const parentToolCallId = { parentToolCallId: Schema.optional(Schema.String) }
 const AssistantTextBody = Schema.Struct({
   type: Schema.Literal("assistant_text"),
   text: Schema.String,
+  ...parentToolCallId,
 })
 const ThinkingBody = Schema.Struct({
   type: Schema.Literal("thinking"),
   text: Schema.String,
+  ...parentToolCallId,
 })
 const ToolCallBody = Schema.Struct({
   type: Schema.Literal("tool_call"),
   toolCallId: Schema.String,
   name: Schema.String,
   input: Schema.Unknown,
+  ...parentToolCallId,
 })
 const ToolResultBody = Schema.Struct({
   type: Schema.Literal("tool_result"),
   toolCallId: Schema.String,
   output: Schema.String,
   isError: Schema.Boolean,
+  ...parentToolCallId,
 })
 const ApprovalRequestBody = Schema.Struct({
   type: Schema.Literal("approval_request"),
@@ -126,6 +132,31 @@ const ErrorBody = Schema.Struct({
   message: Schema.String,
 })
 
+// A subagent or a command the agent started in the background; it outlives the turn that started it.
+export const TaskKind = Schema.Literals(["agent", "command"])
+export type TaskKind = typeof TaskKind.Type
+
+const TaskStartedBody = Schema.Struct({
+  type: Schema.Literal("task_started"),
+  taskId: Schema.String,
+  // The tool call that started the task.
+  toolCallId: Schema.String,
+  kind: TaskKind,
+  description: Schema.String,
+})
+// `stopped`: the user or the agent stopped it, or the run ended first.
+export const TaskOutcome = Schema.Literals(["completed", "failed", "stopped"])
+export type TaskOutcome = typeof TaskOutcome.Type
+
+const TaskEndedBody = Schema.Struct({
+  type: Schema.Literal("task_ended"),
+  taskId: Schema.String,
+  outcome: TaskOutcome,
+  summary: Schema.String,
+  // A command's output as it stood at the end, cut to its last lines; null for a subagent.
+  output: Schema.NullOr(Schema.String),
+})
+
 const InterruptionBody = Schema.Struct({ type: Schema.Literal("interruption") })
 
 const workingFolderFields = {
@@ -157,24 +188,7 @@ const runOptionFields = {
 }
 const RunOptionBody = Schema.Struct({ type: Schema.Literal("run_option"), ...runOptionFields })
 
-const eventBodies = [
-  UserMessageBody,
-  AssistantTextBody,
-  ThinkingBody,
-  ToolCallBody,
-  ToolResultBody,
-  ApprovalRequestBody,
-  ApprovalDecisionBody,
-  QuestionRequestBody,
-  QuestionAnswerBody,
-  RequestUnansweredBody,
-  UsageBody,
-  StatusBody,
-  ErrorBody,
-  InterruptionBody,
-  WorkingFolderBody,
-  RunOptionBody,
-] as const
+
 
 const raw = { raw: Schema.Unknown }
 const stored = {
@@ -185,9 +199,26 @@ const stored = {
 }
 
 // What a harness emits; the server gives it an id, a session and a sequence when it stores it.
-export const HarnessEvent = Schema.Union(
-  eventBodies.map((body) => body.mapFields((f) => ({ ...f, ...raw }))),
-)
+export const HarnessEvent = Schema.Union([
+  UserMessageBody.mapFields((f) => ({ ...f, ...raw })),
+  AssistantTextBody.mapFields((f) => ({ ...f, ...raw })),
+  ThinkingBody.mapFields((f) => ({ ...f, ...raw })),
+  ToolCallBody.mapFields((f) => ({ ...f, ...raw })),
+  ToolResultBody.mapFields((f) => ({ ...f, ...raw })),
+  ApprovalRequestBody.mapFields((f) => ({ ...f, ...raw })),
+  ApprovalDecisionBody.mapFields((f) => ({ ...f, ...raw })),
+  QuestionRequestBody.mapFields((f) => ({ ...f, ...raw })),
+  QuestionAnswerBody.mapFields((f) => ({ ...f, ...raw })),
+  RequestUnansweredBody.mapFields((f) => ({ ...f, ...raw })),
+  UsageBody.mapFields((f) => ({ ...f, ...raw })),
+  StatusBody.mapFields((f) => ({ ...f, ...raw })),
+  ErrorBody.mapFields((f) => ({ ...f, ...raw })),
+  InterruptionBody.mapFields((f) => ({ ...f, ...raw })),
+  TaskStartedBody.mapFields((f) => ({ ...f, ...raw })),
+  TaskEndedBody.mapFields((f) => ({ ...f, ...raw })),
+  WorkingFolderBody.mapFields((f) => ({ ...f, ...raw })),
+  RunOptionBody.mapFields((f) => ({ ...f, ...raw })),
+])
 export type HarnessEvent = typeof HarnessEvent.Type
 
 // Streamed text of the block being written; never stored, the finished block arrives as an event.
@@ -212,17 +243,43 @@ export const HarnessMessageRead = Schema.Struct({
 })
 export type HarnessMessageRead = typeof HarnessMessageRead.Type
 
+// The file a running task writes its output to. Never stored as an event.
+export const HarnessTaskOutputFile = Schema.Struct({
+  type: Schema.Literal("task_output_file"),
+  taskId: Schema.String,
+  path: Schema.String,
+})
+export type HarnessTaskOutputFile = typeof HarnessTaskOutputFile.Type
+
 export const HarnessOutput = Schema.Union([
   HarnessEvent,
   HarnessDelta,
   HarnessProviderSession,
   HarnessMessageRead,
+  HarnessTaskOutputFile,
 ])
 export type HarnessOutput = typeof HarnessOutput.Type
 
-export const TranscriptEvent = Schema.Union(
-  eventBodies.map((body) => body.mapFields((f) => ({ ...f, ...stored }))),
-)
+export const TranscriptEvent = Schema.Union([
+  UserMessageBody.mapFields((f) => ({ ...f, ...stored })),
+  AssistantTextBody.mapFields((f) => ({ ...f, ...stored })),
+  ThinkingBody.mapFields((f) => ({ ...f, ...stored })),
+  ToolCallBody.mapFields((f) => ({ ...f, ...stored })),
+  ToolResultBody.mapFields((f) => ({ ...f, ...stored })),
+  ApprovalRequestBody.mapFields((f) => ({ ...f, ...stored })),
+  ApprovalDecisionBody.mapFields((f) => ({ ...f, ...stored })),
+  QuestionRequestBody.mapFields((f) => ({ ...f, ...stored })),
+  QuestionAnswerBody.mapFields((f) => ({ ...f, ...stored })),
+  RequestUnansweredBody.mapFields((f) => ({ ...f, ...stored })),
+  UsageBody.mapFields((f) => ({ ...f, ...stored })),
+  StatusBody.mapFields((f) => ({ ...f, ...stored })),
+  ErrorBody.mapFields((f) => ({ ...f, ...stored })),
+  InterruptionBody.mapFields((f) => ({ ...f, ...stored })),
+  TaskStartedBody.mapFields((f) => ({ ...f, ...stored })),
+  TaskEndedBody.mapFields((f) => ({ ...f, ...stored })),
+  WorkingFolderBody.mapFields((f) => ({ ...f, ...stored })),
+  RunOptionBody.mapFields((f) => ({ ...f, ...stored })),
+])
 export type TranscriptEvent = typeof TranscriptEvent.Type
 
 const itemFields = {
@@ -245,8 +302,12 @@ export const ToolKind = Schema.Literals([
 ])
 export type ToolKind = typeof ToolKind.Type
 
+// Set on a step of a background subagent: the call that started it.
+const itemParent = { parentToolCallId: Schema.optional(Schema.String) }
+
 export const MessageItem = Schema.Struct({
   ...itemFields,
+  ...itemParent,
   type: Schema.Literal("message"),
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
@@ -257,6 +318,7 @@ export const ThinkingItem = Schema.Struct({
   ...itemFields,
   type: Schema.Literal("thinking"),
   text: Schema.String,
+  ...itemParent,
 })
 export const ToolCallItem = Schema.Struct({
   ...itemFields,
@@ -267,6 +329,7 @@ export const ToolCallItem = Schema.Struct({
   input: Schema.Unknown,
   status: Schema.Literals(["running", "done", "error"]),
   output: Schema.NullOr(Schema.String),
+  ...itemParent,
 })
 
 export const ApprovalItem = Schema.Struct({
@@ -308,6 +371,18 @@ export const InterruptionItem = Schema.Struct({
   type: Schema.Literal("interruption"),
 })
 
+export const TaskItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("task"),
+  taskId: Schema.String,
+  toolCallId: Schema.String,
+  kind: TaskKind,
+  description: Schema.String,
+  status: Schema.Literals(["running", "completed", "failed", "stopped"]),
+  summary: Schema.NullOr(Schema.String),
+  output: Schema.NullOr(Schema.String),
+})
+
 export const WorkingFolderItem = Schema.Struct({
   ...itemFields,
   type: Schema.Literal("working_folder"),
@@ -329,6 +404,7 @@ export const TranscriptItem = Schema.Union([
   UsageItem,
   ErrorItem,
   InterruptionItem,
+  TaskItem,
   WorkingFolderItem,
   RunOptionItem,
 ])

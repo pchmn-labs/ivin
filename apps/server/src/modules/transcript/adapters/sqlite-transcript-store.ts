@@ -55,6 +55,7 @@ const toItem = (row: { id: string; payload: string }, report: Report) => {
 type UserMessageEvent = Extract<TranscriptEvent, { type: "user_message" }>
 type OpenToolCall = Extract<TranscriptItem, { type: "tool_call" }>
 type OpenRequest = Extract<TranscriptItem, { type: "approval" | "question" }>
+type OpenTask = Extract<TranscriptItem, { type: "task" }>
 
 // Images are stored with the type they were sent in; compression changes it afterwards.
 const compressedImages = (db: DatabaseSync, sessionId: string) => {
@@ -235,6 +236,7 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
                (type = 'tool_call' AND payload ->> '$.status' = 'running')
                OR (type = 'approval' AND payload ->> '$.decision' IS NULL)
                OR (type = 'question' AND payload ->> '$.status' = 'open')
+               OR (type = 'task' AND payload ->> '$.status' = 'running')
              ) ORDER BY position`,
             sessionId,
           )
@@ -253,8 +255,13 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             ),
             openRequests: new Map(
               open
-                .filter((item): item is OpenRequest => item.type !== "tool_call")
+                .filter((item): item is OpenRequest => item.type === "approval" || item.type === "question")
                 .map((item) => [item.requestId, item]),
+            ),
+            openTasks: new Map(
+              open
+                .filter((item): item is OpenTask => item.type === "task")
+                .map((item) => [item.taskId, item]),
             ),
           }
         }),

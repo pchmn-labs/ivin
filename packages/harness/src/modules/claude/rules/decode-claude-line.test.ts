@@ -2,6 +2,8 @@ import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
 import { decodeClaudeLine } from "./decode-claude-line.ts"
 import apiError from "./fixtures/api-error.jsonl?raw"
+import backgroundAgent from "./fixtures/background-agent.jsonl?raw"
+import backgroundCommand from "./fixtures/background-command.jsonl?raw"
 import enterWorktree from "./fixtures/enter-worktree.jsonl?raw"
 import exitWorktree from "./fixtures/exit-worktree.jsonl?raw"
 import failedToolCall from "./fixtures/failed-tool-call.jsonl?raw"
@@ -22,6 +24,8 @@ import toolCall from "./fixtures/tool-call.jsonl?raw"
 
 const fixtures = {
   "api-error": apiError,
+  "background-agent": backgroundAgent,
+  "background-command": backgroundCommand,
   "enter-worktree": enterWorktree,
   "exit-worktree": exitWorktree,
   "git-worktree-add": gitWorktreeAdd,
@@ -48,7 +52,9 @@ const fixture = (name: keyof typeof fixtures): HarnessOutput[] =>
     .flatMap(decodeClaudeLine)
 
 const stored = (outputs: HarnessOutput[]) =>
-  outputs.filter((o) => o.type !== "delta" && o.type !== "provider_session")
+  outputs.filter(
+    (o) => o.type !== "delta" && o.type !== "provider_session" && o.type !== "task_output_file",
+  )
 const types = (outputs: HarnessOutput[]) => stored(outputs).map((o) => o.type)
 
 test("a plain answer streams text deltas, then stores one assistant_text, usage and idle", () => {
@@ -347,4 +353,103 @@ test("each message Claude Code takes from its queue is read, the first one and a
     { type: "message_read", messageId: "f1a639d5-fbff-480b-ae2b-102a23ba890b" },
     { type: "message_read", messageId: "c229e6e0-c4ef-494f-9f05-8a9c282d1666" },
   ])
+})
+
+test("a background command is a task from its start line to its notification, and the new turn follows", () => {
+  const outputs = fixture("background-command")
+
+  expect(outputs.filter((o) => o.type === "task_started")).toMatchObject([
+    {
+      type: "task_started",
+      taskId: "baozjf0kj",
+      toolCallId: "toolu_01TmfNJESh68WdPU9o3oFPYH",
+      kind: "command",
+      description: "Run sleep 4 then echo finished in background",
+    },
+  ])
+  expect(outputs.filter((o) => o.type === "task_output_file")).toEqual([
+    {
+      type: "task_output_file",
+      taskId: "baozjf0kj",
+      path: expect.stringMatching(/\/tasks\/baozjf0kj\.output$/),
+    },
+  ])
+  expect(outputs.filter((o) => o.type === "task_ended")).toMatchObject([
+    {
+      type: "task_ended",
+      taskId: "baozjf0kj",
+      outcome: "completed",
+      summary: 'Background command "Run sleep 4 then echo finished in background" completed (exit code 0)',
+    },
+  ])
+  // The first turn ends idle while the task runs; Claude Code then starts its own turn once it ends.
+  expect(types(outputs)).toEqual([
+    "message_read",
+    "status",
+    "tool_call",
+    "task_started",
+    "tool_result",
+    "status",
+    "assistant_text",
+    "usage",
+    "status",
+    "task_ended",
+    "status",
+    "assistant_text",
+    "usage",
+    "status",
+  ])
+  expect(stored(outputs).filter((o) => o.type === "status")).toMatchObject([
+    { status: "running" },
+    { status: "running" },
+    { status: "idle" },
+    { status: "running" },
+    { status: "idle" },
+  ])
+})
+
+test("a background subagent's steps carry the call that started it, its notification ends the task", () => {
+  const outputs = fixture("background-agent")
+
+  const started = outputs.find((o) => o.type === "task_started")
+  expect(started).toMatchObject({
+    taskId: "a0da5cb04d36f6df5",
+    toolCallId: "toolu_01CBcuFGJ8gQnpufQ1P2aD3h",
+    kind: "agent",
+    description: "Count the files",
+  })
+  const steps = outputs.filter(
+    (o) => "parentToolCallId" in o && o.parentToolCallId === "toolu_01CBcuFGJ8gQnpufQ1P2aD3h",
+  )
+  expect(steps.map((o) => o.type)).toEqual(["tool_call", "tool_result", "assistant_text"])
+  expect(steps[0]).toMatchObject({ name: "Bash", toolCallId: "toolu_012v2E8BqMzWiGnJGeqqve8o" })
+  expect(outputs.find((o) => o.type === "task_ended")).toMatchObject({
+    taskId: "a0da5cb04d36f6df5",
+    outcome: "completed",
+    summary: "`ls` listed 0 entries. The directory is empty, and the command printed nothing.",
+  })
+  // The main turn's own lines carry no parent.
+  expect(
+    outputs.filter((o) => o.type === "assistant_text" && !("parentToolCallId" in o && o.parentToolCallId)),
+  ).toHaveLength(2)
+})
+
+test("a task ending with an unknown status counts as failed, one stopped as stopped", () => {
+  const notification = (status: string) =>
+    decodeClaudeLine(
+      JSON.stringify({
+        type: "system",
+        subtype: "task_notification",
+        task_id: "t1",
+        tool_use_id: "toolu_1",
+        status,
+        output_file: "/tmp/t1.output",
+        summary: "done",
+      }),
+    )
+
+  expect(notification("stopped")).toMatchObject([{ type: "task_ended", outcome: "stopped" }])
+  expect(notification("killed")).toMatchObject([{ type: "task_ended", outcome: "stopped" }])
+  expect(notification("failed")).toMatchObject([{ type: "task_ended", outcome: "failed" }])
+  expect(notification("whatever")).toMatchObject([{ type: "task_ended", outcome: "failed" }])
 })

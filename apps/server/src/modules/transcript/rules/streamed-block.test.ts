@@ -25,6 +25,7 @@ test("thinking deltas target a thinking item", () => {
 const openMessage: ItemState = {
   openToolCalls: new Map(),
   openRequests: new Map(),
+    openTasks: new Map(),
   openMessage: {
     id: "m",
     sessionId: "s",

@@ -63,7 +63,7 @@ import { switchToDefaultBranch } from "../modules/session/usecases/switch-to-def
 import { setRunOptions } from "../modules/session/usecases/set-run-options.ts"
 import { sendMessage } from "../modules/session/usecases/send-message.ts"
 import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
-import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
+import { layerSessionRuns, SessionRuns } from "../modules/session/usecases/session-runs.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
 import { layerCurrentSettings } from "../modules/setting/usecases/current-settings.ts"
 import { getSetting } from "../modules/setting/usecases/get-setting.ts"
@@ -196,6 +196,8 @@ export const handlers = Rpcs.toLayer(
         answerQuestion(sessionId, requestId, answers),
       "session.pickBranch": ({ sessionId, name, remote }) => pickBranch(sessionId, name, remote),
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
+      "session.taskOutput": ({ sessionId, taskId }) =>
+        SessionRuns.use((runs) => runs.taskOutput(sessionId, taskId)),
       "session.sendNow": ({ sessionId }) => sendNow(sessionId),
       "session.switchToDefaultBranch": ({ sessionId, localChanges }) =>
         switchToDefaultBranch(sessionId, localChanges),

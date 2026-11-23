@@ -287,3 +287,27 @@ test("a limit of 0 never stops an agent", async () => {
   )
   expect(result).toEqual([])
 })
+
+test("an agent whose session is in background is not stopped for being idle", async () => {
+  const db = newDatabase()
+  const closed: string[] = []
+  const task: HarnessOutput = {
+    type: "task_started",
+    taskId: "k1",
+    toolCallId: "call-k1",
+    kind: "command",
+    description: "Dev server",
+    raw: null,
+  }
+  const result = await withServer(db, [[running, task, idle]], "10 minutes", { closed }, (client) =>
+    Effect.gen(function* () {
+      const session = yield* client["session.create"]({ projectPath: "/p" })
+      yield* send(client, session.id, "m1")
+      yield* untilSession(client, session.id, (s) => s.status === "in_background")
+      yield* TestClock.adjust("1 hour")
+      yield* settle
+      return [...closed]
+    }),
+  )
+  expect(result).toEqual([])
+})

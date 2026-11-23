@@ -10,6 +10,8 @@ export type Recording = {
   name: string
   steps: Step[]
   until: LineTrigger
+  // A --wait after the last step: the end line counts only after it.
+  untilWait: Wait | null
   keep: LineTrigger[]
   allow: string[]
   deny: string[]
@@ -29,7 +31,8 @@ Steps, sent in order:
   --send <text>          a user message
   --interrupt            an interrupt control request
   --initialize           the initialize control request
-  --wait <trigger>       before the next step: <n>ms, or a line to see after the previous step
+  --wait <trigger>       before the next step: <n>ms, or a line to see after the previous step;
+                         after the last step, before the --until line counts
 
 Triggers name a line by its type, and optionally its subtype (or stream event type,
 or control request subtype): result, system/init, stream_event/content_block_delta,
@@ -88,6 +91,7 @@ export const parseRecording = (argv: readonly string[]): Recording | string => {
     name,
     steps: [],
     until: { type: "result", subtype: null },
+    untilWait: null,
     keep: [],
     allow: [],
     deny: [],
@@ -160,7 +164,7 @@ export const parseRecording = (argv: readonly string[]): Recording | string => {
       }
     }
   }
-  if (pendingWait !== null) return "--wait must come before a step."
+  recording.untilWait = pendingWait
   if (recording.steps.length === 0) return `A recording needs at least one step.\n\n${USAGE}`
   return recording
 }

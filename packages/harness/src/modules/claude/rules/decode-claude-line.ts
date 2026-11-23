@@ -11,6 +11,20 @@ const SystemInitLine = Schema.Struct({ session_id: Schema.String })
 
 const SystemStatusLine = Schema.Struct({ status: Schema.NullOr(Schema.String) })
 
+const TaskStartedLine = Schema.Struct({
+  task_id: Schema.String,
+  tool_use_id: Schema.String,
+  description: Schema.String,
+  task_type: Schema.String,
+  is_backgrounded: Schema.optional(Schema.Boolean),
+})
+
+const TaskNotificationLine = Schema.Struct({
+  task_id: Schema.String,
+  status: Schema.String,
+  summary: Schema.optional(Schema.String),
+})
+
 const StreamEventLine = Schema.Struct({
   event: Schema.Struct({
     type: Schema.String,
@@ -103,38 +117,62 @@ const fromStreamEvent = (line: unknown): HarnessOutput[] => {
   return []
 }
 
-const fromAssistant = (line: unknown): HarnessOutput[] => {
+const fromAssistant = (line: unknown, parent: string | null): HarnessOutput[] => {
+  const under = parent ? { parentToolCallId: parent } : {}
   const decoded = Schema.decodeUnknownSync(AssistantLine)(line)
   // A synthetic API error message; the closing result line reports it.
   if (decoded.error !== undefined) return []
   return decoded.message.content.filter(isBlock).flatMap((block): HarnessEvent[] => {
     if (block.type === "text") {
-      return block.text === "" ? [] : [{ type: "assistant_text", text: block.text, raw: block }]
+      return block.text === ""
+        ? []
+        : [{ type: "assistant_text", text: block.text, ...under, raw: block }]
     }
     if (block.type === "thinking") {
-      return block.thinking === "" ? [] : [{ type: "thinking", text: block.thinking, raw: block }]
+      return block.thinking === ""
+        ? []
+        : [{ type: "thinking", text: block.thinking, ...under, raw: block }]
     }
     return [
-      { type: "tool_call", toolCallId: block.id, name: block.name, input: block.input, raw: block },
+      {
+        type: "tool_call",
+        toolCallId: block.id,
+        name: block.name,
+        input: block.input,
+        ...under,
+        raw: block,
+      },
     ]
   })
 }
 
 const INTERRUPTION_TEXT = "[Request interrupted by user"
 
-const fromUser = (line: unknown): HarnessOutput[] => {
+// The result of a call that started a background task says where the task writes its output.
+const TASK_OUTPUT_FILE = /(\/\S*\/tasks\/([^/\s]+)\.output)/
+
+const taskOutputFile = (output: string): HarnessOutput[] => {
+  if (!output.includes("Output is being written to:") && !output.includes("output_file:")) return []
+  const found = TASK_OUTPUT_FILE.exec(output)
+  return found ? [{ type: "task_output_file", taskId: found[2]!, path: found[1]! }] : []
+}
+
+const fromUser = (line: unknown, parent: string | null): HarnessOutput[] => {
   const { message } = Schema.decodeUnknownSync(UserLine)(line)
   if (typeof message.content === "string") return []
   return message.content.flatMap((block): HarnessOutput[] => {
     if (isToolResultBlock(block)) {
+      const output = toolResultOutput(block.content)
       return [
         {
           type: "tool_result",
           toolCallId: block.tool_use_id,
-          output: toolResultOutput(block.content),
+          output,
           isError: block.is_error ?? false,
+          ...(parent ? { parentToolCallId: parent } : {}),
           raw: block,
         },
+        ...taskOutputFile(output),
       ]
     }
     return isTextBlock(block) && block.text.startsWith(INTERRUPTION_TEXT)
@@ -170,9 +208,44 @@ const fromSystem = (line: unknown, subtype: string | undefined): HarnessOutput[]
     const { session_id } = Schema.decodeUnknownSync(SystemInitLine)(line)
     return [{ type: "provider_session", providerSessionId: session_id }]
   }
+  if (subtype === "task_started") return fromTaskStarted(line)
+  if (subtype === "task_notification") return fromTaskNotification(line)
   if (subtype !== "status") return []
   const { status } = Schema.decodeUnknownSync(SystemStatusLine)(line)
   return status === "requesting" ? [{ type: "status", status: "running", raw: line }] : []
+}
+
+// A task that was not started in the background, such as a subagent the turn waits for, is no task here.
+const fromTaskStarted = (line: unknown): HarnessOutput[] => {
+  const started = Schema.decodeUnknownSync(TaskStartedLine)(line)
+  if (started.is_backgrounded !== true) return []
+  return [
+    {
+      type: "task_started",
+      taskId: started.task_id,
+      toolCallId: started.tool_use_id,
+      kind: started.task_type === "local_bash" ? "command" : "agent",
+      description: started.description,
+      raw: line,
+    },
+  ]
+}
+
+const taskOutcome = (status: string): "completed" | "failed" | "stopped" =>
+  status === "completed" ? "completed" : status === "stopped" || status === "killed" ? "stopped" : "failed"
+
+const fromTaskNotification = (line: unknown): HarnessOutput[] => {
+  const ended = Schema.decodeUnknownSync(TaskNotificationLine)(line)
+  return [
+    {
+      type: "task_ended",
+      taskId: ended.task_id,
+      outcome: taskOutcome(ended.status),
+      summary: ended.summary ?? "",
+      output: null,
+      raw: line,
+    },
+  ]
 }
 
 // The tool input of a `question_request`, which the response must send back with the answers.
@@ -236,14 +309,15 @@ export const decodeClaudeLine = (text: string): HarnessOutput[] => {
   }
   try {
     const { type, subtype, parent_tool_use_id } = Schema.decodeUnknownSync(Envelope)(line)
-    if (parent_tool_use_id) return []
+    // Only the steps of a subagent are kept; its streamed text and other lines are not.
+    if (parent_tool_use_id && type !== "assistant" && type !== "user") return []
     switch (type) {
       case "stream_event":
         return fromStreamEvent(line)
       case "assistant":
-        return fromAssistant(line)
+        return fromAssistant(line, parent_tool_use_id ?? null)
       case "user":
-        return fromUser(line)
+        return fromUser(line, parent_tool_use_id ?? null)
       case "result":
         return fromResult(line, subtype)
       case "control_request":

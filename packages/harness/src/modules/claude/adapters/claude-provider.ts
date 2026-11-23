@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process"
 import { existsSync } from "node:fs"
+import { open } from "node:fs/promises"
 import { homedir } from "node:os"
 import { randomUUID } from "node:crypto"
 import { createInterface } from "node:readline"
@@ -31,6 +32,22 @@ const signalGroup = (pid: number, signal: NodeJS.Signals) => {
   try {
     process.kill(-pid, signal)
   } catch {}
+}
+
+const TASK_OUTPUT_LIMIT = 65_536
+
+// The last bytes of the file; a command that prints more than the limit shows its end.
+const readTail = async (path: string): Promise<string> => {
+  const file = await open(path, "r")
+  try {
+    const { size } = await file.stat()
+    const length = Math.min(size, TASK_OUTPUT_LIMIT)
+    const buffer = Buffer.alloc(length)
+    await file.read(buffer, 0, length, size - length)
+    return buffer.toString("utf8")
+  } finally {
+    await file.close()
+  }
 }
 
 const spawnClaude = (
@@ -92,6 +109,7 @@ export const layerClaudeWith = (
       program: Effect.sync(() => ({ name: "claude", path: findOnPath("claude") })),
       skillsFolder: claudeSkillsFolder(process.env, homedir()),
       completeText: (prompt) => completeTextWithClaude(prompt, COMPLETE_TEXT_TIMEOUT),
+      readTaskOutput: (path) => Effect.promise(() => readTail(path).catch(() => "")),
       toolActivity,
       toolKind,
       start: ({ sessionId, cwd, options, providerSessionId }) =>
