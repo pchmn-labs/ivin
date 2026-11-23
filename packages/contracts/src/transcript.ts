@@ -11,7 +11,8 @@ export type ImageMediaType = typeof ImageMediaType.Type
 
 // `number` is unique in the session.
 export const ImageRef = Schema.Struct({
-  id: Schema.String,
+  // Names the image's file, so it holds no path separator.
+  id: Schema.String.check(Schema.isPattern(/^[A-Za-z0-9-]+$/)),
   number: Schema.Int,
   mediaType: ImageMediaType,
 })

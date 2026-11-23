@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs"
-import { join } from "node:path"
+import { join, relative, sep } from "node:path"
 import { Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
 import type { ImageMediaType } from "@ivin/contracts/transcript"
@@ -34,10 +34,10 @@ export const layerFsImageStore = Layer.effect(ImageStore)(
             "INSERT INTO images (id, session_id, number, media_type) VALUES (?, ?, ?, ?)",
           )
           for (const { id, number, mediaType, base64 } of images) {
-            writeFileSync(
-              join(sessionFolder(sessionId), imageFileName(id, mediaType)),
-              Buffer.from(base64, "base64"),
-            )
+            const file = join(sessionFolder(sessionId), imageFileName(id, mediaType))
+            if (relative(sessionFolder(sessionId), file).includes(sep))
+              throw new Error(`Image id ${JSON.stringify(id)} leaves the session's folder`)
+            writeFileSync(file, Buffer.from(base64, "base64"))
             insert.run(id, sessionId, number, mediaType)
           }
         }),

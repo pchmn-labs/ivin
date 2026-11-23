@@ -51,6 +51,9 @@ const listen = (path: string, server: Server) =>
     catch: (cause) => new SocketListenFailed({ path, cause }),
   })
 
+// The CLI's requests are a few hundred bytes.
+const maxLineLength = 1024 * 1024
+
 // One JSON message per line.
 const portOf = (socket: Socket): RpcPort => ({
   onMessage: (handler) => {
@@ -58,6 +61,7 @@ const portOf = (socket: Socket): RpcPort => ({
     socket.setEncoding("utf8")
     socket.on("data", (chunk: string) => {
       buffered += chunk
+      if (buffered.length > maxLineLength && !buffered.includes("\n")) return socket.destroy()
       let end = buffered.indexOf("\n")
       while (end !== -1) {
         const line = buffered.slice(0, end)

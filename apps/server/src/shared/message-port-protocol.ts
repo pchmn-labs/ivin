@@ -17,9 +17,14 @@ export const layerProtocolMessagePort = (port: RpcPort): Layer.Layer<RpcServer.P
 
         port.onMessage((data) => {
           if (typeof data !== "string") return
-          for (const message of parser.decode(
-            data,
-          ) as ReadonlyArray<RpcMessage.FromClientEncoded>) {
+          let messages: ReadonlyArray<RpcMessage.FromClientEncoded>
+          try {
+            messages = parser.decode(data) as ReadonlyArray<RpcMessage.FromClientEncoded>
+          } catch {
+            // A socket client can send anything; a bad message must not crash the server.
+            return
+          }
+          for (const message of messages) {
             // One port carries one client, always id 0.
             run(writeRequest(0, message))
           }
