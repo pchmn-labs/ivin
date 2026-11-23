@@ -66,10 +66,10 @@
     },
     "implement": {
       "source": "pchmn/skills",
-      "commit": "271635b63257c85770a784a202b749d3ea05e5eb",
+      "commit": "1ec232a1b84d3d50e5f43a2a9d70e4ae47936a7c",
       "sourceType": "github",
       "skillPath": "skills/engineering/implement/SKILL.md",
-      "computedHash": "02be11fbdf5a8191514063b25646749beaeb5727e84c141d58c5bae91f8dce0f"
+      "computedHash": "989aa20c5d4e64b9fa3e796264c42eb9b460d620410504a420bd4dac4956c764"
     },
     "improve-codebase-architecture": {
       "source": "pchmn/skills",

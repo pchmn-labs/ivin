@@ -4,7 +4,7 @@ A desktop app to run and supervise coding agents (Claude Code, Codex, ACP agents
 
 ## Status
 
-Design phase: there is no code to run yet. The design is in [docs/architecture.md](docs/architecture.md).
+Design phase: there is no code to run yet. The design is in [docs/architecture/](docs/architecture/README.md).
 
 ## What it will be
 
