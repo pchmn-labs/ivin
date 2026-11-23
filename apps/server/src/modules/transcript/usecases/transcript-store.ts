@@ -1,5 +1,5 @@
 import type { TranscriptEvent, TranscriptItem, TranscriptPage } from "@ivin/contracts/transcript"
-import { Context, type Effect } from "effect"
+import { Context, type DateTime, type Effect } from "effect"
 import type { ItemState } from "../rules/derive-items.ts"
 
 type UserMessageEvent = Extract<TranscriptEvent, { type: "user_message" }>
@@ -15,6 +15,8 @@ export class TranscriptStore extends Context.Service<
     readonly append: (
       event: TranscriptEvent,
       change: { readonly item: TranscriptItem | null; readonly openMessageId: string | null },
+      // Written to the session's last activity in the same transaction.
+      touchedAt: DateTime.Utc | null,
     ) => Effect.Effect<void>
     readonly lastSequence: (sessionId: string) => Effect.Effect<number>
     readonly userMessages: (sessionId: string) => Effect.Effect<readonly UserMessageEvent[]>

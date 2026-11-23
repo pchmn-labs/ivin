@@ -1,4 +1,4 @@
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
 import { ImageData, ImageRef, QuestionAnswer } from "./transcript.ts"
 import { ProjectNotTrusted } from "./project.ts"
@@ -57,7 +57,7 @@ export type HarnessRunOptions = typeof HarnessRunOptions.Type
 export const RelaunchFailure = Schema.Struct({
   previous: RunOptions,
   message: Schema.String,
-  error: Schema.NullOr(Schema.String),
+  error: Schema.NullOr(Schema.String).pipe(Schema.withDecodingDefaultKey(Effect.succeed(null))),
 })
 export type RelaunchFailure = typeof RelaunchFailure.Type
 

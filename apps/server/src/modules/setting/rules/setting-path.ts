@@ -17,7 +17,7 @@ const expectedOf = (schema: Schema.Struct.Fields[string], path: string): Expecte
     case "Boolean":
       return { expected: "boolean" }
     case "Number":
-      return { expected: "number" }
+      return { expected: ast.checks === undefined ? "number" : "wholeNumber" }
     case "String":
       return { expected: "string" }
     case "Union":

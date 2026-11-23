@@ -68,6 +68,7 @@ test("ivin settings set changes only that value in the file, and the app applies
     worktrees: { removeOnTabClose: true },
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
+    agents: { stopWhenIdleMinutes: 10 },
   })
 }, 10_000)
 
@@ -130,7 +131,7 @@ test("ivin settings get prints every setting, or the one at a path", async () =>
 
   expect(all.code).toBe(0)
   expect(all.stdout).toBe(
-    'tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\nsidebar.layout = "rail"\n',
+    'tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\nsidebar.layout = "rail"\nagents.stopWhenIdleMinutes = 10\n',
   )
   expect(one.stdout).toBe("true\n")
   expect(section.stdout).toBe("tabs.stopAgentOnClose = true\n")
@@ -151,6 +152,7 @@ test("--json prints the values as JSON", async () => {
       worktrees: { removeOnTabClose: true },
       files: { folderIcons: true },
       sidebar: { layout: "rail" },
+      agents: { stopWhenIdleMinutes: 10 },
     },
   })
   expect(JSON.parse(one.stdout)).toEqual({ ok: true, path: "tabs.stopAgentOnClose", value: true })

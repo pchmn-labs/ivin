@@ -97,7 +97,8 @@ import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.
 
 export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
   Layer.mergeAll(layerWorktreeCleanup, layerImageCompression, layerFirstMessageReading).pipe(
-    Layer.provideMerge(Layer.mergeAll(sessionRuns, layerCurrentSettings)),
+    Layer.provideMerge(sessionRuns),
+    Layer.provideMerge(layerCurrentSettings),
     Layer.provideMerge(layerSessionFeed),
     Layer.provideMerge(layerOriginFetch),
     Layer.provideMerge(Layer.mergeAll(layerChangeFeed, layerCommittedListings)),

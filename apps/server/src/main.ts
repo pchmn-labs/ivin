@@ -6,7 +6,7 @@ import {
   layerClaude,
   layerScripted,
 } from "@ivin/harness"
-import { Cause, Effect, Fiber, Layer } from "effect"
+import { Cause, Deferred, Effect, Fiber, Layer } from "effect"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
@@ -24,6 +24,10 @@ import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file
 import { layerFsSkillInstallation } from "./modules/skill/adapters/fs-skill-install.ts"
 import { layerServices } from "./rpc/handlers.ts"
 import { serveOverClosingPort, serveOverSocket } from "./rpc/serve.ts"
+import {
+  layerHarnessAfterLoginShellPath,
+  LoginShellPath,
+} from "./shared/usecases/login-shell-path.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
 import { ImageFolder } from "./modules/transcript/usecases/image-folder.ts"
 
@@ -82,13 +86,15 @@ const skillFolder = skillPath as string
 if (typeof pnpmPath !== "string") fail("Missing --pnpm <path>, the folder of the pnpm ivin ships")
 const pnpmFolder = pnpmPath as string
 const loginShell = process.env["SHELL"] || "/bin/zsh"
+const loginShellFolders = Effect.runSync(Deferred.make<ReadonlyArray<string> | null>())
+const loginShellPath = { ready: Deferred.await(loginShellFolders) }
 const layerShellCommand =
   typeof cliCommandPath === "string"
     ? layerFsShellCommand({
         command: cliCommandPath,
         home: homedir(),
         folders: ["/usr/local/bin", join(homedir(), ".local", "bin")],
-        shell: loginShell,
+        shellPath: loginShellPath.ready,
       })
     : Layer.empty
 const socketPath = process.env["IVIN_SOCKET"]
@@ -114,13 +120,13 @@ const layerHarness = layerHarnesses[harnessId as keyof typeof layerHarnesses]
 const adoptLoginShellPath = Effect.gen(function* () {
   const shellFolders = yield* readLoginShellPath(loginShell, LOGIN_SHELL_TIMEOUT_MS)
   if (shellFolders === null) {
-    return yield* Effect.logWarning(
-      `could not read the PATH of ${loginShell}; agents keep the app's`,
-    )
+    yield* Effect.logWarning(`could not read the PATH of ${loginShell}; agents keep the app's`)
+  } else {
+    yield* Effect.sync(() => {
+      process.env["PATH"] = agentPath(process.env["PATH"] ?? "", shellFolders)
+    })
   }
-  yield* Effect.sync(() => {
-    process.env["PATH"] = agentPath(process.env["PATH"] ?? "", shellFolders)
-  })
+  yield* Deferred.succeed(loginShellFolders, shellFolders)
 })
 
 // Ports main posts before the database is ready wait here.
@@ -138,15 +144,17 @@ parentPort.on("message", ({ data, ports: [port] }) => {
 
 // Stores, feeds and runs are built once here: every port, and so every window reload, shares them.
 const startup = Effect.gen(function* () {
-  // Before any layer is built, since agents inherit the server's PATH.
-  if (harnessId === "claude") yield* adoptLoginShellPath
+  // Read in the background: only git and agents wait for it, through `LoginShellPath`.
+  if (harnessId === "claude") yield* Effect.forkScoped(adoptLoginShellPath)
+  else yield* Deferred.succeed(loginShellFolders, null)
   const context = yield* Layer.build(
     Layer.mergeAll(layerServices, layerFsSkillInstallation(skillFolder)).pipe(
       Layer.provideMerge(
         Layer.mergeAll(
           layerDatabase(path),
           Layer.succeed(ImageFolder)({ path: imageFolder }),
-          layerHarness,
+          layerHarnessAfterLoginShellPath(layerHarness),
+          Layer.succeed(LoginShellPath)(loginShellPath),
           layerLogger,
           layerFsKeybindingsFile(ivinHome),
           layerFsSettingsFile(ivinHome),

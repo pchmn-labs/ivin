@@ -51,6 +51,24 @@
   margin-top: var(--iv-space-1);
 }
 
+.iv-settings-page__count {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--iv-space-2);
+}
+
+.iv-settings-page__count-field {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+}
+
+.iv-settings-page__count-field .iv-field {
+  width: 72px;
+  text-align: right;
+}
+
 .iv-settings-page__state {
   display: flex;
   align-items: center;

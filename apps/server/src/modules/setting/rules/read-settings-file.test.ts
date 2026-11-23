@@ -12,6 +12,7 @@ test("a missing or empty file holds the default settings: every switch on, the r
     worktrees: { removeOnTabClose: true },
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
+    agents: { stopWhenIdleMinutes: 10 },
   })
 })
 
@@ -22,6 +23,7 @@ test("a setting in the file replaces its default, and one left out falls back to
       worktrees: { removeOnTabClose: false },
       files: { folderIcons: false },
       sidebar: { layout: "strip" as const },
+      agents: { stopWhenIdleMinutes: 0 },
     },
     problem: null,
   }
@@ -30,6 +32,7 @@ test("a setting in the file replaces its default, and one left out falls back to
     "tabs": { "stopAgentOnClose": false, },
     "files": { "folderIcons": false },
     "sidebar": { "layout": "strip" },
+    "agents": { "stopWhenIdleMinutes": 0 },
     "editor": { "fontSize": 13 },
   }`
   expect(readSettingsFile(off, text)).toEqual({
@@ -38,6 +41,7 @@ test("a setting in the file replaces its default, and one left out falls back to
       worktrees: { removeOnTabClose: true },
       files: { folderIcons: false },
       sidebar: { layout: "strip" },
+      agents: { stopWhenIdleMinutes: 0 },
     },
     problem: null,
   })
@@ -68,4 +72,12 @@ test("an invalid file keeps the previous settings and names its problem", () => 
     reason: "invalidSetting",
     setting: "sidebar.layout",
   })
+  for (const minutes of ["10", -1, 1.5, null]) {
+    expect(
+      readSettingsFile(
+        previous,
+        `{ "agents": { "stopWhenIdleMinutes": ${JSON.stringify(minutes)} } }`,
+      ).problem,
+    ).toEqual({ reason: "invalidSetting", setting: "agents.stopWhenIdleMinutes" })
+  }
 })

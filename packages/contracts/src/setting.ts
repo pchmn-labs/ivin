@@ -6,6 +6,9 @@ export const Settings = Schema.Struct({
   worktrees: Schema.Struct({ removeOnTabClose: Schema.Boolean }),
   files: Schema.Struct({ folderIcons: Schema.Boolean }),
   sidebar: Schema.Struct({ layout: Schema.Literals(["rail", "strip"]) }),
+  agents: Schema.Struct({
+    stopWhenIdleMinutes: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  }),
 })
 export type Settings = typeof Settings.Type
 
@@ -14,6 +17,7 @@ export const defaultSettings: Settings = {
   worktrees: { removeOnTabClose: true },
   files: { folderIcons: true },
   sidebar: { layout: "rail" },
+  agents: { stopWhenIdleMinutes: 10 },
 }
 
 const choicesOf = <Value extends string>(
@@ -35,6 +39,8 @@ export interface SettingSection {
     readonly description: string
     // A setting with fixed values, in the schema's order.
     readonly choices?: ReadonlyArray<{ readonly value: string; readonly label: string }>
+    // A whole number of `unit` at least `min`, typed rather than picked.
+    readonly count?: { readonly min: number; readonly unit: string }
   }>
 }
 
@@ -95,6 +101,20 @@ export const settingSections: ReadonlyArray<SettingSection> = [
       },
     ],
   },
+  {
+    key: "agents",
+    title: "Agents",
+    description: "How long ivin keeps a session's agent running.",
+    settings: [
+      {
+        path: "agents.stopWhenIdleMinutes",
+        label: "Stop an idle agent after",
+        description:
+          "An agent whose session has had no turn for this long is stopped, which ends the background commands it started. The session stays as it was, and your next message starts the agent again. 0 keeps agents running until their tab closes.",
+        count: { min: 0, unit: "minutes" },
+      },
+    ],
+  },
 ]
 
 export const choicesText = (values: ReadonlyArray<string>): string => {
@@ -127,7 +147,7 @@ export class SettingValueInvalid extends Schema.TaggedError<SettingValueInvalid>
   "SettingValueInvalid",
   {
     path: Schema.String,
-    expected: Schema.Literals(["boolean", "number", "string", "oneOf"]),
+    expected: Schema.Literals(["boolean", "number", "wholeNumber", "string", "oneOf"]),
     allowed: Schema.optional(Schema.Array(Schema.String)),
   },
 ) {}

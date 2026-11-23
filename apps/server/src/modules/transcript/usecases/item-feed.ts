@@ -1,7 +1,8 @@
 import type { TranscriptItemChange } from "@ivin/contracts/transcript"
-import { Context, Effect, Layer, PubSub, type Scope, Stream } from "effect"
+import { Context, Effect, Layer, type Scope, type Stream } from "effect"
+import { makeWatcherFeed } from "../../../shared/usecases/watcher-feed.ts"
 
-const FEED_CAPACITY = 1024
+const WATCHER_BUFFER = 1024
 
 export type FeedChange = Exclude<TranscriptItemChange, { type: "page" }>
 
@@ -9,34 +10,20 @@ export class ItemFeed extends Context.Service<
   ItemFeed,
   {
     readonly publish: (change: FeedChange) => Effect.Effect<void>
-    // Subscribed on return: nothing published afterwards is missed.
     readonly watch: (
       sessionId: string,
-    ) => Effect.Effect<Stream.Stream<FeedChange>, never, Scope.Scope>
+      current: Effect.Effect<readonly TranscriptItemChange[]>,
+    ) => Effect.Effect<Stream.Stream<TranscriptItemChange>, never, Scope.Scope>
   }
 >()("ivin/server/ItemFeed") {}
 
-export const layerItemFeed = Layer.effect(ItemFeed)(
-  Effect.gen(function* () {
-    // Sliding: a slow watcher loses the oldest upserts rather than stalling the writer.
-    const pubsub = yield* Effect.acquireRelease(
-      PubSub.sliding<FeedChange>(FEED_CAPACITY),
-      PubSub.shutdown,
-    )
-    return {
-      publish: (change) => PubSub.publish(pubsub, change).pipe(Effect.asVoid),
-      watch: (sessionId) =>
-        PubSub.subscribe(pubsub).pipe(
-          Effect.map((subscription) =>
-            Stream.fromSubscription(subscription).pipe(
-              Stream.filter(
-                (change) =>
-                  (change.type === "upsert" ? change.item.sessionId : change.sessionId) ===
-                  sessionId,
-              ),
-            ),
-          ),
-        ),
-    }
-  }),
-)
+export const layerItemFeed = Layer.sync(ItemFeed)(() => {
+  const feed = makeWatcherFeed<string, TranscriptItemChange>({
+    capacity: WATCHER_BUFFER,
+    matches: (sessionId, change) =>
+      change.type === "upsert"
+        ? change.item.sessionId === sessionId
+        : change.type === "delta" && change.sessionId === sessionId,
+  })
+  return { publish: feed.publish, watch: feed.watch }
+})

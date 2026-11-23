@@ -1,14 +1,21 @@
-import type {
-  Harness,
+import {
+  PendingMessage,
   RelaunchFailure,
   RunOptions,
-  Session,
-  SessionStatus,
-  PendingMessage,
-  WaitingFor,
+  type Harness,
+  type Session,
+  type SessionStatus,
+  type WaitingFor,
 } from "@ivin/contracts/session"
+import { Schema } from "effect"
 import { DateTime, Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
+import {
+  makeRowDecoding,
+  parseJson,
+  rowDecoder,
+  type Report,
+} from "../../../shared/adapters/row-decoding.ts"
 import { SessionStore } from "../usecases/session-store.ts"
 
 interface SessionRow {
@@ -35,7 +42,23 @@ interface SessionRow {
   last_image_number: number
 }
 
-const toSession = (row: SessionRow): Session => ({
+const decodeMessages = rowDecoder(Schema.Array(PendingMessage), "session messages")
+const decodeRelaunchFailure = rowDecoder(RelaunchFailure, "session relaunch failure")
+const decodeRunOptions = rowDecoder(RunOptions, "session run options")
+
+const messagesOf = (id: string, column: string, stored: string, report: Report) => {
+  const key = `${id}.${column}`
+  const parsed = parseJson(stored, "session messages", key, report)
+  return parsed === undefined ? [] : (decodeMessages(parsed, key, report) ?? [])
+}
+
+const relaunchFailureOf = (row: SessionRow, report: Report) => {
+  if (row.relaunch_failure === null) return null
+  const parsed = parseJson(row.relaunch_failure, "session relaunch failure", row.id, report)
+  return parsed === undefined ? null : (decodeRelaunchFailure(parsed, row.id, report) ?? null)
+}
+
+const toSession = (row: SessionRow, report: Report): Session => ({
   id: row.id,
   projectPath: row.project_path,
   workingFolder: row.working_folder,
@@ -48,13 +71,9 @@ const toSession = (row: SessionRow): Session => ({
   model: row.model,
   effort: row.effort,
   permissionMode: row.permission_mode,
-  relaunchFailure:
-    row.relaunch_failure === null
-      ? null
-      : // Stored before the agent's error was kept.
-        { error: null, ...(JSON.parse(row.relaunch_failure) as Omit<RelaunchFailure, "error">) },
-  pendingMessages: JSON.parse(row.pending_messages) as PendingMessage[],
-  unreadMessages: JSON.parse(row.unread_messages) as PendingMessage[],
+  relaunchFailure: relaunchFailureOf(row, report),
+  pendingMessages: messagesOf(row.id, "pending_messages", row.pending_messages, report),
+  unreadMessages: messagesOf(row.id, "unread_messages", row.unread_messages, report),
   status: row.status,
   waitingFor: row.waiting_for,
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
@@ -82,11 +101,12 @@ const pendingToUnread = `unread_messages = (
 export const layerSqliteSessionStore = Layer.effect(SessionStore)(
   Effect.gen(function* () {
     const db = yield* Database
-    const pendingOf = (id: string): PendingMessage[] => {
+    const decoding = makeRowDecoding()
+    const pendingOf = (id: string, report: Report): readonly PendingMessage[] => {
       const row = db.prepare("SELECT pending_messages FROM sessions WHERE id = ?").get(id) as
         | { pending_messages: string }
         | undefined
-      return row ? (JSON.parse(row.pending_messages) as PendingMessage[]) : []
+      return row ? messagesOf(id, "pending_messages", row.pending_messages, report) : []
     }
     return {
       insert: (session) =>
@@ -114,14 +134,14 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           )
         }),
       findById: (id) =>
-        Effect.sync(() => {
+        decoding((report) => {
           const row = db.prepare(`SELECT ${columns} FROM sessions WHERE id = ?`).get(id) as
             | SessionRow
             | undefined
-          return row ? toSession(row) : null
+          return row ? toSession(row, report) : null
         }),
       listByProject: (projectPath) =>
-        Effect.sync(() =>
+        decoding((report) =>
           (
             db
               .prepare(
@@ -129,7 +149,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
                  ORDER BY last_activity_at DESC, created_at DESC`,
               )
               .all(projectPath) as unknown as SessionRow[]
-          ).map(toSession),
+          ).map((row) => toSession(row, report)),
         ),
       rename: (id, title, by) =>
         Effect.sync(
@@ -192,12 +212,14 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             : null
         }),
       confirmedRunOptions: (id) =>
-        Effect.sync(() => {
+        decoding((report) => {
           const row = db
             .prepare("SELECT confirmed_run_options FROM sessions WHERE id = ?")
             .get(id) as { confirmed_run_options: string | null } | undefined
           const stored = row?.confirmed_run_options ?? null
-          return stored === null ? null : (JSON.parse(stored) as RunOptions)
+          if (stored === null) return null
+          const parsed = parseJson(stored, "session run options", id, report)
+          return parsed === undefined ? null : (decodeRunOptions(parsed, id, report) ?? null)
         }),
       setConfirmedRunOptions: (id, options) =>
         Effect.sync(() => {
@@ -220,8 +242,8 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           ).run(JSON.stringify(message), id)
         }),
       takePendingMessage: (id, messageId) =>
-        Effect.sync(() => {
-          const pending = pendingOf(id)
+        decoding((report) => {
+          const pending = pendingOf(id, report)
           const taken = pending.find((message) => message.id === messageId) ?? null
           if (taken === null) return null
           db.prepare("UPDATE sessions SET pending_messages = ? WHERE id = ?").run(
@@ -230,7 +252,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
           )
           return taken
         }),
-      pendingMessages: (id) => Effect.sync(() => pendingOf(id)),
+      pendingMessages: (id) => decoding((report) => pendingOf(id, report)),
       markPendingUnread: (id) =>
         Effect.sync(() => {
           db.prepare(`UPDATE sessions SET ${pendingToUnread} WHERE id = ?`).run(id)
@@ -274,13 +296,6 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         db.prepare(`UPDATE sessions SET ${pendingToUnread} WHERE pending_messages <> '[]'`).run()
         return reset.map((row) => row.id)
       }),
-      touch: (id, at) =>
-        Effect.sync(() => {
-          db.prepare("UPDATE sessions SET last_activity_at = ? WHERE id = ?").run(
-            DateTime.toEpochMillis(at),
-            id,
-          )
-        }),
       setArchivedAt: (id, at) =>
         Effect.sync(() => {
           db.prepare("UPDATE sessions SET archived_at = ? WHERE id = ?").run(

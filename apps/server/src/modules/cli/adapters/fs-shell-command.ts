@@ -100,7 +100,7 @@ export const layerFsShellCommand = (options: {
   readonly command: string
   readonly home: string
   readonly folders: ReadonlyArray<string>
-  readonly shell: string
+  readonly shellPath: Effect.Effect<ReadonlyArray<string> | null>
 }) =>
   Layer.succeed(ShellCommand)({
     command: options.command,
@@ -115,5 +115,5 @@ export const layerFsShellCommand = (options: {
         Effect.tapError((error) => logError("cli.installInShell", error)),
         Effect.mapError(refusalOf),
       ),
-    shellPath: readLoginShellPath(options.shell, LOGIN_SHELL_TIMEOUT_MS),
+    shellPath: options.shellPath,
   })

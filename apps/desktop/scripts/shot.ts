@@ -350,6 +350,13 @@ try {
   await shoot("settings")
   await window
     .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Agents" })
+    .click()
+  await window.getByRole("heading", { name: "Agents" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("settings-agents")
+  await window
+    .getByRole("navigation", { name: "Settings sections" })
     .getByRole("button", { name: "Command line" })
     .click()
   await window.getByRole("heading", { name: "Command line" }).waitFor()

@@ -9,7 +9,12 @@ import { CommandFailed } from "./command.ts"
 const expectedText = ({ expected, allowed }: SettingValueInvalid) =>
   expected === "oneOf"
     ? choicesText(allowed ?? [])
-    : { boolean: "true or false", number: "a number", string: "a string" }[expected]
+    : {
+        boolean: "true or false",
+        number: "a number",
+        wholeNumber: "a whole number, 0 or more",
+        string: "a string",
+      }[expected]
 
 export const settingFailed = (
   error: SettingPathUnknown | SettingValueInvalid | SettingsFileInvalid,

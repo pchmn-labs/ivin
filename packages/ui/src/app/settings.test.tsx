@@ -13,6 +13,7 @@ const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 const stopAgent = () => page.getByRole("switch", { name: "Stop the agent when its tab closes" })
 const removeWorktree = () =>
   page.getByRole("switch", { name: "Remove a merged worktree when its tab closes" })
+const idleLimit = () => page.getByRole("textbox", { name: "Stop an idle agent after" })
 const sections = () => page.getByRole("navigation", { name: "Settings sections" })
 
 const mountApp = async () => {
@@ -150,6 +151,103 @@ test("Open settings.json opens the file, and says so when it could not", async (
   await alert.getByRole("button", { name: "Retry" }).click()
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
   expect(openSettingsFile).toHaveBeenCalledTimes(2)
+})
+
+const openAgents = async () => {
+  await page.getByRole("button", { name: "Settings" }).click()
+  await sections().getByRole("button", { name: "Agents" }).click()
+  await expect.element(page.getByRole("heading", { name: "Agents" })).toBeVisible()
+}
+
+test("the idle limit shows its value in minutes, and Enter saves a new one", async () => {
+  await mountApp()
+  await openAgents()
+  await expect.element(idleLimit()).toHaveValue("10")
+  await expect.element(page.getByText("minutes", { exact: true })).toBeVisible()
+
+  await idleLimit().fill("30")
+  await userEvent.keyboard("{Enter}")
+  await expect.element(idleLimit()).toHaveValue("30")
+
+  await userEvent.keyboard("{Escape}")
+  await userEvent.keyboard(`{${mod}>},{/${mod}}`)
+  await sections().getByRole("button", { name: "Agents" }).click()
+  await expect.element(idleLimit()).toHaveValue("30")
+})
+
+test("0 is accepted as the limit that never stops agents", async () => {
+  await mountApp()
+  await openAgents()
+
+  await idleLimit().fill("0")
+  await userEvent.keyboard("{Enter}")
+  await expect.element(idleLimit()).toHaveValue("0")
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
+})
+
+test("a value that is not a whole number is refused next to the field, keeps what was typed, and nothing is saved", async () => {
+  const server = await mountApp()
+  await openAgents()
+
+  await idleLimit().fill("1.5")
+  await userEvent.keyboard("{Enter}")
+  await expect
+    .element(page.getByRole("alert").getByText("Enter a whole number of minutes, 0 or more."))
+    .toBeVisible()
+  await expect.element(idleLimit()).toHaveValue("1.5")
+  await expect.element(idleLimit()).toBeInvalid()
+
+  await idleLimit().fill("-3")
+  await expect
+    .element(page.getByRole("alert").getByText("Enter a whole number of minutes, 0 or more."))
+    .toBeVisible()
+
+  await userEvent.keyboard("{Escape}")
+  await expect.element(idleLimit()).toHaveValue("10")
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
+  expect(server.errorReports).toEqual([])
+})
+
+test("a failed write of the idle limit shows its message, keeps the typed value, and Retry saves it", async () => {
+  const server = await mountApp()
+  await openAgents()
+  server.failNextCall("setting.set")
+
+  await idleLimit().fill("45")
+  await userEvent.keyboard("{Enter}")
+  const alert = page.getByRole("alert")
+  await expect.element(alert.getByText("The setting was not saved.")).toBeVisible()
+  await expect.element(idleLimit()).toHaveValue("45")
+
+  await alert.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
+  await expect.element(idleLimit()).toHaveValue("45")
+})
+
+test("the idle limit follows a change made outside the page and is disabled while settings.json is broken", async () => {
+  const server = await mountApp()
+  await openAgents()
+
+  server.setUserSettings({
+    settings: { ...defaultSettings, agents: { stopWhenIdleMinutes: 5 } },
+    problem: null,
+  })
+  await expect.element(idleLimit()).toHaveValue("5")
+
+  server.setUserSettings({
+    settings: { ...defaultSettings, agents: { stopWhenIdleMinutes: 5 } },
+    problem: { reason: "invalidSetting", setting: "agents.stopWhenIdleMinutes" },
+  })
+  await expect.element(idleLimit()).toBeDisabled()
+  await expect
+    .element(
+      page
+        .getByRole("alert")
+        .getByText(
+          "agents.stopWhenIdleMinutes in ~/.ivin/settings.json takes a whole number of minutes, 0 or more.",
+        ),
+    )
+    .toBeVisible()
 })
 
 const openCommandLine = async () => {

@@ -1,5 +1,5 @@
 import type { TranscriptItem } from "@ivin/contracts/transcript"
-import { Effect, Layer } from "effect"
+import { DateTime, Effect, Layer } from "effect"
 import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
 import { Database } from "../../../shared/adapters/database.ts"
@@ -62,4 +62,44 @@ test("a small transcript comes back whole with nothing before or after", () => {
 
 test("an empty transcript gives an empty page", () => {
   expect(pageOf([], null, 5, 5)).toEqual({ items: [], hasBefore: false, hasAfter: false })
+})
+
+const eventAt = (id: string, sequence: number) => ({
+  id,
+  sessionId: "s1",
+  sequence,
+  at: DateTime.makeUnsafe(5_000),
+  type: "interruption" as const,
+})
+
+const lastActivity = (db: DatabaseSync) =>
+  (
+    db.prepare("SELECT last_activity_at AS at FROM sessions WHERE id = 's1'").get() as {
+      at: number
+    }
+  ).at
+
+test("an event and the session's activity time are written in one transaction", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db))
+  db.prepare(
+    `INSERT INTO sessions (id, project_path, working_folder, title, harness, model, effort,
+       permission_mode, run_options_at, status, status_changed_at, created_at, last_activity_at)
+     VALUES ('s1', '/p', '/p', 't', 'scripted', 'm', 'e', 'p', 1, 'idle', 1, 1, 1)`,
+  ).run()
+  const change = { item: null, openMessageId: null }
+  const run = (id: string, sequence: number, touchedAt: DateTime.Utc | null) =>
+    Effect.runSync(
+      Effect.gen(function* () {
+        yield* (yield* TranscriptStore).append(eventAt(id, sequence), change, touchedAt)
+      }).pipe(
+        Effect.provide(layerSqliteTranscriptStore.pipe(Layer.provide(Layer.succeed(Database)(db)))),
+      ),
+    )
+
+  run("e1", 1, DateTime.makeUnsafe(9_000))
+  expect(lastActivity(db)).toBe(9_000)
+
+  expect(() => run("e1", 2, DateTime.makeUnsafe(12_000))).toThrow()
+  expect(lastActivity(db)).toBe(9_000)
 })

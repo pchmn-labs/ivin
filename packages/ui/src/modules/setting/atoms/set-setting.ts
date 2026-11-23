@@ -13,7 +13,7 @@ const choiceOf = Atom.family((_path: SettingPath) =>
 
 // One per setting, so a change to one does not interrupt the save of another.
 export const setSettingOf = Atom.family((path: SettingPath) =>
-  serverRuntime.fn<boolean | string>()((value) =>
+  serverRuntime.fn<boolean | number | string>()((value) =>
     Effect.gen(function* () {
       const client = yield* ServerClient
       const watched = yield* Atom.get(watchedSettingsAtom)

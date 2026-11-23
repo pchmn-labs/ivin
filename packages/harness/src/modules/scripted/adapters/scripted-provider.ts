@@ -35,7 +35,19 @@ export interface ScriptedRead {
 
 export const scriptedRead: ScriptedRead = { _tag: "ScriptedRead" }
 
-export type ScriptedElement = HarnessOutput | ScriptedFailure | ScriptedRead
+// Plays `elements` once `gate` completes, with no message sent, as an agent does when a background task finishes.
+export interface ScriptedLater {
+  readonly _tag: "ScriptedLater"
+  readonly gate: Deferred.Deferred<void>
+  readonly elements: readonly HarnessOutput[]
+}
+
+export const scriptedLater = (
+  gate: Deferred.Deferred<void>,
+  elements: readonly HarnessOutput[],
+): ScriptedLater => ({ _tag: "ScriptedLater", gate, elements })
+
+export type ScriptedElement = HarnessOutput | ScriptedFailure | ScriptedRead | ScriptedLater
 
 const isFailure = (element: ScriptedElement): element is ScriptedFailure =>
   "_tag" in element && element._tag === "ScriptedFailure"
@@ -43,9 +55,13 @@ const isFailure = (element: ScriptedElement): element is ScriptedFailure =>
 const isRead = (element: ScriptedElement): element is ScriptedRead =>
   "_tag" in element && element._tag === "ScriptedRead"
 
+const isLater = (element: ScriptedElement): element is ScriptedLater =>
+  "_tag" in element && element._tag === "ScriptedLater"
+
 const isPause = (element: ScriptedElement) =>
   !isFailure(element) &&
   !isRead(element) &&
+  !isLater(element) &&
   (element.type === "approval_request" || element.type === "question_request")
 
 const EVENT_BUFFER = 64
@@ -120,6 +136,7 @@ export const layerScripted = (
       start: (input) =>
         Effect.gen(function* () {
           const { sessionId } = input
+          const scope = yield* Effect.scope
           starts.push(input)
           if (startFailure !== undefined) {
             return yield* new HarnessError({ message: startFailure })
@@ -168,6 +185,13 @@ export const layerScripted = (
             if (isFailure(element))
               return Queue.fail(queue, new HarnessError({ message: element.message }))
             if (isRead(element)) return readWaiting.pipe(Effect.asVoid)
+            if (isLater(element)) {
+              return Deferred.await(element.gate).pipe(
+                Effect.andThen(Effect.forEach(element.elements, offer, { discard: true })),
+                Effect.forkIn(scope),
+                Effect.asVoid,
+              )
+            }
             return Queue.offer(queue, element).pipe(
               Effect.andThen(() => {
                 if (element.type !== "status") return Effect.void
