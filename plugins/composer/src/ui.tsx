@@ -22,6 +22,7 @@ import {
   useOfferedRunOptions,
   useSendMessage,
   useSendNow,
+  useTakeUnreadMessages,
   useSession,
   useSetRunOptions,
   type ActionFailure,
@@ -32,41 +33,46 @@ import {
   type RunOptionsMenuState,
   type Session,
 } from "@ivin/plugin-api/ui"
-import { pendingText, withRelaunchMessage, withUnreadMessages } from "./rules/draft.ts"
+import { pendingText, withRelaunchMessage } from "./rules/draft.ts"
 import { changedRunOption, goBackLabel, relaunchFailureText } from "./rules/relaunch-failure.ts"
 
-const EMPTY_DRAFT: Draft = { text: "", images: [] }
-
 function PendingSheet({ session }: { session: Session }) {
-  const sendNow = useSendNow(session.id)
+  const { sendNow, failure } = useSendNow(session.id)
   const pending = session.pendingMessages
+  useCommandHandler("session.sendNow", sendNow, pending.length > 0)
+  const sendNowHint = useKeyHint("Stops this turn and sends your messages", "session.sendNow")
   if (pending.length === 0) return null
   return (
-    <ActionSheet
-      icon="clock"
-      title={
-        pending.length === 1 ? "Sent to the agent" : `${pending.length} messages sent to the agent`
-      }
-      note={`Read once the agent's current tool call or turn ends. Stop puts ${pending.length === 1 ? "it" : "them"} back here.`}
-      actions={
-        <Tooltip content="Stops this turn and sends your messages">
-          <Button variant="ghost" size="sm" onClick={sendNow}>
-            Send now
-          </Button>
-        </Tooltip>
-      }
-      data-testid="composer-pending"
-    >
-      <Stack as="ul" gap={1}>
-        {pending.map((message) => (
-          <Stack as="li" key={message.id}>
-            <Text size="sm" truncate title={message.text}>
-              {pendingText(message)}
-            </Text>
-          </Stack>
-        ))}
-      </Stack>
-    </ActionSheet>
+    <>
+      <ActionSheet
+        icon="clock"
+        title={
+          pending.length === 1
+            ? "Sent to the agent"
+            : `${pending.length} messages sent to the agent`
+        }
+        note={`Read once the agent's current tool call or turn ends. Stop puts ${pending.length === 1 ? "it" : "them"} back here.`}
+        actions={
+          <Tooltip content={sendNowHint}>
+            <Button variant="ghost" size="sm" onClick={sendNow}>
+              Send now
+            </Button>
+          </Tooltip>
+        }
+        data-testid="composer-pending"
+      >
+        <Stack as="ul" gap={1}>
+          {pending.map((message) => (
+            <Stack as="li" key={message.id}>
+              <Text size="sm" truncate title={message.text}>
+                {pendingText(message)}
+              </Text>
+            </Stack>
+          ))}
+        </Stack>
+      </ActionSheet>
+      {failure && <ErrorMessage {...failure} />}
+    </>
   )
 }
 
@@ -74,9 +80,9 @@ function Composer({ sessionId }: { sessionId: string }) {
   const [draft, setDraft] = useDraft(sessionId)
   const text = draft.text
   const field = useRef<MessageFieldHandle>(null)
-  const [failure, setFailure] = useState<(ActionFailure & { draft: Draft }) | null>(null)
   const [refusal, setRefusal] = useState<string | null>(null)
-  const send = useSendMessage(sessionId)
+  const { send, failure } = useSendMessage(sessionId)
+  useTakeUnreadMessages(sessionId)
   const interrupt = useInterruptSession(sessionId)
   const session = useSession(sessionId)
   const running = session?.status === "working" || session?.status === "waiting"
@@ -103,12 +109,6 @@ function Composer({ sessionId }: { sessionId: string }) {
       setDraft((current) => withRelaunchMessage(current, relaunchFailure))
   }, [relaunchFailureKey])
 
-  const unreadText = (session?.unreadMessages ?? []).map((message) => message.text).join("\n\n")
-  useEffect(() => {
-    // Runs again on each mount, so a draft that already holds the messages keeps them once.
-    if (unreadText !== "") setDraft((current) => withUnreadMessages(current, unreadText))
-  }, [unreadText])
-
   const changeRunOptions = (options: Partial<RunOptions>) => {
     setOptionsFailure(null)
     void setRunOptions(options).then((failed) => {
@@ -118,15 +118,8 @@ function Composer({ sessionId }: { sessionId: string }) {
 
   const sendDraft = (sent: Draft) => {
     if (preparing) return
-    setFailure(null)
     setRefusal(null)
-    setDraft((current) => (current.text === sent.text ? EMPTY_DRAFT : current))
-    void send(sent).then((failed) => {
-      if (failed === undefined) return
-      // Text typed since the send is newer than the failed message, so it wins.
-      setDraft((current) => (current.text === "" ? sent : current))
-      setFailure({ draft: sent, ...failed })
-    })
+    send(sent)
   }
   const submit = () => {
     if (text.trim() !== "") sendDraft(draft)
@@ -140,10 +133,7 @@ function Composer({ sessionId }: { sessionId: string }) {
     text === "" && field.current?.holds(target) === true
 
   const shown: ErrorMessageProps | null = failure
-    ? {
-        message: failure.text,
-        ...(failure.retryable && { onRetry: () => sendDraft(failure.draft) }),
-      }
+    ? failure
     : refusal !== null
       ? { message: refusal }
       : optionsFailure

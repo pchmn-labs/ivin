@@ -341,6 +341,12 @@ export const TranscriptPage = Schema.Struct({
 })
 export type TranscriptPage = typeof TranscriptPage.Type
 
+// The sum of the session's `usage` items; null while it has none.
+export const SessionUsage = Schema.NullOr(
+  Schema.Struct({ tokens: Schema.Int, costUsd: Schema.Number }),
+)
+export type SessionUsage = typeof SessionUsage.Type
+
 export const TranscriptItemChange = Schema.Union([
   Schema.Struct({ type: Schema.Literal("page"), page: TranscriptPage }),
   Schema.Struct({ type: Schema.Literal("upsert"), item: TranscriptItem }),
@@ -372,6 +378,12 @@ export const TranscriptRpcs = RpcGroup.make(
   Rpc.make("transcript.watchItems", {
     payload: { sessionId: Schema.String, before: Schema.Int },
     success: TranscriptItemChange,
+    stream: true,
+  }),
+  // First element: the session's usage so far; then its new total after each `usage` item.
+  Rpc.make("transcript.watchUsage", {
+    payload: { sessionId: Schema.String },
+    success: SessionUsage,
     stream: true,
   }),
   // Every image the user sent in the session, in transcript order.

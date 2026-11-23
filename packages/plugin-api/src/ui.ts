@@ -29,10 +29,12 @@ import type {
   Question,
   QuestionAnswer,
   RunOption,
+  SessionUsage,
   TranscriptItem,
 } from "@ivin/contracts/transcript"
 import { HostContext, useHost } from "./host-context.ts"
 import type {
+  ActionError,
   ActionFailure,
   CommittedChangeListing,
   ChangeListing,
@@ -64,6 +66,7 @@ export type {
   RunOptions,
   Session,
   SessionStatus,
+  SessionUsage,
   Settings,
   Tab,
   TranscriptItem,
@@ -183,6 +186,7 @@ export type UiPlugin = (ctx: UiContext) => void
 export const defineUi = (activate: UiPlugin): UiPlugin => activate
 
 export type {
+  ActionError,
   ActionFailure,
   CommittedChangeListing,
   ChangeListing,
@@ -213,15 +217,18 @@ export const useTabs = () => useHost().useTabs()
 export const useTabsLoaded = () => useHost().useTabsLoaded()
 export const useOpenTab = () => useHost().useOpenTab()
 export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
+export const useUsage = (sessionId: string) => useHost().useUsage(sessionId)
 export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
   useHost().useAnnotations(sessionId, kind) as ReadonlyArray<AnnotationOf<K>>
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
 export const useAnswerQuestion = (sessionId: string) => useHost().useAnswerQuestion(sessionId)
 export const useSessionActions = (session: Session) => useHost().useSessionActions(session)
-export const useRenameSession = () => useHost().useRenameSession()
+export const useRenameSession = (session: Session) => useHost().useRenameSession(session)
 export const useSessionLocation = (session: Session) => useHost().useSessionLocation(session)
 export const useDraft = (sessionId: string) => useHost().useDraft(sessionId)
 export const useSendMessage = (sessionId: string) => useHost().useSendMessage(sessionId)
+export const useTakeUnreadMessages = (sessionId: string) =>
+  useHost().useTakeUnreadMessages(sessionId)
 export const useInterruptSession = (sessionId: string) => useHost().useInterruptSession(sessionId)
 export const useSendNow = (sessionId: string) => useHost().useSendNow(sessionId)
 export const useOfferedRunOptions = (sessionId: string) => useHost().useOfferedRunOptions(sessionId)

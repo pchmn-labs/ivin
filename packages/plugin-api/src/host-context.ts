@@ -5,13 +5,21 @@ import type { OpenProjects } from "@ivin/contracts/project"
 import type { HarnessRunOptions, RunOptions, Session } from "@ivin/contracts/session"
 import type { Settings } from "@ivin/contracts/setting"
 import type { Tab } from "@ivin/contracts/tab"
-import type { ImageData, QuestionAnswer, TranscriptItem } from "@ivin/contracts/transcript"
-import type { HostComponents, MenuItem } from "./components.ts"
+import type {
+  ImageData,
+  QuestionAnswer,
+  SessionUsage,
+  TranscriptItem,
+} from "@ivin/contracts/transcript"
+import type { ErrorMessageProps, HostComponents, MenuItem } from "./components.ts"
 
 export interface ActionFailure {
   readonly text: string
   readonly retryable: boolean
 }
+
+// What a failed action shows in place: its message, with Retry when running it again can help.
+export type ActionError = Pick<ErrorMessageProps, "message" | "onRetry">
 
 // `deleted`: the session's working folder no longer exists.
 export type FolderListing =
@@ -87,7 +95,10 @@ export interface UiHost {
   readonly useTabsLoaded: () => boolean
   // Selects the session's project and its tab, opening one if it has none.
   readonly useOpenTab: () => (sessionId: string) => void
+  // The items the transcript has loaded, not the whole session.
   readonly useTranscript: (sessionId: string) => ReadonlyArray<TranscriptItem>
+  // Tokens and cost summed over the whole session by the server; null until it has any usage.
+  readonly useUsage: (sessionId: string) => SessionUsage
   // The session's annotations of this kind, oldest first.
   readonly useAnnotations: (sessionId: string, kind: string) => ReadonlyArray<Annotation>
   readonly useAnswerApproval: (
@@ -102,7 +113,11 @@ export interface UiHost {
     readonly requestId: string
     readonly answers: ReadonlyArray<QuestionAnswer> | null
   }) => Promise<ActionFailure | undefined>
-  readonly useRenameSession: () => (session: Session, title: string) => void
+  // `failure` is the last rename of the session that failed, until the next one.
+  readonly useRenameSession: (session: Session) => {
+    readonly rename: (title: string) => void
+    readonly failure: ActionError | null
+  }
   // Where the session works: its checkout, a worktree, or a folder outside git.
   readonly useSessionLocation: (session: Session) => SessionLocationLabel
   // The unsent message of the session's composer, kept across session switches.
@@ -110,13 +125,20 @@ export interface UiHost {
     sessionId: string,
   ) => readonly [Draft, (update: (current: Draft) => Draft) => void]
   // Sends the draft's text and the images its markers name; the first message also starts the
-  // session in the working folder picked in its status line.
-  readonly useSendMessage: (
-    sessionId: string,
-  ) => (draft: Draft) => Promise<ActionFailure | undefined>
+  // session in the working folder picked in its status line. A send that fails puts its draft
+  // back and sets `failure`, even when the session is not on screen; each send reports its own.
+  readonly useSendMessage: (sessionId: string) => {
+    readonly send: (draft: Draft) => void
+    readonly failure: ActionError | null
+  }
+  // Puts the messages the agent never read, with their images, in the session's draft once.
+  readonly useTakeUnreadMessages: (sessionId: string) => void
   readonly useInterruptSession: (sessionId: string) => () => void
   // Stops the turn so the agent reads the session's pending messages now.
-  readonly useSendNow: (sessionId: string) => () => void
+  readonly useSendNow: (sessionId: string) => {
+    readonly sendNow: () => void
+    readonly failure: ActionError | null
+  }
   // The models, efforts and permission modes the session's harness offers; null until the server
   // answers, or when the session runs on another harness than the server's.
   readonly useOfferedRunOptions: (sessionId: string) => HarnessRunOptions | null

@@ -1,6 +1,7 @@
 import { Effect } from "effect"
 import { Atom } from "effect/reactivity"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
+import { discardSessionEditsAtom } from "../../file/atoms/file-edit.ts"
 import { closingTab } from "../../tab/atoms/close-tab.ts"
 import { archivedSessionsOf } from "./list-archived-sessions.ts"
 import { sessionsOf } from "./list-sessions.ts"
@@ -35,6 +36,7 @@ export const archiveSessionAtom = serverRuntime.fn<{
           Atom.update(sessions.archiving, (ids) => ids.filter((id) => id !== sessionId)),
         ),
       )
+      yield* Atom.set(discardSessionEditsAtom, sessionId)
       yield* Atom.refresh(archivedSessionsOf(projectPath))
     }).pipe(recordingFailure("archive", sessionId)),
   { concurrent: true },

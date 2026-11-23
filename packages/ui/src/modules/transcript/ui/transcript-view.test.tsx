@@ -1,5 +1,7 @@
-import { RegistryProvider, useAtomMount } from "@effect/atom-react"
+import { RegistryContext, RegistryProvider, useAtomMount } from "@effect/atom-react"
 import { DateTime } from "effect"
+import type { AtomRegistry } from "effect/reactivity"
+import { useContext, useEffect } from "react"
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
@@ -9,6 +11,7 @@ import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { PAGE_SIZE, transcriptOf } from "../atoms/get-items.ts"
+import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
 const message = (position: number, text = `message ${position}`): TranscriptItem => ({
@@ -387,6 +390,112 @@ test("a transcript left at its end opens again at its end, with the items that c
   })
 
   await expect.element(page.getByText("message 44", { exact: true })).toBeVisible()
+})
+
+let registry!: AtomRegistry.AtomRegistry
+function CaptureRegistry() {
+  const context = useContext(RegistryContext)
+  useEffect(() => {
+    registry = context
+  }, [context])
+  return null
+}
+
+const heldView = (server: ReturnType<typeof makeFakeServer>, shown: boolean) => (
+  <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+    <CaptureRegistry />
+    <KeptTranscript />
+    <div style={{ position: "relative", height: 300 }}>
+      <PluginsProvider plugins={builtinPlugins}>
+        {shown && <TranscriptView sessionId="s1" />}
+      </PluginsProvider>
+    </div>
+  </RegistryProvider>
+)
+
+test("a transcript left at its end keeps only its last page, and scrolling up loads the older ones again", async () => {
+  const server = makeFakeServer()
+  const total = PAGE_SIZE * 3
+  server.seedItems(
+    "s1",
+    Array.from({ length: total }, (_, i) => message(i)),
+  )
+  const screen = await render(heldView(server, true))
+  await expect.element(page.getByText(`message ${total - 1}`, { exact: true })).toBeVisible()
+  const ids = () => registry.get(transcriptOf("s1").list.ids)
+  registry.mount(loadItemsBeforeAtom)
+  registry.set(loadItemsBeforeAtom, "s1")
+  await vi.waitFor(() => expect(ids()).toHaveLength(PAGE_SIZE * 2))
+
+  await screen.rerender(heldView(server, false))
+  await vi.waitFor(() => expect(ids()).toHaveLength(PAGE_SIZE))
+  expect(registry.get(transcriptOf("s1").paging).hasBefore).toBe(true)
+
+  await screen.rerender(heldView(server, true))
+  await expect.element(page.getByText(`message ${total - 1}`, { exact: true })).toBeVisible()
+  await vi.waitFor(() => {
+    scroller().scrollTop = 0
+    expect(page.getByText(`message ${PAGE_SIZE}`, { exact: true }).query()).not.toBeNull()
+  })
+})
+
+test("a transcript left scrolled back keeps the pages it has", async () => {
+  const server = makeFakeServer()
+  const total = PAGE_SIZE * 3
+  server.seedItems(
+    "s1",
+    Array.from({ length: total }, (_, i) => message(i)),
+  )
+  const screen = await render(heldView(server, true))
+  await expect.element(page.getByText(`message ${total - 1}`, { exact: true })).toBeVisible()
+  await vi.waitFor(() => {
+    scroller().scrollTop = 0
+    expect(page.getByText(`message ${PAGE_SIZE}`, { exact: true }).query()).not.toBeNull()
+  })
+  scroller().dispatchEvent(new Event("scroll"))
+
+  await screen.rerender(heldView(server, false))
+  await expect.element(page.getByTestId("transcript")).not.toBeInTheDocument()
+  expect(registry.get(transcriptOf("s1").list.ids).length).toBeGreaterThan(PAGE_SIZE)
+})
+
+test("a transcript that cannot load says so with Retry, and Retry loads it", async () => {
+  const server = makeFakeServer()
+  server.seedItems("s1", [message(0)])
+  server.failNextCall("transcript.watchItems")
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+
+  await expect.element(page.getByText("The transcript could not be loaded.")).toBeVisible()
+  expect(document.body.textContent).not.toContain("Loading the transcript")
+
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByText("message 0", { exact: true })).toBeVisible()
+  expect(document.body.textContent).not.toContain("could not be loaded")
+})
+
+test("a transcript of a session that no longer exists says that, with no Retry", async () => {
+  const server = makeFakeServer()
+  server.failNextCall("transcript.watchItems")
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" missing />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+
+  await expect.element(page.getByText("This session no longer exists.")).toBeVisible()
+  expect(page.getByRole("button", { name: "Retry" }).query()).toBeNull()
 })
 
 const sendMessage = async (server: ReturnType<typeof makeFakeServer>) => {

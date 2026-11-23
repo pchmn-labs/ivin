@@ -310,3 +310,119 @@ test("a save cut off from the server says so and keeps the edits", async () => {
     .toBeVisible()
   await expect.element(fileTab("README.md")).toHaveAccessibleDescription("Unsaved edits")
 })
+
+test("archiving a session with unsaved files asks first; Cancel keeps the session and its edits", async () => {
+  const server = makeServer()
+  await mount(server)
+  await typeAtEnd("README.md", " draft")
+
+  await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
+  await expect.element(dialog().getByText("Archive “Checkout flow”?")).toBeVisible()
+  await expect
+    .element(
+      dialog().getByText("Archiving this session will lose the unsaved edits to these files:"),
+    )
+    .toBeVisible()
+  await expect.element(dialog().getByText("README.md", { exact: true })).toBeVisible()
+  await expect.element(dialog().getByRole("button", { name: "Cancel" })).toHaveFocus()
+  await dialog().getByRole("button", { name: "Cancel" }).click()
+
+  await expect.element(sessionTab("Checkout flow")).toBeVisible()
+  expect(server.sessions.get("s1")?.archivedAt).toBeNull()
+  await expect.element(fileTab("README.md")).toHaveAccessibleDescription("Unsaved edits")
+})
+
+test("confirming an archive from the tab's menu drops the edits, and a restore does not bring them back", async () => {
+  const server = makeServer()
+  await mount(server)
+  await typeAtEnd("README.md", " draft")
+
+  await sessionTab("Checkout flow").click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Archive" }).click()
+  await dialog().getByRole("button", { name: "Archive and lose edits" }).click()
+  await expect.element(sessionTab("Checkout flow")).not.toBeInTheDocument()
+  await expect.poll(() => server.sessions.get("s1")?.archivedAt).not.toBeNull()
+
+  await userEvent.keyboard(`{Shift>}{${mod}>}a{/${mod}}{/Shift}`)
+  await userEvent.keyboard("{Enter}")
+  await expect.poll(() => server.sessions.get("s1")?.archivedAt).toBeNull()
+  await userEvent.keyboard("{Escape}")
+  await page.getByText(/^Inactive sessions/).click()
+  await page.getByTestId("inactive-sessions").getByText("Checkout flow").click()
+  await expect.element(code("README.md")).toHaveTextContent("# Shop")
+  await expect.element(fileTab("README.md")).not.toHaveAccessibleDescription("Unsaved edits")
+})
+
+test("deleting a session with unsaved files lists them in the one dialog", async () => {
+  const server = makeServer()
+  await mount(server)
+  await typeAtEnd("README.md", " draft")
+
+  const row = page.getByTestId("session-item").filter({ hasText: "Checkout flow" })
+  await row.hover()
+  await row.getByRole("button", { name: "Session actions" }).click()
+  await page.getByRole("menuitem", { name: "Delete…" }).click()
+  await expect.element(dialog().getByText("Delete “Checkout flow”?")).toBeVisible()
+  await expect
+    .element(
+      dialog().getByText("Deleting this session will lose the unsaved edits to these files:"),
+    )
+    .toBeVisible()
+  await expect.element(dialog().getByText("README.md", { exact: true })).toBeVisible()
+  await dialog().getByRole("button", { name: "Delete and lose edits" }).click()
+  await expect.poll(() => server.sessions.has("s1")).toBe(false)
+})
+
+test("a working agent and several unsaved files show in one dialog", async () => {
+  const server = makeServer()
+  await mount(server)
+  await typeAtEnd("README.md", " draft")
+  await fileTab("main.ts").click()
+  await typeAtEnd("main.ts", " // x")
+  server.setStatus("s1", "working")
+
+  await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
+  await expect
+    .element(
+      dialog().getByText(
+        "Archiving this session will stop the working agent and lose the unsaved edits to these files:",
+      ),
+    )
+    .toBeVisible()
+  await expect.element(dialog().getByText("README.md", { exact: true })).toBeVisible()
+  await expect.element(dialog().getByText("main.ts", { exact: true })).toBeVisible()
+  await expect.element(dialog().getByRole("button", { name: "Stop and archive" })).toBeVisible()
+})
+
+test("cancelling the close of a project with unsaved files keeps them", async () => {
+  const server = makeServer()
+  await mount(server)
+  await typeAtEnd("README.md", " draft")
+
+  await page.getByRole("button", { name: "Project actions" }).click()
+  await page.getByRole("menuitem", { name: "Close project" }).click()
+  await expect.element(dialog().getByText("Close “shop”?")).toBeVisible()
+  await dialog().getByRole("button", { name: "Cancel" }).click()
+  await expect.element(fileTab("README.md")).toHaveAccessibleDescription("Unsaved edits")
+})
+
+test("confirming the close of a project with unsaved files closes it", async () => {
+  const server = makeServer()
+  await mount(server)
+  await typeAtEnd("README.md", " draft")
+
+  await page.getByRole("button", { name: "Project actions" }).click()
+  await page.getByRole("menuitem", { name: "Close project" }).click()
+  await dialog().getByRole("button", { name: "Close project and lose edits" }).click()
+  await expect.element(page.getByTestId("project-name")).not.toBeInTheDocument()
+})
+
+test("archiving a session with no unsaved files asks nothing", async () => {
+  const server = makeServer()
+  await mount(server)
+  await expect.element(sessionTab("Checkout flow")).toBeVisible()
+
+  await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
+  await expect.poll(() => server.sessions.get("s1")?.archivedAt).not.toBeNull()
+  await expect.element(dialog()).not.toBeInTheDocument()
+})

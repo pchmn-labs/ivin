@@ -2,6 +2,7 @@ import { Effect } from "effect"
 import { Atom } from "effect/reactivity"
 import type { ProjectTabs } from "@ivin/contracts/tab"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
+import { discardSessionEditsAtom } from "../../file/atoms/file-edit.ts"
 import { tabsOf } from "./list-tabs.ts"
 
 // Hides the session's tab until `run` answers with the bar the server keeps.
@@ -23,13 +24,23 @@ export const closingTab =
       )
     })
 
-export const closeTabAtom = serverRuntime.fn<{
-  readonly projectPath: string
-  readonly sessionId: string
-}>()(
-  Effect.fnUntraced(function* ({ projectPath, sessionId }) {
-    const client = yield* ServerClient
-    return yield* closingTab(projectPath, sessionId)(client["tab.close"]({ sessionId }))
-  }),
-  { concurrent: true },
-)
+export const closeTabAtom = serverRuntime
+  .fn<{
+    readonly projectPath: string
+    readonly sessionId: string
+    readonly discardEdits?: boolean
+  }>()(
+    Effect.fnUntraced(function* ({ projectPath, sessionId, discardEdits = false }) {
+      const client = yield* ServerClient
+      // Never fails: a result shared between concurrent closes would blame the wrong tab.
+      yield* closingTab(
+        projectPath,
+        sessionId,
+      )(client["tab.close"]({ sessionId })).pipe(
+        Effect.andThen(discardEdits ? Atom.set(discardSessionEditsAtom, sessionId) : Effect.void),
+        Effect.catchCause(() => Effect.void),
+      )
+    }),
+    { concurrent: true },
+  )
+  .pipe(Atom.keepAlive)

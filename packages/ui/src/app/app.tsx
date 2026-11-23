@@ -21,6 +21,7 @@ import { SessionActionDialog } from "../modules/session/ui/session-action-dialog
 import { StartSessionError } from "../modules/session/ui/start-session-error.tsx"
 import { TabView } from "../modules/tab/ui/tab-view.tsx"
 import { tabTranscriptsAtom } from "../modules/transcript/atoms/tab-transcripts.ts"
+import { MainAreaBoundary } from "./failure-boundary.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
 import { MainTopBar } from "./main-top-bar.tsx"
@@ -183,7 +184,9 @@ export function App() {
             <TrustProjectDialog />
             <StartSessionError projectPath={projectPath} />
             <KeybindingsFileProblem />
-            <TabView projectPath={projectPath} />
+            <MainAreaBoundary projectPath={projectPath}>
+              <TabView projectPath={projectPath} />
+            </MainAreaBoundary>
           </main>
           <SessionActionDialog />
           <Slot slot="window.overlay" props={{}} />

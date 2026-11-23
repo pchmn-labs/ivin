@@ -28,16 +28,23 @@ import { openSessions } from "./rules/open-sessions.ts"
 
 function SessionRow({ session, selected }: { session: Session; selected: boolean }) {
   const openTab = useOpenTab()
-  const rename = useRenameSession()
+  const { rename, failure: renameFailure } = useRenameSession(session)
   const [draft, setDraft] = useState<string | null>(null)
   const location = useSessionLocation(session)
   const actions = useSessionActions(session)
 
   const commit = () => {
     const title = draft?.trim()
-    if (title && title !== session.title) rename(session, title)
+    if (title && title !== session.title) rename(title)
     setDraft(null)
   }
+
+  const below =
+    actions.failure !== null ? (
+      <ErrorMessage message={actions.failure} />
+    ) : renameFailure ? (
+      <ErrorMessage {...renameFailure} />
+    ) : null
 
   if (draft !== null) {
     return (
@@ -88,7 +95,7 @@ function SessionRow({ session, selected }: { session: Session; selected: boolean
             ]}
           />
         }
-        {...(actions.failure !== null && { below: <ErrorMessage message={actions.failure} /> })}
+        {...(below && { below })}
       />
     </Stack>
   )

@@ -3,6 +3,7 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react"
 import type { VirtuosoHandle } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import type { SentMessagePlace } from "../rules/sent-message-scroll.ts"
+import { trimTranscriptAtom } from "../atoms/trim-transcript.ts"
 import { placeToRestore } from "../rules/transcript-place.ts"
 
 const END_SLACK = 2
@@ -45,14 +46,12 @@ export function useSavePlace({
     () => () => {
       const { firstIndex, sentMessagePlace } = latest.current
       const sent = sentMessagePlace()
-      list.current?.getState((state) =>
-        registry.set(transcriptOf(sessionId).place, {
-          firstIndex,
-          atEnd: atEnd.current,
-          list: state,
-          sent,
-        }),
-      )
+      list.current?.getState((state) => {
+        const place = { firstIndex, atEnd: atEnd.current, list: state, sent }
+        registry.set(transcriptOf(sessionId).place, place)
+        // Reopening at the end needs only the last page; a place scrolled back keeps what it has.
+        if (place.atEnd) registry.set(trimTranscriptAtom, sessionId)
+      })
     },
     [registry, sessionId],
   )

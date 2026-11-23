@@ -2,6 +2,8 @@ import { expect, test, vi } from "vitest"
 import { AsyncResult } from "effect/reactivity"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
 import { makeTestSession } from "../../../core/test-session.ts"
+import { fileEditOf, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
+import { noEdit } from "../../file/rules/file-edit.ts"
 import { tabsOf } from "../../tab/atoms/list-tabs.ts"
 import { archiveSessionAtom } from "./archive-session.ts"
 import { deleteSessionAtom } from "./delete-session.ts"
@@ -127,4 +129,58 @@ test("a failed delete keeps the session and says why, until the next try succeed
   registry.set(deleteSessionAtom, { projectPath: project, sessionId: "s1" })
   await vi.waitFor(() => expect(registry.get(sessions.ids)).toEqual(["s2"]))
   expect(registry.get(sessionActionFailureOf("s1"))).toBeNull()
+})
+
+const typeInto = (registry: Registry, sessionId: string, path: string) =>
+  registry.set(fileEditOf(sessionId, folderOf(sessionId), path), {
+    ...noEdit,
+    base: { text: "a", version: "1" },
+    draft: "b",
+  })
+
+const folderOf = (sessionId: string) =>
+  makeTestSession({ id: sessionId, title: "", projectPath: project }).workingFolder
+
+type Registry = Awaited<ReturnType<typeof setup>>["registry"]
+
+test("an archived session loses its unsaved edits, and a restore does not bring them back", async () => {
+  const { registry, archivedIds } = await setup()
+  typeInto(registry, "s1", "README.md")
+  typeInto(registry, "s2", "other.md")
+
+  registry.set(archiveSessionAtom, { projectPath: project, sessionId: "s1" })
+  await vi.waitFor(() => expect(archivedIds()).toEqual(["s1"]))
+  registry.set(restoreSessionAtom, { projectPath: project, sessionId: "s1" })
+  await vi.waitFor(() => expect(archivedIds()).toEqual([]))
+
+  expect(registry.get(unsavedPathsOf("s1", folderOf("s1")))).toEqual([])
+  expect(registry.get(unsavedPathsOf("s2", folderOf("s2")))).toEqual(["other.md"])
+})
+
+test("a failed archive or delete keeps the session's unsaved edits", async () => {
+  const { registry, server } = await setup()
+  typeInto(registry, "s1", "README.md")
+
+  server.failNextCall("session.archive")
+  registry.set(archiveSessionAtom, { projectPath: project, sessionId: "s1" })
+  await vi.waitFor(() =>
+    expect(registry.get(sessionActionFailureOf("s1"))).toBe("The session was not archived."),
+  )
+  server.failNextCall("session.delete")
+  registry.set(deleteSessionAtom, { projectPath: project, sessionId: "s1" })
+  await vi.waitFor(() =>
+    expect(registry.get(sessionActionFailureOf("s1"))).toBe("The session was not deleted."),
+  )
+
+  expect(registry.get(unsavedPathsOf("s1", folderOf("s1")))).toEqual(["README.md"])
+})
+
+test("a deleted session loses its unsaved edits", async () => {
+  const { registry, sessions } = await setup()
+  typeInto(registry, "s1", "README.md")
+
+  registry.set(deleteSessionAtom, { projectPath: project, sessionId: "s1" })
+  await vi.waitFor(() => expect(registry.get(sessions.ids)).toEqual(["s2"]))
+
+  expect(registry.get(unsavedPathsOf("s1", folderOf("s1")))).toEqual([])
 })

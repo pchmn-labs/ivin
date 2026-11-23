@@ -80,7 +80,11 @@ let startServer: (options?: { readonly manual: boolean }) => void = () => {}
 
 // Registered before ready: the window loads sent images and plugins' files straight from disk.
 protocol.registerSchemesAsPrivileged([
-  { scheme: IMAGE_SCHEME, privileges: { standard: true, secure: true } },
+  // The composer reads unread messages' images with fetch, from the window's own origin.
+  {
+    scheme: IMAGE_SCHEME,
+    privileges: { standard: true, secure: true, corsEnabled: true, supportFetchAPI: true },
+  },
   { scheme: PLUGIN_SCHEME, privileges: { standard: true, secure: true } },
   // A module script is fetched with CORS, from the window's own origin.
   {
@@ -215,9 +219,17 @@ void app.whenReady().then(() => {
   if (!isFirstInstance) return
   if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
   const imageFolder = join(app.getPath("userData"), "images")
-  protocol.handle(IMAGE_SCHEME, (request) => {
+  protocol.handle(IMAGE_SCHEME, async (request) => {
     const file = imageFile(imageFolder, request.url)
-    return file ? net.fetch(pathToFileURL(file).toString()) : new Response(null, { status: 404 })
+    if (!file) return new Response(null, { status: 404 })
+    const response = await net.fetch(pathToFileURL(file).toString())
+    return new Response(response.body, {
+      status: response.status,
+      headers: {
+        "content-type": response.headers.get("content-type") ?? "",
+        "access-control-allow-origin": "*",
+      },
+    })
   })
   protocol.handle(PLUGIN_SCHEME, async (request) => {
     const file = await pluginFile(pluginsFolder, request.url)

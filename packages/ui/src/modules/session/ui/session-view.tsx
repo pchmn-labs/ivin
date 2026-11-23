@@ -51,7 +51,12 @@ function OpenSession({ projectPath, sessionId }: { projectPath: string; sessionI
       )}
       {!blank && (
         <div className="iv-session-view__transcript">
-          <TranscriptView key={sessionId} sessionId={sessionId} live={isRunning(status)} />
+          <TranscriptView
+            key={sessionId}
+            sessionId={sessionId}
+            live={isRunning(status)}
+            missing={session === undefined}
+          />
         </div>
       )}
       {status === "preparing_worktree" && (

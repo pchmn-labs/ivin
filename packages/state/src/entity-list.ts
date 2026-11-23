@@ -111,7 +111,11 @@ export const makeEntityList = <A, R = never, E = never, ER = never>(options: {
       return found === undefined ? [] : [found]
     }),
   )
-  const status = Atom.readable((get) => (feed ? get(feed) : undefined))
+  // Refreshing it restarts the feed, which is how a view retries one that failed.
+  const status = Atom.readable(
+    (get) => (feed ? get(feed) : undefined),
+    (refresh) => feed && refresh(feed),
+  )
 
   return { ...writer, ids, item, items, status }
 }

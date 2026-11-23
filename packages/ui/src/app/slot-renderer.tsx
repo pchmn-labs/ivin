@@ -1,11 +1,12 @@
-import { useAtomValue } from "@effect/atom-react"
-import { Component, type ComponentType, type ReactNode } from "react"
+import { RegistryContext, useAtomValue } from "@effect/atom-react"
+import { Component, useContext, type ComponentType, type ReactNode } from "react"
 import type { SlotComponentProps, SlotName, SlotProps } from "@ivin/plugin-api/ui"
 import { contributionsAtom, type Contribution } from "../modules/plugin/atoms/contributions.ts"
+import { reportPluginFailureAtom } from "../modules/plugin/atoms/report-plugin-failure.ts"
 import { visibleContributions } from "../modules/plugin/rules/visible-contributions.ts"
 
 class ContributionBoundary extends Component<
-  { pluginId: string; children: ReactNode; quiet?: boolean },
+  { pluginId: string; children: ReactNode; quiet?: boolean; onError: (error: unknown) => void },
   { failed: boolean }
 > {
   override state = { failed: false }
@@ -16,6 +17,7 @@ class ContributionBoundary extends Component<
 
   override componentDidCatch(error: unknown) {
     console.error(`plugin ${this.props.pluginId} failed`, error)
+    this.props.onError(error)
   }
 
   override render() {
@@ -30,6 +32,15 @@ class ContributionBoundary extends Component<
   }
 }
 
+function useReportPluginError(pluginId: string) {
+  const registry = useContext(RegistryContext)
+  return (error: unknown) =>
+    registry.set(reportPluginFailureAtom, {
+      id: pluginId,
+      reason: `Its slot failed while rendering: ${error instanceof Error ? error.message : String(error)}`,
+    })
+}
+
 export function SlotContribution<S extends SlotName>({
   contribution,
   props,
@@ -38,8 +49,9 @@ export function SlotContribution<S extends SlotName>({
   props: SlotProps[S]
 }) {
   const Component = contribution.component as ComponentType<SlotProps[S]>
+  const onError = useReportPluginError(contribution.pluginId)
   return (
-    <ContributionBoundary pluginId={contribution.pluginId}>
+    <ContributionBoundary pluginId={contribution.pluginId} onError={onError}>
       <Component {...props} />
     </ContributionBoundary>
   )
@@ -48,9 +60,10 @@ export function SlotContribution<S extends SlotName>({
 // A contribution's badge renders nothing when it fails; its slot shows the failure.
 export function ContributionBadge({ contribution }: { contribution: Contribution }) {
   const Badge = contribution.badge as ComponentType | undefined
+  const onError = useReportPluginError(contribution.pluginId)
   if (Badge === undefined) return undefined
   return (
-    <ContributionBoundary pluginId={contribution.pluginId} quiet>
+    <ContributionBoundary pluginId={contribution.pluginId} quiet onError={onError}>
       <Badge />
     </ContributionBoundary>
   )

@@ -1,11 +1,10 @@
 import { RegistryContext, useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Exit } from "effect"
 import { useContext, useState, type DragEvent, type KeyboardEvent } from "react"
 import { Button } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { ContextMenu } from "../../../core/components/menu/menu.tsx"
-import { discardSessionEditsAtom, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
+import { unsavedPathsOf } from "../../file/atoms/file-edit.ts"
 import { fileName } from "../../file/rules/file-name.ts"
 import { settingsAtom } from "../../setting/atoms/settings.ts"
 import { isRunning } from "../../session/rules/is-running.ts"
@@ -45,12 +44,11 @@ function TabItem({
 }) {
   const session = useAtomValue(sessionsOf(projectPath).item(sessionId))
   const openTab = useAtomSet(openTabAtom)
-  const closeTab = useAtomSet(closeTabAtom, { mode: "promiseExit" })
+  const closeTab = useAtomSet(closeTabAtom)
   const { tabs: settings } = useAtomValue(settingsAtom)
   const [confirming, setConfirming] = useState(false)
   // Read when the user closes, kept while the prompt fades out.
   const [unsaved, setUnsaved] = useState<ReadonlyArray<string>>([])
-  const discardEdits = useAtomSet(discardSessionEditsAtom)
   const registry = useContext(RegistryContext)
   const actions = useSessionActions(session)
   if (!session) return null
@@ -60,7 +58,7 @@ function TabItem({
     const paths = registry.get(unsavedPathsOf(sessionId, session.workingFolder))
     setUnsaved(paths)
     if (stopsAgent || paths.length > 0) setConfirming(true)
-    else void closeTab({ projectPath, sessionId })
+    else closeTab({ projectPath, sessionId })
   }
   const unsavedNames = unsaved.map(fileName)
   const unsavedText =
@@ -162,9 +160,7 @@ function TabItem({
               variant="danger"
               onClick={() => {
                 setConfirming(false)
-                void closeTab({ projectPath, sessionId }).then(
-                  (exit) => Exit.isSuccess(exit) && discardEdits(sessionId),
-                )
+                closeTab({ projectPath, sessionId, discardEdits: true })
               }}
             >
               {prompt.confirm}

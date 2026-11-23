@@ -1,8 +1,12 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
 import { useCallback, useMemo } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
+import {
+  FailureHeader,
+  FailureSkeleton,
+} from "../../../core/components/failure-state/failure-state.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { shownRows, type TranscriptRow as RowData } from "../rules/turns.ts"
 import { useLoadBefore } from "../hooks/use-load-before.ts"
@@ -17,8 +21,18 @@ const FIRST_ITEM_INDEX = 1_000_000
 // One 24px transcript line and the item's 8px padding above and below; keep in step with transcript-view.css.
 const ROW_HEIGHT = 40
 // `live`: the session's agent is working, so its last turn is under way.
-export function TranscriptView({ sessionId, live = false }: { sessionId: string; live?: boolean }) {
-  const { loaded, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
+// `missing`: the session is no longer in its project.
+export function TranscriptView({
+  sessionId,
+  live = false,
+  missing = false,
+}: {
+  sessionId: string
+  live?: boolean
+  missing?: boolean
+}) {
+  const { loaded, failed, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
+  const retry = useAtomRefresh(transcriptOf(sessionId).list.status)
   const loadItemsBefore = useAtomSet(loadItemsBeforeAtom)
   const shown = useMemo(() => shownRows(rows, live), [rows, live])
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
@@ -44,6 +58,7 @@ export function TranscriptView({ sessionId, live = false }: { sessionId: string;
     load: () => loadItemsBefore(sessionId),
   })
 
+  if (failed && !loaded) return <TranscriptFailure missing={missing} retry={retry} />
   if (!loaded) return <TranscriptEmpty>Loading the transcript…</TranscriptEmpty>
   if (shown.length === 0) return <TranscriptEmpty>No messages yet</TranscriptEmpty>
 
@@ -93,6 +108,18 @@ function TranscriptEmpty({ children }: { children: string }) {
   return (
     <div className="iv-transcript iv-transcript__empty">
       <Text tone="muted">{children}</Text>
+    </div>
+  )
+}
+
+function TranscriptFailure({ missing, retry }: { missing: boolean; retry: () => void }) {
+  return (
+    <div className="iv-transcript iv-transcript__failure">
+      <FailureHeader
+        message={missing ? "This session no longer exists." : "The transcript could not be loaded."}
+        {...(!missing && { onRetry: retry })}
+      />
+      <FailureSkeleton />
     </div>
   )
 }

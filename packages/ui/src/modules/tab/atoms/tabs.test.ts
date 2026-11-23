@@ -4,6 +4,8 @@ import { makeTestRegistry } from "../../../core/test-registry.ts"
 import { projectsAtom } from "../../project/atoms/list-projects.ts"
 import { openProjectAtom } from "../../project/atoms/open-project.ts"
 import { createSessionAtom } from "../../session/atoms/create-session.ts"
+import { fileEditOf, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
+import { noEdit } from "../../file/rules/file-edit.ts"
 import { closeTabAtom } from "./close-tab.ts"
 import { tabsOf } from "./list-tabs.ts"
 import { openTabAtom } from "./open-tab.ts"
@@ -205,4 +207,33 @@ test("opening the tab of another project's session selects that project", async 
 
   await vi.waitFor(() => expect(registry.get(projectsAtom.value).selectedPath).toBe(project))
   expect(registry.get(tabsOf(project).value).selectedSessionId).toBe("session-1")
+})
+
+test("closing two tabs at once drops the edits of the one that closed, not of the one that failed", async () => {
+  const { registry, server, ids } = await setup()
+  const folder = server.sessions.get("session-1")!.workingFolder
+  for (const id of ["session-1", "session-2"]) {
+    registry.set(fileEditOf(id, folder, "a.md"), {
+      ...noEdit,
+      base: { text: "a", version: "1" },
+      draft: "b",
+    })
+  }
+  const first = server.holdNextCall("tab.close")
+
+  registry.set(closeTabAtom, {
+    projectPath: project,
+    sessionId: "session-1",
+    discardEdits: true,
+  })
+  registry.set(closeTabAtom, {
+    projectPath: project,
+    sessionId: "session-2",
+    discardEdits: true,
+  })
+  await vi.waitFor(() => expect(registry.get(unsavedPathsOf("session-2", folder))).toEqual([]))
+  first.fail()
+
+  await vi.waitFor(() => expect(ids()).toContain("session-1"))
+  expect(registry.get(unsavedPathsOf("session-1", folder))).toEqual(["a.md"])
 })

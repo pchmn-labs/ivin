@@ -215,6 +215,18 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
             hasAfter: later.length > after,
           }
         }),
+      usageTotal: (sessionId) =>
+        Effect.sync(() => {
+          const row = db
+            .prepare(
+              `SELECT COUNT(*) AS count,
+                      COALESCE(SUM((payload ->> '$.inputTokens') + (payload ->> '$.outputTokens')), 0) AS tokens,
+                      COALESCE(SUM(payload ->> '$.costUsd'), 0) AS costUsd
+               FROM transcript_items WHERE session_id = ? AND type = 'usage'`,
+            )
+            .get(sessionId) as { count: number; tokens: number; costUsd: number }
+          return row.count === 0 ? null : { tokens: row.tokens, costUsd: row.costUsd }
+        }),
       itemState: (sessionId) =>
         decoding((report): ItemState => {
           const open = readItems(

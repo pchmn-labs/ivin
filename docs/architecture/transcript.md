@@ -13,6 +13,13 @@ What the design adds to the [glossary](../../GLOSSARY.md)'s terms in the `transc
 - A session whose items are absent or derived with older rules (`ITEMS_VERSION`) gets them derived from all its events on its next read or write, once. A change to the rules that alters stored items bumps that version. A tool call's `kind` is computed again on each read, so a change to the harness's tool table needs no new version.
 - When a turn or a run ends with approvals or questions still open, a `request_unanswered` event closes each one: an approval's decision, or a question's status, becomes `unanswered`, and the running tool call the approval was for gets a failed `tool_result` ("Not run: the approval was not answered."). At startup, a session left working or waiting gets the same events, and a new run gives them to any request its session still holds open, such as one left by a run from before this event existed.
 
+- `transcript.watchUsage` streams the session's total tokens and cost, summed in SQL over every stored `usage` item, then the new total after each one; a session without usage streams `null`. A plugin reads it through `useUsage`, so the total does not depend on which pages the window holds.
+
+## In the window
+
+- The window holds a window of items. A tab's transcript stays fed while the tab is open; when its view closes with the transcript left at its end (`place.atEnd`), the items before the last page (`PAGE_SIZE`, 50) are removed and `hasBefore` is set, so reopening starts on the last item and scrolling up loads older pages again. A transcript left scrolled back keeps every page it has. The view that is on screen is never trimmed: its rows above the viewport would move under the reader.
+- A transcript whose feed fails shows "The transcript could not be loaded." with Retry at the top of the transcript area, over a faint grey skeleton, in place of "Loading the transcript…". When the session is no longer in its project, it shows "This session no longer exists." with no Retry. Retry starts the feed again and keeps the items already loaded.
+
 ## Owning the transcript
 
 - Codex and ACP have no equivalent of Claude's JSONL, and annotations and plugins need event ids that don't depend on a provider's file.

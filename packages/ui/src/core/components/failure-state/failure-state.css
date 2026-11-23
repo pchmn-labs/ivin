@@ -1,0 +1,38 @@
+.iv-failure__row {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: var(--iv-space-9);
+  padding: 0 var(--iv-space-2) 0 var(--iv-space-3);
+  border-bottom: 1px solid var(--iv-border);
+  background: var(--iv-bg-card);
+}
+
+.iv-failure__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-3);
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: var(--iv-space-6);
+}
+
+.iv-failure__ghost {
+  height: var(--iv-space-3);
+  border-radius: var(--iv-radius-sm);
+  background: var(--iv-bg-active);
+  opacity: 0.5;
+}
+
+.iv-failure__ghost[data-width="full"] {
+  width: 100%;
+}
+
+.iv-failure__ghost[data-width="wide"] {
+  width: 80%;
+}
+
+.iv-failure__ghost[data-width="short"] {
+  width: 40%;
+}

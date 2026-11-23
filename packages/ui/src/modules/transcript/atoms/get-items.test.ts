@@ -66,3 +66,21 @@ test("an upsert after deltas wins over the pending text", async () => {
   await nextFrame()
   expect(registry.get(transcript.list.item("a"))).toEqual(stored)
 })
+
+test("a feed that fails marks the transcript failed, and refreshing it loads the transcript", async () => {
+  const { registry, server } = makeTestRegistry()
+  registry.mount(sessionsOf("/p").ids)
+  server.failNextCall("transcript.watchItems")
+  const transcript = transcriptOf("s1")
+  registry.mount(transcript.view)
+  await vi.waitFor(() =>
+    expect(registry.get(transcript.view)).toMatchObject({ failed: true, loaded: false }),
+  )
+
+  registry.refresh(transcript.list.status)
+  await new Promise((r) => setTimeout(r, 200))
+  console.log("STEP2", server.callsOf("transcript.watchItems"), registry.get(transcript.view))
+  await vi.waitFor(() =>
+    expect(registry.get(transcript.view)).toMatchObject({ failed: false, loaded: true }),
+  )
+})

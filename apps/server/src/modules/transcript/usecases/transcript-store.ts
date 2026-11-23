@@ -1,4 +1,9 @@
-import type { TranscriptEvent, TranscriptItem, TranscriptPage } from "@ivin/contracts/transcript"
+import type {
+  SessionUsage,
+  TranscriptEvent,
+  TranscriptItem,
+  TranscriptPage,
+} from "@ivin/contracts/transcript"
 import { Context, type DateTime, type Effect } from "effect"
 import type { ItemState } from "../rules/derive-items.ts"
 
@@ -33,6 +38,7 @@ export class TranscriptStore extends Context.Service<
       before: number,
       after: number,
     ) => Effect.Effect<TranscriptPage>
+    readonly usageTotal: (sessionId: string) => Effect.Effect<SessionUsage>
     readonly itemState: (sessionId: string) => Effect.Effect<ItemState>
   }
 >()("ivin/server/TranscriptStore") {}

@@ -1,3 +1,4 @@
+import { EditorState } from "@ivin/plugin-api/editor"
 import type { Atom, AtomRegistry } from "effect/reactivity"
 import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
 import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
@@ -9,6 +10,7 @@ import {
   editorContributionsAtom,
   fileIconContributionsAtom,
 } from "./contributions.ts"
+import { reportPluginFailureAtom } from "./report-plugin-failure.ts"
 
 export interface UiPluginEntry {
   readonly manifest: { readonly id: string }
@@ -29,6 +31,13 @@ export const activatePlugin = (
       atom,
       registry.get(atom).filter((item) => item.pluginId !== pluginId),
     )
+  const reportFailure = (what: string, error: unknown) => {
+    console.error(`plugin ${pluginId} ${what}`, error)
+    registry.set(reportPluginFailureAtom, {
+      id: pluginId,
+      reason: `Its ${what} and was turned off: ${error instanceof Error ? error.message : String(error)}`,
+    })
+  }
   let active = true
   const removeOwn = () => {
     active = false
@@ -79,19 +88,37 @@ export const activatePlugin = (
         ]),
     },
     editorExtensions: {
-      add: (extension) =>
+      add: (extension) => {
+        try {
+          EditorState.create({ extensions: extension })
+        } catch (error) {
+          reportFailure("editor extension is invalid", error)
+          return
+        }
         registry.set(editorContributionsAtom, [
           ...registry.get(editorContributionsAtom),
           { pluginId, extension },
-        ]),
+        ])
+      },
     },
     fileIcons: {
       // A plugin may add its icons once something it loads arrives, after it was turned off.
       add: (icon) => {
         if (!active) return
+        let broken = false
+        const guarded: typeof icon = (row) => {
+          if (broken) return null
+          try {
+            return icon(row)
+          } catch (error) {
+            broken = true
+            reportFailure("file icon function threw", error)
+            return null
+          }
+        }
         registry.set(fileIconContributionsAtom, [
           ...registry.get(fileIconContributionsAtom),
-          { pluginId, icon },
+          { pluginId, icon: guarded },
         ])
       },
     },
