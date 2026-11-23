@@ -23,3 +23,4 @@ packages/harness/src/
 ## Tests
 
 - `rules/`: on recorded provider output kept as fixtures.
+- A Claude fixture is recorded with `pnpm record:claude <fixture-name>`, never with a `claude -p` run of your own: it runs Claude Code with the harness's arguments in a temporary folder and writes its stdout lines to `fixtures/<fixture-name>.jsonl`, with the account and home folder redacted. `pnpm record:claude` alone lists its options. A recording runs a real agent on the user's account and costs tokens.
