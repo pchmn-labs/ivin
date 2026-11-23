@@ -70,7 +70,7 @@ function useLogRenderError() {
   }
 }
 
-// Sits inside RegistryProvider, so Try again keeps every atom: drafts and unsaved edits.
+// Sits inside RegistryProvider, so Retry keeps every atom: drafts and unsaved edits.
 export function WindowFailureBoundary({ children }: { children: ReactNode }) {
   const onError = useLogRenderError()
   return (
@@ -95,7 +95,6 @@ export function AreaFailureBoundary({
   )
 }
 
-// Resets on a tab switch.
 export function MainAreaBoundary({
   projectPath,
   children,

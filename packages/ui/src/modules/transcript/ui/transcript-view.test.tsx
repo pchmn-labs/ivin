@@ -488,7 +488,7 @@ test("a transcript of a session that no longer exists says that, with no Retry",
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <div style={{ position: "relative", height: 300 }}>
         <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" missing />
+          <TranscriptView sessionId="s1" sessionGone />
         </PluginsProvider>
       </div>
     </RegistryProvider>,

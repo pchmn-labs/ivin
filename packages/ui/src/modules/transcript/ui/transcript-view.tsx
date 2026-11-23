@@ -21,15 +21,14 @@ const FIRST_ITEM_INDEX = 1_000_000
 // One 24px transcript line and the item's 8px padding above and below; keep in step with transcript-view.css.
 const ROW_HEIGHT = 40
 // `live`: the session's agent is working, so its last turn is under way.
-// `missing`: the session is no longer in its project.
 export function TranscriptView({
   sessionId,
   live = false,
-  missing = false,
+  sessionGone = false,
 }: {
   sessionId: string
   live?: boolean
-  missing?: boolean
+  sessionGone?: boolean
 }) {
   const { loaded, failed, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
   const retry = useAtomRefresh(transcriptOf(sessionId).list.status)
@@ -58,7 +57,7 @@ export function TranscriptView({
     load: () => loadItemsBefore(sessionId),
   })
 
-  if (failed && !loaded) return <TranscriptFailure missing={missing} retry={retry} />
+  if (failed && !loaded) return <TranscriptFailure sessionGone={sessionGone} retry={retry} />
   if (!loaded) return <TranscriptEmpty>Loading the transcript…</TranscriptEmpty>
   if (shown.length === 0) return <TranscriptEmpty>No messages yet</TranscriptEmpty>
 
@@ -112,12 +111,14 @@ function TranscriptEmpty({ children }: { children: string }) {
   )
 }
 
-function TranscriptFailure({ missing, retry }: { missing: boolean; retry: () => void }) {
+function TranscriptFailure({ sessionGone, retry }: { sessionGone: boolean; retry: () => void }) {
   return (
     <div className="iv-transcript iv-transcript__failure">
       <FailureHeader
-        message={missing ? "This session no longer exists." : "The transcript could not be loaded."}
-        {...(!missing && { onRetry: retry })}
+        message={
+          sessionGone ? "This session no longer exists." : "The transcript could not be loaded."
+        }
+        {...(!sessionGone && { onRetry: retry })}
       />
       <FailureSkeleton />
     </div>
