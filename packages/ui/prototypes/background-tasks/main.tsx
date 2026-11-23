@@ -9,7 +9,7 @@ import { Inline, Sheet, SidePane } from "./variants.tsx"
 const VARIANTS = [
   { name: "Sheet", Component: Sheet },
   { name: "Inline", Component: Inline },
-  { name: "Side pane", Component: SidePane },
+  { name: "Card tabs", Component: SidePane },
 ]
 
 const requested = Number.parseInt(new URLSearchParams(location.search).get("v") ?? "", 10)

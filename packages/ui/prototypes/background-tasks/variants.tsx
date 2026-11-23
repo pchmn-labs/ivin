@@ -304,11 +304,46 @@ function DetailHeader({ task, onClose }: { task: Task; onClose: () => void }) {
   )
 }
 
+const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi)
+
+function ApprovalSheet() {
+  return (
+    <div className="proto-approval">
+      <div className="proto-approval-head">
+        <Icon name="circle-alert" size={14} />
+        <span className="proto-approval-title">Allow this command?</span>
+        <span className="proto-approval-detail">git push --force-with-lease origin fix/double-stop</span>
+      </div>
+      <div className="proto-approval-actions">
+        <span className="proto-hint">↑↓ Navigate · Enter Select · Esc Deny</span>
+        <span className="proto-btn">Deny</span>
+        <span className="proto-btn" data-primary>Allow</span>
+      </div>
+    </div>
+  )
+}
+
 export function Sheet() {
   const [open, setOpen] = useState<Task | null>(TASKS[1]!)
+  const [approval, setApproval] = useState(true)
+  const [height, setHeight] = useState(280)
   useEscape(() => setOpen(null))
+  const drag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const startY = e.clientY
+    const start = height
+    const move = (ev: PointerEvent) => setHeight(clamp(start + startY - ev.clientY, 120, window.innerHeight - 360))
+    const up = () => {
+      window.removeEventListener("pointermove", move)
+      window.removeEventListener("pointerup", up)
+    }
+    window.addEventListener("pointermove", move)
+    window.addEventListener("pointerup", up)
+  }
   return (
     <Window>
+      <label className="proto-demo">
+        <input type="checkbox" checked={approval} onChange={(e) => setApproval(e.target.checked)} /> Approval pending
+      </label>
       <Transcript
         fold={
           <Fold
@@ -327,13 +362,15 @@ export function Sheet() {
       />
       <div className="proto-dock">
         {open && (
-          <div className="proto-sheet" key={open.id}>
+          <div className="proto-sheet" data-stacked={approval || undefined} style={{ height }} key={open.id}>
+            <div className="proto-grip" onPointerDown={drag} onDoubleClick={() => setHeight(280)} role="separator" aria-orientation="horizontal" aria-label="Resize" />
             <DetailHeader task={open} onClose={() => setOpen(null)} />
             <div className="proto-sheet-body">
               <Body task={open} />
             </div>
           </div>
         )}
+        {approval && <ApprovalSheet />}
         <Composer />
       </div>
     </Window>
@@ -372,35 +409,66 @@ export function Inline() {
   )
 }
 
+const FILES = ["session-runs.ts", "session-lock.ts"]
+const CODE = [
+  "export function setStatus(run: Run, status: Status) {",
+  "  if (run.status === status) return",
+  "  run.status = status",
+  "  publish(run.sessionId, { type: \"status\", status })",
+  "}",
+  "",
+  "export function stopRun(run: Run) {",
+  "  const tasks = run.tasks.slice()",
+  "  for (const task of tasks) task.stop()",
+  "  run.child.kill()",
+  "}",
+]
+
+type Tab = { kind: "file"; name: string } | { kind: "task"; task: Task }
+const tabKey = (t: Tab) => (t.kind === "file" ? `f:${t.name}` : `t:${t.task.id}`)
+
 export function SidePane() {
-  const [open, setOpen] = useState<Task | null>(TASKS[0]!)
-  useEscape(() => setOpen(null))
+  const [tabs, setTabs] = useState<Tab[]>(FILES.map((name) => ({ kind: "file", name })))
+  const [sel, setSel] = useState<string>("f:session-runs.ts")
+  const openTask = (task: Task) => {
+    const tab: Tab = { kind: "task", task }
+    setTabs((ts) => (ts.some((t) => tabKey(t) === tabKey(tab)) ? ts : [...ts, tab]))
+    setSel(tabKey(tab))
+  }
+  const close = (key: string) => {
+    setTabs((ts) => ts.filter((t) => tabKey(t) !== key))
+    if (sel === key) setSel(tabKey(tabs[0]!) === key ? tabKey(tabs[1]!) : tabKey(tabs[0]!))
+  }
+  const current = tabs.find((t) => tabKey(t) === sel)
   return (
     <Window
       pane={
-        open && (
-          <aside className="proto-pane" key={open.id}>
-            <DetailHeader task={open} onClose={() => setOpen(null)} />
-            <div className="proto-pane-tabs">
-              {TASKS.map((t) => (
-                <button key={t.id} type="button" className="proto-pane-tab" data-active={t.id === open.id || undefined} onClick={() => setOpen(t)}>
-                  <TaskIcon task={t} />
-                  {t.kind === "agent" ? "Subagent" : t.command.split(" ").slice(0, 2).join(" ")}
+        <aside className="proto-pane">
+          <div className="proto-pane-tabs" role="tablist">
+            {tabs.map((t) => (
+              <span key={tabKey(t)} role="tab" className="proto-pane-tab" data-active={tabKey(t) === sel || undefined} onClick={() => setSel(tabKey(t))}>
+                {t.kind === "file" ? <Icon name="file" size={14} /> : <span className="proto-tab-dot" />}
+                <span>{t.kind === "file" ? t.name : t.task.kind === "agent" ? "Subagent" : t.task.command.split(" ").slice(0, 2).join(" ")}</span>
+                <button type="button" className="proto-tab-close" aria-label="Close" onClick={(e) => { e.stopPropagation(); close(tabKey(t)) }}>
+                  <Icon name="x" size={12} />
                 </button>
-              ))}
-            </div>
-            <div className="proto-pane-body">
-              <Body task={open} />
-            </div>
-          </aside>
-        )
+              </span>
+            ))}
+          </div>
+          <div className="proto-pane-body">
+            {current?.kind === "file" && (
+              <pre className="proto-code">{CODE.map((l, i) => `${String(i + 1).padStart(2)}  ${l}`).join("\n")}</pre>
+            )}
+            {current?.kind === "task" && <Body key={current.task.id} task={current.task} />}
+          </div>
+        </aside>
       }
     >
       <Transcript
         fold={
           <Fold
             renderRow={(t) => (
-              <button key={t.id} type="button" className="proto-task" data-active={open?.id === t.id || undefined} onClick={() => setOpen(t)}>
+              <button key={t.id} type="button" className="proto-task" data-active={sel === `t:${t.id}` || undefined} onClick={() => openTask(t)}>
                 <TaskIcon task={t} />
                 <span className="proto-task-name">{t.name}</span>
                 <span className="proto-task-meta">{t.since}</span>
