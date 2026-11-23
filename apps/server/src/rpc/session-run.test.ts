@@ -6,7 +6,7 @@ import { Rpcs } from "@ivin/contracts/rpcs"
 import type { Session } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { layerScripted, type ScriptedElement, type ScriptedOptions } from "@ivin/harness"
-import { Deferred, Effect, Fiber, Layer } from "effect"
+import { Deferred, type Duration, Effect, Fiber, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
 import { expect, test } from "vitest"
 import { layerSessionRunsWith } from "../modules/session/usecases/session-runs.ts"
@@ -36,7 +36,7 @@ const newDatabase = () => {
 const withServer = <A, E>(
   db: DatabaseSync,
   turns: readonly (readonly ScriptedElement[])[],
-  options: ScriptedOptions,
+  { deadline = "20 millis", ...options }: ScriptedOptions & { deadline?: Duration.Input },
   use: (client: Client) => Effect.Effect<A, E>,
 ) =>
   Effect.runPromise(
@@ -44,7 +44,7 @@ const withServer = <A, E>(
       Effect.flatMap(use),
       Effect.provide(
         handlers.pipe(
-          Layer.provide(layerServicesWith(layerSessionRunsWith("20 millis"))),
+          Layer.provide(layerServicesWith(layerSessionRunsWith(deadline))),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(Layer.succeed(Database)(db)),
           Layer.provide(layerKeybindingsFileOf([])),
@@ -209,18 +209,22 @@ test("an interrupt the agent honours does not stop its process", async () => {
   const db = newDatabase()
   const closed: string[] = []
   const interrupted: string[] = []
-  const result = await withServer(db, [working], { closed, interrupted }, (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p" })
-      yield* send(client, session.id, "m1")
-      yield* untilTypes(db, session.id, "assistant_text")
-      yield* client["session.interrupt"]({ sessionId: session.id })
-      yield* untilTypes(db, session.id, "interruption")
-      yield* untilSession(client, session.id, (s) => s.status === "idle")
-      // Waits well past the 20 ms deadline: a stop would show by then.
-      yield* Effect.sleep("150 millis")
-      return { closed: closed.length, interrupted: interrupted.length }
-    }),
+  const result = await withServer(
+    db,
+    [working],
+    { closed, interrupted, deadline: "250 millis" },
+    (client) =>
+      Effect.gen(function* () {
+        const session = yield* client["session.create"]({ projectPath: "/p" })
+        yield* send(client, session.id, "m1")
+        yield* untilTypes(db, session.id, "assistant_text")
+        yield* client["session.interrupt"]({ sessionId: session.id })
+        yield* untilTypes(db, session.id, "interruption")
+        yield* untilSession(client, session.id, (s) => s.status === "idle")
+        // Waits past the 250 ms deadline: a stop would show by then.
+        yield* Effect.sleep("500 millis")
+        return { closed: closed.length, interrupted: interrupted.length }
+      }),
   )
   expect(result).toEqual({ closed: 0, interrupted: 1 })
 })

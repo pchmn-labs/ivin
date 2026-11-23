@@ -127,6 +127,8 @@ interface ActiveRun {
 }
 
 // Logs a failure of one cleanup step so the steps after it still run.
+const runFailed = new HarnessError({ message: "ivin failed while running the agent" })
+
 const guarded = <A, E, R>(action: string, effect: Effect.Effect<A, E, R>) =>
   effect.pipe(
     Effect.catchCause((cause) =>
@@ -285,9 +287,12 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           return { record, decide, turnStatus, stream, fail }
         })
 
-      const startRun = (session: Session, writer: Effect.Success<ReturnType<typeof makeWriter>>) =>
+      const buildRun = (
+        session: Session,
+        writer: Effect.Success<ReturnType<typeof makeWriter>>,
+        scope: Scope.Closeable,
+      ) =>
         Effect.gen(function* () {
-          const scope = yield* Scope.make()
           const storedProviderSessionId = yield* sessions.providerSessionId(session.id)
           const options = runOptionsOf(session)
           const harness = yield* provider
@@ -297,12 +302,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
               options,
               providerSessionId: storedProviderSessionId,
             })
-            .pipe(
-              Scope.provide(scope),
-              Effect.onExit((exit) =>
-                Exit.isSuccess(exit) ? Effect.void : Scope.close(scope, Exit.void),
-              ),
-            )
+            .pipe(Scope.provide(scope))
 
           const end = Effect.suspend(() => {
             if (runs.get(session.id) === run) runs.delete(session.id)
@@ -324,11 +324,11 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           let turn = 0
           let firstTurn: { readonly message: string; error: string | null } | null = null
           const endFirstTurn = Effect.suspend(() => {
-            const turn = firstTurn
-            if (turn === null) return Effect.void
+            const first = firstTurn
+            if (first === null) return Effect.void
             firstTurn = null
-            return turn.error !== null
-              ? offerPreviousOptions(session.id, options, turn.message, turn.error)
+            return first.error !== null
+              ? offerPreviousOptions(session.id, options, first.message, first.error)
               : sessions.setConfirmedRunOptions(session.id, options)
           })
           const readMessage = (messageId: string) =>
@@ -375,9 +375,7 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
               // The scope closing, which `end` already does, interrupts this fiber.
               if (Cause.hasInterruptsOnly(exit.cause)) return Effect.void
               const failure = Cause.findErrorOption(exit.cause)
-              const error = Option.isSome(failure)
-                ? failure.value
-                : new HarnessError({ message: "ivin failed while running the agent" })
+              const error = Option.isSome(failure) ? failure.value : runFailed
               return Effect.suspend(() => {
                 if (firstTurn !== null) firstTurn.error ??= error.message
                 return Option.isNone(failure)
@@ -414,6 +412,16 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
           }
           runs.set(session.id, run)
           return run
+        })
+
+      const startRun = (session: Session, writer: Effect.Success<ReturnType<typeof makeWriter>>) =>
+        Effect.gen(function* () {
+          const scope = yield* Scope.make()
+          return yield* buildRun(session, writer, scope).pipe(
+            Effect.onExit((exit) =>
+              Exit.isSuccess(exit) ? Effect.void : Scope.close(scope, Exit.void),
+            ),
+          )
         })
 
       const runOf = (session: Session, message: UserMessage) =>
@@ -497,7 +505,9 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
         Effect.suspend(() => {
           const run = runs.get(sessionId)
           // Closing the run's scope also interrupts the fiber that would have set the status.
-          return run ? run.end.pipe(Effect.andThen(setStatus(sessionId, "idle"))) : Effect.void
+          return run
+            ? run.end.pipe(Effect.andThen(guarded("set idle status", setStatus(sessionId, "idle"))))
+            : Effect.void
         })
 
       return {
@@ -522,9 +532,9 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
                   )
               }
               yield* setStatus(session.id, "working")
-              const run = yield* runOf(session, message)
-              if (!run) return
               yield* Effect.gen(function* () {
+                const run = yield* runOf(session, message)
+                if (!run) return
                 // Mid-turn, a worktree the agent just made would be taken for one that was already there.
                 if (!run.busy()) yield* run.turnStarted
                 yield* run.record(userMessageEvent(message), message.id)
@@ -536,18 +546,17 @@ export const layerSessionRunsWith = (interruptDeadline: Duration.Input) =>
                     ),
                   )
               }).pipe(
-                Effect.onError((cause) =>
-                  Cause.hasInterruptsOnly(cause)
-                    ? Effect.void
-                    : logFailure("send message", cause).pipe(
-                        Effect.andThen(run.end),
-                        Effect.andThen(
-                          run.fail(
-                            new HarnessError({ message: "ivin failed while running the agent" }),
-                          ),
-                        ),
-                      ),
-                ),
+                Effect.onError((cause) => {
+                  if (Cause.hasInterruptsOnly(cause)) return Effect.void
+                  const run = runs.get(session.id)
+                  return logFailure("send message", cause).pipe(
+                    Effect.andThen(
+                      run
+                        ? run.end.pipe(Effect.andThen(run.fail(runFailed)))
+                        : guarded("set failed status", setStatus(session.id, "failed")),
+                    ),
+                  )
+                }),
               )
             }),
           ),
