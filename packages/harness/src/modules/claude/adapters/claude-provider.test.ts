@@ -334,10 +334,10 @@ test("start names a project folder that does not exist", async () => {
 test("closing the scope returns within a bound when a grandchild holds the pipes open", async () => {
   await withFakeClaude(
     `require("node:child_process").spawn("sleep", ["5"], { stdio: "inherit", detached: true }).unref()
+require("node:fs").writeFileSync("grandchild-started", "")
 setInterval(() => {}, 1000)`,
     async (dir) => {
-      const started = Date.now()
-      await Effect.runPromise(
+      const grandchildStartedAt = await Effect.runPromise(
         Effect.gen(function* () {
           yield* (yield* HarnessProvider).start({
             sessionId: "s1",
@@ -345,11 +345,14 @@ setInterval(() => {}, 1000)`,
             options: { model: "haiku", effort: "low", permissionMode: "manual" },
             providerSessionId: null,
           })
-          yield* Effect.sleep("200 millis")
+          yield* Effect.promise(() =>
+            expect.poll(() => existsSync(join(dir, "grandchild-started"))).toBe(true),
+          )
+          return Date.now()
         }).pipe(Effect.provide(layerClaudeWith("100 millis")), Effect.scoped),
       )
 
-      expect(Date.now() - started).toBeLessThan(500)
+      expect(Date.now() - grandchildStartedAt).toBeLessThan(500)
     },
   )
 })

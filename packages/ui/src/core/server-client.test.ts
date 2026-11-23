@@ -1,3 +1,4 @@
+import { AsyncResult } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { selectProjectAtom } from "../modules/project/atoms/select-project.ts"
 import { makeTestRegistry } from "./test-registry.ts"
@@ -21,6 +22,6 @@ test("an RPC that succeeds reports nothing", async () => {
 
   registry.set(selectProjectAtom, "/open")
 
-  await new Promise((resolve) => setTimeout(resolve, 20))
+  await vi.waitFor(() => expect(AsyncResult.isSuccess(registry.get(selectProjectAtom))).toBe(true))
   expect(server.errorReports).toEqual([])
 })

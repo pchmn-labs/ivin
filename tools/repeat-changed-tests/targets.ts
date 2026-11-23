@@ -1,4 +1,4 @@
-import ts from "typescript"
+import ts from "typescript-compiler-api"
 
 export type ChangedLines = { added: number[]; removedAfter: number[] }
 export type ChangedFile = ChangedLines & { path: string; source: string }

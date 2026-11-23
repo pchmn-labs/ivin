@@ -27,6 +27,9 @@ const expectedOf = (schema: Schema.Struct.Fields[string], path: string): Expecte
           allowed: ast.types.map((type) => (type as typeof type & { literal: string }).literal),
         }
       }
+      break
+    default:
+      break
   }
   throw new Error(`The setting ${path} has a type settings set cannot check.`)
 }

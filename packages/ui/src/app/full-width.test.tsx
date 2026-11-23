@@ -198,13 +198,14 @@ test("closing files in full width keeps the mode, and closing the last one leave
 })
 
 test("the Close file keybinding does nothing while the Session tab is selected", async () => {
-  await mount(makeServer())
+  const server = makeServer()
+  await mount(server)
   await openTwoFiles()
   await fullWidthButton().click()
   await rowTab("Session").click()
 
   await userEvent.keyboard(`{${mod}>}{Shift>}w{/Shift}{/${mod}}`)
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  expect(server.callsOf("tab.closeSubView")).toBe(0)
   await expect.element(rowTab("main.ts")).toBeVisible()
 })
 

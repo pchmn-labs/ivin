@@ -15,11 +15,12 @@ import {
 
 export function useRecordSessionVisits() {
   const selectedId = useAtomValue(selectedSessionIdAtom)
-  const [history, setHistory] = useAtom(sessionHistoryAtom)
+  const setHistory = useAtomSet(sessionHistoryAtom)
 
+  // Keyed on the selection alone: a step back changes the history before the server selects that session.
   useEffect(() => {
-    if (selectedId !== null) setHistory(visit(history, selectedId))
-  }, [selectedId, history, setHistory])
+    if (selectedId !== null) setHistory((history) => visit(history, selectedId))
+  }, [selectedId, setHistory])
 }
 
 export function useSessionHistory(projectPath: string) {

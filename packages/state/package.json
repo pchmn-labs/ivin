@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./rpc-client-protocol": "./src/rpc-client-protocol.ts",
+    "./rpc-server-protocol": "./src/rpc-server-protocol.ts",
     "./frame-batch": "./src/frame-batch.ts",
     "./entity-list": "./src/entity-list.ts",
     "./fed-state": "./src/fed-state.ts",

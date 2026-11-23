@@ -2,7 +2,7 @@ import { Data, Effect, Fiber, type Scope } from "effect"
 import { chmod, mkdir, unlink } from "node:fs/promises"
 import { connect, createServer, type Server, type Socket } from "node:net"
 import { dirname } from "node:path"
-import type { RpcPort } from "../message-port-protocol.ts"
+import type { RpcServerPort } from "@ivin/state/rpc-server-protocol"
 
 export class SocketInUse extends Data.TaggedError("SocketInUse")<{ readonly path: string }> {}
 
@@ -55,7 +55,7 @@ const listen = (path: string, server: Server) =>
 const maxLineLength = 1024 * 1024
 
 // One JSON message per line.
-const portOf = (socket: Socket): RpcPort => ({
+const portOf = (socket: Socket): RpcServerPort => ({
   onMessage: (handler) => {
     let buffered = ""
     socket.setEncoding("utf8")
@@ -81,7 +81,7 @@ const portOf = (socket: Socket): RpcPort => ({
 // Serves each connection with `serve` until it closes; the file is removed when the scope closes.
 export const listenOnUnixSocket = <R>(
   path: string,
-  serve: (port: RpcPort) => Effect.Effect<never, unknown, R>,
+  serve: (port: RpcServerPort) => Effect.Effect<never, unknown, R>,
 ): Effect.Effect<void, SocketInUse | SocketListenFailed, R | Scope.Scope> =>
   Effect.gen(function* () {
     yield* removeIfStale(path)

@@ -100,7 +100,6 @@ test("keybindings.json moves the sidebar toggle to mod+b while the app runs", as
     .toBeVisible()
 
   await userEvent.keyboard(`{${mod}>}\\{/${mod}}`)
-  await new Promise((resolve) => setTimeout(resolve, 100))
   await expect.element(page.getByRole("complementary")).toBeVisible()
   await userEvent.keyboard(`{${mod}>}b{/${mod}}`)
   await expect.element(page.getByRole("complementary")).not.toBeInTheDocument()
@@ -137,6 +136,9 @@ test("back and forward walk the sessions opened in this window", async () => {
     .getByRole("button")
     .first()
     .click()
+  await expect
+    .element(openSessions().getByRole("tab", { name: /First/ }))
+    .toHaveAttribute("aria-selected", "true")
   await page
     .getByTestId("session-item")
     .filter({ hasText: "Second" })
@@ -179,11 +181,11 @@ test("each tab shows its session, closes on its button, and the bar reorders by 
     target.dispatchEvent(
       new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer, clientX }),
     )
-  const rendered = () => new Promise((resolve) => setTimeout(resolve, 50))
   fire(items[1]!, "dragstart")
-  await rendered()
-  fire(items[0]!, "dragover", items[0]!.getBoundingClientRect().left + 1)
-  await rendered()
+  await vi.waitFor(() => {
+    fire(items[0]!, "dragover", items[0]!.getBoundingClientRect().left + 1)
+    expect(items[0]!.dataset.drop).toBe("before")
+  })
   fire(items[0]!, "drop")
   await vi.waitFor(() => expect(server.tabOrder("/dev/ivin")).toEqual(["s2", "s1"]))
 

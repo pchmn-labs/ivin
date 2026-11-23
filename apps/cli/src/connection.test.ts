@@ -9,7 +9,9 @@ import { Server, withServer } from "./connection.ts"
 
 test("a server that accepts and never answers fails the command at its time limit", async () => {
   const socketPath = join(mkdtempSync(join(tmpdir(), "ivin-cli-")), "ivin.sock")
-  const listening = createServer(() => {})
+  let requested = () => {}
+  const requestSeen = new Promise<void>((resolve) => (requested = resolve))
+  const listening = createServer((socket) => socket.once("data", requested))
   await new Promise<void>((resolve) => listening.listen(socketPath, resolve))
 
   try {
@@ -22,11 +24,8 @@ test("a server that accepts and never answers fails the command at its time limi
             return yield* client["setting.get"]({ path: null })
           }).pipe(Effect.catchTag("RpcClientError", Effect.die)),
         ).pipe(Effect.flip, Effect.forkChild)
-        // The limit starts once the socket is open, which takes real time.
-        while (fiber.pollUnsafe() === undefined) {
-          yield* TestClock.adjust("30 seconds")
-          yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 5)))
-        }
+        yield* Effect.promise(() => requestSeen)
+        yield* TestClock.adjust("30 seconds")
         return yield* Fiber.join(fiber)
       }).pipe(Effect.provide(TestClock.layer())),
     )

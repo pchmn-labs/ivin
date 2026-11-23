@@ -8,6 +8,7 @@ import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { layerScripted, type ScriptedElement, type ScriptedOptions } from "@ivin/harness"
 import { Deferred, type Duration, Effect, Fiber, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
+import { TestClock } from "effect/testing"
 import { expect, test } from "vitest"
 import { layerSessionRunsWith } from "../modules/session/usecases/session-runs.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
@@ -17,6 +18,7 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServicesWith } from "./handlers.ts"
+import { until } from "./test-waits.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 
 const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
@@ -35,41 +37,51 @@ const newDatabase = () => {
   return db
 }
 
-const withServer = <A, E>(
+const serverLayer = (
   db: DatabaseSync,
   turns: readonly (readonly ScriptedElement[])[],
   { deadline = "20 millis", ...options }: ScriptedOptions & { deadline?: Duration.Input },
+) =>
+  handlers.pipe(
+    Layer.provide(layerServicesWith(layerSessionRunsWith(deadline))),
+    Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
+    Layer.provide(Layer.succeed(Database)(db)),
+    Layer.provide(layerKeybindingsFileOf([])),
+    Layer.provide(layerSettingsFileOf([])),
+    Layer.provide(
+      Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+    ),
+    Layer.provide(layerScripted(turns, { reportSession: true, ...options })),
+  )
+
+const withServer = <A, E>(
+  db: DatabaseSync,
+  turns: readonly (readonly ScriptedElement[])[],
+  options: ScriptedOptions & { deadline?: Duration.Input },
   use: (client: Client) => Effect.Effect<A, E>,
 ) =>
   Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServicesWith(layerSessionRunsWith(deadline))),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerScripted(turns, { reportSession: true, ...options })),
-        ),
-      ),
+      Effect.provide(serverLayer(db, turns, options)),
       Effect.scoped,
     ),
   )
 
-const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 400; attempt++) {
-      const value = yield* read
-      if (done(value)) return value
-      yield* Effect.sleep("5 millis")
-    }
-    return yield* Effect.die("The condition was never met")
-  })
+const withTestClock = <A, E>(
+  db: DatabaseSync,
+  turns: readonly (readonly ScriptedElement[])[],
+  options: ScriptedOptions & { deadline?: Duration.Input },
+  use: (client: Client) => Effect.Effect<A, E, TestClock.TestClock>,
+) =>
+  Effect.runPromise(
+    makeClient().pipe(
+      Effect.flatMap(use),
+      Effect.provide(serverLayer(db, turns, options)),
+      Effect.provide(TestClock.layer()),
+      Effect.scoped,
+    ),
+  )
 
 const untilSession = (client: Client, id: string, done: (session: Session) => boolean) =>
   until(
@@ -211,7 +223,7 @@ test("an interrupt the agent honours does not stop its process", async () => {
   const db = newDatabase()
   const closed: string[] = []
   const interrupted: string[] = []
-  const result = await withServer(
+  const result = await withTestClock(
     db,
     [working],
     { closed, interrupted, deadline: "250 millis" },
@@ -223,8 +235,7 @@ test("an interrupt the agent honours does not stop its process", async () => {
         yield* client["session.interrupt"]({ sessionId: session.id })
         yield* untilTypes(db, session.id, "interruption")
         yield* untilSession(client, session.id, (s) => s.status === "idle")
-        // Waits past the 250 ms deadline: a stop would show by then.
-        yield* Effect.sleep("500 millis")
+        yield* TestClock.adjust("500 millis")
         return { closed: closed.length, interrupted: interrupted.length }
       }),
   )

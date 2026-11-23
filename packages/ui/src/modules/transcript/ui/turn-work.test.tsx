@@ -306,7 +306,10 @@ test("unfolding the last turn does not scroll the transcript", async () => {
   const before = scroller.scrollTop
 
   await page.getByTestId("turn-line").last().click()
-  await new Promise((resolve) => setTimeout(resolve, 300))
+  await expect
+    .element(page.getByTestId("turn-line").last())
+    .toHaveAttribute("aria-expanded", "true")
+  await expect.element(page.getByTestId("tool-output").first()).toBeVisible()
 
   expect(scroller.scrollTop).toBe(before)
 })
@@ -323,16 +326,17 @@ test("a session of 200 turns of 30 calls scrolls without rendering the folded ca
   const scroller = document.querySelector<HTMLElement>('[data-testid="transcript"]')!
   await expect.element(page.getByText("Answer 199")).toBeVisible()
 
-  for (let i = 0; i < 10; i++) {
-    scroller.scrollTop = 0
-    await new Promise((resolve) => setTimeout(resolve, 100))
-    expect(toolRows()).toHaveLength(0)
-  }
   const answers = () =>
     [...(scroller.textContent ?? "").matchAll(/Answer (\d+)/g)].map((match) => Number(match[1]))
   // Answers 198 and 199 are on the first page, so a lower one means an older page rendered;
   // which turn ends up on top depends on how many pages the machine loaded.
-  await vi.waitFor(() => expect(Math.min(...answers())).toBeLessThan(198))
+  const toolRowsSeen: number[] = []
+  await vi.waitFor(() => {
+    scroller.scrollTop = 0
+    toolRowsSeen.push(toolRows().length)
+    expect(Math.min(...answers())).toBeLessThan(198)
+  })
+  expect(Math.max(...toolRowsSeen)).toBe(0)
   expect(document.querySelectorAll('[data-testid="turn"]').length).toBeLessThan(20)
 })
 

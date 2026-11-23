@@ -1,4 +1,23 @@
 {
+  "options": {
+    "typeAware": true
+  },
+  "rules": {
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "typescript/await-thenable": "error",
+    "typescript/no-base-to-string": "error",
+    "typescript/switch-exhaustiveness-check": [
+      "error",
+      {
+        "considerDefaultExhaustiveForUnions": true
+      }
+    ],
+    "typescript/no-unnecessary-type-assertion": "error",
+    "typescript/no-misused-spread": "error",
+    "typescript/prefer-promise-reject-errors": "error",
+    "typescript/consistent-type-imports": "error"
+  },
   "ignorePatterns": [
     ".agents/**",
     ".claude/**",
@@ -133,6 +152,66 @@
           {
             "paths": [],
             "patterns": [
+              {
+                "group": [
+                  "**",
+                  "!@ivin/plugin-api",
+                  "!@ivin/plugin-api/**",
+                  "!react",
+                  "!react/**",
+                  "!./**",
+                  "!../**"
+                ],
+                "message": "A plugin imports only @ivin/plugin-api and react, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["plugins/**/rules/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "electron",
+                "message": "Imports of electron are not allowed in this layer, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "name": "react",
+                "message": "rules/ is called directly and does not import react, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "name": "effect",
+                "message": "rules/ imports only effect/Schema from effect, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              }
+            ],
+            "patterns": [
+              {
+                "group": ["effect/**", "!effect/Schema"],
+                "message": "rules/ imports only effect/Schema from effect, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["node:*"],
+                "message": "Imports of node:* are not allowed in this layer, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": ["react/**"],
+                "message": "rules/ does not import react, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
+              {
+                "group": [
+                  "**/adapters/**",
+                  "**/usecases/**",
+                  "**/atoms/**",
+                  "**/hooks/**",
+                  "**/ui/**"
+                ],
+                "message": "rules/ does not import the layers above it, see docs/adr/0001-code-grouped-by-subject-and-layered-by-test.md"
+              },
               {
                 "group": [
                   "**",

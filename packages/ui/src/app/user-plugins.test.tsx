@@ -73,7 +73,7 @@ test("a user plugin's bundle renders with the app's React, and its command retur
   await expect.element(page.getByText("count 42")).toBeVisible()
   const handler = registry.get(commandHandlersAtom).find((h) => h.commandId === "counter.answer")
   expect(handler).toBeDefined()
-  expect((handler!.run as () => unknown)()).toBe(42)
+  expect(handler?.run()).toBe(42)
 })
 
 test("a user plugin replaces the built-in plugin with its id", async () => {

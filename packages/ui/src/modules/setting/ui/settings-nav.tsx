@@ -76,11 +76,13 @@ export function SettingsNav({ onClose }: { onClose: () => void }) {
         ))}
       </ul>
       <div className="iv-settings-nav__foot">
-        {file.failure !== null && <ErrorMessage message={file.failure} onRetry={file.open} />}
+        {file.failure !== null && (
+          <ErrorMessage message={file.failure} onRetry={() => void file.open()} />
+        )}
         <ListRow
           leading={<Icon name="brackets-curly" size={14} />}
           title="Open settings.json"
-          onSelect={file.open}
+          onSelect={() => void file.open()}
           tooltip={{ text: SETTINGS_FILE, mono: true }}
         />
         {connection.state === "connected" && (

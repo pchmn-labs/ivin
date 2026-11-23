@@ -17,6 +17,7 @@ import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { forkWatch, until } from "./test-waits.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 // Real git: over 1 s when the suite runs other git tests beside it.
@@ -162,15 +163,17 @@ test("a session is preparing its new worktree before it works", async () => {
   const statuses = await withServer([], (client) =>
     Effect.gen(function* () {
       const created = yield* client["session.create"]({ projectPath: project })
-      const watching = yield* client["session.watch"]({ projectPath: project }).pipe(
-        Stream.filter((change) => change._tag === "changed"),
-        Stream.map((change) => change.session),
-        Stream.map((session) => session.status),
-        Stream.takeUntil((status) => status === "working"),
-        Stream.runCollect,
-        Effect.forkChild,
+      const watching = yield* forkWatch(
+        client["session.watch"]({ projectPath: project }),
+        (stream) =>
+          stream.pipe(
+            Stream.filter((change) => change._tag === "changed"),
+            Stream.map((change) => change.session),
+            Stream.map((session) => session.status),
+            Stream.takeUntil((status) => status === "working"),
+            Stream.runCollect,
+          ),
       )
-      yield* Effect.sleep("10 millis")
       yield* sendFirst(client, created.id, { kind: "new_worktree" })
       return yield* Fiber.join(watching)
     }),
@@ -274,13 +277,7 @@ const sessionOf = (client: Client, sessionId: string) =>
   )
 
 const untilStatus = (client: Client, sessionId: string, status: string) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 400; attempt++) {
-      if ((yield* sessionOf(client, sessionId)).status === status) return
-      yield* Effect.sleep("5 millis")
-    }
-    return yield* Effect.die(`The session never reached ${status}`)
-  })
+  until(sessionOf(client, sessionId), (session) => session.status === status)
 
 const send = (client: Client, sessionId: string, messageId: string) =>
   client["session.sendMessage"]({ sessionId, messageId, text: "go" }).pipe(
@@ -398,7 +395,11 @@ test("a worktree the agent creates with git worktree add moves the session once 
     (client) =>
       Effect.gen(function* () {
         const created = yield* client["session.create"]({ projectPath: project })
-        yield* client["session.sendMessage"]({ sessionId: created.id, messageId: "m1", text: "go" })
+        yield* client["session.sendMessage"]({
+          sessionId: created.id,
+          messageId: "m1",
+          text: "go",
+        })
         yield* untilStatus(client, created.id, "waiting")
         // The approval holds the turn while git creates the worktree, as the real command would.
         git(project, "worktree", "add", "--quiet", "-b", "try/adopt", path)

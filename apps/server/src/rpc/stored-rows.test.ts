@@ -37,7 +37,7 @@ const insertSession = (db: DatabaseSync, id: string, stored: Record<string, stri
   const names = Object.keys(columns)
   db.prepare(
     `INSERT INTO sessions (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`,
-  ).run(...(Object.values(columns) as (string | number)[]))
+  ).run(...Object.values(columns))
 }
 
 const insertItem = (db: DatabaseSync, id: string, sessionId: string, payload: object) =>

@@ -15,6 +15,7 @@ import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { migrations, runMigrations } from "../shared/adapters/migrations.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import { until } from "./test-waits.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 
 const makeClient = () => RpcTest.makeClient(Rpcs)
@@ -51,15 +52,6 @@ const withServer = <A, E>(
       Effect.scoped,
     ),
   )
-
-const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
-  Effect.gen(function* () {
-    for (;;) {
-      const value = yield* read
-      if (done(value)) return value
-      yield* Effect.sleep("5 millis")
-    }
-  })
 
 const statusOf = (client: Client, sessionId: string) =>
   client["session.list"]({ projectPath: "/p" }).pipe(
@@ -217,7 +209,7 @@ test("every page read from stored items equals the page derived from all of the 
   expect(byType("approval")).toMatchObject([{ decision: "allow" }, { decision: "unanswered" }])
   expect(byType("question")).toMatchObject([{ status: "answered" }])
   expect(byType("interruption")).toHaveLength(1)
-})
+}, 5000)
 
 test("a page of a session whose items are current is read without its events", async () => {
   const db = newDatabase()
