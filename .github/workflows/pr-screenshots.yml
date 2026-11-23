@@ -23,15 +23,17 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           BODY: ${{ github.event.pull_request.body }}
         run: |
-          ui=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename' \
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq '.[].filename')
+          ui=$(printf '%s\n' "$files" \
             | grep -E '^(packages/ui/src|plugins/[^/]+/src)/.*\.(tsx|css)$' \
-            | grep -vE '\.test\.tsx$' || true)
+            | grep -vE '\.test\.(tsx|css)$' || true)
           if [ -z "$ui" ]; then
             echo "No UI file changed."
             exit 0
           fi
-          # "No visible change." is the opt-out the pull request template names.
-          if printf '%s' "$BODY" | grep -qE '!\[|<img |No visible change\.'; then
+          # The template's own comments name the opt-out, so they are dropped before matching.
+          shown=$(printf '%s' "$BODY" | perl -0pe 's/<!--.*?-->//gs')
+          if printf '%s' "$shown" | grep -qE '!\[|<img |No visible change\.'; then
             echo "The body has a capture, or says nothing on screen changes."
             exit 0
           fi
