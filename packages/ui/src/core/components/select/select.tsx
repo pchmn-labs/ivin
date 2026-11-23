@@ -8,6 +8,7 @@ export interface SelectProps {
   readonly options: ReadonlyArray<{ value: string; label: string }>
   readonly disabled?: boolean
   readonly "data-testid"?: string
+  readonly "aria-describedby"?: string
 }
 
 export function Select({
@@ -17,6 +18,7 @@ export function Select({
   options,
   disabled,
   "data-testid": testId,
+  "aria-describedby": describedBy,
 }: SelectProps) {
   return (
     <span className="iv-select">
@@ -26,6 +28,7 @@ export function Select({
         value={value}
         disabled={disabled}
         data-testid={testId}
+        aria-describedby={describedBy}
         onChange={(event) => onChange(event.target.value)}
       >
         {options.map((option) => (

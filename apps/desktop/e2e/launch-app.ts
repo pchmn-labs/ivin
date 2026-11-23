@@ -1,4 +1,4 @@
-import { _electron as electron, type ElectronApplication } from "@playwright/test"
+import { _electron as electron, type ElectronApplication, type Page } from "@playwright/test"
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { delimiter, dirname, join } from "node:path"
@@ -64,4 +64,10 @@ export const launchPackagedApp = (
           ...(options.path !== undefined && { PATH: options.path }),
         },
   })
+}
+
+// The settings page is the one place that names the server's version.
+export const openServerVersion = async (window: Page) => {
+  await window.keyboard.press(process.platform === "darwin" ? "Meta+Comma" : "Control+Comma")
+  return window.getByTestId("server-version")
 }

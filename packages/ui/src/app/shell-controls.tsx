@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { IconButton } from "../core/components/button/button.tsx"
 import { useKeyHint } from "../modules/keybinding/hooks/use-key-hint.ts"
 import { useSessionHistory } from "../modules/session/hooks/use-session-history.ts"
@@ -7,9 +8,16 @@ export interface ShellControlsProps {
   readonly projectPath: string
   readonly sidebarOpen: boolean
   readonly onToggleSidebar: () => void
+  // Before back and forward, such as the Settings button.
+  readonly extra?: ReactNode
 }
 
-export function ShellControls({ projectPath, sidebarOpen, onToggleSidebar }: ShellControlsProps) {
+export function ShellControls({
+  projectPath,
+  sidebarOpen,
+  onToggleSidebar,
+  extra,
+}: ShellControlsProps) {
   const history = useSessionHistory(projectPath)
   const toggleHint = useKeyHint("Toggle sidebar", "sidebar.toggle")
   return (
@@ -23,6 +31,7 @@ export function ShellControls({ projectPath, sidebarOpen, onToggleSidebar }: She
         aria-expanded={sidebarOpen}
         onClick={onToggleSidebar}
       />
+      {extra}
       <IconButton
         icon="arrow-left"
         label="Back"

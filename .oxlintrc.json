@@ -215,6 +215,8 @@
     {
       "files": [
         "packages/ui/src/modules/project/ui/project-rail.tsx",
+        "packages/ui/src/modules/project/ui/project-select.tsx",
+        "packages/ui/src/modules/project/ui/project-strip.tsx",
         "packages/ui/src/modules/session/ui/branch-picker.tsx",
         "packages/ui/src/modules/session/ui/checkout-sync.tsx",
         "packages/ui/src/modules/session/ui/draft-images.tsx",

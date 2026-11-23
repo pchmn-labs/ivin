@@ -7,6 +7,7 @@ test("the known paths are the dotted paths of the settings schema's leaves", () 
     "tabs.stopAgentOnClose",
     "worktrees.removeOnTabClose",
     "files.folderIcons",
+    "sidebar.layout",
   ])
 })
 
@@ -27,6 +28,18 @@ test("a value of the wrong type is refused with the type the setting takes", () 
       ok: false,
       reason: "invalidValue",
       expected: "boolean",
+    })
+  }
+})
+
+test("a setting with fixed values takes one of them and is refused with the list", () => {
+  expect(checkSetting("sidebar.layout", "strip")).toEqual({ ok: true })
+  for (const value of ["column", "Strip", true, null]) {
+    expect(checkSetting("sidebar.layout", value)).toEqual({
+      ok: false,
+      reason: "invalidValue",
+      expected: "oneOf",
+      allowed: ["rail", "strip"],
     })
   }
 })

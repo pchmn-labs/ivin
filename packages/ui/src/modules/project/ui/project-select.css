@@ -1,0 +1,54 @@
+.iv-project-select {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--iv-space-2);
+  min-width: 0;
+  height: var(--iv-control-md);
+  margin-right: auto;
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-md);
+  background: transparent;
+  color: var(--iv-text);
+  cursor: default;
+  transition:
+    background-color var(--iv-duration-fast) ease-out,
+    transform var(--iv-duration-press) var(--iv-ease-out);
+}
+
+.iv-project-select:active {
+  transform: scale(0.97);
+}
+
+.iv-project-select[data-popup-open] {
+  background: var(--iv-bg-active);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-project-select:hover {
+    background: var(--iv-bg-hover);
+  }
+}
+
+.iv-project-select > svg:last-child {
+  flex: none;
+  color: var(--iv-text-faint);
+}
+
+.iv-project-select__name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--iv-text-lg);
+  line-height: var(--iv-text-lg-lh);
+  font-weight: var(--iv-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv-project-select__waiting {
+  color: var(--iv-attention);
+  font-size: var(--iv-text-xs);
+  font-weight: var(--iv-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}

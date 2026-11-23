@@ -41,3 +41,7 @@
   padding: var(--iv-space-2);
   border-top: 1px solid var(--iv-border);
 }
+
+.iv-settings-nav__version {
+  padding: 0 var(--iv-space-2);
+}

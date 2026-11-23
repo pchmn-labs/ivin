@@ -2,7 +2,13 @@ import { expect, test } from "@playwright/test"
 import { execFile } from "node:child_process"
 import { lstatSync, mkdirSync, existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { claudeConfigDir, launchPackagedApp, makeFakeClaudeBin, makeTempDir } from "./launch-app.ts"
+import {
+  claudeConfigDir,
+  launchPackagedApp,
+  makeFakeClaudeBin,
+  makeTempDir,
+  openServerVersion,
+} from "./launch-app.ts"
 import { sendMessage, startSession } from "./session-helpers.ts"
 
 const runIvin = (userDataDir: string, args: string[]) =>
@@ -44,7 +50,7 @@ test("the socket is its owner's only, replaces a stale one, and is gone once the
   const app = await launchPackagedApp(userDataDir)
   try {
     const window = await app.firstWindow()
-    await expect(window.getByTestId("server-version")).toHaveText("Server 0.0.0")
+    await expect(await openServerVersion(window)).toHaveText("ivin 0.0.0")
     await expect.poll(() => lstatSync(socketPath).isSocket()).toBe(true)
     expect(lstatSync(socketPath).mode & 0o777).toBe(0o600)
 

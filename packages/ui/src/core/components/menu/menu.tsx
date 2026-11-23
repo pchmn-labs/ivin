@@ -1,19 +1,32 @@
 import { ContextMenu as BaseContextMenu } from "@base-ui/react/context-menu"
 import { Menu as BaseMenu } from "@base-ui/react/menu"
 import type { MenuItem, MenuProps } from "@ivin/plugin-api/ui"
-import type { ReactElement } from "react"
+import type { ReactElement, ReactNode } from "react"
 import { Icon } from "../icon/icon.tsx"
 import "./menu.css"
 
 export type { MenuProps }
 
-type Action = Exclude<MenuItem, "separator" | { readonly heading: string }>
+type Action = Exclude<MenuItem, "separator" | { readonly heading: string }> & {
+  // In place of the icon, such as a project's creature.
+  readonly leading?: ReactNode
+  // After the label, such as a count.
+  readonly trailing?: ReactNode
+  readonly "aria-label"?: string
+}
+
+export type CoreMenuItem = Action | "separator" | { readonly heading: string }
+
+export interface CoreMenuProps extends Omit<MenuProps, "items"> {
+  readonly items: ReadonlyArray<CoreMenuItem>
+}
 
 function ItemContent({ item }: { item: Action }) {
   return (
     <>
-      {item.icon === undefined ? null : <Icon name={item.icon} size={14} />}
+      {item.leading ?? (item.icon === undefined ? null : <Icon name={item.icon} size={14} />)}
       <span className="iv-menu__label">{item.label}</span>
+      {item.trailing}
       {item.hint === undefined ? null : <span className="iv-menu__hint">{item.hint}</span>}
       {item.checked === undefined ? null : (
         <span className="iv-menu__check">
@@ -24,7 +37,7 @@ function ItemContent({ item }: { item: Action }) {
   )
 }
 
-function Items({ items }: { items: ReadonlyArray<MenuItem> }) {
+function Items({ items }: { items: ReadonlyArray<CoreMenuItem> }) {
   const chosen = items.findIndex(
     (item) => typeof item === "object" && "checked" in item && item.checked,
   )
@@ -48,6 +61,7 @@ function Items({ items }: { items: ReadonlyArray<MenuItem> }) {
             key={index}
             className={className}
             disabled={item.disabled}
+            aria-label={item["aria-label"]}
             onClick={item.onSelect}
           >
             <ItemContent item={item} />
@@ -58,6 +72,7 @@ function Items({ items }: { items: ReadonlyArray<MenuItem> }) {
             value={index}
             className={className}
             disabled={item.disabled}
+            aria-label={item["aria-label"]}
             closeOnClick
             onClick={item.onSelect}
           >
@@ -69,7 +84,7 @@ function Items({ items }: { items: ReadonlyArray<MenuItem> }) {
   )
 }
 
-export function Menu({ trigger, items, align = "start", onOpenChange }: MenuProps) {
+export function Menu({ trigger, items, align = "start", onOpenChange }: CoreMenuProps) {
   return (
     <BaseMenu.Root {...(onOpenChange && { onOpenChange })}>
       <BaseMenu.Trigger render={trigger} />
@@ -89,7 +104,7 @@ export function ContextMenu({
   items,
   children,
 }: {
-  items: ReadonlyArray<MenuItem>
+  items: ReadonlyArray<CoreMenuItem>
   children: ReactElement
 }) {
   return (

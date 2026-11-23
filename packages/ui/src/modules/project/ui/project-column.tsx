@@ -9,9 +9,19 @@ import { ArchivedSessionList } from "../../session/ui/archived-session-list.tsx"
 import { NewSessionButton } from "../../session/ui/new-session-button.tsx"
 import { closeProjectAtom } from "../atoms/close-project.ts"
 import { ProjectCreature } from "./project-creature.tsx"
+import { ProjectSelect } from "./project-select.tsx"
 import "./project-column.css"
 
-export function ProjectColumn({ project, children }: { project: Project; children: ReactNode }) {
+export function ProjectColumn({
+  project,
+  select = false,
+  children,
+}: {
+  project: Project
+  // Names the project in a menu of the open projects, for a sidebar with no rail.
+  select?: boolean
+  children: ReactNode
+}) {
   const closeProject = useAtomSet(closeProjectAtom)
   const [archivedOpen, setArchivedOpen] = useAtom(archivedViewOpenAtom)
   const archivedKey = useCommandKey("session.showArchived")
@@ -28,11 +38,17 @@ export function ProjectColumn({ project, children }: { project: Project; childre
   }
   return (
     <div className="iv-project-column">
-      <div className="iv-project-column__head">
-        <ProjectCreature name={project.name} size={16} />
-        <h1 className="iv-project-column__name" data-testid="project-name" title={project.path}>
-          {project.name}
-        </h1>
+      <div className="iv-project-column__head" data-select={select || undefined}>
+        {select ? (
+          <ProjectSelect project={project} />
+        ) : (
+          <>
+            <ProjectCreature name={project.name} size={16} />
+            <h1 className="iv-project-column__name" data-testid="project-name" title={project.path}>
+              {project.name}
+            </h1>
+          </>
+        )}
         <NewSessionButton projectPath={project.path} icon="new-session" size="md" />
         <Menu
           align="end"

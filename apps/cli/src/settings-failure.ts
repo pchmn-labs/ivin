@@ -1,11 +1,15 @@
-import type {
-  SettingPathUnknown,
-  SettingsFileInvalid,
-  SettingValueInvalid,
+import {
+  choicesText,
+  type SettingPathUnknown,
+  type SettingsFileInvalid,
+  type SettingValueInvalid,
 } from "@ivin/contracts/setting"
 import { CommandFailed } from "./command.ts"
 
-const expectedText = { boolean: "true or false", number: "a number", string: "a string" }
+const expectedText = ({ expected, allowed }: SettingValueInvalid) =>
+  expected === "oneOf"
+    ? choicesText(allowed ?? [])
+    : { boolean: "true or false", number: "a number", string: "a string" }[expected]
 
 export const settingFailed = (
   error: SettingPathUnknown | SettingValueInvalid | SettingsFileInvalid,
@@ -20,7 +24,7 @@ export const settingFailed = (
     case "SettingValueInvalid":
       return new CommandFailed({
         reason: "invalidValue",
-        message: `${error.path} takes ${expectedText[error.expected]}, not ${JSON.stringify(value)}.`,
+        message: `${error.path} takes ${expectedText(error)}, not ${JSON.stringify(value)}.`,
       })
     case "SettingsFileInvalid": {
       const { parseError } = error

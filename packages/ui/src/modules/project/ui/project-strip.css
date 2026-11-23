@@ -1,0 +1,68 @@
+.iv-project-strip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--iv-space-half);
+  padding: var(--iv-space-1) var(--iv-space-2);
+  border-top: 1px solid var(--iv-border);
+}
+
+.iv-project-strip__row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--iv-space-half);
+  min-width: 0;
+  padding: var(--iv-space-1) var(--iv-space-half);
+  overflow-x: auto;
+  scroll-padding-inline: var(--iv-space-2);
+  scrollbar-width: none;
+}
+
+.iv-project-strip__item {
+  position: relative;
+  flex: none;
+}
+
+.iv-project-strip__project {
+  display: grid;
+  width: var(--iv-strip-button-size);
+  height: var(--iv-strip-button-size);
+  place-items: center;
+  border: 0;
+  border-radius: var(--iv-radius-md);
+  background: transparent;
+  cursor: default;
+  transition:
+    background-color var(--iv-duration-fast) ease-out,
+    transform var(--iv-duration-press) var(--iv-ease-out);
+}
+
+.iv-project-strip__project:active {
+  transform: scale(0.97);
+}
+
+.iv-project-strip__project[aria-current="true"] {
+  background: var(--iv-bg-raised);
+  box-shadow:
+    0 0 0 1px var(--iv-border),
+    var(--iv-shadow-raised);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-project-strip__project:not([aria-current="true"]):hover {
+    background: var(--iv-bg-hover);
+  }
+}
+
+.iv-project-strip__waiting {
+  position: absolute;
+  top: var(--iv-space-half);
+  right: var(--iv-space-half);
+  width: var(--iv-dot-size);
+  height: var(--iv-dot-size);
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-attention);
+  box-shadow: 0 0 0 var(--iv-line-bold) var(--iv-bg-card);
+  pointer-events: none;
+}

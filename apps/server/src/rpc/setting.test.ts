@@ -74,6 +74,7 @@ test("setting.set writes the value, and setting.watch and setting.get then give 
     tabs: { stopAgentOnClose: false },
     worktrees: { removeOnTabClose: true },
     files: { folderIcons: true },
+    sidebar: { layout: "rail" },
   })
 })
 
@@ -92,7 +93,12 @@ test("an unknown path or a value of the wrong type is refused, and the file is u
     }),
   )
 
-  const knownPaths = ["tabs.stopAgentOnClose", "worktrees.removeOnTabClose", "files.folderIcons"]
+  const knownPaths = [
+    "tabs.stopAgentOnClose",
+    "worktrees.removeOnTabClose",
+    "files.folderIcons",
+    "sidebar.layout",
+  ]
   expect(result.unknown).toMatchObject({
     _tag: "SettingPathUnknown",
     path: "tabs.nope",

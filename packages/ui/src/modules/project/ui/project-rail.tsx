@@ -1,21 +1,19 @@
-import { useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { ReactNode } from "react"
+import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { Project } from "@ivin/contracts/project"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
-import { sessionsOf } from "../../session/atoms/list-sessions.ts"
 import { projectsAtom } from "../atoms/list-projects.ts"
 import { selectProjectAtom } from "../atoms/select-project.ts"
+import { waitingCountsAtom } from "../atoms/waiting-counts.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
+import { projectLabel } from "../rules/project-label.ts"
 import { ProjectCreature } from "./project-creature.tsx"
 import "./project-rail.css"
 
 function ProjectButton({ project, selected }: { project: Project; selected: boolean }) {
   const selectProject = useAtomSet(selectProjectAtom)
-  const list = sessionsOf(project.path)
-  useAtomMount(list.ids)
-  const waiting = useAtomValue(list.items).filter((s) => s.status === "waiting").length
-  const label = waiting === 0 ? project.name : `${project.name} · ${waiting} waiting for you`
+  const waiting = useAtomValue(waitingCountsAtom)[project.path] ?? 0
+  const label = projectLabel(project.name, waiting)
 
   return (
     <div className="iv-project-rail__item">
@@ -39,7 +37,7 @@ function ProjectButton({ project, selected }: { project: Project; selected: bool
   )
 }
 
-export function ProjectRail({ footer }: { footer?: ReactNode }) {
+export function ProjectRail() {
   const { projects, selectedPath } = useAtomValue(projectsAtom.value)
   const { openFolder } = useOpenFolder()
 
@@ -53,8 +51,6 @@ export function ProjectRail({ footer }: { footer?: ReactNode }) {
         />
       ))}
       <IconButton icon="plus" label="Open folder…" size="sm" onClick={openFolder} />
-      <span className="iv-project-rail__spacer" />
-      {footer}
     </nav>
   )
 }

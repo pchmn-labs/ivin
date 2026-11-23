@@ -5,6 +5,7 @@ export const Settings = Schema.Struct({
   tabs: Schema.Struct({ stopAgentOnClose: Schema.Boolean }),
   worktrees: Schema.Struct({ removeOnTabClose: Schema.Boolean }),
   files: Schema.Struct({ folderIcons: Schema.Boolean }),
+  sidebar: Schema.Struct({ layout: Schema.Literals(["rail", "strip"]) }),
 })
 export type Settings = typeof Settings.Type
 
@@ -12,6 +13,7 @@ export const defaultSettings: Settings = {
   tabs: { stopAgentOnClose: true },
   worktrees: { removeOnTabClose: true },
   files: { folderIcons: true },
+  sidebar: { layout: "rail" },
 }
 
 export type SettingPath = {
@@ -26,6 +28,8 @@ export interface SettingSection {
     readonly path: SettingPath
     readonly label: string
     readonly description: string
+    // A setting with fixed values, in the schema's order.
+    readonly choices?: ReadonlyArray<{ readonly value: string; readonly label: string }>
   }>
 }
 
@@ -69,7 +73,32 @@ export const settingSections: ReadonlyArray<SettingSection> = [
       },
     ],
   },
+  {
+    key: "sidebar",
+    title: "Sidebar",
+    description: "How the sidebar shows your open projects.",
+    settings: [
+      {
+        path: "sidebar.layout",
+        label: "Projects",
+        description:
+          "Rail lists the projects in a column beside the sessions. Strip names the selected project above the sessions and lines up the others at the sidebar's foot.",
+        choices: [
+          { value: "rail", label: "Rail" },
+          { value: "strip", label: "Strip" },
+        ],
+      },
+    ],
+  },
 ]
+
+// The values a setting with fixed values takes, as `"rail" or "strip"`.
+export const choicesText = (values: ReadonlyArray<string>): string => {
+  const quoted = values.map((value) => JSON.stringify(value))
+  return quoted.length < 2
+    ? quoted.join("")
+    : `${quoted.slice(0, -1).join(", ")} or ${quoted.at(-1)}`
+}
 
 export const SettingsFileProblem = Schema.Struct({
   reason: Schema.Literals(["notJson", "notAnObject", "invalidSetting"]),
@@ -92,7 +121,12 @@ export class SettingPathUnknown extends Schema.TaggedError<SettingPathUnknown>()
 
 export class SettingValueInvalid extends Schema.TaggedError<SettingValueInvalid>()(
   "SettingValueInvalid",
-  { path: Schema.String, expected: Schema.Literals(["boolean", "number", "string"]) },
+  {
+    path: Schema.String,
+    expected: Schema.Literals(["boolean", "number", "string", "oneOf"]),
+    // The values a setting of `expected` "oneOf" takes.
+    allowed: Schema.optional(Schema.Array(Schema.String)),
+  },
 ) {}
 
 export class SettingsFileInvalid extends Schema.TaggedError<SettingsFileInvalid>()(

@@ -52,7 +52,7 @@ test("⌘, opens the page on its first section, and Escape closes it with the fo
   await expect.element(toggle).toHaveFocus()
 })
 
-test("the gear in the project rail opens the page, and the back arrow closes it", async () => {
+test("the gear in the sidebar's top row opens the page, and the back arrow closes it", async () => {
   await mountApp()
   const gear = page.getByRole("button", { name: "Settings" })
   await gear.click()

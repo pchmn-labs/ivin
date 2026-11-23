@@ -10,10 +10,6 @@
   scrollbar-width: none;
 }
 
-.iv-project-rail__spacer {
-  flex: 1;
-}
-
 .iv-project-rail__item {
   position: relative;
   flex: none;

@@ -1,25 +1,34 @@
 import { Settings, type SettingValueInvalid } from "@ivin/contracts/setting"
 import * as Schema from "effect/Schema"
 
-type Expected = SettingValueInvalid["expected"]
+interface Expected {
+  readonly expected: SettingValueInvalid["expected"]
+  readonly allowed?: ReadonlyArray<string>
+}
 
-interface Leaf {
+interface Leaf extends Expected {
   readonly path: string
   readonly is: (value: unknown) => boolean
-  readonly expected: Expected
 }
 
 const expectedOf = (schema: Schema.Struct.Fields[string], path: string): Expected => {
-  switch (schema.ast._tag) {
+  const { ast } = schema
+  switch (ast._tag) {
     case "Boolean":
-      return "boolean"
+      return { expected: "boolean" }
     case "Number":
-      return "number"
+      return { expected: "number" }
     case "String":
-      return "string"
-    default:
-      throw new Error(`The setting ${path} has a type settings set cannot check.`)
+      return { expected: "string" }
+    case "Union":
+      if (ast.types.every((type) => type._tag === "Literal" && typeof type.literal === "string")) {
+        return {
+          expected: "oneOf",
+          allowed: ast.types.map((type) => (type as typeof type & { literal: string }).literal),
+        }
+      }
   }
+  throw new Error(`The setting ${path} has a type settings set cannot check.`)
 }
 
 const leavesOf = (fields: Schema.Struct.Fields, prefix: string): Leaf[] =>
@@ -31,7 +40,7 @@ const leavesOf = (fields: Schema.Struct.Fields, prefix: string): Leaf[] =>
           {
             path,
             is: Schema.is(schema as Schema.Codec<unknown>),
-            expected: expectedOf(schema, path),
+            ...expectedOf(schema, path),
           },
         ]
   })
@@ -46,12 +55,16 @@ export const checkSetting = (
 ):
   | { readonly ok: true }
   | { readonly ok: false; readonly reason: "unknownPath" }
-  | { readonly ok: false; readonly reason: "invalidValue"; readonly expected: Expected } => {
+  | ({ readonly ok: false; readonly reason: "invalidValue" } & Expected) => {
   const leaf = leaves.get(path)
   if (leaf === undefined) return { ok: false, reason: "unknownPath" }
-  return leaf.is(value)
-    ? { ok: true }
-    : { ok: false, reason: "invalidValue", expected: leaf.expected }
+  if (leaf.is(value)) return { ok: true }
+  return {
+    ok: false,
+    reason: "invalidValue",
+    expected: leaf.expected,
+    ...(leaf.allowed !== undefined && { allowed: leaf.allowed }),
+  }
 }
 
 // Undefined when no setting or section has that path.

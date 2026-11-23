@@ -1,0 +1,16 @@
+.iv-settings-button {
+  position: relative;
+  display: inline-grid;
+}
+
+.iv-settings-button__lost {
+  position: absolute;
+  top: var(--iv-space-half);
+  right: var(--iv-space-half);
+  width: var(--iv-dot-size);
+  height: var(--iv-dot-size);
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-danger);
+  box-shadow: 0 0 0 var(--iv-line-bold) var(--iv-bg-card);
+  pointer-events: none;
+}

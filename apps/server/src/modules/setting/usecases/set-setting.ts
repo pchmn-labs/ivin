@@ -14,7 +14,11 @@ export const setSetting = (path: string, value: Schema.Json) =>
     if (!check.ok) {
       return yield* check.reason === "unknownPath"
         ? new SettingPathUnknown({ path, knownPaths: settingPaths })
-        : new SettingValueInvalid({ path, expected: check.expected })
+        : new SettingValueInvalid({
+            path,
+            expected: check.expected,
+            ...(check.allowed !== undefined && { allowed: check.allowed }),
+          })
     }
     const file = yield* SettingsFile
     yield* file.edit((text) => {

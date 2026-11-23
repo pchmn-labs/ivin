@@ -15,6 +15,8 @@ export interface CommandHandler {
 export const coreCommands: ReadonlyArray<Command> = [
   { id: "sidebar.toggle", title: "Toggle sidebar", pluginId: null },
   { id: "sidebar.showSessions", title: "Show sessions", pluginId: null },
+  { id: "project.next", title: "Next project", pluginId: null },
+  { id: "project.previous", title: "Previous project", pluginId: null },
   { id: "session.interrupt", title: "Interrupt", pluginId: null },
   { id: "composer.send", title: "Send", pluginId: null },
   { id: "session.archive", title: "Archive session", pluginId: null },
