@@ -3,7 +3,6 @@
   flex: none;
   flex-wrap: wrap;
   gap: var(--iv-space-1) var(--iv-space-3);
-  min-width: 0;
   color: var(--iv-text-faint);
   font-size: var(--iv-text-xs);
   line-height: var(--iv-text-xs-lh);

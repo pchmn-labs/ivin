@@ -93,7 +93,6 @@ function PendingSheet({
       keys={[
         { key: "↑↓", label: "Choose" },
         { key: "↵", label: "Answer" },
-        { key: "Esc", label: "Deny" },
       ]}
       data-testid="approval-sheet"
     >

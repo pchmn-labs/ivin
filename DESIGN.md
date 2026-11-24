@@ -335,7 +335,7 @@ The palette is green-tinted neutrals, one yew-green accent, an amber and a curso
 - **Body** (400, 13px/20px): the default for the whole app: row titles, options, controls, the composer.
 - **Transcript Body** (400, 14px/24px): the user's message, the agent's text and the Markdown answer in the transcript.
 - **Label** (500, 12px/16px): small buttons, field labels, tooltips, status labels, the session title in the main title bar, the composer's run options button, tool arguments and a failed tool's status.
-- **Caption** (500, 11px/16px): the session group labels with their counts, the project badge (600), and key hints in the action sheet and option list.
+- **Caption** (500, 11px/16px): the session group labels with their counts, the project badge (600), and the key shown on an option list row.
 - **Mono** (400, 12px/20px): code blocks, tool arguments, file paths and the approval detail (clamped to three lines). Inline code is 0.92em.
 - **Transcript Mono** (400, 13px/20px): tool arguments, file paths, code blocks and other mono text in the transcript. Inline code stays 0.92em of its line.
 
