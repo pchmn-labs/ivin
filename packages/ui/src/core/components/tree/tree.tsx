@@ -332,9 +332,11 @@ export function Tree({
                 {Array.from({ length: row.depth }, (_, level) => (
                   <span key={level} className="iv-tree__indent" />
                 ))}
-                <span className="iv-tree__chevron" aria-hidden>
-                  {row.expanded === null ? null : <Icon name="chevron-right" size={12} />}
-                </span>
+                {row.expanded === null ? null : (
+                  <span className="iv-tree__chevron" aria-hidden>
+                    <Icon name="chevron-right" size={12} />
+                  </span>
+                )}
                 <span className="iv-tree__icon" aria-hidden>
                   {fileIconOf(fileIcons, {
                     name: row.name,
