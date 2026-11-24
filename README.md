@@ -29,3 +29,7 @@ Before writing code, read [AGENTS.md](AGENTS.md) and [docs/conventions/](docs/co
 ## Why
 
 ivin replaces a fork of MonoCode in which every feature was shaped by the cost of the next upstream merge. It starts from what that fork taught about the extension points a real feature set needs.
+
+## Licence
+
+[MIT](LICENSE). Third-party material is listed in [NOTICE](NOTICE).
