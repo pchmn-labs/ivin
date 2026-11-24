@@ -278,7 +278,7 @@ function FileStage({ bar, path }: { bar: Bar; path: string }) {
             {name} is outside the working folder, so it cannot be edited.{" "}
             {revealed && <span className="proto-note">Finder opens with {name} selected</span>}
           </span>
-          <Button variant={bar === "attention" ? "secondary" : "ghost"} size="sm" onClick={() => setRevealed(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setRevealed(true)}>
             Show in Finder
           </Button>
         </div>
