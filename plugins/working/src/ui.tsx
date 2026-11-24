@@ -54,18 +54,22 @@ function Detail({
 }) {
   return (
     <Stack as="span" direction="row" gap={1} align="center">
-      <ProjectMark name={project} size={12} />
-      <Text size="xs" tone="faint" truncate>
-        {project}
-      </Text>
+      <Stack as="span" direction="row" gap={1.5} align="center">
+        <ProjectMark name={project} size={10} />
+        <Text size="xs" tone="faint" truncate>
+          {project}
+        </Text>
+      </Stack>
       {question === undefined ? null : (
         <>
           <Text size="xs" tone="faint">
             ·
           </Text>
-          <Text size="xs" tone="muted" truncate data-testid="working-question">
-            {question}
-          </Text>
+          <Stack as="span" grow>
+            <Text size="xs" tone="muted" truncate data-testid="working-question">
+              {question}
+            </Text>
+          </Stack>
         </>
       )}
       {background === undefined ? null : (
@@ -73,9 +77,11 @@ function Detail({
           <Text size="xs" tone="faint">
             ·
           </Text>
-          <Text size="xs" tone="muted" truncate data-testid="working-background">
-            {background}
-          </Text>
+          <Stack as="span" grow>
+            <Text size="xs" tone="muted" truncate data-testid="working-background">
+              {background}
+            </Text>
+          </Stack>
         </>
       )}
     </Stack>
