@@ -911,7 +911,8 @@ export const makeFakeServer = (
         if (!folders.has(session.workingFolder))
           return Effect.fail(new WorkingFolderDeleted({ sessionId }))
         fileListings++
-        return Effect.succeed({ paths: filesUnder(session.workingFolder, ""), truncated: false })
+        const t = performance.now(); const paths = filesUnder(session.workingFolder, ""); (globalThis as any).__t?.push(['filesUnder', performance.now() - t])
+        return Effect.succeed({ paths, truncated: false })
       }),
     "file.gitStatus": ({ sessionId }: { sessionId: string }) =>
       Effect.suspend(() => {
@@ -1346,7 +1347,7 @@ export const makeFakeServer = (
               },
               postMessage: (data) => {
                 if (outbox.push(data) === 1) {
-                  queueMicrotask(() => outbox.splice(0).forEach((reply) => toClient(reply)))
+                  queueMicrotask(() => outbox.splice(0).forEach((reply) => { const t = performance.now(); toClient(reply); const d = performance.now() - t; if (d > 2) (globalThis as any).__t?.push(['decode', d]) }))
                 }
               },
             }),
@@ -1357,7 +1358,7 @@ export const makeFakeServer = (
           Effect.provide(
             layerClientProtocolMessagePort({
               onMessage: (handler) => void (toClient = handler),
-              postMessage: (data) => (toServer ? toServer(data) : early.push(data)),
+              postMessage: (data) => { const t = performance.now(); toServer ? toServer(data) : early.push(data); const d = performance.now() - t; if (d > 2) (globalThis as any).__t?.push(['server', d]) },
             }),
           ),
         )
