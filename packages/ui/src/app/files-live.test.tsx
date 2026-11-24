@@ -118,6 +118,20 @@ test("rows take the colour of their git status, and so do the folders above a ch
   await expect.element(item("README.md")).not.toHaveAttribute("data-status")
 })
 
+test("the git status follows the session into the worktree its agent moves to", async () => {
+  const worktree = `${project}/.worktrees/fix-cart`
+  const server = makeServer()
+  server.folders.set(worktree, folder("src/", "README.md"))
+  await mount(server)
+  await expect.element(item("docs")).toBeVisible()
+
+  server.moveSession("s1", worktree)
+  await expect.element(item("docs")).not.toBeInTheDocument()
+  server.gitStatus.set(worktree, [{ path: "README.md", status: "modified" }])
+  server.changeOnDisk(worktree, ["README.md"])
+  await expect.element(item("README.md")).toHaveAttribute("data-status", "modified")
+})
+
 test("when git cannot read which files changed, a message with Retry shows above a tree that stays usable", async () => {
   const server = makeServer()
   server.gitStatus.set(project, [{ path: "README.md", status: "modified" }])

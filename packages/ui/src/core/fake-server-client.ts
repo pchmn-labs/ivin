@@ -101,6 +101,8 @@ export interface FakeServer {
   readonly taskOutputs: Map<string, string>
   // Changes the tasks a session lists, as the server does when a task starts or ends.
   readonly setBackgroundTasks: (sessionId: string, tasks: Session["backgroundTasks"]) => void
+  // Moves a session to another working folder, as the server does when the agent enters a worktree.
+  readonly moveSession: (sessionId: string, workingFolder: string) => void
   // The agent takes the session's pending messages into its running turn, as steers.
   readonly readPendingMessages: (sessionId: string) => void
   readonly sentMessages: ReadonlyArray<{
@@ -1409,6 +1411,10 @@ export const makeFakeServer = (
     taskOutputs,
     setBackgroundTasks: (sessionId, backgroundTasks) =>
       void saveSession({ ...sessions.get(sessionId)!, backgroundTasks }),
+    moveSession: (sessionId, workingFolder) => {
+      const session = sessions.get(sessionId)!
+      saveSession({ ...session, workingFolder, inWorktree: workingFolder !== session.projectPath })
+    },
     readPendingMessages: (sessionId) => readMessages(sessions.get(sessionId)!, true),
     holdNextSend: () => {
       let settle!: (ok: boolean) => void
