@@ -29,6 +29,21 @@ import { UserIcon as User } from "@phosphor-icons/react/dist/csr/User"
 import { WarningIcon as Warning } from "@phosphor-icons/react/dist/csr/Warning"
 import { WarningCircleIcon as WarningCircle } from "@phosphor-icons/react/dist/csr/WarningCircle"
 import { XIcon as X } from "@phosphor-icons/react/dist/csr/X"
+import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react/dist/csr/ArrowLeft"
+import { ArrowsOutIcon as ArrowsOut } from "@phosphor-icons/react/dist/csr/ArrowsOut"
+import { BrainIcon as Brain } from "@phosphor-icons/react/dist/csr/Brain"
+import { ClockIcon as Clock } from "@phosphor-icons/react/dist/csr/Clock"
+import { GitDiffIcon as GitDiff } from "@phosphor-icons/react/dist/csr/GitDiff"
+import { QuestionIcon as Question } from "@phosphor-icons/react/dist/csr/Question"
+import { RobotIcon as Robot } from "@phosphor-icons/react/dist/csr/Robot"
+import { SparkleIcon as Sparkle } from "@phosphor-icons/react/dist/csr/Sparkle"
+import { StackIcon as Stack } from "@phosphor-icons/react/dist/csr/Stack"
+import { TerminalIcon as Terminal } from "@phosphor-icons/react/dist/csr/Terminal"
+import { WrenchIcon as Wrench } from "@phosphor-icons/react/dist/csr/Wrench"
+import { ArrowClockwiseIcon as ArrowClockwise } from "@phosphor-icons/react/dist/csr/ArrowClockwise"
+import { ArrowRightIcon as ArrowRight } from "@phosphor-icons/react/dist/csr/ArrowRight"
+import { ArrowSquareOutIcon as ArrowSquareOut } from "@phosphor-icons/react/dist/csr/ArrowSquareOut"
+import { SquareSplitHorizontalIcon as SquareSplitHorizontal } from "@phosphor-icons/react/dist/csr/SquareSplitHorizontal"
 import type { IconProps as PluginIconProps } from "@ivin/plugin-api/ui"
 import "./icon.css"
 
@@ -66,49 +81,25 @@ const eagerIcons = {
   "new-session": NotePencil,
   search: MagnifyingGlass,
   gear: Gear,
+  terminal: Terminal,
+  brain: Brain,
+  wrench: Wrench,
+  sparkles: Sparkle,
+  "arrow-left": ArrowLeft,
+  stack: Stack,
+  robot: Robot,
+  "arrows-out": ArrowsOut,
+  clock: Clock,
+  diff: GitDiff,
+  question: Question,
+  "arrow-right": ArrowRight,
+  split: SquareSplitHorizontal,
+  restart: ArrowClockwise,
+  "external-link": ArrowSquareOut,
 } satisfies Partial<Record<IconName, PhosphorIcon>>
 
-// Each loads the first time it is drawn; every weight of a Phosphor icon is in its file.
+// Drawn only by settings and the Files and Changes panels; each loads the first time it is drawn.
 const lazyIcons = {
-  terminal: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Terminal").then((m) => ({ default: m.TerminalIcon })),
-  ),
-  brain: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Brain").then((m) => ({ default: m.BrainIcon })),
-  ),
-  wrench: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Wrench").then((m) => ({ default: m.WrenchIcon })),
-  ),
-  sparkles: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Sparkle").then((m) => ({ default: m.SparkleIcon })),
-  ),
-  "arrow-left": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowLeft").then((m) => ({ default: m.ArrowLeftIcon })),
-  ),
-  "arrow-right": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowRight").then((m) => ({
-      default: m.ArrowRightIcon,
-    })),
-  ),
-  "arrows-left-right": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowsLeftRight").then((m) => ({
-      default: m.ArrowsLeftRightIcon,
-    })),
-  ),
-  stack: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Stack").then((m) => ({ default: m.StackIcon })),
-  ),
-  robot: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Robot").then((m) => ({ default: m.RobotIcon })),
-  ),
-  "arrows-out": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowsOut").then((m) => ({ default: m.ArrowsOutIcon })),
-  ),
-  split: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/SquareSplitHorizontal").then((m) => ({
-      default: m.SquareSplitHorizontalIcon,
-    })),
-  ),
   "brackets-curly": lazy(() =>
     import("@phosphor-icons/react/dist/csr/BracketsCurly").then((m) => ({
       default: m.BracketsCurlyIcon,
@@ -116,6 +107,11 @@ const lazyIcons = {
   ),
   "app-window": lazy(() =>
     import("@phosphor-icons/react/dist/csr/AppWindow").then((m) => ({ default: m.AppWindowIcon })),
+  ),
+  download: lazy(() =>
+    import("@phosphor-icons/react/dist/csr/DownloadSimple").then((m) => ({
+      default: m.DownloadSimpleIcon,
+    })),
   ),
   "collapse-all": lazy(() =>
     import("@phosphor-icons/react/dist/csr/ArrowsInLineVertical").then((m) => ({
@@ -128,33 +124,14 @@ const lazyIcons = {
   "eye-slash": lazy(() =>
     import("@phosphor-icons/react/dist/csr/EyeSlash").then((m) => ({ default: m.EyeSlashIcon })),
   ),
-  clock: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Clock").then((m) => ({ default: m.ClockIcon })),
-  ),
-  diff: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/GitDiff").then((m) => ({ default: m.GitDiffIcon })),
-  ),
-  question: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Question").then((m) => ({ default: m.QuestionIcon })),
-  ),
   undo: lazy(() =>
     import("@phosphor-icons/react/dist/csr/ArrowUUpLeft").then((m) => ({
       default: m.ArrowUUpLeftIcon,
     })),
   ),
-  download: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/DownloadSimple").then((m) => ({
-      default: m.DownloadSimpleIcon,
-    })),
-  ),
-  restart: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowClockwise").then((m) => ({
-      default: m.ArrowClockwiseIcon,
-    })),
-  ),
-  "external-link": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowSquareOut").then((m) => ({
-      default: m.ArrowSquareOutIcon,
+  "arrows-left-right": lazy(() =>
+    import("@phosphor-icons/react/dist/csr/ArrowsLeftRight").then((m) => ({
+      default: m.ArrowsLeftRightIcon,
     })),
   ),
 } satisfies Partial<Record<IconName, ComponentType<PhosphorProps>>>
