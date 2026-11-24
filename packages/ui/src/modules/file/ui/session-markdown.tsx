@@ -7,18 +7,19 @@ import {
   useInCodeBlock,
   type MarkdownLinkRendering,
 } from "../../../core/components/markdown/markdown.tsx"
+import { useListedFiles } from "../hooks/use-listed-files.ts"
 import { useOpenFileLink } from "../hooks/use-open-file-link.ts"
-import { hasFileScheme, isPathShaped, type FileLink } from "../rules/file-link.ts"
+import { hasFileScheme, inlineCodeTarget, type InlineCodeTarget } from "../rules/file-link.ts"
 import "./session-markdown.css"
 
 interface Links {
-  readonly linkOf: (href: string) => FileLink
+  readonly targetOf: (code: string) => InlineCodeTarget
   // Answers true when it handled the link, so the browser does not follow it.
   readonly openLink: (href: string) => boolean
 }
 
 const LinksContext = createContext<Links>({
-  linkOf: () => ({ kind: "none" }),
+  targetOf: () => ({ kind: "code" }),
   openLink: () => false,
 })
 const InLink = createContext(false)
@@ -41,13 +42,19 @@ function SessionLink({ href = "", node: _node, ...rest }: ComponentProps<"a"> & 
 }
 
 function SessionInlineCode({ node: _node, ...props }: ComponentProps<"code"> & ExtraProps) {
-  const { linkOf, openLink } = useContext(LinksContext)
+  const { targetOf, openLink } = useContext(LinksContext)
   const inLink = useContext(InLink)
   const inBlock = useInCodeBlock()
   const text = typeof props.children === "string" ? props.children : null
-  if (inLink || inBlock || text === null || !isPathShaped(text) || linkOf(text).kind === "none") {
-    return <code {...props} />
+  const target = inLink || inBlock || text === null ? null : targetOf(text)
+  if (target?.kind === "web") {
+    return (
+      <a className="iv-session-markdown__path" href={target.url}>
+        <code {...props} />
+      </a>
+    )
   }
+  if (text === null || target?.kind !== "file") return <code {...props} />
   const follow = (event: MouseEvent) => {
     event.preventDefault()
     openLink(text)
@@ -71,9 +78,12 @@ const linkRendering: MarkdownLinkRendering = {
 }
 
 function LinkedMarkdown({ text, sessionId }: { text: string; sessionId: string }) {
-  const { linkOf, openLink, failure } = useOpenFileLink(sessionId)
+  const { openLink, failure, workingFolder } = useOpenFileLink(sessionId)
+  const files = useListedFiles(sessionId, workingFolder ?? "")
+  const targetOf = (code: string): InlineCodeTarget =>
+    workingFolder === undefined ? { kind: "code" } : inlineCodeTarget(code, workingFolder, files)
   return (
-    <LinksContext.Provider value={{ linkOf, openLink }}>
+    <LinksContext.Provider value={{ targetOf, openLink }}>
       <Markdown text={text} linkRendering={linkRendering} />
       {failure && (
         <div className="iv-session-markdown__failure">

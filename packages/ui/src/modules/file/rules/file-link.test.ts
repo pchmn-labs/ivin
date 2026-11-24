@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { fileLink, hasFileScheme, isPathShaped } from "./file-link.ts"
+import { fileLink, hasFileScheme, inlineCodeTarget, type ListedFiles } from "./file-link.ts"
 
 const folder = "/Users/me/repo"
 
@@ -101,47 +101,91 @@ test("a file URL or a name followed by a line has a file scheme; a web or script
   expect(hasFileScheme("src/main.ts")).toBe(false)
 })
 
-test("inline code shaped like a path, with an optional line, opens as a path", () => {
+const listed = (...paths: Array<string>) => ({ paths: new Set(paths), truncated: false })
+const files = listed("src/main.ts", "bin/ivin", "LICENSE", ".env.example", "example.com")
+const target = (code: string, listing: ListedFiles = files) =>
+  inlineCodeTarget(code, folder, listing).kind
+
+test("inline code naming a listed file, with an optional line, opens it", () => {
   for (const code of [
-    "packages/ui/src/x.ts",
-    "packages/ui/src/x.ts:42",
-    "x.ts:42:7",
-    "x.ts:42-50",
-    "x.ts#L42-L50",
-    "x.ts",
-    ".env",
-    "src/",
-    "/Users/me/.zshrc",
-    "file:///Users/me/notes.md",
-    "origin/main",
-    // Shaped like a file with an extension; a click shows the file view's "no longer exists".
-    "console.log",
-  ]) {
-    expect(isPathShaped(code), code).toBe(true)
-  }
+    "src/main.ts",
+    "./src/main.ts",
+    "src/main.ts:42",
+    "src/main.ts:42:7",
+    "src/main.ts:42-50",
+    "src/main.ts#L42-L50",
+    "bin/ivin",
+    "LICENSE",
+    ".env.example",
+    "example.com",
+  ])
+    expect(target(code), code).toBe("file")
 })
 
-test("inline code that is a command, a call, a URL or a name stays code", () => {
+test("an absolute path or a file URL opens on its shape, inside the working folder or not", () => {
   for (const code of [
+    "/Users/me/.zshrc",
+    "/Users/me/.zshrc:11",
+    "/Users/me/repo/src/gone.ts",
+    "file:///Users/me/notes.md",
+    "../other/a.ts",
+  ])
+    expect(target(code), code).toBe("file")
+})
+
+test("a relative path the list does not hold, a branch or a name stays code", () => {
+  for (const code of [
+    "origin/main",
+    "pchmn-labs/ivin",
+    "console.log",
+    "process.env",
+    "src/old.ts",
+    "src",
+    "notes.md",
+    "run.sh",
+    "ivin.app",
     "npm install",
     "foo()",
     "a && b",
     "https://example.com",
-    "https://example.com/x.ts",
     "@types/node",
     "~/.zshrc",
     "1.2.3",
     "PNPM_HOME",
-    "Makefile:12",
     "std::vector",
-    "a#b/c",
     "x = 1",
     "<div>",
-    "a,b/c",
     "/",
-    "//",
     "",
-  ]) {
-    expect(isPathShaped(code), code).toBe(false)
+  ])
+    expect(target(code), code).toBe("code")
+})
+
+test("a domain the list does not hold opens as a web link", () => {
+  expect(inlineCodeTarget("github.com", folder, files)).toEqual({
+    kind: "web",
+    url: "https://github.com",
+  })
+  expect(inlineCodeTarget("github.com/pchmn-labs/ivin", folder, files)).toEqual({
+    kind: "web",
+    url: "https://github.com/pchmn-labs/ivin",
+  })
+  expect(target("docs.example.fr/a?b=1")).toBe("web")
+  expect(target("Example.COM")).toBe("web")
+  expect(target("a@example.com")).toBe("code")
+})
+
+test("while the list loads, only an absolute path opens", () => {
+  expect(target("src/main.ts", "loading")).toBe("code")
+  expect(target("github.com", "loading")).toBe("code")
+  expect(target("/Users/me/.zshrc", "loading")).toBe("file")
+})
+
+test("when the list is truncated or unreadable, a relative path opens on its shape", () => {
+  for (const listing of [{ paths: new Set<string>(), truncated: true }, "unreadable"] as const) {
+    expect(target("src/old.ts", listing)).toBe("file")
+    expect(target("origin/main", listing)).toBe("file")
+    expect(target("LICENSE", listing)).toBe("code")
+    expect(target("github.com", listing)).toBe("file")
   }
 })

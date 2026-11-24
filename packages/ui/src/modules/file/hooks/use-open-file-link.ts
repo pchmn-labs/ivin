@@ -47,5 +47,5 @@ export function useOpenFileLink(sessionId: string) {
     return true
   }
 
-  return { linkOf, openLink, failure }
+  return { linkOf, openLink, failure, workingFolder: session?.workingFolder }
 }

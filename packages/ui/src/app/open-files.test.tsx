@@ -400,6 +400,40 @@ test("inline code that is not a path, or code in a block, stays plain code", asy
   expect(page.getByRole("link").elements()).toEqual([])
 })
 
+test("inline code naming a branch, a property or a file the working folder does not hold stays plain code", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [
+    answer("Rebase on `origin/main`, log with `console.log`, see `src/old.ts`."),
+  ])
+  await mount(server)
+  await expect.element(page.getByText("src/old.ts")).toBeVisible()
+  await expect.poll(() => server.fileListings()).toBeGreaterThan(0)
+  expect(page.getByRole("link").elements()).toEqual([])
+})
+
+test("a domain in inline code links to its web page", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [answer("Published on `github.com/pchmn-labs/ivin`.")])
+  await mount(server)
+  await expect
+    .element(transcriptLink("github.com/pchmn-labs/ivin"))
+    .toHaveAttribute("href", "https://github.com/pchmn-labs/ivin")
+})
+
+test("a file the agent creates after its answer becomes a link to it", async () => {
+  const server = makeServer()
+  server.files.set(`${project}/bin/shop`, { kind: "text", text: "#!/bin/sh\n" })
+  server.seedItems("s1", [answer("Run `bin/shop`.")])
+  await mount(server)
+  await expect.poll(() => server.fileListings()).toBeGreaterThan(0)
+  await expect.element(transcriptLink("bin/shop")).not.toBeInTheDocument()
+  server.folders.set(project, [...server.folders.get(project)!, ...folder("bin/")])
+  server.folders.set(`${project}/bin`, folder("shop"))
+  server.changeOnDisk(project, ["bin/shop"])
+  await transcriptLink("bin/shop").click()
+  await expect.element(code("shop")).toHaveTextContent("#!/bin/sh")
+})
+
 test("the file on a tool row that read it opens beside the chat", async () => {
   const server = makeServer()
   server.seedItems("s1", [

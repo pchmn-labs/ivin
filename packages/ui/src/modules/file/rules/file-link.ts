@@ -82,10 +82,43 @@ const URL_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//
 const LINE_TAIL = /(?::\d+(?::\d+|-\d+)?|#L\d+(?:-L?\d+)?)$/
 const NOT_IN_PATH = /[\s()<>{}[\]'"`,;:&|=*?$!#\\^]/
 const EXTENSION = /\.[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*$/
+// Common top-level domains only: `.md`, `.sh` or `.app` are file extensions as often as domains.
+const DOMAIN =
+  /^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|net|org|io|dev|co|fr|de|uk|eu|edu|gov|info|me)(?::\d+)?(?:\/\S*)?$/i
 
-export const isPathShaped = (code: string): boolean => {
+export type ListedFiles =
+  | { readonly paths: ReadonlySet<string>; readonly truncated: boolean }
+  | "loading"
+  | "unreadable"
+
+export type InlineCodeTarget =
+  | { readonly kind: "file" }
+  | { readonly kind: "web"; readonly url: string }
+  | { readonly kind: "code" }
+
+const FILE: InlineCodeTarget = { kind: "file" }
+const CODE: InlineCodeTarget = { kind: "code" }
+
+const pathPart = (code: string): string | null => {
   const target = (code.startsWith("file://") ? code.slice(7) : code).replace(LINE_TAIL, "")
-  if (URL_SCHEME.test(target) || NOT_IN_PATH.test(target) || /^[@~]/.test(target)) return false
-  if (!/[a-zA-Z]/.test(target)) return false
-  return target.includes("/") || EXTENSION.test(target)
+  if (URL_SCHEME.test(target) || NOT_IN_PATH.test(target) || /^[@~]/.test(target)) return null
+  return /[a-zA-Z]/.test(target) ? target : null
+}
+
+const isPathShaped = (target: string) => target.includes("/") || EXTENSION.test(target)
+
+export const inlineCodeTarget = (
+  code: string,
+  workingFolder: string,
+  files: ListedFiles,
+): InlineCodeTarget => {
+  const target = pathPart(code)
+  const link = target === null ? NONE : fileLink(code, workingFolder)
+  if (target !== null && link.kind !== "none") {
+    if (target.startsWith("/") || link.kind === "outside") return isPathShaped(target) ? FILE : CODE
+    if (files === "unreadable" || (files !== "loading" && files.truncated))
+      return isPathShaped(target) ? FILE : CODE
+    if (files !== "loading" && files.paths.has(link.path)) return FILE
+  }
+  return files !== "loading" && DOMAIN.test(code) ? { kind: "web", url: `https://${code}` } : CODE
 }
