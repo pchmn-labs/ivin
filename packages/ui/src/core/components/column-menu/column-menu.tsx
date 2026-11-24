@@ -264,7 +264,7 @@ export function ColumnMenu({
               <span className="iv-column-menu__hint">{hint}</span>
               <KeyHints
                 hints={[
-                  { key: "←↑↓→", label: "Move" },
+                  { key: "↑↓ ←→", label: "Move" },
                   { key: "↵", label: "Pick" },
                   { key: "Esc", label: "Close" },
                 ]}
