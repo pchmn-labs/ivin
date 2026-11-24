@@ -229,7 +229,7 @@ test("a turn of 9 calls opens its steps folded, but for a failed call and a suba
     call("c6"),
     call("c7", "read", "error"),
     call("c8"),
-    call("c12"),
+    call("c9"),
     text("a", "Done"),
   ])
 
@@ -452,6 +452,23 @@ test("while the turn runs, an open step of 11 calls shows 8 rows that follow the
   server.pushItem(call("c13"))
   await expect.element(page.getByText("tool-c13")).toBeVisible()
   await vi.waitFor(() => expect(atListEnd(callList())).toBe(true))
+})
+
+test("a wheel up in the calls keeps their place when a call arrives before the scroll event", async () => {
+  const { user, text, call } = items(Date.now())
+  const server = await mount(
+    [user("u1"), text("t1", "Running"), ...Array.from({ length: 11 }, (_, i) => call(`c${i + 1}`))],
+    true,
+  )
+  await expect.element(page.getByText("tool-c11")).toBeVisible()
+  const list = callList()
+  await vi.waitFor(() => expect(atListEnd(list)).toBe(true))
+
+  list.dispatchEvent(new WheelEvent("wheel", { deltaY: -40, bubbles: true }))
+  list.scrollTop = 0
+  server.pushItem(call("c12"))
+  await expect.element(page.getByText("tool-c12")).toBeInTheDocument()
+  expect(callList().scrollTop).toBe(0)
 })
 
 test("an open step of 8 calls does not scroll", async () => {
