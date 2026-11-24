@@ -5,10 +5,10 @@ import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type {
-  ApprovalItem,
   Session,
   SlotName,
   SlotProps,
+  ApprovalItem,
   TranscriptItem,
   UiContext,
   UiHost,
@@ -41,7 +41,10 @@ const mount = async (
   const Sheet = slots["composer.above"] as ComponentType<SlotProps["composer.above"]>
   const host: UiHost = {
     ...testUiHost,
-    useTranscript: () => items,
+    usePendingApproval: () =>
+      items.findLast(
+        (item): item is ApprovalItem => item.type === "approval" && item.decision === null,
+      ),
     useAnswerApproval: () => answer,
   }
   await render(

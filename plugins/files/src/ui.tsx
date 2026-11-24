@@ -12,7 +12,6 @@ import {
   useFileOnScreen,
   useFolderChanges,
   useGitStatus,
-  useGitStatusFailure,
   useListFiles,
   useListFolder,
   useOpenFile,
@@ -121,9 +120,8 @@ function useFileList(session: Session, active: boolean) {
 function FolderTreeView({ session, state }: { session: Session; state: PluginState }) {
   const listFolder = useListFolder()
   const openFile = useOpenFile()
-  const statuses = useGitStatus(session.id)
+  const { entries: statuses, ...statusFailure } = useGitStatus(session.id)
   const marks = useMemo(() => gitMarks(statuses), [statuses])
-  const statusFailure = useGitStatusFailure(session.id)
   const [openFailure, setOpenFailure] = useState<({ path: string } & ActionFailure) | null>(null)
   const open = async (path: string) => {
     setOpenFailure(null)
@@ -425,7 +423,7 @@ function GoToFileList({
   }) => ReactNode
 }) {
   const { listing, retry } = useFileList(session, true)
-  const statuses = useGitStatus(session.id)
+  const { entries: statuses } = useGitStatus(session.id)
   const marks = useMemo(() => gitMarks(statuses), [statuses])
   const openFile = useOpenFile()
   const [failure, setFailure] = useState<({ path: string } & ActionFailure) | null>(null)

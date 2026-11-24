@@ -11,14 +11,13 @@ import {
   Text,
   defineUi,
   formatToolInput,
-  pendingApproval,
-  pendingQuestion,
   useAnswerApproval,
   useOpenTab,
+  usePendingApproval,
+  usePendingQuestion,
   useProjects,
   useSelectedSessionId,
   useSessions,
-  useTranscript,
   type ActionFailure,
   type Session,
 } from "@ivin/plugin-api/ui"
@@ -97,9 +96,8 @@ function Detail({
 function WaitingRow({ session, project, now }: { session: Session; project: string; now: number }) {
   const openTab = useOpenTab()
   const answer = useAnswerApproval(session.id)
-  const transcript = useTranscript(session.id)
-  const pending = pendingApproval(transcript)
-  const question = pendingQuestion(transcript)?.questions[0]?.question
+  const pending = usePendingApproval(session.id)
+  const question = usePendingQuestion(session.id)?.questions[0]?.question
   const [sending, setSending] = useState(false)
   const [failure, setFailure] = useState<(ActionFailure & { allow: boolean }) | null>(null)
   const command = pending === undefined ? undefined : formatToolInput(pending.name, pending.input)

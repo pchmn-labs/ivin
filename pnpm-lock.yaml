@@ -327,9 +327,6 @@ importers:
       '@codemirror/view':
         specifier: ^6.43.15
         version: 6.43.15
-      '@ivin/contracts':
-        specifier: workspace:*
-        version: link:../contracts
       react:
         specifier: 19.3.1
         version: 19.3.1

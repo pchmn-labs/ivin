@@ -10,6 +10,7 @@ import {
 import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
+import { contractSession } from "../rules/plugin-session.ts"
 import { HARNESSES } from "../rules/harnesses.ts"
 import { isRunning } from "../rules/is-running.ts"
 import {
@@ -84,13 +85,14 @@ const columnsFor = (offered: HarnessRunOptions | null, session: Session): Column
 }
 
 export function RunOptionsMenu({
-  session,
+  session: pluginSession,
   offered,
   previous,
   state,
   onStateChange,
   onChange,
 }: RunOptionsMenuProps) {
+  const session = contractSession(pluginSession)
   useCommandHandler(COMMANDS.model, () => onStateChange({ open: true, start: "model" }))
   useCommandHandler(COMMANDS.effort, () => onStateChange({ open: true, start: "effort" }))
   useCommandHandler(COMMANDS.permissionMode, () =>

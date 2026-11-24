@@ -1,8 +1,14 @@
 import { createElement } from "react"
 import type { ComponentType, ReactElement, ReactNode, Ref } from "react"
-import type { ChangeStatus, GitFileStatus } from "@ivin/contracts/file"
-import type { HarnessRunOptions, RunOptions, Session } from "@ivin/contracts/session"
-import type { ImageRef, RunOption } from "@ivin/contracts/transcript"
+import type {
+  ChangeStatus,
+  GitFileStatus,
+  HarnessRunOptions,
+  ImageRef,
+  RunOption,
+  RunOptions,
+  Session,
+} from "./types.ts"
 import { useHost } from "./host-context.ts"
 import type { Draft, SessionLocationLabel } from "./host-context.ts"
 

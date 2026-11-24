@@ -1,16 +1,21 @@
 import { createContext, useContext } from "react"
-import type { Annotation } from "@ivin/contracts/annotation"
-import type { Change, FolderEntry, GitStatusEntry } from "@ivin/contracts/file"
-import type { OpenProjects } from "@ivin/contracts/project"
-import type { HarnessRunOptions, RunOptions, Session } from "@ivin/contracts/session"
-import type { Settings } from "@ivin/contracts/setting"
-import type { Tab } from "@ivin/contracts/tab"
 import type {
+  Annotation,
+  ApprovalItem,
+  Change,
+  FolderEntry,
+  GitStatusEntry,
+  HarnessRunOptions,
   ImageData,
+  OpenProjects,
   QuestionAnswer,
+  QuestionItem,
+  RunOptions,
+  Session,
   SessionUsage,
-  TranscriptItem,
-} from "@ivin/contracts/transcript"
+  Settings,
+  Tab,
+} from "./types.ts"
 import type { ErrorMessageProps, HostComponents, MenuItem } from "./components.ts"
 
 export interface ActionFailure {
@@ -60,6 +65,17 @@ export type CommittedChangeListing =
   | { readonly kind: "no_default_branch" }
   | { readonly kind: "no_merge_base" }
 
+export type ChangeKind = "working" | "committed"
+
+export type ChangeListingOf<K extends ChangeKind> = K extends "committed"
+  ? CommittedChangeListing
+  : ChangeListing
+
+export interface DiffOnScreen {
+  readonly path: string
+  readonly kind: ChangeKind
+}
+
 export interface DiscardFailure extends ActionFailure {
   readonly gitMessage: string | null
 }
@@ -100,8 +116,10 @@ export interface UiHost {
   }
   // Selects the session's project and its tab, opening one if it has none.
   readonly useOpenTab: () => (sessionId: string) => void
-  // The items the transcript has loaded, not the whole session.
-  readonly useTranscript: (sessionId: string) => ReadonlyArray<TranscriptItem>
+  // The approval the session waits on: the last one still unanswered.
+  readonly usePendingApproval: (sessionId: string) => ApprovalItem | undefined
+  // The questions the session waits on: the last ones still unanswered.
+  readonly usePendingQuestion: (sessionId: string) => QuestionItem | undefined
   // Tokens and cost summed over the whole session by the server; null until it has any usage.
   readonly useUsage: (sessionId: string) => SessionUsage
   // The session's annotations of this kind, oldest first.
@@ -173,41 +191,34 @@ export interface UiHost {
     sessionId: string,
     onChange: (paths: ReadonlyArray<string>) => void,
   ) => void
-  // The changed files of the working folder, kept up to date with the disk.
-  readonly useGitStatus: (sessionId: string) => ReadonlyArray<GitStatusEntry>
-  // Why `useGitStatus` holds nothing when git could not read the changed files, else null; `retry` reads them again.
-  readonly useGitStatusFailure: (sessionId: string) => {
+  // The changed files of the working folder, kept up to date with the disk. `failure` is why
+  // `entries` is empty when git could not read them, else null; `retry` reads them again.
+  readonly useGitStatus: (sessionId: string) => {
+    readonly entries: ReadonlyArray<GitStatusEntry>
     readonly failure: ActionFailure | null
     readonly retry: () => void
   }
   // The file the session's tab has selected beside its chat, or null.
   readonly useFileOnScreen: (sessionId: string) => string | null
-  // The working folder's uncommitted changes, kept up to date with the disk.
-  readonly useChanges: (sessionId: string) => {
-    readonly listing: ChangeListing
+  // `working`: the uncommitted changes; `committed`: what the branch's commits changed since it
+  // left origin's default branch. Kept up to date with the disk.
+  readonly useChanges: <K extends ChangeKind>(
+    sessionId: string,
+    kind: K,
+  ) => {
+    readonly listing: ChangeListingOf<K>
     readonly retry: () => void
   }
-  // Opens the uncommitted diff of a file beside the session's chat, or selects it if open.
+  // Opens the diff of a file beside the session's chat, or selects it if open.
   readonly useOpenDiff: () => (
     sessionId: string,
     path: string,
+    kind: ChangeKind,
   ) => Promise<ActionFailure | undefined>
-  // The file whose diff the session's tab has selected beside its chat, or null.
-  readonly useDiffOnScreen: (sessionId: string) => string | null
+  // The diff the session's tab has selected beside its chat, or null.
+  readonly useDiffOnScreen: (sessionId: string) => DiffOnScreen | null
   // The user's ~/.ivin/settings.json over the defaults, kept up to date with the file.
   readonly useSettings: () => Settings
-  // What the commits of the session's branch changed since it left origin's default branch,
-  // kept up to date with the disk.
-  readonly useCommittedChanges: (sessionId: string) => {
-    readonly listing: CommittedChangeListing
-    readonly retry: () => void
-  }
-  // Opens what the branch's commits changed in a file beside the session's chat, or selects it.
-  readonly useOpenCommittedDiff: () => (
-    sessionId: string,
-    path: string,
-  ) => Promise<ActionFailure | undefined>
-  readonly useCommittedDiffOnScreen: (sessionId: string) => string | null
   // Restores each file to its last commit, or deletes it when git does not track it or it is new.
   readonly useDiscardChanges: () => (
     sessionId: string,
