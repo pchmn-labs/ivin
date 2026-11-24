@@ -154,7 +154,8 @@ function Composer({ sessionId }: { sessionId: string }) {
   const status = <Slot slot="composer.status" props={{ sessionId }} />
   const location = session && <SessionLocationPicker session={session} />
 
-  if (session?.workingFolderDeleted) {
+  // The server refuses a pick while the session is busy.
+  if (session?.workingFolderDeleted && !running && !preparing) {
     // Outside the composer's keybinding area, so Enter picks the folder rather than sending.
     return (
       <ComposerFrame alert={alert} location={location} status={status}>

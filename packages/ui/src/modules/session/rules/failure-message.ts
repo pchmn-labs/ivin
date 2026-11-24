@@ -70,6 +70,9 @@ export const pickWorkingFolderFailure = (error: unknown): ActionFailure => {
   if (isTag<SessionNotFound>(error, "SessionNotFound")) {
     return { text: "This session no longer exists.", retryable: false }
   }
+  if (isTag<SessionWorking>(error, "SessionWorking")) {
+    return { text: "The agent is working. Pick a folder once it stops.", retryable: true }
+  }
   if (isTag<WorktreeNotCreated>(error, "WorktreeNotCreated")) {
     const reason = (error as WorktreeNotCreated).reason
     return reason === "no_default_branch"

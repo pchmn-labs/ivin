@@ -40,6 +40,22 @@ const lastMentioned = (text: string, folders: readonly string[], from: string) =
   return best?.folder ?? null
 }
 
+// `git worktree move` of the working folder, spotted by its result whatever the command calls the paths.
+export const folderMovedTo = ({
+  workingFolder,
+  projectPath,
+  listed,
+  appeared,
+}: {
+  readonly workingFolder: string
+  readonly projectPath: string
+  readonly listed: ReadonlySet<string>
+  readonly appeared: readonly string[]
+}): string | null =>
+  workingFolder !== projectPath && !listed.has(workingFolder) && appeared.length === 1
+    ? appeared[0]!
+    : null
+
 // Where the agent works after this tool call, or null when it stays.
 // `folders`: the checkout and the worktrees git lists; `created`: those the agent made and has not entered.
 export const folderAfterTool = ({

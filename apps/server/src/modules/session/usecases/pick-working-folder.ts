@@ -1,5 +1,6 @@
-import { SessionNotFound, type WorkingFolderChoice } from "@ivin/contracts/session"
+import { SessionNotFound, SessionWorking, type WorkingFolderChoice } from "@ivin/contracts/session"
 import { DateTime, Effect } from "effect"
+import { isBusy } from "../rules/busy-session.ts"
 import { moveToCheckout, moveToExistingWorktree, moveToNewWorktree } from "./move-working-folder.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionRuns } from "./session-runs.ts"
@@ -10,6 +11,7 @@ export const pickWorkingFolder = (sessionId: string, workingFolder: WorkingFolde
     const store = yield* SessionStore
     const session = yield* store.findById(sessionId)
     if (!session) return yield* new SessionNotFound({ sessionId })
+    if (isBusy(session)) return yield* new SessionWorking({ sessionId })
     // An agent process keeps the cwd it started in.
     yield* (yield* SessionRuns).stop(sessionId)
     if (workingFolder.kind === "new_worktree") yield* moveToNewWorktree(session, "pick")

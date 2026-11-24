@@ -3,6 +3,7 @@ import {
   answerApprovalFailure,
   answerQuestionFailure,
   checkoutFailure,
+  pickWorkingFolderFailure,
   createSessionFailure,
   renameFailure,
   sendNowFailure,
@@ -166,5 +167,13 @@ test("a Send now or a rename that failed says what did not happen and offers a r
   expect(renameFailure(sessionNotFound)).toEqual({
     text: "This session no longer exists.",
     retryable: false,
+  })
+})
+
+test("a working folder picked while the agent works can be picked again once it stops", () => {
+  const failure = pickWorkingFolderFailure({ _tag: "SessionWorking", sessionId: "s1" })
+  expect(failure).toEqual({
+    text: "The agent is working. Pick a folder once it stops.",
+    retryable: true,
   })
 })

@@ -684,3 +684,87 @@ test("a session whose worktree was deleted while the server was down is marked w
 
   expect(session?.workingFolderDeleted).toBe(true)
 })
+
+const approvalTurn = (command: string): ScriptedElement[] => [
+  { type: "status", status: "running", raw: null },
+  { type: "tool_call", toolCallId: "t1", name: "Bash", input: { command }, raw: null },
+  {
+    type: "approval_request",
+    requestId: "r1",
+    toolCallId: "t1",
+    name: "Bash",
+    input: { command },
+    raw: null,
+  },
+  { type: "tool_result", toolCallId: "t1", output: "", isError: false, raw: null },
+  { type: "assistant_text", text: "Done.", raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
+test("a session follows its worktree when the agent moves it, whatever the command calls the paths", async () => {
+  const path = addWorktree("old")
+  const moved = join(project, ".worktrees", "new")
+  const move = `cd ${project} && git worktree move .worktrees/old .worktrees/new && cd .worktrees/new`
+  const { session, items } = await withServer(
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const sessionId = yield* startInWorktree(client, path)
+        yield* untilStatus(client, sessionId, "idle")
+        yield* client["session.sendMessage"]({ sessionId, messageId: "m2", text: "rename" })
+        yield* untilStatus(client, sessionId, "waiting")
+        git(project, "worktree", "move", path, moved)
+        yield* client["session.answerApproval"]({ sessionId, requestId: "r1", allow: true })
+        yield* untilStatus(client, sessionId, "idle")
+        return {
+          session: yield* sessionOf(client, sessionId),
+          items: yield* itemsOf(client, sessionId),
+        }
+      }),
+    [turn, approvalTurn(move)],
+  )
+
+  expect(session).toMatchObject({
+    workingFolder: moved,
+    branch: "old",
+    workingFolderDeleted: false,
+  })
+  expect(items.filter((i) => i.type === "working_folder").at(-1)).toMatchObject({
+    path: moved,
+    cause: "adoption",
+  })
+})
+
+test("picking a working folder while the agent works is refused, and the run goes on", async () => {
+  const path = addWorktree("gone")
+  const closed: string[] = []
+  const { error, closedDuringTurn, session, items } = await withServer(
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const sessionId = yield* startInWorktree(client, path)
+        yield* untilStatus(client, sessionId, "idle")
+        yield* client["session.sendMessage"]({ sessionId, messageId: "m2", text: "go" })
+        yield* untilStatus(client, sessionId, "waiting")
+        const error = yield* Effect.flip(
+          client["session.pickWorkingFolder"]({ sessionId, workingFolder: { kind: "checkout" } }),
+        )
+        const closedDuringTurn = [...closed]
+        yield* client["session.answerApproval"]({ sessionId, requestId: "r1", allow: true })
+        yield* untilStatus(client, sessionId, "idle")
+        return {
+          error,
+          closedDuringTurn,
+          session: yield* sessionOf(client, sessionId),
+          items: yield* itemsOf(client, sessionId),
+        }
+      }),
+    [turn, approvalTurn("ls")],
+    closed,
+  )
+
+  expect(error).toMatchObject({ _tag: "SessionWorking" })
+  expect(closedDuringTurn).toEqual([])
+  expect(session).toMatchObject({ workingFolder: path })
+  expect(items.at(-1)).toMatchObject({ type: "message", role: "assistant" })
+})
