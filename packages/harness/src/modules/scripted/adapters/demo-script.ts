@@ -246,10 +246,51 @@ const demoSteerTurn: readonly ScriptedElement[] = [
   },
 ]
 
+const routes = Array.from({ length: 56 }, (_, i) => `/orders/${i + 1}`)
+
+// Starts the dev server in the background, then makes more calls than a transcript page holds.
+const demoBackgroundTurn: readonly HarnessOutput[] = [
+  { type: "status", status: "running", raw: null },
+  { type: "assistant_text", text: "I'll start the dev server, then check each route.", raw: null },
+  {
+    type: "tool_call",
+    toolCallId: "demo-dev-server",
+    name: "Bash",
+    input: { command: "pnpm dev", run_in_background: true },
+    raw: null,
+  },
+  {
+    type: "task_started",
+    taskId: "demo-task-dev",
+    toolCallId: "demo-dev-server",
+    kind: "command",
+    description: "Dev server",
+    raw: null,
+  },
+  {
+    type: "tool_result",
+    toolCallId: "demo-dev-server",
+    output: "Started in the background.",
+    isError: false,
+    raw: null,
+  },
+  ...routes.flatMap((route, i) =>
+    call(`demo-route-${i}`, "Bash", { command: `curl -s localhost:5173${route}` }, "200 OK"),
+  ),
+  {
+    type: "assistant_text",
+    text: "Every order route answers 200. The dev server keeps running in the background.",
+    raw: null,
+  },
+  { type: "usage", ...demoUsage, raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
 export const demoShotScript: readonly (readonly ScriptedElement[])[] = [
   demoTurn,
   demoWorkTurn,
   demoQuestionTurn,
   demoTypecheckTurn,
   demoSteerTurn,
+  demoBackgroundTurn,
 ]
