@@ -19,7 +19,7 @@
     "@ivin/server": "workspace:*",
     "@ivin/ui": "workspace:*",
     "@playwright/test": "1.65.1",
-    "electron": "45.3.3",
+    "electron": "45.4.1",
     "electron-builder": "26.18.0"
   }
 }
