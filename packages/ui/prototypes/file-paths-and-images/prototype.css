@@ -80,8 +80,8 @@ body { overflow: hidden; background: var(--iv-bg); color: var(--iv-text); font-f
 /* Read-only bar */
 .proto-ro { display: flex; flex: none; align-items: center; gap: var(--iv-space-2); min-height: 32px; padding: var(--iv-space-1) var(--iv-space-2) var(--iv-space-1) var(--iv-space-3); box-sizing: border-box; font-size: var(--iv-text-sm); line-height: var(--iv-text-sm-lh); }
 .proto-ro-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.proto-ro--neutral { border-bottom: 1px solid var(--iv-border); background: var(--iv-bg-raised); color: var(--iv-text); }
+.proto-ro--neutral { background: var(--iv-bg-raised); color: var(--iv-text); }
 .proto-ro--neutral .proto-ro-icon { color: var(--iv-text-muted); }
-.proto-ro--attention { border-bottom: 1px solid var(--iv-border); background: var(--iv-attention-subtle); color: var(--iv-text); }
+.proto-ro--attention { background: var(--iv-attention-subtle); color: var(--iv-text); }
 .proto-ro-icon { display: inline-flex; }
 .proto-ro--attention .proto-ro-icon { color: var(--iv-attention); }
