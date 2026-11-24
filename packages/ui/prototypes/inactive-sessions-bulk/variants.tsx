@@ -33,8 +33,20 @@ const task = (description: string): BackgroundTask => ({
 })
 
 const OPEN: ReadonlyArray<Fake> = [
-  { id: "o1", title: "Group the tabs into named groups", status: "working", ago: "now", unsaved: [] },
-  { id: "o2", title: "Show the release notes in the update card", status: "idle", ago: "12 min", unsaved: [] },
+  {
+    id: "o1",
+    title: "Group the tabs into named groups",
+    status: "working",
+    ago: "now",
+    unsaved: [],
+  },
+  {
+    id: "o2",
+    title: "Show the release notes in the update card",
+    status: "idle",
+    ago: "12 min",
+    unsaved: [],
+  },
 ]
 
 const INACTIVE: ReadonlyArray<Fake> = [
@@ -148,7 +160,9 @@ function SectionHead({
         <Menu
           align="end"
           onOpenChange={setMenuOpen}
-          trigger={<IconButton icon="ellipsis" label="Actions for the inactive sessions" size="sm" />}
+          trigger={
+            <IconButton icon="ellipsis" label="Actions for the inactive sessions" size="sm" />
+          }
           items={[
             { label: "Archive all", icon: "archive", onSelect: () => onPick("archive") },
             "separator",
@@ -160,7 +174,15 @@ function SectionHead({
   )
 }
 
-function InactiveRow({ session, failure, below }: { session: Fake; failure?: string; below?: ReactNode }) {
+function InactiveRow({
+  session,
+  failure,
+  below,
+}: {
+  session: Fake
+  failure?: string
+  below?: ReactNode
+}) {
   const extra = failure ? <ErrorMessage message={failure} /> : below
   return (
     <ListRow
@@ -254,7 +276,15 @@ function Frame({ children }: { children: ReactNode }) {
   )
 }
 
-function DialogActions({ onCancel, onConfirm, label }: { onCancel: () => void; onConfirm: () => void; label: string }) {
+function DialogActions({
+  onCancel,
+  onConfirm,
+  label,
+}: {
+  onCancel: () => void
+  onConfirm: () => void
+  label: string
+}) {
   return (
     <>
       <Button variant="secondary" onClick={onCancel}>
@@ -283,7 +313,9 @@ function FileList({ files }: { files: ReadonlyArray<string> }) {
 function useModalFlow() {
   const state = useInactive()
   const [open, setOpen] = useState(true)
-  const [pending, setPending] = useState<{ action: Action; sessions: ReadonlyArray<Fake> } | null>(null)
+  const [pending, setPending] = useState<{ action: Action; sessions: ReadonlyArray<Fake> } | null>(
+    null,
+  )
   const [shown, setShown] = useState(pending)
   useEffect(() => {
     if (pending) setShown(pending)
@@ -295,7 +327,14 @@ function useModalFlow() {
   return { ...state, open, setOpen, pending, setPending, shown, confirm }
 }
 
-function ModalVariant({ body }: { body: (action: Action, sessions: ReadonlyArray<Fake>) => { description: string; content: ReactNode } }) {
+function ModalVariant({
+  body,
+}: {
+  body: (
+    action: Action,
+    sessions: ReadonlyArray<Fake>,
+  ) => { description: string; content: ReactNode }
+}) {
   const flow = useModalFlow()
   if (flow.sessions.length === 0) return <Frame>{null}</Frame>
   const shown = flow.shown
@@ -402,7 +441,9 @@ export function Itemized() {
                 <div className="proto-manifest-line">
                   <Mark session={s} />
                   <span className="proto-manifest-title">{s.title}</span>
-                  {isRunning(s) && <span className="proto-tag proto-tag--attention">Agent stops</span>}
+                  {isRunning(s) && (
+                    <span className="proto-tag proto-tag--attention">Agent stops</span>
+                  )}
                   {s.unsaved.length > 0 && (
                     <span className="proto-tag proto-tag--danger">
                       {plural(s.unsaved.length, "unsaved file")}
@@ -426,7 +467,9 @@ export function Itemized() {
 function loss(s: Fake): string | null {
   const parts = [
     ...(isRunning(s) ? ["Agent stops"] : []),
-    ...(s.unsaved.length > 0 ? [`Unsaved edits to ${s.unsaved.map(fileName).join(", ")} are lost`] : []),
+    ...(s.unsaved.length > 0
+      ? [`Unsaved edits to ${s.unsaved.map(fileName).join(", ")} are lost`]
+      : []),
   ]
   return parts.length === 0 ? null : parts.join(" · ")
 }
@@ -464,8 +507,11 @@ export function InPlace() {
         ) : (
           <div className="proto-confirm" role="group" aria-label="Confirm">
             <span className="proto-confirm-text">
-              {pending === "archive" ? "Archive" : "Delete"} {plural(state.sessions.length, "session")}?
-              {pending === "delete" && <span className="proto-confirm-sub">This cannot be undone.</span>}
+              {pending === "archive" ? "Archive" : "Delete"}{" "}
+              {plural(state.sessions.length, "session")}?
+              {pending === "delete" && (
+                <span className="proto-confirm-sub">This cannot be undone.</span>
+              )}
             </span>
             <Button size="sm" variant="ghost" onClick={() => setPending(null)}>
               Cancel

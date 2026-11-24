@@ -66,7 +66,7 @@ function Harness() {
     return () => document.removeEventListener("keydown", onKey)
   }, [])
 
-  const { Component } = VARIANTS[current]!
+  const { Component } = VARIANTS[current]
   return (
     <>
       <Component key={mountKey} />
