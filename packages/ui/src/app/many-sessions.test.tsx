@@ -61,23 +61,28 @@ const mountMany = async (count: number) => {
   await expect.element(page.getByTestId("session-item").first()).toBeVisible()
 }
 
-test("a session picked in a list of 300 brings its tab into view in the bar", async () => {
-  await mountMany(300)
-  const row = page.getByRole("button", { name: /Jo/ }).nth(40)
-  row.element().scrollIntoView()
-  await row.click()
+test(
+  "a session picked in a list of 300 brings its tab into view in the bar",
+  // Rendering 300 rows and 300 tabs in development React takes 3 to 5 s on the CI runner.
+  { timeout: 15_000 },
+  async () => {
+    await mountMany(300)
+    const row = page.getByRole("button", { name: /Jo/ }).nth(40)
+    row.element().scrollIntoView()
+    await row.click()
 
-  const selected = page
-    .getByRole("tablist", { name: "Open sessions" })
-    .getByRole("tab", { selected: true })
-  await expect.element(selected).toBeVisible()
-  await expect
-    .poll(() => {
-      const box = selected.element().getBoundingClientRect()
-      return box.left >= 0 && box.right <= window.innerWidth
-    })
-    .toBe(true)
-})
+    const selected = page
+      .getByRole("tablist", { name: "Open sessions" })
+      .getByRole("tab", { selected: true })
+    await expect.element(selected).toBeVisible()
+    await expect
+      .poll(() => {
+        const box = selected.element().getBoundingClientRect()
+        return box.left >= 0 && box.right <= window.innerWidth
+      })
+      .toBe(true)
+  },
+)
 
 test("a message of long unbroken lines keeps the Send button inside the window", async () => {
   await mountMany(3)
