@@ -36,14 +36,14 @@
 .iv-list-row__below {
   display: flex;
   gap: var(--iv-space-1);
-  padding: 0 var(--iv-space-2) var(--iv-space-2) var(--iv-space-8);
+  padding: 0 var(--iv-space-2) var(--iv-space-2) var(--iv-space-9);
 }
 
 .iv-list-row__main {
   display: flex;
   flex: 1;
   align-items: center;
-  gap: var(--iv-space-2);
+  gap: var(--iv-space-3);
   min-width: 0;
   min-height: var(--iv-row-height);
   padding: 0 var(--iv-space-2);
@@ -77,8 +77,9 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: var(--iv-space-half);
   min-width: 0;
-  padding: var(--iv-space-1) 0;
+  padding: var(--iv-space-2) 0;
 }
 
 .iv-list-row__subtitle {
@@ -104,7 +105,6 @@
 
 .iv-list-row:hover .iv-list-row__actions,
 .iv-list-row:focus-within .iv-list-row__actions,
-.iv-list-row[data-selected] .iv-list-row__actions,
 /* A hidden trigger leaves its open menu anchored to the window's top-left corner. */
 .iv-list-row__actions:has([data-popup-open]) {
   display: flex;

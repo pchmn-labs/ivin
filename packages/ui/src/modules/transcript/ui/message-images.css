@@ -2,6 +2,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--iv-space-2);
+  /* Puts the images 12px from the bubble's top edge, as from its left edge. */
+  margin-top: var(--iv-space-half);
   margin-bottom: 10px;
 }
 

@@ -87,6 +87,7 @@ function PendingSheet({
   return (
     <ActionSheet
       tone="attention"
+      icon="exclamation"
       title="Approval needed"
       detail={formatToolInput(item.name, item.input)}
       keys={[

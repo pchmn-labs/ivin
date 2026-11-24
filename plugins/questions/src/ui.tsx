@@ -178,41 +178,45 @@ function PendingSheet({
       }
       data-testid="question-sheet"
     >
-      <Stack gap={2}>
-        <Stack gap={1}>
+      <Stack gap={3}>
+        <Stack inset={1}>
           <Text>{question.question}</Text>
-          {question.multiSelect ? (
-            <Text size="xs" tone="faint">
-              Choose one or more
-            </Text>
-          ) : null}
         </Stack>
-        <ChoiceList
-          key={step}
-          label={question.header}
-          multiple={question.multiSelect}
-          options={question.options.map((option, index) => ({
-            id: String(index),
-            label: option.label,
-            ...(option.description === "" ? {} : { description: option.description }),
-          }))}
-          selected={draft.selected}
-          onSelectedChange={(selected) => update({ selected })}
-          onSubmit={confirm}
-          onEscape={() => send(null)}
-          onPrevious={() => setStep((at) => Math.max(0, at - 1))}
-          onNext={() => setStep((at) => Math.min(questions.length - 1, at + 1))}
-          other={{
-            id: OTHER,
-            label: "Other",
-            placeholder: "Type your own answer",
-            text: draft.other,
-            onTextChange: (other) => update({ other }),
-          }}
-          disabled={sending}
-          keyboardSource={isEmptyComposer}
-          autoFocus
-        />
+        <Stack gap={1}>
+          {question.multiSelect ? (
+            <Stack inset={1}>
+              <Text size="xs" tone="faint">
+                Choose one or more
+              </Text>
+            </Stack>
+          ) : null}
+          <ChoiceList
+            key={step}
+            label={question.header}
+            multiple={question.multiSelect}
+            options={question.options.map((option, index) => ({
+              id: String(index),
+              label: option.label,
+              ...(option.description === "" ? {} : { description: option.description }),
+            }))}
+            selected={draft.selected}
+            onSelectedChange={(selected) => update({ selected })}
+            onSubmit={confirm}
+            onEscape={() => send(null)}
+            onPrevious={() => setStep((at) => Math.max(0, at - 1))}
+            onNext={() => setStep((at) => Math.min(questions.length - 1, at + 1))}
+            other={{
+              id: OTHER,
+              label: "Other",
+              placeholder: "Type your own answer",
+              text: draft.other,
+              onTextChange: (other) => update({ other }),
+            }}
+            disabled={sending}
+            keyboardSource={isEmptyComposer}
+            autoFocus
+          />
+        </Stack>
         {failure && (
           <ErrorMessage
             message={failure.text}

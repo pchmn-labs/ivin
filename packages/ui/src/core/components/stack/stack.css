@@ -20,6 +20,10 @@
   min-height: 0;
 }
 
+.iv-stack--inset-1 {
+  padding-inline: var(--iv-space-1);
+}
+
 .iv-stack--gap-0 {
   gap: 0;
 }

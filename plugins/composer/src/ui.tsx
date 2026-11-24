@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import {
   ActionSheet,
+  Block,
   Button,
   ComposerFrame,
   ErrorMessage,
@@ -61,12 +62,14 @@ function PendingSheet({ session }: { session: Session }) {
         }
         data-testid="composer-pending"
       >
-        <Stack as="ul" gap={1}>
+        <Stack as="ul" gap={2}>
           {pending.map((message) => (
             <Stack as="li" key={message.id}>
-              <Text size="sm" truncate title={message.text}>
-                {pendingText(message)}
-              </Text>
+              <Block tone="bubble">
+                <Text size="sm" truncate title={message.text}>
+                  {pendingText(message)}
+                </Text>
+              </Block>
             </Stack>
           ))}
         </Stack>
@@ -237,7 +240,7 @@ function Composer({ sessionId }: { sessionId: string }) {
             </Stack>
             {running && text.trim() === "" ? (
               <IconButton
-                icon="square"
+                icon="stop"
                 label="Interrupt"
                 tooltip={interruptHint}
                 variant="secondary"

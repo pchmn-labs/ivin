@@ -3,7 +3,7 @@ import { useFolderLabel } from "../hooks/use-folder-label.ts"
 
 export function FolderRow({ session }: { session: Session }) {
   return (
-    <Stack direction="row" gap={1} align="center">
+    <Stack direction="row" gap={1} align="center" inset={1} grow>
       <Icon name={session.inWorktree ? "worktree" : "folder"} size={12} />
       <Text size="xs" tone="faint" mono truncate title={session.workingFolder}>
         {useFolderLabel(session)}

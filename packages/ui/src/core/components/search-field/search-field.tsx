@@ -4,7 +4,15 @@ import "./search-field.css"
 
 export type { SearchFieldProps }
 
-export function SearchField({ label, value, onChange, placeholder, onEscape }: SearchFieldProps) {
+export function SearchField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  autoFocus,
+  onBlur,
+  onEscape,
+}: SearchFieldProps) {
   return (
     <label className="iv-search-field">
       <Icon name="search" size={12} />
@@ -16,6 +24,8 @@ export function SearchField({ label, value, onChange, placeholder, onEscape }: S
         value={value}
         autoComplete="off"
         spellCheck={false}
+        autoFocus={autoFocus}
+        onBlur={onBlur}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key !== "Escape" || event.nativeEvent.isComposing) return
