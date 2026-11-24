@@ -113,11 +113,11 @@
 .iv-column-menu__wide-note {
   display: flex;
   align-items: center;
-  height: var(--iv-control-md);
-  padding: 0 var(--iv-space-3);
+  padding: var(--iv-space-1) var(--iv-space-3);
   border-top: 1px solid var(--iv-border);
   color: var(--iv-text-faint);
-  font-size: var(--iv-text-sm);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
 }
 
 .iv-column-menu__foot {

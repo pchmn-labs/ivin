@@ -911,6 +911,9 @@ test("while the agent works, the run options menu says the change waits for the 
   await mountSession("working")
   await runOptions("Sonnet 5.5, High, Manual").click()
   await expect.element(page.getByText("Applies once the agent finishes this turn.")).toBeVisible()
+  await expect
+    .element(page.getByText("Applies to this session from the next message"))
+    .not.toBeInTheDocument()
 })
 
 test("a failed relaunch docks a sheet above the composer, puts the message back and offers the previous model", async () => {

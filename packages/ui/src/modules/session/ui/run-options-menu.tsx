@@ -106,6 +106,7 @@ export function RunOptionsMenu({
   }
 
   const shown = shownRunOptions(offered, session)
+  const running = isRunning(session.status)
 
   return (
     <ColumnMenu
@@ -115,7 +116,7 @@ export function RunOptionsMenu({
       startColumn={state.start}
       columns={columnsFor(offered, session)}
       onPick={pick}
-      hint="Applies to this session from the next message"
+      hint={running ? "" : "Applies to this session from the next message"}
       trigger={
         <button
           type="button"
@@ -141,9 +142,7 @@ export function RunOptionsMenu({
         </button>
       }
     >
-      {isRunning(session.status) && (
-        <ColumnMenuNote>Applies once the agent finishes this turn.</ColumnMenuNote>
-      )}
+      {running && <ColumnMenuNote>Applies once the agent finishes this turn.</ColumnMenuNote>}
     </ColumnMenu>
   )
 }
