@@ -21,8 +21,7 @@ export interface SentMessageScroll {
 // What a tab saves and restores, while room is left under the message.
 export interface SentMessagePlace {
   readonly id: string
-  // Unknown while the view was still scrolling to the message.
-  readonly top: number | undefined
+  readonly top: number
   readonly room: number
   readonly userScrolled: boolean
 }
@@ -48,7 +47,7 @@ export type SentMessageEvent =
     }
   | { readonly type: "measured"; readonly view: Measurement }
   | { readonly type: "scroll-ended"; readonly view: Measurement | undefined }
-  | { readonly type: "scroll-cancelled" }
+  | { readonly type: "scroll-cancelled"; readonly view: Measurement | undefined }
   | { readonly type: "user-scrolled" }
   | {
       readonly type: "opened"
@@ -91,8 +90,11 @@ export const nextSentMessageScroll = (
       const ended = { ...state, scrolling: false }
       return event.view?.messageTop === undefined ? withRoom(ended, 0, 0) : fit(ended, event.view)
     }
-    case "scroll-cancelled":
-      return { state: { ...state, scrolling: false } }
+    case "scroll-cancelled": {
+      const top = event.view?.messageTop
+      const sent = state.sent && top !== undefined ? { ...state.sent, top } : state.sent
+      return { state: { ...state, scrolling: false, sent } }
+    }
     case "user-scrolled":
       return { state: state.sent ? { ...state, mode: "left" } : state }
     case "opened": {
@@ -138,7 +140,8 @@ const rowsChanged = (
 const fit = (state: SentMessageScroll, view: Measurement): SentMessageStep => {
   if (state.scrolling || !state.sent) return { state }
   const top = view.messageTop ?? state.sent.top
-  if (top === undefined) return { state }
+  // A footer above the message is one the list has not laid out yet.
+  if (top === undefined || view.footerTop < top) return { state }
   const tracked = { ...state, sent: { ...state.sent, top } }
   const step = withRoom(tracked, view.viewHeight - (view.footerTop - top), view.footerMinHeight)
   if (state.mode === "left") return step
@@ -172,7 +175,13 @@ export const mayFollowEnd = (state: SentMessageScroll, turn: string | undefined)
 export const needsMeasurement = (state: SentMessageScroll) =>
   !state.scrolling && state.sent !== undefined
 
+// Without the message's top, a restored room could fill the view with no row the list would draw.
 export const sentMessagePlace = (state: SentMessageScroll): SentMessagePlace | undefined =>
-  state.sent && state.roomLeft
-    ? { ...state.sent, room: state.room, userScrolled: state.mode === "left" }
+  state.sent?.top !== undefined && state.roomLeft
+    ? {
+        id: state.sent.id,
+        top: state.sent.top,
+        room: state.room,
+        userScrolled: state.mode === "left",
+      }
     : undefined
