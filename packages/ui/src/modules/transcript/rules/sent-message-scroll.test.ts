@@ -324,11 +324,16 @@ describe("the place a tab saves and restores (#199)", () => {
     })
   })
 
-  test("is saved with an unknown top during the scroll", () => {
-    const { state } = run([opened, sent])
+  test("is not saved while the message's top is unknown", () => {
+    const { state } = run([opened, sent, { type: "scroll-cancelled", view: undefined }])
+    expect(sentMessagePlace(state)).toBeUndefined()
+  })
+
+  test("is saved with the top the list draws the message at when the scroll stops", () => {
+    const { state } = run([opened, sent, { type: "scroll-cancelled", view: measured() }])
     expect(sentMessagePlace(state)).toEqual({
       id: "m40",
-      top: undefined,
+      top: 1000,
       room: VIEW,
       userScrolled: false,
     })
@@ -368,6 +373,15 @@ describe("the place a tab saves and restores (#199)", () => {
     const { last, state } = run([...open(), resized(VIEW + 200, { messageTop: undefined })])
     expect(last.scroll).toEqual({ type: "end" })
     expect(state.mode).toBe("following")
+  })
+
+  test("keeps its room while the list has not laid out its rows yet", () => {
+    const { steps, state } = run([
+      ...open(),
+      { type: "measured", view: measured(40, { footerTop: 0, messageTop: undefined }) },
+    ])
+    expect(steps.at(-1)).toEqual({ state: steps.at(-2)!.state })
+    expect(state.room).toBe(VIEW - 40)
   })
 
   test("opens where the user had scrolled", () => {

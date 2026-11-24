@@ -562,3 +562,25 @@ test("an answer that grew taller than the view while the transcript was closed o
   await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
   await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
 })
+
+const inView = (text: string) => {
+  const top = topInView(text)
+  return top >= 0 && top < scroller().clientHeight
+}
+
+test("a transcript closed after its turn ended opens with the sent message and its answer in view", async () => {
+  const server = makeFakeServer()
+  const screen = await sendMessage(server)
+  server.pushItem(toolCall(41))
+  server.pushItem(toolCall(42))
+  server.pushItem(message(43, "the answer"))
+  await expect.element(page.getByText("the answer", { exact: true })).toBeVisible()
+  await screen.rerender(switchableView(server, true, false))
+
+  await closeAndOpen(screen, server)
+
+  await vi.waitFor(() => {
+    expect(inView("question 40")).toBe(true)
+    expect(inView("the answer")).toBe(true)
+  })
+})
