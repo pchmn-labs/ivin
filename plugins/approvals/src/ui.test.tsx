@@ -207,3 +207,13 @@ test("a failure a retry cannot fix shows no Retry", async () => {
   await expect.element(alert.getByText("This approval was already answered.")).toBeVisible()
   expect(alert.getByRole("button", { name: "Retry" }).query()).toBeNull()
 })
+
+test("a command of one very long line stays inside the sheet, with both options reachable", async () => {
+  await page.viewport(500, 600)
+  const command = `curl -X POST https://api.northwind-industries-holdings.example.com/v2/${"segment/".repeat(25)}export?${"q=value&".repeat(20)}`
+  await mount([{ ...approval(null), input: { command } }])
+
+  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeInViewport()
+  await expect.element(page.getByRole("radio", { name: /^Deny/ })).toBeInViewport()
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth)
+})

@@ -99,3 +99,18 @@ test("a failed restore says so under the session's row and keeps it archived", a
   await expect.element(rows().getByRole("alert")).toHaveTextContent("The session was not restored.")
   expect(server.sessions.get("s1")?.archivedAt).not.toBeNull()
 })
+
+test("300 archived sessions with long titles stay in the column, each with its menu reachable", async () => {
+  const long =
+    "Fix the Wiśniewska-Kowalczyk invoice export so that bartholomew.fitzgerald@northwind-industries-holdings.example.com stops getting duplicates"
+  await page.viewport(900, 700)
+  await setup(Array.from({ length: 300 }, (_, n) => (n % 2 ? long : "Jo")))
+
+  await expect.element(rows().first()).toBeVisible()
+  const list = rows().first().element().parentElement!
+  expect(list.scrollWidth).toBeLessThanOrEqual(list.clientWidth)
+  const row = rows().first().element().getBoundingClientRect()
+  const actions = rows().first().element().querySelectorAll("button")
+  for (const action of actions)
+    expect(action.getBoundingClientRect().right).toBeLessThanOrEqual(row.right)
+})
