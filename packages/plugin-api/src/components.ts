@@ -250,6 +250,10 @@ export interface MarkdownProps {
   readonly sessionId?: string
 }
 
+export interface KeyHintsProps {
+  readonly hints: ReadonlyArray<{ readonly key: string; readonly label: string }>
+}
+
 export interface ActionSheetProps {
   // `danger` is announced as an alert.
   readonly tone?: "attention" | "danger" | "neutral"
@@ -260,7 +264,7 @@ export interface ActionSheetProps {
   readonly aside?: ReactNode
   readonly hint?: string
   // A footer: the key hints on the left, the actions on the right.
-  readonly keys?: ReadonlyArray<{ readonly key: string; readonly label: string }>
+  readonly keys?: KeyHintsProps["hints"]
   // Faint text on the footer's left, in place of the key hints.
   readonly note?: string
   readonly actions?: ReactNode
@@ -562,6 +566,7 @@ export interface HostComponents {
   readonly StatusMark: ComponentType<StatusMarkProps>
   readonly Markdown: ComponentType<MarkdownProps>
   readonly ActionSheet: ComponentType<ActionSheetProps>
+  readonly KeyHints: ComponentType<KeyHintsProps>
   readonly OptionList: ComponentType<OptionListProps>
   readonly ChoiceList: ComponentType<ChoiceListProps>
   readonly Steps: ComponentType<StepsProps>
@@ -606,6 +611,7 @@ export const CodeBlock = hostComponent((c) => c.CodeBlock)
 export const StatusMark = hostComponent((c) => c.StatusMark)
 export const Markdown = hostComponent((c) => c.Markdown)
 export const ActionSheet = hostComponent((c) => c.ActionSheet)
+export const KeyHints = hostComponent((c) => c.KeyHints)
 export const OptionList = hostComponent((c) => c.OptionList)
 export const ChoiceList = hostComponent((c) => c.ChoiceList)
 export const Steps = hostComponent((c) => c.Steps)

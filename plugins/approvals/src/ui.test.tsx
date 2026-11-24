@@ -75,7 +75,8 @@ test("a pending approval docks a sheet with the command and the two options", as
   await expect.element(page.getByText("pnpm test", { exact: true })).toBeVisible()
   await expect.element(page.getByRole("radio", { name: "Allow" })).toBeChecked()
   await expect.element(page.getByRole("radio", { name: /^Deny/ })).not.toBeChecked()
-  await expect.element(page.getByText("↑↓ to choose, Enter to answer, Esc to deny")).toBeVisible()
+  await expect.element(page.getByText("Choose")).toBeVisible()
+  await expect.element(page.getByText("Answer", { exact: true })).toBeVisible()
   await expect.element(page.getByTestId("approval-decision")).not.toBeInTheDocument()
 })
 

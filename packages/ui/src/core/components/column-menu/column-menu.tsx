@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react"
 import { Icon } from "../icon/icon.tsx"
+import { KeyHints } from "../key-hints/key-hints.tsx"
 import "./column-menu.css"
 
 export interface ColumnMenuItem {
@@ -243,7 +244,13 @@ export function ColumnMenu({
             {children}
             <div className="iv-column-menu__foot">
               <span className="iv-column-menu__hint">{highlighted?.description ?? hint}</span>
-              <span className="iv-column-menu__keys">←↑↓→ move · ↵ pick · esc</span>
+              <KeyHints
+                hints={[
+                  { key: "←↑↓→", label: "Move" },
+                  { key: "↵", label: "Pick" },
+                  { key: "Esc", label: "Close" },
+                ]}
+              />
             </div>
           </Popover.Popup>
         </Popover.Positioner>
