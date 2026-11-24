@@ -66,6 +66,14 @@ export function useSentMessageScroll({
     }
   }
 
+  // The list's very end shows only the room under the message, where the list draws no row.
+  const lastRowsTop = (view: HTMLElement) => {
+    const end = footer()
+    return end
+      ? Math.max(0, contentTop(view, end) - view.clientHeight)
+      : view.scrollHeight - view.clientHeight
+  }
+
   const animateToMessage = (view: HTMLElement) => {
     cancelAnimationFrame(frame.current)
     const duration = matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -76,8 +84,7 @@ export function useSentMessageScroll({
     frame.current = requestAnimationFrame(function step(now) {
       started ??= now
       const row = sentRow(view)
-      // Until the virtual list draws the message, the list's end is the closest known target.
-      const target = row ? contentTop(view, row) : view.scrollHeight - view.clientHeight
+      const target = row ? contentTop(view, row) : lastRowsTop(view)
       const progress = duration === 0 ? 1 : Math.min(1, (now - started) / duration)
       view.scrollTop = from + (target - from) * easeOut(progress)
       if (progress < 1 || (!row && now - started < 1000)) {
@@ -135,10 +142,11 @@ export function useSentMessageScroll({
 
   const sentMessagePlace = useCallback(() => placeOf(model.current), [])
 
-  useEffect(
+  // A layout cleanup, so the message is measured while the list is still in the page.
+  useLayoutEffect(
     () => () => {
       cancelAnimationFrame(frame.current)
-      dispatch({ type: "scroll-cancelled" })
+      dispatch({ type: "scroll-cancelled", view: measure() })
     },
     [dispatch],
   )
