@@ -172,8 +172,8 @@ export interface FakeServer {
   readonly fileListings: () => number
   // Streams paths changed on disk to `file.watch` for that working folder; change `folders` first.
   readonly changeOnDisk: (workingFolder: string, paths: ReadonlyArray<string>) => void
-  // What `file.readFile` reads, by absolute path; a path missing here has no file. A text's
-  // version is the text itself.
+  // What `file.readFile` and `file.readOutsideFile` read, by absolute path; a path missing here has
+  // no file. A text's version is the text itself.
   readonly files: Map<string, FakeFile>
   // Makes the writes of `file.writeFile` fail as a file that cannot be written.
   unwritable: boolean
@@ -1010,6 +1010,16 @@ export const makeFakeServer = (
           },
         ),
       ),
+    "file.readOutsideFile": ({ sessionId, path }: { sessionId: string; path: string }) =>
+      Effect.suspend((): Effect.Effect<FileContent, SessionNotFound | FileNotRead> => {
+        if (!sessions.has(sessionId)) return Effect.fail(new SessionNotFound({ sessionId }))
+        const file = path.startsWith("/") ? files.get(path) : undefined
+        if (file === undefined)
+          return Effect.fail(new FileNotRead({ sessionId, path, reason: "missing" }))
+        if (file === "unreadable")
+          return Effect.fail(new FileNotRead({ sessionId, path, reason: "unreadable" }))
+        return Effect.succeed(file.kind === "text" ? { ...file, version: file.text } : file)
+      }),
     "file.writeFile": ({
       sessionId,
       path,

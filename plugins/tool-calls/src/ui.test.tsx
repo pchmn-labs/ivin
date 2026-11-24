@@ -23,6 +23,10 @@ const mount = async (item: ToolCallItem) => {
   activate(ctx)
   const host = {
     ...testUiHost,
+    components: {
+      ...testUiHost.components,
+      FilePath: ({ path }: { path: string }) => <a href={path}>{path}</a>,
+    },
   }
   await render(
     <UiHostProvider host={host}>
@@ -91,4 +95,11 @@ test("a skill call names its skill on a row that does not open, unless it failed
   })
   await page.getByText("/nope").click()
   await expect.element(page.getByText("Unknown skill")).toBeVisible()
+})
+
+test("the file a tool reads or writes is a link to it on the row", async () => {
+  await mount(tool("done", "file contents"))
+  await expect.element(page.getByRole("link", { name: "/a.ts" })).toBeVisible()
+  await mount({ ...tool("done", "out"), id: "i1", name: "Bash", input: { command: "ls" } })
+  await expect.element(page.getByRole("link", { name: "ls" })).not.toBeInTheDocument()
 })

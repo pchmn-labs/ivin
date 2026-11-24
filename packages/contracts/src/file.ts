@@ -49,12 +49,19 @@ export class FolderNotListed extends Schema.TaggedError<FolderNotListed>()("Fold
 }) {}
 
 export const FILE_SIZE_LIMIT = 2 * 1024 * 1024
+export const IMAGE_SIZE_LIMIT = 10 * 1024 * 1024
 
-// `binary`: a zero byte among its first bytes. `version` identifies the bytes read, for
-// `file.writeFile` to tell whether the file changed since.
+// `version` identifies the bytes read, for `file.writeFile` to tell whether the file changed since.
+// `image`: a raster image, told by its extension, in base64; an SVG reads as text.
 export const FileContent = Schema.Union([
   Schema.Struct({ kind: Schema.Literal("text"), text: Schema.String, version: Schema.String }),
-  Schema.Struct({ kind: Schema.Literal("too_large"), size: Schema.Number }),
+  Schema.Struct({
+    kind: Schema.Literal("image"),
+    mimeType: Schema.String,
+    data: Schema.String,
+    version: Schema.String,
+  }),
+  Schema.Struct({ kind: Schema.Literal("too_large"), size: Schema.Number, limit: Schema.Number }),
   Schema.Struct({ kind: Schema.Literal("binary") }),
 ])
 export type FileContent = typeof FileContent.Type
@@ -185,6 +192,13 @@ export const FileRpcs = RpcGroup.make(
       PathOutsideWorkingFolder,
       FileNotRead,
     ]),
+  }),
+  // An absolute path, read as `file.readFile` reads, with no working folder check. `missing` also
+  // answers a relative path.
+  Rpc.make("file.readOutsideFile", {
+    payload: { sessionId: Schema.String, path: Schema.String },
+    success: FileContent,
+    error: Schema.Union([SessionNotFound, FileNotRead]),
   }),
   // The working folder's files that git does not ignore, as paths in the form of `file.listFolder`.
   Rpc.make("file.listFiles", {

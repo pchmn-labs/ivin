@@ -28,4 +28,7 @@ export const mainArgument = (name: string, input: unknown): string | null => {
   return typeof value === "string" ? value : null
 }
 
+export const filePathArgument = (name: string, input: unknown): string | null =>
+  MAIN_ARGUMENT[name] === "file_path" ? mainArgument(name, input) : null
+
 export const prettyInput = (input: unknown): string => JSON.stringify(input, null, 2) ?? ""

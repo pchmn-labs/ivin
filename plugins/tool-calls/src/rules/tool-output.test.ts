@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { mainArgument, prettyInput } from "./tool-output.ts"
+import { filePathArgument, mainArgument, prettyInput } from "./tool-output.ts"
 
 test.each([
   ["Bash", { command: "ls -la" }, "ls -la"],
@@ -28,4 +28,13 @@ test("an unknown tool or a missing argument has no main argument", () => {
 test("the full input is indented JSON", () => {
   expect(prettyInput({ a: 1 })).toBe('{\n  "a": 1\n}')
   expect(prettyInput(undefined)).toBe("")
+})
+
+test("a tool that reads or writes a file names it as a path, any other tool does not", () => {
+  expect(filePathArgument("Read", { file_path: "/a.ts" })).toBe("/a.ts")
+  expect(filePathArgument("Edit", { file_path: "src/a.ts" })).toBe("src/a.ts")
+  expect(filePathArgument("Write", { file_path: "/b.ts" })).toBe("/b.ts")
+  expect(filePathArgument("MultiEdit", { file_path: "/c.ts" })).toBe("/c.ts")
+  expect(filePathArgument("Bash", { command: "cat a.ts" })).toBeNull()
+  expect(filePathArgument("Read", {})).toBeNull()
 })
