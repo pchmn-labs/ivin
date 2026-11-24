@@ -141,14 +141,15 @@ const useOpenSubView = () => {
 }
 
 const useSubViewOnScreen = (sessionId: string) => {
-  const workingFolder =
-    useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.workingFolder ?? ""
+  const workingFolder = useWorkingFolderOf(sessionId)
   const { selected, sessionTabSelected } = useAtomValue(subViewsOf(sessionId, workingFolder).value)
   return sessionTabSelected ? null : selected
 }
 
 const useOpenSession = (sessionId: string) =>
   useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)
+
+const useWorkingFolderOf = (sessionId: string) => useOpenSession(sessionId)?.workingFolder ?? ""
 
 // The session may belong to another project than the one on screen, from the Working panel.
 const useSessionProjectPath = (sessionId: string) =>
@@ -321,17 +322,18 @@ const host: UiHost = {
   },
   useFolderChanges: (sessionId, onChange) => {
     const registry = useContext(RegistryContext)
+    const workingFolder = useWorkingFolderOf(sessionId)
     const changed = useEffectEvent((paths: ReadonlyArray<string>) => onChange(paths))
     useEffect(
       () =>
-        registry.subscribe(folderChangesOf(sessionId), (result) => {
+        registry.subscribe(folderChangesOf(sessionId, workingFolder), (result) => {
           if (AsyncResult.isSuccess(result)) changed(result.value.paths)
         }),
-      [registry, sessionId],
+      [registry, sessionId, workingFolder],
     )
   },
   useGitStatus: (sessionId) => {
-    const atom = gitStatusOf(sessionId)
+    const atom = gitStatusOf(sessionId, useWorkingFolderOf(sessionId))
     const result = useAtomValue(atom)
     const retry = useAtomRefresh(atom)
     return {
@@ -345,8 +347,11 @@ const host: UiHost = {
     return selected?.kind === "file" ? selected.path : null
   },
   useChanges: (sessionId, kind) => {
+    const workingFolder = useWorkingFolderOf(sessionId)
     const atom = (
-      kind === "committed" ? committedChangesOf(sessionId) : changesOf(sessionId)
+      kind === "committed"
+        ? committedChangesOf(sessionId, workingFolder)
+        : changesOf(sessionId, workingFolder)
     ) as Atom.Atom<AsyncResult.AsyncResult<CommittedChangeListing, unknown>>
     const result = useAtomValue(atom)
     const retry = useAtomRefresh(atom)

@@ -1,6 +1,10 @@
 import { Atom } from "effect/reactivity"
 import { rereadOnChange } from "./reread-on-change.ts"
 
-export const gitStatusOf = Atom.family((sessionId: string) =>
-  rereadOnChange(sessionId, (client) => client["file.gitStatus"]({ sessionId })),
-)
+const family = Atom.family((key: string) => {
+  const [sessionId = ""] = key.split("\n")
+  return rereadOnChange(sessionId, (client) => client["file.gitStatus"]({ sessionId }))
+})
+
+export const gitStatusOf = (sessionId: string, workingFolder: string) =>
+  family(`${sessionId}\n${workingFolder}`)

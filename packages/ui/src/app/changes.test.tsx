@@ -173,6 +173,18 @@ test("the Changes tab follows the session on screen", async () => {
   await expect.element(changesTab()).toHaveTextContent("Changes1")
 })
 
+test("the Changes tab follows the session into the worktree its agent moves to", async () => {
+  const server = await mount(makeServer())
+  await expect.element(row("README.md")).toBeVisible()
+
+  server.moveSession("s1", worktree)
+  await expect.element(row("notes.md")).toBeVisible()
+  server.changes.set(worktree, { kind: "listed", changes: [change("cart.ts", "modified")] })
+  server.changeOnDisk(worktree, ["cart.ts"])
+  await expect.element(row("cart.ts")).toBeVisible()
+  await expect.element(changesTab()).toHaveTextContent("Changes1")
+})
+
 test("a click on a change opens its diff beside the chat, and Open file opens the file", async () => {
   await mount(makeServer())
   await row("README.md").click()
