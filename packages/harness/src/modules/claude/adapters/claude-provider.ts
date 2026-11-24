@@ -89,13 +89,19 @@ const spawnClaude = (
   return { child, lines, exited, started, stderr: () => stderr.trim() }
 }
 
-// Kept even when Claude Code did not answer: each question runs the user's hooks.
 const listedRunOptions = (timeout: Duration.Input) => {
   let listed: HarnessRunOptions | null = null
   return Effect.suspend(() =>
     listed
       ? Effect.succeed(listed)
-      : listClaudeModels(timeout).pipe(Effect.map((models) => (listed = claudeRunOptions(models)))),
+      : listClaudeModels(timeout).pipe(
+          Effect.map((models) => {
+            const options = claudeRunOptions(models)
+            // An empty answer is not kept: the next question asks Claude Code again.
+            if (models.length > 0) listed = options
+            return options
+          }),
+        ),
   )
 }
 
