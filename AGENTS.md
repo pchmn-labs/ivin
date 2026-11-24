@@ -59,6 +59,8 @@ Start every branch in its own git worktree under `.worktrees/`, named after the 
 
 One PR per ticket or ticketless change, opened against `main`. Its title is a conventional commit, `<type>(<scope>): <subject>`, because a squash merge takes the title. Its body follows `.github/pull_request_template.md` when the repo has one.
 
+Give the PR the `e2e:macos` label when the change can behave differently on macOS: code that checks the platform, the desktop app's main process or preload, packaging, a native dependency, keyboard handling. Without it, the packaged app is tested on macOS only after the merge, on `main`.
+
 Before opening the PR, run the `code-review` skill on the branch since its merge-base with `main`, and fix what it finds or say in the PR why you left it.
 
 Everything written to the tracker is in English, whatever the language of the conversation: a ticket, a PR title, a PR body, a comment. The code, the commits and the docs are too.
