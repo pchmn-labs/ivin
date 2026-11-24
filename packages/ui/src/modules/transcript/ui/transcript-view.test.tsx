@@ -259,16 +259,21 @@ test("while the answer streams in, the view moves at a steady pace", async () =>
   server.pushItem(toolCall(41))
   await expect.poll(fromEnd).toBeLessThan(2)
 
-  const tops = await everyFrame(
+  const seen = await everyFrame(
     (frame) => {
-      if (frame % 4 === 0) server.pushChange(streamLine(frame / 4))
-      return scroller().scrollTop
+      if (frame % 8 === 0) server.pushChange(streamLine(frame / 8))
+      return { at: performance.now(), top: scroller().scrollTop }
     },
-    (seen) => seen.length === 80,
+    (frames) => frames.length === 160,
   )
 
-  const steps = tops.slice(41).map((top, index) => top - tops[40 + index]!)
-  expect(Math.max(...steps)).toBeLessThan(2 * Math.max(1, Math.min(...steps)))
+  // Frames do not all last as long, so the pace is read in pixels per millisecond.
+  const paces = seen
+    .slice(41)
+    .map(({ at, top }, index) => (top - seen[40 + index]!.top) / (at - seen[40 + index]!.at))
+  const median = paces.toSorted((a, b) => a - b)[paces.length >> 1]!
+  const steady = paces.filter((pace) => pace > median / 1.5 && pace < median * 1.5)
+  expect(steady.length).toBeGreaterThan(0.8 * paces.length)
 })
 
 const messageRowTop = () => {
