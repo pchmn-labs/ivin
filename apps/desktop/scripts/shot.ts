@@ -293,6 +293,17 @@ try {
   await sidebar.getByTestId("working-session").waitFor()
   await window.waitForTimeout(300)
   await shoot("working-panel")
+  await sidebar
+    .getByTestId("working-panel")
+    .getByText(/^Working/)
+    .click()
+  await sidebar.getByTestId("working-session").waitFor({ state: "hidden" })
+  await window.waitForTimeout(300)
+  await shoot("working-panel-folded")
+  await sidebar
+    .getByTestId("working-panel")
+    .getByText(/^Working/)
+    .click()
   await sidebar.getByTestId("working-session").getByRole("button").first().click()
   await sidebar.getByTestId("working-panel").waitFor({ state: "detached" })
   const closeTab = async (title: string) => {

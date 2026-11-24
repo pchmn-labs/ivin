@@ -84,6 +84,10 @@
   scrollbar-width: thin;
 }
 
+.iv-app__bottom-scroll:has(> .iv-disclosure--panel:not([open]):only-child) {
+  padding-bottom: 0;
+}
+
 .iv-app__main {
   display: flex;
   flex-direction: column;
