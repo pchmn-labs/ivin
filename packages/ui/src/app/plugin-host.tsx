@@ -91,9 +91,9 @@ const LOADING = { kind: "loading" } as const satisfies ChangeListing
 
 const useProjectPath = () => useAtomValue(selectedProjectAtom)?.path ?? NO_PROJECT
 
-// A retry in flight still counts: the message stays until the feed answers.
+// A watch feed never succeeds, so a failure that is waiting again means it is running.
 const hasFailed = (status: AsyncResult.AsyncResult<unknown, unknown> | undefined) =>
-  status !== undefined && AsyncResult.isFailure(status)
+  status !== undefined && AsyncResult.isFailure(status) && !status.waiting
 
 const useSessionListStatus = (): ReturnType<UiHost["useSessionListStatus"]> => {
   const path = useProjectPath()
