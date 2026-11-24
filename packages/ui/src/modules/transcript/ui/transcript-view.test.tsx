@@ -2,7 +2,7 @@ import { RegistryContext, RegistryProvider, useAtomMount } from "@effect/atom-re
 import { DateTime } from "effect"
 import type { AtomRegistry } from "effect/reactivity"
 import { useContext, useEffect } from "react"
-import { afterEach, expect, test, vi } from "vitest"
+import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
@@ -69,11 +69,6 @@ const inView = (text: string) => {
   const top = topInView(text)
   return top >= 0 && top < scroller().clientHeight
 }
-
-// The sent-message scroll reads its duration from this token: 0 ends it on its first frame.
-const setMotion = (duration: string) =>
-  document.documentElement.style.setProperty("--iv-duration-base", duration)
-afterEach(() => document.documentElement.style.removeProperty("--iv-duration-base"))
 
 test("the transcript stays put when scrolled up and follows when at the bottom", async () => {
   const server = makeFakeServer()
@@ -189,132 +184,59 @@ const sessionView = (server: ReturnType<typeof makeFakeServer>, height: number, 
   </RegistryProvider>
 )
 
-test("a sent message scrolls up to the top of the view, and stays there while the answer is short", async () => {
-  const server = makeFakeServer()
-  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+const longAnswer = (position: number, lines = 30) =>
+  message(position, Array.from({ length: lines }, (_, i) => `line ${i}`).join("\n\n"))
 
+const sendQuestion = async (server: ReturnType<typeof makeFakeServer>) => {
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
   const screen = await render(sessionView(server, 300, false))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
-
-  setMotion("0ms")
   server.pushItem(userMessage(40))
   await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
   await screen.rerender(sessionView(server, 300, true))
-  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
+  return screen
+}
+
+test("a short answer to a sent message is shown at the end of the view, with no empty room under it", async () => {
+  const server = makeFakeServer()
+  await sendQuestion(server)
+
   server.pushItem(message(41))
   await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
-  expect(topInView("question 40")).toBeLessThan(30)
+  await expect.poll(fromEnd).toBeLessThan(2)
+  expect(inView("question 40")).toBe(true)
 })
 
-test("a sent message stays at the top of the view when its tool calls fold as the turn ends", async () => {
+test("a long answer stops scrolling the view once the sent message reaches its top", async () => {
   const server = makeFakeServer()
-  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
-  const view = (live: boolean) => (
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ position: "relative", height: 300 }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" live={live} />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>
-  )
+  await sendQuestion(server)
 
-  const screen = await render(view(true))
-  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
-
-  server.pushItem(userMessage(40))
-  for (let i = 41; i < 45; i++) server.pushItem(toolCall(i))
-  server.pushItem(message(45))
-  await expect.element(page.getByText("message 45", { exact: true })).toBeVisible()
-  await screen.rerender(view(false))
-  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
-})
-
-test("a sent message goes back to the top of the view when the view grows after hiding it", async () => {
-  const server = makeFakeServer()
-  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
-  const view = (height: number) => sessionView(server, height, true)
-
-  const screen = await render(sessionView(server, 300, false))
-  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
-
-  setMotion("0ms")
-  server.pushItem(userMessage(40))
-  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
-  await screen.rerender(view(300))
-  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
-  server.pushItem(message(41, Array.from({ length: 4 }, (_, i) => `line ${i}`).join("\n\n")))
-  await expect.element(page.getByText("line 3", { exact: true })).toBeVisible()
-  await screen.rerender(view(80))
-  await vi.waitFor(() => expect(page.getByText("question 40", { exact: true }).query()).toBeNull())
-  await screen.rerender(view(300))
-  await vi.waitFor(() =>
-    expect(
-      page.getByText("question 40", { exact: true }).element().getBoundingClientRect().top -
-        scroller().getBoundingClientRect().top,
-    ).toBeLessThan(30),
-  )
-})
-
-test("once the answer is taller than the view, the transcript follows its end", async () => {
-  const server = makeFakeServer()
-  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
-
-  const screen = await render(sessionView(server, 300, false))
-  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
-
-  setMotion("0ms")
-  server.pushItem(userMessage(40))
-  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
-  await screen.rerender(sessionView(server, 300, true))
-  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
-  server.pushItem(message(41, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n")))
-  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
+  server.pushItem(longAnswer(41))
+  await expect.element(page.getByText("line 0", { exact: true })).toBeVisible()
+  await expect.poll(() => fromEnd()).toBeGreaterThan(100)
+  const stoppedAt = scroller().scrollTop
   server.pushItem(message(42))
-  await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
-  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
+  await expect
+    .poll(() => scroller().scrollHeight - scroller().clientHeight)
+    .toBeGreaterThan(stoppedAt + 100)
+  expect(scroller().scrollTop).toBe(stoppedAt)
 })
 
-test("an answer taller than the view that arrives while the view scrolls to the sent message is followed to its end", async () => {
+test("scrolled back to the end, the transcript follows its end again", async () => {
   const server = makeFakeServer()
-  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+  await sendQuestion(server)
+  server.pushItem(longAnswer(41))
+  await expect.poll(() => fromEnd()).toBeGreaterThan(100)
 
-  const screen = await render(sessionView(server, 300, false))
-  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
-
-  // Long enough that the answer always arrives before the scroll ends.
-  setMotion("1500ms")
-  server.pushItem(userMessage(40))
-  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
-  await screen.rerender(sessionView(server, 300, true))
-  server.pushItem(message(41, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n")))
-  await expect.poll(fromEnd, { timeout: 5_000 }).toBeLessThan(2)
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: 1 }))
+  await vi.waitFor(() => {
+    scroller().scrollTop = scroller().scrollHeight
+    scroller().dispatchEvent(new Event("scroll"))
+    expect(fromEnd()).toBeLessThan(2)
+  })
   server.pushItem(message(42))
   await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
   await expect.poll(fromEnd).toBeLessThan(2)
-})
-
-test("loading the older items of a long turn does not scroll to its message", async () => {
-  const server = makeFakeServer()
-  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 80 }, (_, i) => message(i + 1))])
-
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ position: "relative", height: 300 }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>,
-  )
-  await expect.element(page.getByText("message 80", { exact: true })).toBeVisible()
-
-  await vi.waitFor(() => {
-    scroller().scrollTop = 0
-    expect(page.getByText("question 0", { exact: true }).query()).not.toBeNull()
-  })
-  const room = document.querySelector<HTMLElement>(".iv-transcript")!.style
-  expect(room.getPropertyValue("--iv-transcript-room")).toBe("")
 })
 
 const thinking = (position: number): TranscriptItem => ({
@@ -537,52 +459,27 @@ const sendMessage = async (server: ReturnType<typeof makeFakeServer>) => {
   server.pushItem(userMessage(40))
   await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
   await screen.rerender(switchableView(server, true, true))
-  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
   return screen
 }
 
-test("a sent message is still at the top of the view when the transcript opens again", async () => {
+test("a transcript closed during a turn and opened again after it shows its rows, never an empty area", async () => {
   const server = makeFakeServer()
   const screen = await sendMessage(server)
 
-  await closeAndOpen(screen, server, () => server.pushItem(message(41)), true)
+  await closeAndOpen(screen, server, () => server.pushItem(message(41, "the answer")), true)
 
-  await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
-  await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
-})
-
-test("an answer that grew taller than the view while the transcript was closed opens at its end", async () => {
-  const server = makeFakeServer()
-  const screen = await sendMessage(server)
-  const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
-
-  await closeAndOpen(
-    screen,
-    server,
-    () =>
-      server.pushItem(message(41, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n"))),
-    true,
-  )
-
-  await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
+  await expect.element(page.getByText("the answer", { exact: true })).toBeVisible()
   await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
 })
 
-test("a transcript closed after its turn ended opens with the sent message and its answer in view", async () => {
+test("a long answer that came while the transcript was closed opens at its end", async () => {
   const server = makeFakeServer()
   const screen = await sendMessage(server)
-  server.pushItem(toolCall(41))
-  server.pushItem(toolCall(42))
-  server.pushItem(message(43, "the answer"))
-  await expect.element(page.getByText("the answer", { exact: true })).toBeVisible()
-  await screen.rerender(switchableView(server, true, false))
 
-  await closeAndOpen(screen, server)
+  await closeAndOpen(screen, server, () => server.pushItem(longAnswer(41)), true)
 
-  await vi.waitFor(() => {
-    expect(inView("question 40")).toBe(true)
-    expect(inView("the answer")).toBe(true)
-  })
+  await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
+  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
 })
 
 test("a session with no message yet says so", async () => {
