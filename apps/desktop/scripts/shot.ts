@@ -335,6 +335,22 @@ try {
   await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").waitFor()
   await window.waitForTimeout(300)
   await shoot("open-file")
+  for (const [name, label] of [
+    ["resize-files-card", "Resize the files card"],
+    ["resize-sidebar", "Resize the sidebar"],
+  ] as const) {
+    const box = await window.getByRole("separator", { name: label }).boundingBox()
+    if (box === null) throw new Error(`No handle: ${label}`)
+    const x = box.x + box.width / 2
+    const y = box.y + box.height / 2
+    await window.mouse.move(x, y)
+    await window.mouse.down()
+    await window.mouse.move(x + (name === "resize-sidebar" ? 12 : -12), y, { steps: 3 })
+    await window.waitForTimeout(300)
+    await shoot(name)
+    await window.mouse.up()
+    await window.getByRole("separator", { name: label }).dblclick()
+  }
   await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").first().click()
   await window.keyboard.type(" ")
   await window.keyboard.press(
