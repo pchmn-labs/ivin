@@ -1,4 +1,4 @@
-import type { SessionStatus } from "@ivin/contracts/session"
+import type { SessionStatus } from "./types.ts"
 
 const LABELS: Record<SessionStatus, string> = {
   preparing_worktree: "Preparing worktree…",

@@ -5,7 +5,15 @@ import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
 import { makeTestSession, testDateTime } from "../../../packages/ui/src/core/test-session.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type { Session, SlotProps, TranscriptItem, UiContext, UiHost } from "@ivin/plugin-api/ui"
+import type {
+  ApprovalItem,
+  QuestionItem,
+  Session,
+  SlotProps,
+  TranscriptItem,
+  UiContext,
+  UiHost,
+} from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
 const projects = [
@@ -64,7 +72,14 @@ const mountPanel = async (
     useProjects: () => ({ projects, selectedPath: "/shop" }),
     useSelectedSessionId: () => onScreen,
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
-    useTranscript: (sessionId) => transcripts[sessionId] ?? [],
+    usePendingApproval: (sessionId) =>
+      transcripts[sessionId]?.find(
+        (item): item is ApprovalItem => item.type === "approval" && item.decision === null,
+      ),
+    usePendingQuestion: (sessionId) =>
+      transcripts[sessionId]?.find(
+        (item): item is QuestionItem => item.type === "question" && item.status === "open",
+      ),
     useAnswerApproval: (sessionId) => async (answer) => {
       answers.push({ sessionId, ...answer })
       return answerFails ? { text: "The session has stopped.", retryable: true } : undefined

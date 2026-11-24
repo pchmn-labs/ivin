@@ -1,5 +1,6 @@
 import { useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { Session, WorkingFolderChoice } from "@ivin/contracts/session"
+import type { PickWorkingFolderProps } from "@ivin/plugin-api/ui"
+import type { WorkingFolderChoice } from "@ivin/contracts/session"
 import type { ActionFailure } from "@ivin/plugin-api/ui"
 import { Cause, Exit } from "effect"
 import { AsyncResult } from "effect/reactivity"
@@ -13,6 +14,7 @@ import { newWorktreeBaseOf, worktreesOf } from "../../worktree/atoms/list-worktr
 import { sessionsOf } from "../atoms/list-sessions.ts"
 import { pickWorkingFolderAtom } from "../atoms/pick-working-folder.ts"
 import { listWorktreesFailure, pickWorkingFolderFailure } from "../rules/failure-message.ts"
+import { contractSession } from "../rules/plugin-session.ts"
 import { folderName, newBranchLabel } from "../rules/session-location.ts"
 import "./pick-working-folder.css"
 
@@ -25,7 +27,8 @@ interface Option {
   readonly mono: boolean
 }
 
-export function PickWorkingFolder({ session }: { session: Session }) {
+export function PickWorkingFolder(props: PickWorkingFolderProps) {
+  const session = contractSession(props.session)
   const { projectPath } = session
   const worktreesAtom = worktreesOf(projectPath)
   const listedWorktrees = useAtomValue(worktreesAtom)

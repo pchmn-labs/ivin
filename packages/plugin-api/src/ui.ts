@@ -5,39 +5,53 @@ import type {
   Annotation,
   AnnotationDataOf,
   AnnotationTarget,
-  IssueAnnotationData,
-  PrAnnotationData,
-} from "@ivin/contracts/annotation"
-import type {
+  ApprovalItem,
   Change,
   ChangeStatus,
+  CitationAnnotationData,
+  ErrorItem,
   FolderEntry,
   GitFileStatus,
   GitStatusEntry,
-} from "@ivin/contracts/file"
-import type { OpenProjects, Project } from "@ivin/contracts/project"
-import type {
   HarnessRunOptions,
+  ImageData,
+  ImageRef,
+  InterruptionItem,
+  IssueAnnotationData,
+  Json,
+  MessageItem,
+  OfferedModel,
   OfferedValue,
+  OpenProjects,
+  PendingMessage,
+  PrAnnotationData,
+  Project,
+  Question,
+  QuestionAnswer,
+  QuestionItem,
+  RunOption,
+  RunOptionItem,
   RunOptions,
   Session,
   SessionStatus,
-} from "@ivin/contracts/session"
-import type { Settings } from "@ivin/contracts/setting"
-import type { Tab } from "@ivin/contracts/tab"
-import type {
-  Question,
-  QuestionAnswer,
-  RunOption,
   SessionUsage,
+  Settings,
+  Tab,
+  ThinkingItem,
+  ToolCallItem,
   TranscriptItem,
-} from "@ivin/contracts/transcript"
+  UtcDateTime,
+  WorkingFolderItem,
+} from "./types.ts"
 import { HostContext, useHost } from "./host-context.ts"
 import type {
   ActionError,
   ActionFailure,
-  CommittedChangeListing,
+  ChangeKind,
   ChangeListing,
+  ChangeListingOf,
+  CommittedChangeListing,
+  DiffOnScreen,
   DiscardFailure,
   Draft,
   DraftImage,
@@ -49,42 +63,50 @@ import type {
 
 export type {
   Annotation,
+  AnnotationDataOf,
+  AnnotationTarget,
+  ApprovalItem,
   Change,
   ChangeStatus,
-  EditorExtension,
-  AnnotationTarget,
+  CitationAnnotationData,
+  ErrorItem,
   FolderEntry,
   GitFileStatus,
   GitStatusEntry,
   HarnessRunOptions,
+  ImageData,
+  ImageRef,
+  InterruptionItem,
   IssueAnnotationData,
+  Json,
+  MessageItem,
+  OfferedModel,
   OfferedValue,
   OpenProjects,
+  PendingMessage,
   PrAnnotationData,
   Project,
+  Question,
+  QuestionAnswer,
+  QuestionItem,
   RunOption,
+  RunOptionItem,
   RunOptions,
   Session,
   SessionStatus,
   SessionUsage,
   Settings,
   Tab,
+  ThinkingItem,
+  ToolCallItem,
   TranscriptItem,
+  UtcDateTime,
+  WorkingFolderItem,
+  EditorExtension,
 }
-// The data of a kind defined in contracts has that kind's shape; any other kind's is JSON.
 export type AnnotationOf<K extends string> = Omit<Annotation, "data"> & {
   readonly data: AnnotationDataOf<K>
 }
-export type MessageItem = Extract<TranscriptItem, { type: "message" }>
-export type ThinkingItem = Extract<TranscriptItem, { type: "thinking" }>
-export type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
-export type ApprovalItem = Extract<TranscriptItem, { type: "approval" }>
-export type QuestionItem = Extract<TranscriptItem, { type: "question" }>
-export type { Question, QuestionAnswer }
-export type ErrorItem = Extract<TranscriptItem, { type: "error" }>
-export type InterruptionItem = Extract<TranscriptItem, { type: "interruption" }>
-export type WorkingFolderItem = Extract<TranscriptItem, { type: "working_folder" }>
-export type RunOptionItem = Extract<TranscriptItem, { type: "run_option" }>
 export type MessageSlotItem =
   | MessageItem
   | ThinkingItem
@@ -200,8 +222,11 @@ export const defineUi = (activate: UiPlugin): UiPlugin => activate
 export type {
   ActionError,
   ActionFailure,
-  CommittedChangeListing,
+  ChangeKind,
   ChangeListing,
+  ChangeListingOf,
+  CommittedChangeListing,
+  DiffOnScreen,
   DiscardFailure,
   Draft,
   DraftImage,
@@ -228,7 +253,8 @@ export const useSelectedSessionId = () => useHost().useSelectedSessionId()
 export const useTabs = () => useHost().useTabs()
 export const useSessionListStatus = () => useHost().useSessionListStatus()
 export const useOpenTab = () => useHost().useOpenTab()
-export const useTranscript = (sessionId: string) => useHost().useTranscript(sessionId)
+export const usePendingApproval = (sessionId: string) => useHost().usePendingApproval(sessionId)
+export const usePendingQuestion = (sessionId: string) => useHost().usePendingQuestion(sessionId)
 export const useUsage = (sessionId: string) => useHost().useUsage(sessionId)
 export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
   useHost().useAnnotations(sessionId, kind) as ReadonlyArray<AnnotationOf<K>>
@@ -257,18 +283,12 @@ export const useFolderChanges = (
   onChange: (paths: ReadonlyArray<string>) => void,
 ) => useHost().useFolderChanges(sessionId, onChange)
 export const useGitStatus = (sessionId: string) => useHost().useGitStatus(sessionId)
-export const useGitStatusFailure = (sessionId: string) => useHost().useGitStatusFailure(sessionId)
 export const useFileOnScreen = (sessionId: string) => useHost().useFileOnScreen(sessionId)
-export const useChanges = (sessionId: string) => useHost().useChanges(sessionId)
+export const useChanges = <K extends ChangeKind>(sessionId: string, kind: K) =>
+  useHost().useChanges(sessionId, kind)
 export const useOpenDiff = () => useHost().useOpenDiff()
 export const useDiffOnScreen = (sessionId: string) => useHost().useDiffOnScreen(sessionId)
 export const useSettings = () => useHost().useSettings()
-export const useCommittedChanges = (sessionId: string) => useHost().useCommittedChanges(sessionId)
-export const useOpenCommittedDiff = () => useHost().useOpenCommittedDiff()
-export const useCommittedDiffOnScreen = (sessionId: string) =>
-  useHost().useCommittedDiffOnScreen(sessionId)
 export const useDiscardChanges = () => useHost().useDiscardChanges()
 export { formatToolInput } from "./format-tool-input.ts"
-export { pendingApproval } from "./pending-approval.ts"
-export { pendingQuestion } from "./pending-question.ts"
 export { statusLabel } from "./status-label.ts"

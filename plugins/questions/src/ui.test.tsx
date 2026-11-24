@@ -5,10 +5,10 @@ import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type {
-  QuestionItem,
   Session,
   SlotName,
   SlotProps,
+  QuestionItem,
   TranscriptItem,
   UiContext,
   UiHost,
@@ -41,7 +41,10 @@ const mount = async (
   const Sheet = slots["composer.above"] as ComponentType<SlotProps["composer.above"]>
   const host: UiHost = {
     ...testUiHost,
-    useTranscript: () => items,
+    usePendingQuestion: () =>
+      items.find(
+        (item): item is QuestionItem => item.type === "question" && item.status === "open",
+      ),
     useAnswerQuestion: () => answer,
   }
   const screen = await render(
