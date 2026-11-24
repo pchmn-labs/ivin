@@ -111,5 +111,5 @@ const isPackagedAppTest = (path: string) => path.startsWith("apps/desktop/e2e/")
 
 export const repeatTargets = (files: ChangedFile[]): FileTarget[] =>
   files
-    .filter((file) => !/\.perf\.test\.tsx?$/.test(file.path) && !isPackagedAppTest(file.path))
+    .filter((file) => !isPackagedAppTest(file.path))
     .flatMap(fileTarget)

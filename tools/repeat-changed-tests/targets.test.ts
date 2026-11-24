@@ -80,10 +80,10 @@ describe("repeatTargets", () => {
     expect(targets([9])).toEqual(wholeFile)
   })
 
-  test("a frame-rate test file is never targeted", () => {
+  test("a frame-rate test file is targeted like any other", () => {
     expect(
       repeatTargets([{ path: "a.perf.test.tsx", source, added: [6], removedAfter: [] }]),
-    ).toEqual([])
+    ).toEqual([{ path: "a.perf.test.tsx", testNames: ["first"] }])
   })
 
   test("a packaged app test file is never targeted", () => {
