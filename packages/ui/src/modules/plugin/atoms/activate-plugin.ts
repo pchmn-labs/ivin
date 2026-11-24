@@ -1,4 +1,3 @@
-import { EditorState } from "@ivin/plugin-api/editor"
 import type { Atom, AtomRegistry } from "effect/reactivity"
 import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
 import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
@@ -90,17 +89,21 @@ export const activatePlugin = (
         ]),
     },
     editorExtensions: {
+      // Checked once CodeMirror has loaded, so the extension reaches the editors a moment later.
       add: (extension) => {
-        try {
-          EditorState.create({ extensions: extension })
-        } catch (error) {
-          reportFailure("editor extension is invalid", error)
-          return
-        }
-        registry.set(editorContributionsAtom, [
-          ...registry.get(editorContributionsAtom),
-          { pluginId, extension },
-        ])
+        void import("@ivin/plugin-api/editor").then(({ EditorState }) => {
+          if (!active) return
+          try {
+            EditorState.create({ extensions: extension })
+          } catch (error) {
+            reportFailure("editor extension is invalid", error)
+            return
+          }
+          registry.set(editorContributionsAtom, [
+            ...registry.get(editorContributionsAtom),
+            { pluginId, extension },
+          ])
+        })
       },
     },
     fileIcons: {

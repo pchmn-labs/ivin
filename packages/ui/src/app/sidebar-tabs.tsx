@@ -11,6 +11,8 @@ import "./sidebar-tabs.css"
 // In this order: the selected session row, a tree, then what the panel offers first.
 const FOCUS_TARGETS = ['[aria-current="true"]', '[role="tree"]', 'button, input, [tabindex="0"]']
 
+const FOCUS_WAIT_MS = 3_000
+
 export function SidebarTabs() {
   const registry = useContext(RegistryContext)
   const contributions = useAtomValue(contributionsAtom)
@@ -23,9 +25,27 @@ export function SidebarTabs() {
   useEffect(() => {
     if (focusRequest === handledRequest.current) return
     handledRequest.current = focusRequest
-    for (const selector of FOCUS_TARGETS) {
-      const target = content.current?.querySelector<HTMLElement>(selector)
-      if (target) return target.focus()
+    const focusFirstTarget = () => {
+      for (const selector of FOCUS_TARGETS) {
+        const target = content.current?.querySelector<HTMLElement>(selector)
+        if (target) {
+          target.focus()
+          return true
+        }
+      }
+      return false
+    }
+    if (focusFirstTarget() || content.current === null) return
+    // A panel still loading its code has nothing to focus yet; it gets the focus when it arrives.
+    const observer = new MutationObserver(() => {
+      if (focusFirstTarget()) observer.disconnect()
+    })
+    observer.observe(content.current, { childList: true, subtree: true })
+    // A panel that never gets a target must not take the focus long after the request.
+    const giveUp = setTimeout(() => observer.disconnect(), FOCUS_WAIT_MS)
+    return () => {
+      observer.disconnect()
+      clearTimeout(giveUp)
     }
   }, [focusRequest])
 
@@ -42,7 +62,7 @@ export function SidebarTabs() {
     >
       <div ref={content} className="iv-sidebar-tabs__panel">
         {panel === undefined ? null : (
-          <SlotContribution<"sidebar.panel"> contribution={panel} props={{}} />
+          <SlotContribution<"sidebar.panel"> key={panel.id} contribution={panel} props={{}} />
         )}
       </div>
     </Tabs>

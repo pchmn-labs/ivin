@@ -61,7 +61,7 @@ test("a plugin's commands and default keybindings run while it is active, and le
   expect(runCommand(registry, "prs.refresh")).toBe(false)
 })
 
-test("a plugin's editor extensions reach the file editor while it is active, and leave with it", () => {
+test("a plugin's editor extensions reach the file editor while it is active, and leave with it", async () => {
   const registry = AtomRegistry.make()
   const mine = EditorView.contentAttributes.of({ "data-mine": "yes" })
   const deactivate = activatePlugin(
@@ -69,10 +69,28 @@ test("a plugin's editor extensions reach the file editor while it is active, and
     { manifest: { id: "vim" }, activate: defineUi((ctx) => ctx.editorExtensions.add(mine)) },
     () => undefined,
   )
-  expect(registry.get(editorExtensionsAtom)).toEqual([mine])
+  await vi.waitFor(() => expect(registry.get(editorExtensionsAtom)).toEqual([mine]))
 
   deactivate()
   expect(registry.get(editorExtensionsAtom)).toEqual([])
+})
+
+test("an editor extension added by a plugin turned off before CodeMirror loads is never added", async () => {
+  const { registry } = makeTestRegistry()
+  const gone = EditorView.contentAttributes.of({ "data-gone": "yes" })
+  const kept = EditorView.contentAttributes.of({ "data-kept": "yes" })
+  const addGone = activatePlugin(
+    registry,
+    { manifest: { id: "gone" }, activate: defineUi((ctx) => ctx.editorExtensions.add(gone)) },
+    () => undefined,
+  )
+  addGone()
+  activatePlugin(
+    registry,
+    { manifest: { id: "kept" }, activate: defineUi((ctx) => ctx.editorExtensions.add(kept)) },
+    () => undefined,
+  )
+  await vi.waitFor(() => expect(registry.get(editorExtensionsAtom)).toEqual([kept]))
 })
 
 test("a plugin's file icons leave with it, and one it adds once turned off is never added", () => {
@@ -127,8 +145,8 @@ test("an editor extension CodeMirror rejects is turned off and reported against 
     },
     () => undefined,
   )
-  expect(registry.get(editorExtensionsAtom)).toEqual([good])
   await vi.waitFor(() => expect(server.pluginFailures).toHaveLength(1))
+  expect(registry.get(editorExtensionsAtom)).toEqual([good])
   expect(server.pluginFailures[0]?.id).toBe("vim")
 })
 

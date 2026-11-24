@@ -1,8 +1,12 @@
+import { lazy } from "react"
 import { defineUi } from "@ivin/plugin-api/ui"
 import { AREA } from "./rules/groups.ts"
 import type { OnScreen } from "./rules/on-screen.ts"
 import { ChangesBadge } from "./ui/changes-badge.tsx"
-import { ChangesPanel } from "./ui/changes-panel.tsx"
+
+const ChangesPanel = lazy(() =>
+  import("./ui/changes-panel.tsx").then((m) => ({ default: m.ChangesPanel })),
+)
 
 export const activate = defineUi((ctx) => {
   const onScreen: OnScreen = { current: null }

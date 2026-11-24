@@ -5,7 +5,8 @@ import {
   useAtomSet,
   useAtomValue,
 } from "@effect/atom-react"
-import { useCallback, useContext, useEffect, useRef } from "react"
+import { Suspense, lazy, useCallback, useContext, useEffect, useRef } from "react"
+import { LoadingRows } from "../core/components/loading-rows/loading-rows.tsx"
 import { NotificationProvider } from "../core/components/notification/notification.tsx"
 import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
@@ -22,7 +23,7 @@ import { SessionActionDialog } from "../modules/session/ui/session-action-dialog
 import { StartSessionError } from "../modules/session/ui/start-session-error.tsx"
 import { TabView } from "../modules/tab/ui/tab-view.tsx"
 import { tabTranscriptsAtom } from "../modules/transcript/atoms/tab-transcripts.ts"
-import { MainAreaBoundary } from "./failure-boundary.tsx"
+import { AreaFailureBoundary, MainAreaBoundary } from "./failure-boundary.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
 import { MainTopBar } from "./main-top-bar.tsx"
@@ -44,9 +45,12 @@ import { useUpdateCommands } from "../modules/update/hooks/use-update-commands.t
 import { UpdateButton } from "../modules/update/ui/update-button.tsx"
 import { SettingsButton } from "../modules/setting/ui/settings-button.tsx"
 import { SettingsNav } from "../modules/setting/ui/settings-nav.tsx"
-import { SettingsPage } from "../modules/setting/ui/settings-page.tsx"
 import { settingsAtom } from "../modules/setting/atoms/settings.ts"
 import "./app.css"
+
+const SettingsPage = lazy(() =>
+  import("../modules/setting/ui/settings-page.tsx").then((m) => ({ default: m.SettingsPage })),
+)
 
 const CARD_MIN = 240
 const CARD_MAX = 480
@@ -220,7 +224,11 @@ export function App() {
             <main className="iv-app__main">
               <MainTopBar projectPath={null} controls={null} />
               {serverLost}
-              <SettingsPage />
+              <AreaFailureBoundary>
+                <Suspense fallback={<LoadingRows label="Loading" />}>
+                  <SettingsPage />
+                </Suspense>
+              </AreaFailureBoundary>
             </main>
           </div>
         )}

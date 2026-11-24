@@ -9,7 +9,7 @@ plugins/<id>/
   src/
     server.ts           optional: the server half, activate(ctx)
     ui.tsx              optional: the UI half's entry, activate(ctx) only
-    ui/<name>.tsx       optional: one component per file
+    ui/<name>.tsx       optional: one component per file; a heavy one is loaded with import()
     hooks/use-<name>.ts optional: one hook per file, use- in the filename and in every export
     rules/              optional: the plugin's pure logic, read by both halves
 ```
@@ -20,6 +20,10 @@ plugins/<id>/
 | `hooks/` | a test needs a mounted component |
 | `ui/` | a test needs a renderer |
 | `server.ts`, `ui.tsx` | a test needs a `ctx` |
+
+## Keeping `ui.tsx` small
+
+`ui.tsx` loads when the window starts. It holds `activate` and what the first screen needs, such as a badge. A panel, an overlay or a theme goes in another file, which a slot component loads with `React.lazy(() => import("./ui/panel.tsx"))`; the host wraps each slot in a `Suspense` that shows its loading indicator, and a failed load shows the slot's failure. A `window.overlay` slot shows nothing while loading, so a plugin whose popup opens on a command mounts the lazy component at its first opening. The server bundles a user plugin with code splitting, so the same `import()` works there.
 
 ## Tests
 

@@ -35,10 +35,10 @@ export const activate = (ctx) =>
 
 const importFromSource =
   (sources: Record<string, string>): ImportBundle =>
-  (bundle) => {
-    exposeHostModules()
+  async (bundle) => {
+    await exposeHostModules()
     const source = sources[bundle]
-    if (source === undefined) return Promise.reject(new Error(`no bundle ${bundle}`))
+    if (source === undefined) throw new Error(`no bundle ${bundle}`)
     const url = URL.createObjectURL(new Blob([source], { type: "text/javascript" }))
     return import(/* @vite-ignore */ url)
   }

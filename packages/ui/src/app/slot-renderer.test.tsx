@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { lazy } from "react"
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
@@ -124,4 +125,31 @@ test("a contribution that throws while rendering is reported to its plugin's log
   await vi.waitFor(() => expect(server.pluginFailures).toHaveLength(1))
   expect(server.pluginFailures[0]).toMatchObject({ id: "prs" })
   expect(server.pluginFailures[0]?.reason).toContain("boom")
+})
+
+const lazyPlugin = (load: () => Promise<{ default: () => React.ReactNode }>): UiPluginEntry => ({
+  manifest: { id: "heavy" },
+  activate: defineUi((ctx) => {
+    ctx.slots.add("composer.status", lazy(load), { name: "status" })
+  }),
+})
+
+test("a slot whose code is still loading shows the loading indicator, then its content", async () => {
+  let arrive: (module: { default: () => React.ReactNode }) => void = () => {}
+  await render(app([lazyPlugin(() => new Promise((resolve) => (arrive = resolve)))]))
+  await expect.element(page.getByRole("status", { name: "Loading" })).toBeVisible()
+
+  arrive({ default: () => <span>Heavy panel</span> })
+  await expect.element(page.getByText("Heavy panel")).toBeVisible()
+  expect(page.getByRole("status", { name: "Loading" }).elements()).toHaveLength(0)
+})
+
+test("a slot whose code fails to load shows the slot's failure and reports it", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {})
+  const server = makeFakeServer()
+  await render(app([lazyPlugin(() => Promise.reject(new Error("chunk missing")))], server))
+  await expect
+    .element(page.getByRole("alert"))
+    .toHaveTextContent("plugin heavy failed — see ivin plugin logs heavy")
+  await vi.waitFor(() => expect(server.pluginFailures[0]?.id).toBe("heavy"))
 })

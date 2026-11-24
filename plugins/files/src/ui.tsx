@@ -1,7 +1,11 @@
+import { lazy } from "react"
 import { defineUi } from "@ivin/plugin-api/ui"
 import type { PluginState } from "./rules/plugin-state.ts"
-import { FilesPanel } from "./ui/files-panel.tsx"
-import { GoToFile } from "./ui/go-to-file.tsx"
+import { GoToFileHost } from "./ui/go-to-file-host.tsx"
+
+const FilesPanel = lazy(() =>
+  import("./ui/files-panel.tsx").then((m) => ({ default: m.FilesPanel })),
+)
 
 export const activate = defineUi((ctx) => {
   const state: PluginState = {
@@ -15,7 +19,7 @@ export const activate = defineUi((ctx) => {
     name: "panel",
     title: "Files",
   })
-  ctx.slots.add("window.overlay", () => <GoToFile state={state} />, { name: "goToFile" })
+  ctx.slots.add("window.overlay", () => <GoToFileHost state={state} />, { name: "goToFile" })
   ctx.commands.register("files.show", {
     title: "Show files",
     run: () => ctx.sidebar.showPanel("panel"),

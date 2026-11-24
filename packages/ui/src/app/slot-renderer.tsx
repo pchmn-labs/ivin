@@ -1,6 +1,7 @@
 import { RegistryContext, useAtomValue } from "@effect/atom-react"
-import { Component, useContext, type ComponentType, type ReactNode } from "react"
+import { Component, Suspense, useContext, type ComponentType, type ReactNode } from "react"
 import type { SlotComponentProps, SlotName, SlotProps } from "@ivin/plugin-api/ui"
+import { LoadingRows } from "../core/components/loading-rows/loading-rows.tsx"
 import { contributionsAtom, type Contribution } from "../modules/plugin/atoms/contributions.ts"
 import { reportPluginFailureAtom } from "../modules/plugin/atoms/report-plugin-failure.ts"
 import { visibleContributions } from "../modules/plugin/rules/visible-contributions.ts"
@@ -52,7 +53,12 @@ export function SlotContribution<S extends SlotName>({
   const onError = useReportPluginError(contribution.pluginId)
   return (
     <ContributionBoundary pluginId={contribution.pluginId} onError={onError}>
-      <Component {...props} />
+      {/* A popup shows nothing until it opens; any other slot shows rows while its code loads. */}
+      <Suspense
+        fallback={contribution.slot === "window.overlay" ? null : <LoadingRows label="Loading" />}
+      >
+        <Component {...props} />
+      </Suspense>
     </ContributionBoundary>
   )
 }
