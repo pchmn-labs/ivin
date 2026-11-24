@@ -36,9 +36,9 @@
 }
 
 .iv-tab-bar__item[data-selected] {
-  background: var(--iv-bg-raised);
+  background: color-mix(in srgb, var(--iv-accent) 12%, var(--iv-bg-raised));
   /* Inset: the tab list scrolls, which clips an outer ring at its left edge. */
-  box-shadow: inset 0 0 0 1px var(--iv-border);
+  box-shadow: inset 0 0 0 1px var(--iv-border-strong);
 }
 
 .iv-tab-bar__tab {
