@@ -91,8 +91,13 @@ export interface UiHost {
   readonly useSelectedSessionId: () => string | null
   // The selected project's tabs, in tab bar order.
   readonly useTabs: () => ReadonlyArray<Tab>
-  // False until the selected project's tabs first arrive from the server.
-  readonly useTabsLoaded: () => boolean
+  // The selected project's tabs and sessions: `loaded` once its tabs first arrive from the server,
+  // `failed` while either feed is down, and `retry` restarts the one that failed.
+  readonly useSessionListStatus: () => {
+    readonly loaded: boolean
+    readonly failed: boolean
+    readonly retry: () => void
+  }
   // Selects the session's project and its tab, opening one if it has none.
   readonly useOpenTab: () => (sessionId: string) => void
   // The items the transcript has loaded, not the whole session.

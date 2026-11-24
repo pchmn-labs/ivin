@@ -139,6 +139,9 @@ export interface FakeServer {
   readonly setUserKeybindings: (state: UserKeybindings) => void
   // Makes the next call of this RPC die, as a lost connection would; a `watch` RPC streams the death.
   readonly failNextCall: (rpc: string) => void
+  // Makes every call of this RPC die, until `recoverCalls`: a feed that rebuilds fails again.
+  readonly failCalls: (rpc: string) => void
+  readonly recoverCalls: (rpc: string) => void
   readonly callsOf: (rpc: string) => number
   // Makes the next call of this RPC wait until `release` is called, or die as `failNextCall`.
   readonly holdNextCall: (rpc: string) => {
@@ -313,6 +316,7 @@ export const makeFakeServer = (
         : Effect.fail(new SessionNotFound({ sessionId })),
     )
   const failing = new Set<string>()
+  const failingUntilRecovered = new Set<string>()
   const untrustedProjects = new Set<string>()
   const holding = new Map<string, Promise<boolean>>()
   const sentMessages: Array<FakeServer["sentMessages"][number]> = []
@@ -1305,7 +1309,7 @@ export const makeFakeServer = (
       (...args: Array<unknown>) => {
         calls.set(rpc, (calls.get(rpc) ?? 0) + 1)
         const run = () =>
-          failing.delete(rpc)
+          failing.delete(rpc) || failingUntilRecovered.has(rpc)
             ? /\.watch/.test(rpc)
               ? Stream.die(new Error(`${rpc} failed`))
               : Effect.die(new Error(`${rpc} failed`))
@@ -1415,6 +1419,8 @@ export const makeFakeServer = (
       Effect.runSync(PubSub.publish(keybindingChanges, state))
     },
     failNextCall: (rpc) => void failing.add(rpc),
+    failCalls: (rpc) => void failingUntilRecovered.add(rpc),
+    recoverCalls: (rpc) => void failingUntilRecovered.delete(rpc),
     untrustedProjects,
     callsOf: (rpc) => calls.get(rpc) ?? 0,
     holdNextCall: (rpc) => {

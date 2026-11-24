@@ -1,4 +1,4 @@
-import { useAtomValue } from "@effect/atom-react"
+import { useAtomRefresh, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { Button } from "../../../core/components/button/button.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
@@ -12,14 +12,16 @@ import "./no-project.css"
 export function NoProject() {
   const status = useAtomValue(projectsAtom.status)
   const { openFolder } = useOpenFolder()
-  const message = AsyncResult.isInitial(status)
-    ? "Loading the projects…"
-    : AsyncResult.isFailure(status)
-      ? "Could not load the projects"
-      : "No project open"
+  const retry = useAtomRefresh(projectsAtom.status)
   return (
     <Stack align="center" justify="center" gap={4} grow>
-      <Text tone="muted">{message}</Text>
+      {AsyncResult.isFailure(status) ? (
+        <ErrorMessage message="The projects could not be loaded." onRetry={retry} />
+      ) : (
+        <Text tone="muted">
+          {AsyncResult.isInitial(status) ? "Loading the projects…" : "No project open"}
+        </Text>
+      )}
       {AsyncResult.isSuccess(status) && (
         <Button variant="primary" icon="folder-open" onClick={openFolder}>
           Open folder…

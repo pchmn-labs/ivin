@@ -5,6 +5,8 @@ import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
+import { makeTestSession } from "../core/test-session.ts"
+import { serverStateAtom } from "../modules/server/atoms/server-state.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { builtinPlugins } from "./builtin-plugins.ts"
 import { PluginsProvider } from "./plugin-host.tsx"
@@ -173,4 +175,72 @@ test("a branch name too long for the row keeps its gap after the worktree icon",
   expect(branchLabel.scrollWidth).toBeGreaterThan(branchLabel.clientWidth)
   const branch = branchItem.getBoundingClientRect()
   expect(branch.left - icon.right).toBeGreaterThanOrEqual(4)
+})
+
+test("a tab list that cannot load says so with Retry, and Retry shows the sessions", async () => {
+  const server = makeFakeServer({
+    project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
+  server.failCalls("tab.list")
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <SidebarTabs />
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+
+  await expect.element(page.getByText("The sessions could not be loaded.")).toBeVisible()
+  expect(page.getByText(/No sessions in p/).query()).toBeNull()
+
+  server.recoverCalls("tab.list")
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByText(/No sessions in p yet/)).toBeVisible()
+  expect(page.getByText("The sessions could not be loaded.").query()).toBeNull()
+})
+
+test("no error shows in the list while the server restarts, since the window already says so", async () => {
+  const server = makeFakeServer({
+    project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
+  server.failCalls("tab.list")
+  await render(
+    <RegistryProvider
+      initialValues={[
+        [serverClientLayerAtom, server.layer],
+        [serverStateAtom, { kind: "restarting" }],
+      ]}
+    >
+      <PluginsProvider plugins={builtinPlugins}>
+        <SidebarTabs />
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+
+  await vi.waitFor(() => expect(server.callsOf("tab.list")).toBeGreaterThan(0))
+  await expect.element(page.getByRole("region", { name: "Sessions" })).toBeVisible()
+  expect(page.getByRole("alert").query()).toBeNull()
+})
+
+test("Retry on a session feed that failed clears the error once the feed runs again", async () => {
+  const server = makeFakeServer({
+    project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
+  server.sessions.set("s1", makeTestSession({ id: "s1", title: "First" }))
+  server.openTab("s1")
+  server.failCalls("session.watch")
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <SidebarTabs />
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+  await expect.element(page.getByText("The sessions could not be loaded.")).toBeVisible()
+
+  server.recoverCalls("session.watch")
+  await page.getByRole("button", { name: "Retry" }).click()
+
+  await expect.element(page.getByText("First", { exact: true })).toBeVisible()
+  expect(page.getByRole("alert").query()).toBeNull()
 })

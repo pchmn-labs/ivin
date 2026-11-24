@@ -21,7 +21,7 @@ import {
   useSessionLocation,
   useSessions,
   useTabs,
-  useTabsLoaded,
+  useSessionListStatus,
   type Session,
 } from "@ivin/plugin-api/ui"
 import { openSessions } from "./rules/open-sessions.ts"
@@ -106,7 +106,7 @@ function SessionsPanel() {
   const { projects, selectedPath } = useProjects()
   const sessions = useSessions()
   const tabs = useTabs()
-  const tabsLoaded = useTabsLoaded()
+  const { loaded: tabsLoaded, failed, retry } = useSessionListStatus()
   const selectedSessionId = useSelectedSessionId()
   const projectName = projects.find((project) => project.path === selectedPath)?.name ?? ""
   const inProject = sessions.filter((session) => session.projectPath === selectedPath)
@@ -114,7 +114,18 @@ function SessionsPanel() {
 
   return (
     <Stack as="nav" aria-label="Sessions" direction="column">
-      {tabsLoaded && tabs.length === 0 && (
+      {failed && (
+        <ErrorMessage
+          message={
+            open.length === 0 ? "The sessions could not be loaded." : "Sessions may be out of date."
+          }
+          onRetry={retry}
+        />
+      )}
+      {!failed && (!tabsLoaded || (tabs.length > 0 && open.length === 0)) && (
+        <ListSection label="Sessions" loading />
+      )}
+      {tabsLoaded && !failed && tabs.length === 0 && (
         <Text as="p" size="sm" tone="faint">
           {inProject.length === 0
             ? `No sessions in ${projectName} yet. Start one with New session.`

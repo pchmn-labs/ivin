@@ -584,3 +584,18 @@ test("a transcript closed after its turn ended opens with the sent message and i
     expect(inView("the answer")).toBe(true)
   })
 })
+
+test("a session with no message yet says so", async () => {
+  const server = makeFakeServer()
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <div style={{ position: "relative", height: 300 }}>
+        <PluginsProvider plugins={builtinPlugins}>
+          <TranscriptView sessionId="s1" />
+        </PluginsProvider>
+      </div>
+    </RegistryProvider>,
+  )
+
+  await expect.element(page.getByText("No messages yet. Write to the agent below.")).toBeVisible()
+})
