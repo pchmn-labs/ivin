@@ -14,3 +14,7 @@ updates:
     groups:
       npm:
         patterns: ["*"]
+    ignore:
+      # ADR-0008 ships pnpm 11, a JavaScript package, not pnpm 12's native executable.
+      - dependency-name: pnpm
+        update-types: ["version-update:semver-major"]
