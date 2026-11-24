@@ -26,3 +26,13 @@ test("a folded disclosure's content is not in the page until it is unfolded", as
   await page.getByText("Output").click()
   await expect.element(page.getByText("file contents")).not.toBeInTheDocument()
 })
+
+test("a summary given as a function gets whether the disclosure is open", async () => {
+  await render(
+    <Disclosure summary={(open) => (open ? "Hide output" : "Show output")}>
+      file contents
+    </Disclosure>,
+  )
+  await page.getByText("Show output").click()
+  await expect.element(page.getByText("Hide output")).toBeVisible()
+})

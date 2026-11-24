@@ -149,6 +149,22 @@ test("the panel folds and unfolds its rows", async () => {
   await expect.element(page.getByText("Add search")).toBeVisible()
 })
 
+test("the head counts the sessions that need you only while the panel is folded", async () => {
+  await mountPanel([session("waits", "Write the post", "/blog", "waiting")], null)
+  await expect.element(page.getByText("Write the post")).toBeVisible()
+  expect(page.getByText(/1 needs you/).query()).toBeNull()
+
+  await page.getByText(/^Working ·/).click()
+  await expect.element(page.getByText(/1 needs you/)).toBeVisible()
+})
+
+test("the groups' labels are for screen readers only", async () => {
+  await mountPanel([session("runs", "Add search", "/shop", "working")], null)
+
+  const label = group("Running").getByRole("heading").element()
+  expect(label.getBoundingClientRect().width).toBeLessThanOrEqual(1)
+})
+
 test("the panel is absent when no session outside the one on screen runs or waits", async () => {
   await mountPanel(
     [
