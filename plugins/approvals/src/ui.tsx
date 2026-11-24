@@ -90,7 +90,11 @@ function PendingSheet({
       tone="attention"
       title="Approval needed"
       detail={formatToolInput(item.name, item.input)}
-      hint="↑↓ to choose, Enter to answer, Esc to deny"
+      keys={[
+        { key: "↑↓", label: "Choose" },
+        { key: "↵", label: "Answer" },
+        { key: "Esc", label: "Deny" },
+      ]}
       data-testid="approval-sheet"
     >
       <OptionList

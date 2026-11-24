@@ -140,11 +140,6 @@
   white-space: nowrap;
 }
 
-.iv-column-menu__keys {
-  flex: none;
-  white-space: nowrap;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .iv-column-menu {
     transition: none;
