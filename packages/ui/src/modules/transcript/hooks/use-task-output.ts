@@ -1,7 +1,8 @@
 import { useAtomRefresh, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { useEffect } from "react"
-import { taskOutputOf, type TaskItem } from "../atoms/background-tasks.ts"
+import { taskOutputOf } from "../atoms/background-tasks.ts"
+import type { TaskItem } from "../rules/background-tasks.ts"
 
 const POLL_MS = 1000
 

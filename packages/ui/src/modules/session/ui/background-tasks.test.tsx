@@ -12,13 +12,19 @@ import { makeTestSession } from "../../../core/test-session.ts"
 import { SessionView } from "./session-view.tsx"
 
 const base = { sessionId: "s1", at: 0 }
-const review = { taskId: "k1", kind: "agent", description: "Review the diff" } as const
-const tests = { taskId: "k2", kind: "command", description: "End-to-end tests" } as const
+const listed = (taskId: string, kind: "agent" | "command", description: string) =>
+  ({
+    taskId,
+    kind,
+    description,
+    itemId: `task-${taskId}`,
+    toolCallId: `call-${taskId}`,
+    at: 0,
+  }) as const
+const review = listed("k1", "agent", "Review the diff")
+const tests = listed("k2", "command", "End-to-end tests")
 
-const task = (
-  position: number,
-  { taskId, kind, description }: typeof review | typeof tests,
-): TranscriptItem => ({
+const task = (position: number, { taskId, kind, description }: typeof review): TranscriptItem => ({
   ...base,
   id: `task-${taskId}`,
   position,
@@ -124,6 +130,48 @@ test("a session in background folds its tasks under the last turn, and its steps
   await expect.element(page.getByText("Review the diff")).toBeVisible()
   await expect.element(page.getByText("End-to-end tests")).toBeVisible()
   await expect.element(page.getByText("Both run in the background.")).toBeVisible()
+})
+
+test("a task started before the loaded page of the transcript still shows in the fold and its sheet", async () => {
+  const later = Array.from({ length: 80 }, (_, i): TranscriptItem => ({
+    ...base,
+    id: `later-${i}`,
+    position: 10 + i,
+    type: "message",
+    role: "assistant",
+    text: `later ${i}`,
+    images: [],
+    steer: false,
+  }))
+  const server = makeFakeServer()
+  server.openProject("/p")
+  server.sessions.set(
+    "s1",
+    makeTestSession({
+      id: "s1",
+      title: "Run the tests",
+      projectPath: "/p",
+      started: true,
+      status: "in_background",
+      backgroundTasks: [tests],
+    }),
+  )
+  server.seedItems("s1", [...items, ...later])
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+          <SessionView projectPath="/p" sessionId="s1" />
+        </div>
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+  await expect.element(page.getByText("later 79", { exact: true })).toBeInTheDocument()
+  await line().click()
+
+  await expect.element(page.getByText("End-to-end tests")).toBeVisible()
+  await page.getByTestId("task-details").click()
+  await expect.element(page.getByTestId("task-sheet")).toBeVisible()
 })
 
 test("the fold stays while the agent works again with tasks running, and goes with the last task", async () => {

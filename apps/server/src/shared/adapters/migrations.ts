@@ -223,6 +223,22 @@ export const migrations: readonly Migration[] = [
     version: 23,
     sql: "ALTER TABLE sessions ADD COLUMN background_tasks TEXT NOT NULL DEFAULT '[]'",
   },
+  {
+    version: 24,
+    sql: `UPDATE sessions SET background_tasks = (
+      SELECT json_group_array(json_object(
+        'taskId', json_extract(i.payload, '$.taskId'),
+        'kind', json_extract(i.payload, '$.kind'),
+        'description', json_extract(i.payload, '$.description'),
+        'itemId', i.id,
+        'toolCallId', json_extract(i.payload, '$.toolCallId'),
+        'at', json_extract(i.payload, '$.at')
+      ))
+      FROM json_each(sessions.background_tasks) t
+      JOIN transcript_items i ON i.session_id = sessions.id AND i.type = 'task'
+        AND json_extract(i.payload, '$.taskId') = json_extract(t.value, '$.taskId')
+    )`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

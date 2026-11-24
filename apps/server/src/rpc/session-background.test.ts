@@ -119,7 +119,7 @@ const itemsOf = (db: DatabaseSync, sessionId: string, type: string) =>
       .all(sessionId, type) as { payload: string }[]
   ).map((row) => JSON.parse(row.payload) as Record<string, unknown>)
 
-test("a turn that ends while a task runs leaves the session in background, listing the task", async () => {
+test("a turn that ends while a task runs leaves the session in background, listing the task and its item", async () => {
   const db = newDatabase()
   const session = await withServer(db, [turn], {}, (client) =>
     Effect.gen(function* () {
@@ -128,8 +128,16 @@ test("a turn that ends while a task runs leaves the session in background, listi
       return yield* untilSession(client, created.id, (s) => s.status === "in_background")
     }),
   )
+  const [item] = itemsOf(db, session.id, "task")
   expect(session.backgroundTasks).toEqual([
-    { taskId: "k1", kind: "command", description: "Task k1" },
+    {
+      taskId: "k1",
+      kind: "command",
+      description: "Task k1",
+      itemId: item!["id"],
+      toolCallId: item!["toolCallId"],
+      at: item!["at"],
+    },
   ])
 })
 

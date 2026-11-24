@@ -1,18 +1,17 @@
 import { Effect } from "effect"
 import { Atom, AsyncResult } from "effect/reactivity"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
+import type { TaskItem } from "../rules/background-tasks.ts"
 import { strongFamily } from "@ivin/state/strong-family"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 import { transcriptOf } from "./get-items.ts"
-
-export type TaskItem = Extract<TranscriptItem, { type: "task" }>
 
 // The task whose detail the sheet shows, by session; null while the sheet is closed.
 export const openTaskOf = strongFamily((_sessionId: string) =>
   Atom.keepAlive(Atom.make<string | null>(null)),
 )
 
-// The session's tasks, running or ended, in the order they started.
+// The loaded page's tasks, running or ended, in the order they started.
 export const tasksOf = strongFamily((sessionId: string) =>
   Atom.readable((get) =>
     get(transcriptOf(sessionId).list.items).filter(

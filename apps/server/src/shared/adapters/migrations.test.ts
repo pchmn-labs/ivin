@@ -241,3 +241,38 @@ test("stored events lose their raw line and keep the rest of their payload", () 
     { payload: '{"type":"interruption"}' },
   ])
 })
+
+test("a stored background task gets its item's id, tool call and start", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 23)))
+  db.exec(
+    `INSERT INTO sessions (id, project_path, title, created_at, last_activity_at, background_tasks)
+     VALUES ('s', '/p', 't', 0, 0, '[{"taskId":"k1","kind":"command","description":"Build"}]'),
+            ('idle', '/p', 't', 0, 0, '[]');
+     INSERT INTO transcript_items (id, session_id, position, type, payload) VALUES
+       ('i1', 's', 3, 'task', '{"id":"i1","type":"task","taskId":"k1","toolCallId":"t1","kind":"command","description":"Build","at":42}')`,
+  )
+
+  Effect.runSync(runMigrations(db))
+
+  const tasks = db.prepare("SELECT id, background_tasks FROM sessions ORDER BY id").all() as {
+    id: string
+    background_tasks: string
+  }[]
+  expect(tasks.map((row) => [row.id, JSON.parse(row.background_tasks)])).toEqual([
+    ["idle", []],
+    [
+      "s",
+      [
+        {
+          taskId: "k1",
+          kind: "command",
+          description: "Build",
+          itemId: "i1",
+          toolCallId: "t1",
+          at: 42,
+        },
+      ],
+    ],
+  ])
+})

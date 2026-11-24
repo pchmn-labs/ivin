@@ -24,6 +24,11 @@ export const BackgroundTask = Schema.Struct({
   taskId: Schema.String,
   kind: TaskKind,
   description: Schema.String,
+  // The task's transcript item, which can sit before the page the window holds.
+  itemId: Schema.String,
+  toolCallId: Schema.String,
+  // Epoch milliseconds of its start.
+  at: Schema.Number,
 })
 export type BackgroundTask = typeof BackgroundTask.Type
 

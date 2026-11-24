@@ -85,7 +85,7 @@ function OpenSession({
         </div>
       )}
       <div className="iv-session-view__dock" data-task-sheet={taskOpen ? "" : undefined}>
-        <TaskSheet sessionId={sessionId} />
+        <TaskSheet sessionId={sessionId} background={session?.backgroundTasks ?? []} />
         <Slot key={sessionId} slot="session.composer" props={{ sessionId }} />
       </div>
       <ImageViewer sessionId={sessionId} />
