@@ -1,10 +1,15 @@
 import { useDeferredValue, useMemo } from "react"
-import { ErrorMessage, Tree, type ActionFailure, type Session } from "@ivin/plugin-api/ui"
+import {
+  EmptyMessage,
+  ErrorMessage,
+  Tree,
+  type ActionFailure,
+  type Session,
+} from "@ivin/plugin-api/ui"
 import { useFileList } from "../hooks/use-file-list.ts"
 import { filterRows } from "../rules/filter-rows.ts"
 import type { gitMarks } from "../rules/git-marks.ts"
 import { FOLDER_DELETED, LIST_TRUNCATED } from "../rules/messages.ts"
-import { Message } from "./message.tsx"
 import { OpenFailure } from "./open-failure.tsx"
 
 export function FilteredContent({
@@ -29,7 +34,7 @@ export function FilteredContent({
     [listing, query, marks],
   )
   if (listing === null) return null
-  if (listing.kind === "deleted") return <Message>{FOLDER_DELETED}</Message>
+  if (listing.kind === "deleted") return <EmptyMessage>{FOLDER_DELETED}</EmptyMessage>
   if (listing.kind === "failed") {
     return (
       <ErrorMessage
@@ -41,9 +46,9 @@ export function FilteredContent({
   return (
     <>
       <OpenFailure failure={openFailure} open={open} />
-      {listing.truncated && <Message>{LIST_TRUNCATED}</Message>}
+      {listing.truncated && <EmptyMessage>{LIST_TRUNCATED}</EmptyMessage>}
       {rows.length === 0 ? (
-        <Message>{`No file matches “${filter.trim()}”.`}</Message>
+        <EmptyMessage>{`No file matches “${filter.trim()}”.`}</EmptyMessage>
       ) : (
         <Tree
           label="Files"

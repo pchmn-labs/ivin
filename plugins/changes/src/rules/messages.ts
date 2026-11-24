@@ -17,3 +17,11 @@ export const committedMessage = (listing: CommittedChangeListing): string | null
       return null
   }
 }
+
+export const nothingChangedMessage = (
+  uncommitted: number,
+  listing: CommittedChangeListing,
+): string | null =>
+  uncommitted === 0 && listing.kind === "listed" && listing.changes.length === 0
+    ? `No changes since ${listing.base}. What the agent changes shows up here.`
+    : null

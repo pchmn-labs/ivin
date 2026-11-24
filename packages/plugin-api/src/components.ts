@@ -352,6 +352,11 @@ export interface OptionListProps {
   readonly autoFocus?: boolean
 }
 
+export interface EmptyMessageProps {
+  readonly "data-testid"?: string
+  readonly children: ReactNode
+}
+
 export interface ErrorMessageProps {
   readonly message: string
   readonly onRetry?: () => void
@@ -605,6 +610,7 @@ export interface HostComponents {
   readonly OptionList: ComponentType<OptionListProps>
   readonly ChoiceList: ComponentType<ChoiceListProps>
   readonly Steps: ComponentType<StepsProps>
+  readonly EmptyMessage: ComponentType<EmptyMessageProps>
   readonly ErrorMessage: ComponentType<ErrorMessageProps>
   readonly ListRow: ComponentType<ListRowProps>
   readonly ListSection: ComponentType<ListSectionProps>
@@ -651,6 +657,7 @@ export const KeyHints = hostComponent((c) => c.KeyHints)
 export const OptionList = hostComponent((c) => c.OptionList)
 export const ChoiceList = hostComponent((c) => c.ChoiceList)
 export const Steps = hostComponent((c) => c.Steps)
+export const EmptyMessage = hostComponent((c) => c.EmptyMessage)
 export const ErrorMessage = hostComponent((c) => c.ErrorMessage)
 export const ListRow = hostComponent((c) => c.ListRow)
 export const ChangeList = hostComponent((c) => c.ChangeList)

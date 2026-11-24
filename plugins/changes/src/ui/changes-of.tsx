@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ChangeList,
+  EmptyMessage,
   ErrorMessage,
   Stack,
   useChanges,
@@ -18,11 +19,10 @@ import { changeItems } from "../rules/change-items.ts"
 import type { Discarding } from "../rules/discarding.ts"
 import { AREA, COMMITTED, UNCOMMITTED } from "../rules/groups.ts"
 import { listError } from "../rules/list-error.ts"
-import { FOLDER_DELETED, committedMessage } from "../rules/messages.ts"
+import { FOLDER_DELETED, committedMessage, nothingChangedMessage } from "../rules/messages.ts"
 import type { OnScreen } from "../rules/on-screen.ts"
 import { DiscardDialog } from "./discard-dialog.tsx"
 import { ListingFailure } from "./listing-failure.tsx"
-import { Message } from "./message.tsx"
 
 interface OpenFailure extends ActionFailure {
   readonly retry: () => void
@@ -124,17 +124,18 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
     case "loading":
       return null
     case "deleted":
-      return <Message>{FOLDER_DELETED}</Message>
+      return <EmptyMessage>{FOLDER_DELETED}</EmptyMessage>
     case "not_repository":
       return (
-        <Message>
+        <EmptyMessage>
           This working folder is not in a git repository, so it has no changes to show.
-        </Message>
+        </EmptyMessage>
       )
     case "failed":
       return <ListingFailure listing={listing} retry={retry} />
     case "listed": {
       const below = committedMessage(committed.listing)
+      const nothingChanged = nothingChangedMessage(changes.length, committed.listing)
       return (
         <Stack direction="column" gap={3}>
           {openFailure !== null && (
@@ -143,8 +144,11 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
               {...(openFailure.retryable && { onRetry: openFailure.retry })}
             />
           )}
-          {changes.length === 0 && (
-            <Message>No uncommitted changes. What the agent changes shows up here.</Message>
+          {nothingChanged !== null && <EmptyMessage>{nothingChanged}</EmptyMessage>}
+          {changes.length === 0 && nothingChanged === null && (
+            <EmptyMessage>
+              No uncommitted changes. What the agent changes shows up here.
+            </EmptyMessage>
           )}
           {groups.length > 0 && (
             <ChangeList
@@ -167,7 +171,7 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
               }}
             />
           )}
-          {below !== null && <Message>{below}</Message>}
+          {below !== null && nothingChanged === null && <EmptyMessage>{below}</EmptyMessage>}
           {committed.listing.kind === "failed" && (
             <ListingFailure listing={committed.listing} retry={committed.retry} />
           )}

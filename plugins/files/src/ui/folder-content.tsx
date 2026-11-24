@@ -1,8 +1,7 @@
-import { ErrorMessage, Tree, type ActionFailure } from "@ivin/plugin-api/ui"
+import { EmptyMessage, ErrorMessage, Tree, type ActionFailure } from "@ivin/plugin-api/ui"
 import { FOLDER_DELETED } from "../rules/messages.ts"
 import type { FolderState, FolderTree } from "../rules/folder-tree.ts"
 import type { treeRows } from "../rules/tree-rows.ts"
-import { Message } from "./message.tsx"
 import { OpenFailure } from "./open-failure.tsx"
 
 export function FolderContent({
@@ -24,7 +23,7 @@ export function FolderContent({
 }) {
   const root: FolderState | undefined = tree.folders.get("")
   if (root?.kind === "deleted") {
-    return <Message>{FOLDER_DELETED}</Message>
+    return <EmptyMessage>{FOLDER_DELETED}</EmptyMessage>
   }
   if (root?.kind === "failed") {
     return (
@@ -35,7 +34,7 @@ export function FolderContent({
     )
   }
   if (root?.kind === "listed" && root.entries.length === 0) {
-    return <Message>This folder is empty.</Message>
+    return <EmptyMessage>This folder is empty.</EmptyMessage>
   }
 
   const failedFolders: Array<{ path: string; text: string; retryable: boolean }> = []
