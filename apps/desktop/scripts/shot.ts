@@ -519,6 +519,43 @@ try {
   await window.getByRole("switch", { name: "Show folder icons", checked: true }).waitFor()
   await window.getByRole("button", { name: "Back to sessions" }).click()
   await sidebar.getByRole("treeitem", { name: "src", exact: true }).locator("img").waitFor()
+  // A worktree deleted while its agent waits on the user: the picker comes once the turn ends.
+  await sidebar.getByRole("tab", { name: /^Sessions/ }).click()
+  await sidebar.getByRole("button", { name: "New session" }).first().click()
+  await window.getByTestId("working-folder-picker").click()
+  await window.getByRole("option", { name: /docs\/adr/ }).click()
+  await sendMessage(window, "Document the order totals")
+  await window
+    .getByTestId("transcript")
+    .getByText(/^The scripted answer/)
+    .waitFor()
+  await sendMessage(window, "Fix the empty order page")
+  await window
+    .getByTestId("transcript")
+    .getByText(/^Worked for .* tool calls/)
+    .waitFor()
+  await sendMessage(window, "Add tests for the order totals")
+  await window.getByTestId("question-sheet").waitFor()
+  execFileSync("git", ["worktree", "remove", "--force", join(repo, ".worktrees", "docs-adr")], {
+    cwd: repo,
+    env: gitEnv,
+  })
+  // The server checks the folder when the session's tab opens.
+  await window.getByTestId("tab").first().click()
+  await window.getByTestId("tab").filter({ hasText: "Document the order totals" }).click()
+  await window.getByTestId("session-location").getByText("Worktree deleted").waitFor()
+  await window.getByTestId("question-sheet").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("worktree-deleted-while-waiting")
+  await window.keyboard.press("1")
+  await window.getByText("Choose one or more").waitFor()
+  await window.keyboard.press("Space")
+  await window.keyboard.press("Enter")
+  await window.getByText("Where should the agent continue?").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("worktree-deleted-picker")
+  await window.getByRole("button", { name: "Continue here" }).click()
+  await window.getByRole("textbox", { name: "Message" }).waitFor()
   // A repository git cannot read: the lists and the status fail instead of showing nothing.
   appendFileSync(join(repo, ".git/config"), "[broken\n")
   // The status is read again after a change on disk.
