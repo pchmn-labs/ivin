@@ -8,9 +8,10 @@ const USER_SCROLL_MS = 300
 // The glide covers 95% of the way in three times this.
 const GLIDE_MS = 50
 
+const UP_KEYS = new Set(["ArrowUp", "PageUp", "Home"])
+
 const reducedMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches
 
-// The first row drawn under the top of the view, and how far below that top it starts.
 const readingPlace = (view: HTMLElement) => {
   const viewTop = view.getBoundingClientRect().top
   for (const row of view.querySelectorAll("[data-index]")) {
@@ -134,6 +135,11 @@ export function useFollowTranscript({
     const up = view.scrollTop < lastTop.current - 1
     lastTop.current = view.scrollTop
     const byUser = scrollbarHeld.current || performance.now() - userAt.current < USER_SCROLL_MS
+    const id = anchor.current
+    if (id !== undefined && following.current) {
+      const top = rowTop(view, id)
+      if (top !== null && Math.abs(top) <= 1) stopFollowing()
+    }
     if (atEnd) {
       if (anchor.current === undefined) following.current = true
     } else if (up && byUser) {
@@ -147,8 +153,15 @@ export function useFollowTranscript({
     userAt.current = performance.now()
     if (event.deltaY < 0) stopFollowing()
   }, [])
-  const onInput = useCallback(() => {
+  // A touch drag scrolls either way; reaching the end again follows again.
+  const onTouch = useCallback(() => {
     userAt.current = performance.now()
+    stopFollowing()
+  }, [])
+  // Like the wheel, a key or a touch must stop following before a growing row pulls the view back.
+  const onKeyDown = useCallback((event: KeyboardEvent) => {
+    userAt.current = performance.now()
+    if (UP_KEYS.has(event.key) || (event.key === " " && event.shiftKey)) stopFollowing()
   }, [])
   const onPointerDown = useCallback((event: PointerEvent) => {
     if (event.target === scroller.current) scrollbarHeld.current = true
@@ -176,8 +189,8 @@ export function useFollowTranscript({
       const previous = scroller.current
       previous?.removeEventListener("scroll", onScroll)
       previous?.removeEventListener("wheel", onWheel)
-      previous?.removeEventListener("touchmove", onInput)
-      previous?.removeEventListener("keydown", onInput)
+      previous?.removeEventListener("touchmove", onTouch)
+      previous?.removeEventListener("keydown", onKeyDown)
       previous?.removeEventListener("pointerdown", onPointerDown)
       previous?.removeEventListener("click", onClick)
       window.removeEventListener("pointerup", onPointerUp)
@@ -188,8 +201,8 @@ export function useFollowTranscript({
       if (!view) return
       view.addEventListener("scroll", onScroll)
       view.addEventListener("wheel", onWheel, { passive: true })
-      view.addEventListener("touchmove", onInput, { passive: true })
-      view.addEventListener("keydown", onInput)
+      view.addEventListener("touchmove", onTouch, { passive: true })
+      view.addEventListener("keydown", onKeyDown)
       view.addEventListener("pointerdown", onPointerDown)
       view.addEventListener("click", onClick)
       window.addEventListener("pointerup", onPointerUp)
@@ -197,7 +210,7 @@ export function useFollowTranscript({
       watchedFooter.current = null
       watchFooter()
     },
-    [onScroll, onWheel, onInput, onPointerDown, onPointerUp, onClick],
+    [onScroll, onWheel, onTouch, onKeyDown, onPointerDown, onPointerUp, onClick],
   )
 
   const turn = lastTurnMessageId(rows)

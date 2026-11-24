@@ -234,9 +234,12 @@ export const migrations: readonly Migration[] = [
         'toolCallId', json_extract(i.payload, '$.toolCallId'),
         'at', json_extract(i.payload, '$.at')
       ))
-      FROM json_each(sessions.background_tasks) t
-      JOIN transcript_items i ON i.session_id = sessions.id AND i.type = 'task'
-        AND json_extract(i.payload, '$.taskId') = json_extract(t.value, '$.taskId')
+      FROM (
+        SELECT i.id, i.payload FROM json_each(sessions.background_tasks) t
+        JOIN transcript_items i ON i.session_id = sessions.id AND i.type = 'task'
+          AND json_extract(i.payload, '$.taskId') = json_extract(t.value, '$.taskId')
+        ORDER BY t.key
+      ) i
     )`,
   },
 ]

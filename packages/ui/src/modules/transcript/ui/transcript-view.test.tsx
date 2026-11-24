@@ -265,14 +265,8 @@ test("scrolled up while the agent works, the transcript stays put", async () => 
 test("scrolled back to the end, the transcript follows its end again", async () => {
   const server = makeFakeServer()
   await sendQuestion(server)
-  ;(globalThis as any).LOG = []
   server.pushItem(longAnswer(41))
-  await expect
-    .poll(fromEnd)
-    .toBeLessThan(2)
-    .catch(() => {
-      throw new Error(JSON.stringify([fromEnd(), (globalThis as any).LOG]))
-    })
+  await expect.poll(fromEnd).toBeLessThan(2)
   const scrolled = scrollEvent()
   scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -200 }))
   scroller().scrollTop -= 200
@@ -283,15 +277,9 @@ test("scrolled back to the end, the transcript follows its end again", async () 
     scroller().dispatchEvent(new Event("scroll"))
     expect(fromEnd()).toBeLessThan(2)
   })
-  ;(globalThis as any).LOG = []
   server.pushItem(message(42))
   await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
-  await expect
-    .poll(fromEnd)
-    .toBeLessThan(2)
-    .catch(() => {
-      throw new Error(JSON.stringify([fromEnd(), (globalThis as any).LOG]))
-    })
+  await expect.poll(fromEnd).toBeLessThan(2)
 })
 
 const thinking = (position: number): TranscriptItem => ({
@@ -534,15 +522,10 @@ test("a long answer that came while the transcript was closed opens at its end",
   const server = makeFakeServer()
   const screen = await sendMessage(server)
 
-  ;(globalThis as any).LOG = []
   await closeAndOpen(screen, server, () => server.pushItem(longAnswer(41)), true)
 
   await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
-  await vi
-    .waitFor(() => expect(fromEnd()).toBeLessThan(2))
-    .catch(() => {
-      throw new Error(JSON.stringify([fromEnd(), (globalThis as any).LOG]))
-    })
+  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
 })
 
 test("a session with no message yet says so", async () => {

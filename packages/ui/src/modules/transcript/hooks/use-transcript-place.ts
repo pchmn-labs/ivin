@@ -22,7 +22,6 @@ export function useRestoredPlace({
   return restored
 }
 
-// `following`, not the scroll position: a glide toward the end may not have reached it yet.
 export function useSavePlace({
   sessionId,
   firstIndex,
