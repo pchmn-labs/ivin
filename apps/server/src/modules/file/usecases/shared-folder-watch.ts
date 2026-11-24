@@ -5,8 +5,8 @@ import { makeSharedStreams } from "./shared-streams.ts"
 export class SharedFolderWatch extends Context.Service<
   SharedFolderWatch,
   {
-    // One watcher per folder, opened with the first reader and closed with the last; the `skip`
-    // of the reader that opens it applies.
+    // One watcher per folder, opened with the first reader and closed with the last; the
+    // latest `skip` passed for the folder applies.
     readonly subscribe: (
       folder: string,
       skip?: (path: string) => boolean,

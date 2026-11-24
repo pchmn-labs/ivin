@@ -12,7 +12,10 @@ const firstLines = (text: string) => {
     end = text.indexOf("\n", end + 1)
     if (end === -1) return null
   }
-  return { shown: text.slice(0, end), total: text.split("\n").length }
+  return {
+    shown: text.slice(0, end),
+    total: text.split("\n").length - (text.endsWith("\n") ? 1 : 0),
+  }
 }
 
 export function CodeBlock({ text, "data-testid": testId }: CodeBlockProps) {

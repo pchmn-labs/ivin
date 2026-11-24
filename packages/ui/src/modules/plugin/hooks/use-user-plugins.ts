@@ -20,7 +20,6 @@ export function useUserPlugins(importBundle: ImportBundle) {
 
   // Started once per bundle, so a longer list neither imports nor reports a plugin twice.
   const loads = useRef(new Map<string, Promise<UiPluginEntry | null>>())
-  // A plugin whose activate threw stays off until its bundle changes or the window reloads.
   const failed = useRef(new Set<string>())
   const keys = useRef(new WeakMap<UiPluginEntry, string>())
 

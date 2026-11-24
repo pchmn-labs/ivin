@@ -2,8 +2,6 @@ import { Effect, Stream } from "effect"
 import { Atom } from "effect/reactivity"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 
-// Not kept alive: a file shown again is read again. While shown, it is read again after each
-// batch of changes that holds its path; a failed read ends the stream, and Retry starts it again.
 const family = Atom.family((key: string) => {
   const [sessionId = "", , path = ""] = key.split("\n")
   return serverRuntime.atom(
