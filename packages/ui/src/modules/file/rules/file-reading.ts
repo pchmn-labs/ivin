@@ -1,9 +1,10 @@
-import { FILE_SIZE_LIMIT, type FileContent, type FileNotRead } from "@ivin/contracts/file"
+import type { FileContent, FileNotRead } from "@ivin/contracts/file"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 import { fileName } from "./file-name.ts"
 
 export type FileReading =
   | { readonly kind: "text"; readonly text: string; readonly version: string }
+  | { readonly kind: "image"; readonly src: string; readonly bytes: number }
   | { readonly kind: "message"; readonly text: string; readonly retryable: boolean }
 
 const message = (text: string, retryable = false): FileReading => ({
@@ -14,14 +15,38 @@ const message = (text: string, retryable = false): FileReading => ({
 
 const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, "")} MB`
 
+export const byteSize = (bytes: number): string =>
+  bytes < 1024
+    ? `${bytes} B`
+    : bytes < 1024 * 1024
+      ? `${Math.round(bytes / 1024)} KB`
+      : megabytes(bytes)
+
+const base64Bytes = (data: string) =>
+  (data.length * 3) / 4 - (data.endsWith("==") ? 2 : data.endsWith("=") ? 1 : 0)
+
+export const isSvgPath = (path: string): boolean => /\.svg$/i.test(path)
+
+export const svgSource = (text: string): string =>
+  `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`
+
+export const imageNotShown = (path: string): string =>
+  `${fileName(path)} cannot be shown: its data is damaged or in a format ivin cannot read.`
+
 export const fileReading = (content: FileContent, path: string): FileReading => {
   const name = fileName(path)
   switch (content.kind) {
     case "text":
       return content
+    case "image":
+      return {
+        kind: "image",
+        src: `data:${content.mimeType};base64,${content.data}`,
+        bytes: base64Bytes(content.data),
+      }
     case "too_large":
       return message(
-        `${name} is ${megabytes(content.size)}, over the ${megabytes(FILE_SIZE_LIMIT)} ivin shows, so it is not shown.`,
+        `${name} is ${megabytes(content.size)}, over the ${megabytes(content.limit)} ivin shows, so it is not shown.`,
       )
     case "binary":
       return message(`${name} is a binary file, so it is not shown.`)

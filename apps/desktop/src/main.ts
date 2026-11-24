@@ -14,7 +14,7 @@ import {
 import { readFileSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
-import { delimiter, dirname, join } from "node:path"
+import { delimiter, dirname, isAbsolute, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { appMenuTemplate } from "./app-menu.ts"
 import {
@@ -28,6 +28,7 @@ import {
   RPC_PORT_REPLY,
   RPC_PORT_REQUEST,
   SERVER_STATE,
+  SHOW_IN_FOLDER,
   UPDATE_STATE,
 } from "./channels.ts"
 import { writeCliCommand } from "./cli-command.ts"
@@ -268,6 +269,10 @@ ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
   }
   const failure = await shell.openPath(file)
   return failure === "" ? null : `could not open ${file}: ${failure}`
+})
+
+ipcMain.handle(SHOW_IN_FOLDER, (_event, path: unknown) => {
+  if (typeof path === "string" && isAbsolute(path)) shell.showItemInFolder(path)
 })
 
 void app.whenReady().then(() => {

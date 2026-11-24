@@ -1,0 +1,32 @@
+.iv-segmented {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-bg-raised);
+}
+
+.iv-segmented__option {
+  height: 22px;
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-sm);
+  background: transparent;
+  color: var(--iv-text-muted);
+  font: inherit;
+  font-size: var(--iv-text-sm);
+  transition:
+    background-color var(--iv-duration-fast) var(--iv-ease-out),
+    color var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-segmented__option:hover {
+  background: var(--iv-bg-hover);
+}
+
+.iv-segmented__option[data-pressed] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}

@@ -10,6 +10,7 @@ import {
   RPC_PORT_REPLY,
   RPC_PORT_REQUEST,
   SERVER_STATE,
+  SHOW_IN_FOLDER,
   UPDATE_STATE,
 } from "./channels.ts"
 
@@ -28,6 +29,8 @@ ipcRenderer.on(RPC_PORT_REPLY, (event, id: unknown) => {
 contextBridge.exposeInMainWorld("ivin", {
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke(PICK_FOLDER),
   openSettingsFile: (): Promise<string | null> => ipcRenderer.invoke(OPEN_SETTINGS_FILE),
+  platform: process.platform,
+  showInFolder: (path: string): Promise<void> => ipcRenderer.invoke(SHOW_IN_FOLDER, path),
   getServerState: (): Promise<unknown> => ipcRenderer.invoke(GET_SERVER_STATE),
   restartServer: (): Promise<void> => ipcRenderer.invoke(RESTART_SERVER),
   onServerState: (listener: (state: unknown) => void): (() => void) => {

@@ -1,9 +1,18 @@
 import { Effect, Stream } from "effect"
 import { Atom } from "effect/reactivity"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
+import { isOutsidePath } from "../rules/file-link.ts"
 
 const family = Atom.family((key: string) => {
   const [sessionId = "", , path = ""] = key.split("\n")
+  if (isOutsidePath(path)) {
+    return serverRuntime.atom(
+      Effect.gen(function* () {
+        const client = yield* ServerClient
+        return yield* client["file.readOutsideFile"]({ sessionId, path })
+      }),
+    )
+  }
   return serverRuntime.atom(
     Stream.unwrap(
       Effect.gen(function* () {

@@ -1,5 +1,12 @@
-import { memo, useRef, type ComponentProps, type ComponentType } from "react"
-import ReactMarkdown, { type Components, type UrlTransform } from "react-markdown"
+import {
+  createContext,
+  memo,
+  useContext,
+  useRef,
+  type ComponentProps,
+  type ComponentType,
+} from "react"
+import ReactMarkdown, { type Components, type ExtraProps, type UrlTransform } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { CopyButton } from "../copy-button/copy-button.tsx"
 import "./markdown.css"
@@ -8,6 +15,8 @@ import { extendBlocks, splitBlocks } from "../../../modules/transcript/rules/spl
 export interface MarkdownLinkRendering {
   readonly component: ComponentType<ComponentProps<"a">>
   readonly urlTransform: UrlTransform
+  // Inside a code block, `useInCodeBlock` is true.
+  readonly code?: ComponentType<ComponentProps<"code"> & ExtraProps>
 }
 
 interface BlockProps {
@@ -15,11 +24,17 @@ interface BlockProps {
   readonly linkRendering: MarkdownLinkRendering | undefined
 }
 
+const InBlock = createContext(false)
+
+export const useInCodeBlock = () => useContext(InBlock)
+
 function MarkdownCode({ node: _node, ...props }: ComponentProps<"pre"> & { node?: unknown }) {
   const pre = useRef<HTMLPreElement>(null)
   return (
     <div className="iv-markdown__code">
-      <pre {...props} ref={pre} />
+      <InBlock.Provider value={true}>
+        <pre {...props} ref={pre} />
+      </InBlock.Provider>
       <CopyButton text={() => pre.current?.textContent ?? ""} />
     </div>
   )
@@ -27,7 +42,11 @@ function MarkdownCode({ node: _node, ...props }: ComponentProps<"pre"> & { node?
 
 const Block = memo(function Block({ source, linkRendering }: BlockProps) {
   const components: Components = linkRendering
-    ? { pre: MarkdownCode, a: linkRendering.component }
+    ? {
+        pre: MarkdownCode,
+        a: linkRendering.component,
+        ...(linkRendering.code && { code: linkRendering.code }),
+      }
     : { pre: MarkdownCode }
   return (
     <ReactMarkdown

@@ -58,6 +58,7 @@ export type IconName =
   | "app-window"
   | "collapse-all"
   | "eye"
+  | "lock"
   | "eye-slash"
   | "clock"
   | "diff"
@@ -261,6 +262,13 @@ export interface MarkdownProps {
   readonly text: string
   // Links to files of this session's working folder open beside its chat.
   readonly sessionId?: string
+}
+
+// A file path that opens the file beside the session's chat, as a file link in an answer does: a
+// path relative to the working folder, or absolute, with an optional line (`a.ts:42`).
+export interface FilePathProps {
+  readonly sessionId: string
+  readonly path: string
 }
 
 export interface KeyHintsProps {
@@ -587,6 +595,7 @@ export interface HostComponents {
   readonly CodeBlock: ComponentType<CodeBlockProps>
   readonly StatusMark: ComponentType<StatusMarkProps>
   readonly Markdown: ComponentType<MarkdownProps>
+  readonly FilePath: ComponentType<FilePathProps>
   readonly ActionSheet: ComponentType<ActionSheetProps>
   readonly KeyHints: ComponentType<KeyHintsProps>
   readonly OptionList: ComponentType<OptionListProps>
@@ -632,6 +641,7 @@ export const Disclosure = hostComponent((c) => c.Disclosure)
 export const CodeBlock = hostComponent((c) => c.CodeBlock)
 export const StatusMark = hostComponent((c) => c.StatusMark)
 export const Markdown = hostComponent((c) => c.Markdown)
+export const FilePath = hostComponent((c) => c.FilePath)
 export const ActionSheet = hostComponent((c) => c.ActionSheet)
 export const KeyHints = hostComponent((c) => c.KeyHints)
 export const OptionList = hostComponent((c) => c.OptionList)

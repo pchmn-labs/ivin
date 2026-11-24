@@ -1,6 +1,6 @@
 import { _electron as electron, type Locator } from "@playwright/test"
 import { execFileSync } from "node:child_process"
-import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import { appendFileSync, copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
 import { basename, dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeTempDir } from "../e2e/launch-app.ts"
@@ -403,6 +403,22 @@ try {
   await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").waitFor()
   await window.waitForTimeout(300)
   await shoot("open-file")
+  mkdirSync(join(repo, "assets"))
+  copyFileSync(join(desktopDir, "build/icon.png"), join(repo, "assets/logo.png"))
+  copyFileSync(join(desktopDir, "build/icon.svg"), join(repo, "assets/mark.svg"))
+  for (const [name, file] of [
+    ["image-file", "logo.png"],
+    ["svg-file", "mark.svg"],
+  ] as const) {
+    if (file === "logo.png")
+      await sidebar.getByRole("treeitem", { name: "assets", exact: true }).click()
+    await sidebar.getByRole("treeitem", { name: file, exact: true }).click()
+    await window.getByText(/^\d+ × \d+ · /).waitFor()
+    await window.waitForTimeout(300)
+    await shoot(name)
+  }
+  await sidebar.getByRole("treeitem", { name: "total.ts", exact: true }).click()
+  await window.getByRole("textbox", { name: "total.ts" }).getByText("formatTotal").waitFor()
   for (const [name, label] of [
     ["resize-files-card", "Resize the files card"],
     ["resize-sidebar", "Resize the sidebar"],
