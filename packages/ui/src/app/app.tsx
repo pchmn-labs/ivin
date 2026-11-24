@@ -40,6 +40,8 @@ import {
   settingsPageOpenAtom,
   settingsSectionAtom,
 } from "../modules/setting/atoms/settings-page.ts"
+import { useUpdateCommands } from "../modules/update/hooks/use-update-commands.ts"
+import { UpdateButton } from "../modules/update/ui/update-button.tsx"
 import { SettingsButton } from "../modules/setting/ui/settings-button.tsx"
 import { SettingsNav } from "../modules/setting/ui/settings-nav.tsx"
 import { SettingsPage } from "../modules/setting/ui/settings-page.tsx"
@@ -84,6 +86,7 @@ export function App() {
     focusBeforeSettings.current = focused instanceof HTMLElement ? focused : null
     setSettingsOpen(true)
   }
+  useUpdateCommands()
   useCommandHandler("settings.open", openSettings)
   useCommandHandler("cli.installInShell", () => {
     registry.set(settingsSectionAtom, "commandLine")
@@ -141,7 +144,12 @@ export function App() {
                     projectPath={projectPath}
                     sidebarOpen={sidebarOpen}
                     onToggleSidebar={toggleSidebar}
-                    extra={<SettingsButton />}
+                    extra={
+                      <>
+                        <UpdateButton />
+                        <SettingsButton />
+                      </>
+                    }
                   />
                 </div>
                 <div className="iv-app__card-body" data-layout={layout}>

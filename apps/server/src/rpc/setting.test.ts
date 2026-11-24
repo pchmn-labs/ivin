@@ -76,6 +76,7 @@ test("setting.set writes the value, and setting.watch and setting.get then give 
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
     agents: { stopWhenIdleMinutes: 10 },
+    updates: { automaticCheck: true },
   })
 })
 
@@ -100,6 +101,7 @@ test("an unknown path or a value of the wrong type is refused, and the file is u
     "files.folderIcons",
     "sidebar.layout",
     "agents.stopWhenIdleMinutes",
+    "updates.automaticCheck",
   ]
   expect(result.unknown).toMatchObject({
     _tag: "SettingPathUnknown",

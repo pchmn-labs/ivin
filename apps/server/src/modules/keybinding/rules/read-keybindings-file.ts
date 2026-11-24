@@ -3,7 +3,7 @@ import type {
   KeybindingsFileProblem,
   UserKeybindings,
 } from "@ivin/contracts/keybinding"
-import { parseJsonc } from "../../../shared/rules/parse-jsonc.ts"
+import { parseJsonc } from "@ivin/contracts/jsonc"
 
 type Read =
   | { readonly keybindings: ReadonlyArray<Keybinding> }

@@ -4,7 +4,7 @@ import {
   type SettingsFileProblem,
   type UserSettings,
 } from "@ivin/contracts/setting"
-import { parseJsonc } from "../../../shared/rules/parse-jsonc.ts"
+import { parseJsonc } from "@ivin/contracts/jsonc"
 
 class Invalid {
   constructor(readonly problem: SettingsFileProblem) {}
@@ -104,6 +104,14 @@ const read = (text: string | null): Settings => {
         "agents",
         "stopWhenIdleMinutes",
         defaultSettings.agents.stopWhenIdleMinutes,
+      ),
+    },
+    updates: {
+      automaticCheck: booleanOf(
+        file,
+        "updates",
+        "automaticCheck",
+        defaultSettings.updates.automaticCheck,
       ),
     },
   }

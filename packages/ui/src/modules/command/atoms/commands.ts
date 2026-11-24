@@ -33,6 +33,7 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "composer.choosePermissionMode", title: "Choose the permission mode", pluginId: null },
   { id: "settings.open", title: "Open settings", pluginId: null },
   { id: "settings.close", title: "Close settings", pluginId: null },
+  { id: "update.check", title: "Check for updates", pluginId: null },
   { id: "cli.installInShell", title: "Install the ivin command in your shell", pluginId: null },
   { id: "tree.focusPrevious", title: "Move up in the tree", pluginId: null },
   { id: "tree.focusNext", title: "Move down in the tree", pluginId: null },

@@ -9,6 +9,7 @@ export const Settings = Schema.Struct({
   agents: Schema.Struct({
     stopWhenIdleMinutes: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   }),
+  updates: Schema.Struct({ automaticCheck: Schema.Boolean }),
 })
 export type Settings = typeof Settings.Type
 
@@ -18,6 +19,7 @@ export const defaultSettings: Settings = {
   files: { folderIcons: true },
   sidebar: { layout: "rail" },
   agents: { stopWhenIdleMinutes: 10 },
+  updates: { automaticCheck: true },
 }
 
 const choicesOf = <Value extends string>(
@@ -112,6 +114,19 @@ export const settingSections: ReadonlyArray<SettingSection> = [
         description:
           "An agent whose session has had no turn for this long is stopped, which ends the background commands it started; an agent that still runs background tasks is left alone. The session stays as it was, and your next message starts the agent again. 0 keeps agents running until their tab closes.",
         count: { min: 0, unit: "minutes" },
+      },
+    ],
+  },
+  {
+    key: "updates",
+    title: "Updates",
+    description: "How ivin gets a new version of itself.",
+    settings: [
+      {
+        path: "updates.automaticCheck",
+        label: "Check for updates automatically",
+        description:
+          "ivin looks for a new release when it starts and every hour, downloads it in the background and replaces itself when you restart. Off, ivin sends no request until you run Check for updates.",
       },
     ],
   },
