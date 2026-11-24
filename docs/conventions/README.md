@@ -53,6 +53,8 @@ Beside the file they test, as `<file>.test.ts`. `rules/` are called directly; ea
 
 The `node` test project puts a failing `claude` first on the PATH, so a test that spawns Claude Code puts its own fake before it. `IVIN_TEST_CLAUDE=1` runs against the installed CLI.
 
+A test does not depend on timing: a browser test waits for what the user would see (`expect.element`, `expect.poll`), never for a fixed delay or a number of frames. The CI runs each test a pull request adds or changes 20 times; when that job fails, `pnpm test:repeat-changed` reproduces it. Find the cause in the app or the test, never hide it with `--retry` or a longer wait.
+
 ## Flat packages
 
 No modules and no layers; one file per concern, kebab-case.

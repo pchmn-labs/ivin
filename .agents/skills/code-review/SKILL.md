@@ -10,8 +10,6 @@ Two-axis review of the diff between `HEAD` and a fixed point the user supplies:
 
 Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings. Start every sub-agent with a fresh context window.
 
-The issue tracker should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
-
 ## Process
 
 ### 1. Pin the fixed point
@@ -21,6 +19,12 @@ Whatever the user said is the fixed point (a commit SHA, branch name, tag, `main
 Capture the diff command once: `git diff <fixed-point>...HEAD` (three-dot, so the comparison is against the merge-base). Also note the list of commits via `git log <fixed-point>..HEAD --oneline`.
 
 Before going further, confirm the fixed point resolves (`git rev-parse <fixed-point>`) and the diff is non-empty. A bad ref or empty diff should fail here, not inside two parallel sub-agents.
+
+Size the review to the diff (`git diff --stat`):
+
+- **Docs or config only** (Markdown, skills, YAML, JSON): no sub-agent. Report "no code to review" and stop.
+- **Small** (under ~50 changed lines of code), with no spec found at step 2: the Standards sub-agent only.
+- **Anything else**: both sub-agents.
 
 ### 2. Identify the spec source
 
