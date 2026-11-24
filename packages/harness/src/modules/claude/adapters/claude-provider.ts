@@ -97,7 +97,7 @@ const listedRunOptions = (timeout: Duration.Input) => {
       : listClaudeModels(timeout).pipe(
           Effect.map((models) => {
             const options = claudeRunOptions(models)
-            // An empty answer is not kept: the next question asks Claude Code again.
+            // Keeping an empty answer would pin the four aliases until ivin restarts.
             if (models.length > 0) listed = options
             return options
           }),
