@@ -84,7 +84,7 @@
   scrollbar-width: thin;
 }
 
-.iv-app__bottom-scroll:has(> details:not([open]):only-child) {
+.iv-app__bottom-scroll:has(> .iv-disclosure--panel:not([open]):only-child) {
   padding-bottom: 0;
 }
 
