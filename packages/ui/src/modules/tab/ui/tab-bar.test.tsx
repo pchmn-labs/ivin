@@ -39,6 +39,7 @@ const setup = async (
     relaunchFailure: null,
     pendingMessages: [],
     unreadMessages: [],
+    backgroundTasks: [],
     status,
     statusChangedAt: at,
     createdAt: at,
@@ -102,4 +103,14 @@ test("a tab draws its session's harness mark", async () => {
   const tab = page.getByTestId("tab").element()
   expect(tab.querySelector(".iv-harness-mark--agent")).not.toBeNull()
   expect(tab.querySelector(".iv-harness-mark--claude")).toBeNull()
+})
+
+test("the tab of a session in background draws the pulsing dot and asks before it stops the tasks", async () => {
+  await setup("in_background")
+
+  expect(document.querySelector(".iv-session-mark")?.getAttribute("data-status")).toBe(
+    "in_background",
+  )
+  await closeTab()
+  await expect.element(confirmation()).toBeVisible()
 })

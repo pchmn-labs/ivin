@@ -64,6 +64,7 @@ import { setRunOptions } from "../modules/session/usecases/set-run-options.ts"
 import { sendMessage } from "../modules/session/usecases/send-message.ts"
 import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
 import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
+import { taskOutput } from "../modules/session/usecases/task-output.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
 import { layerWorktreeCleanup } from "../modules/session/usecases/worktree-cleanup.ts"
 import { layerCurrentSettings } from "../modules/setting/usecases/current-settings.ts"
@@ -86,6 +87,7 @@ import { setFullWidth } from "../modules/tab/usecases/set-full-width.ts"
 import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlite-transcript-store.ts"
 import { layerFsImageStore } from "../modules/transcript/adapters/fs-image-store.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
+import { getTaskItems } from "../modules/transcript/usecases/get-task-items.ts"
 import { listImages } from "../modules/transcript/usecases/list-images.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
@@ -200,6 +202,7 @@ export const handlers = Rpcs.toLayer(
         answerQuestion(sessionId, requestId, answers),
       "session.pickBranch": ({ sessionId, name, remote }) => pickBranch(sessionId, name, remote),
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
+      "session.taskOutput": ({ sessionId, taskId }) => taskOutput(sessionId, taskId),
       "session.sendNow": ({ sessionId }) => sendNow(sessionId),
       "session.switchToDefaultBranch": ({ sessionId, localChanges }) =>
         switchToDefaultBranch(sessionId, localChanges),
@@ -236,6 +239,7 @@ export const handlers = Rpcs.toLayer(
         getItems(sessionId, position, before, after),
       "transcript.watchItems": ({ sessionId, before }) => watchItems(sessionId, before),
       "transcript.watchUsage": ({ sessionId }) => watchUsage(sessionId),
+      "transcript.getTaskItems": ({ sessionId, toolCallId }) => getTaskItems(sessionId, toolCallId),
       "transcript.listImages": ({ sessionId }) => listImages(sessionId),
     }),
   ),

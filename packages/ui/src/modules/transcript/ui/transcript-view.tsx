@@ -13,7 +13,9 @@ import { useLoadBefore } from "../hooks/use-load-before.ts"
 import { useRestoredPlace, useSavePlace } from "../hooks/use-transcript-place.ts"
 import { useSentMessageScroll } from "../hooks/use-sent-message-scroll.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
+import { BackgroundFold } from "./background-fold.tsx"
 import { TurnWork } from "./turn-work.tsx"
+import type { BackgroundTask } from "@ivin/contracts/session"
 import "./transcript-view.css"
 
 // Virtuoso counts down from here when rows are prepended, so it keeps the scroll anchor.
@@ -25,10 +27,13 @@ export function TranscriptView({
   sessionId,
   live = false,
   sessionGone = false,
+  background = [],
 }: {
   sessionId: string
   live?: boolean
   sessionGone?: boolean
+  // The tasks the agent rests on; the fold under the last turn lists them.
+  background?: ReadonlyArray<BackgroundTask>
 }) {
   const { loaded, failed, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
   const retry = useAtomRefresh(transcriptOf(sessionId).list.status)
@@ -78,6 +83,7 @@ export function TranscriptView({
         followOutput={followOutput}
         totalListHeightChanged={fitRoom}
         components={{ Footer: TranscriptFooter }}
+        context={{ sessionId, background }}
         rangeChanged={rangeChanged}
         startReached={startReached}
         itemContent={(_, row) => (
@@ -99,8 +105,17 @@ function RowContent({ sessionId, row, live }: { sessionId: string; row: RowData;
   )
 }
 
-function TranscriptFooter() {
-  return <div className="iv-transcript__footer" />
+function TranscriptFooter({
+  context,
+}: {
+  context?: { sessionId: string; background: ReadonlyArray<BackgroundTask> }
+}) {
+  return (
+    <>
+      {context && <BackgroundFold sessionId={context.sessionId} tasks={context.background} />}
+      <div className="iv-transcript__footer" />
+    </>
+  )
 }
 
 function TranscriptEmpty({ children }: { children: string }) {

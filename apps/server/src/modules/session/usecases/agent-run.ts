@@ -16,6 +16,9 @@ export interface AgentRun {
   readonly options: RunOptions
   readonly busy: () => boolean
   readonly turn: () => number
+  readonly hasTasks: () => boolean
+  // The end of a running background command's output, as the agent writes it; null with no such task.
+  readonly taskOutput: (taskId: string) => Effect.Effect<string | null>
   readonly record: (event: HarnessEvent) => Effect.Effect<void>
   // Starts a turn with the message; a harness failure ends the run and fails the session.
   readonly start: (message: UserMessage) => Effect.Effect<void>
@@ -26,6 +29,7 @@ export interface AgentRun {
   readonly interrupt: Effect.Effect<void>
   readonly end: Effect.Effect<void>
   readonly stop: Effect.Effect<void>
+  readonly stopInterrupted: Effect.Effect<void>
   // Ends the run, then records the error and fails the session.
   readonly fail: (error: HarnessError) => Effect.Effect<void>
 }
@@ -106,6 +110,8 @@ const buildRun = (
     const follower = yield* followAgentWorktree(session, writer.record, provider.toolActivity)
 
     let providerSessionId = storedProviderSessionId
+    // The file each running task writes its output to, until the run ends.
+    const taskFiles = new Map<string, string>()
     let busy = false
     let turn = 0
     let started = false
@@ -142,6 +148,12 @@ const buildRun = (
       options,
       busy: () => busy,
       turn: () => turn,
+      hasTasks: writer.hasOpenTasks,
+      taskOutput: (taskId) =>
+        Effect.suspend(() => {
+          const path = taskFiles.get(taskId)
+          return path === undefined ? Effect.succeed(null) : provider.readTaskOutput(path)
+        }),
       record: (event) => writer.record(event),
       start: (message) =>
         Effect.gen(function* () {
@@ -164,6 +176,10 @@ const buildRun = (
       interrupt: harness.interrupt,
       end,
       stop,
+      stopInterrupted: guarded(
+        "record interruption",
+        writer.record({ type: "interruption", raw: null }),
+      ).pipe(Effect.andThen(stop)),
       fail,
     }
 
@@ -178,8 +194,34 @@ const buildRun = (
         yield* writer.record(userMessageEvent(message, steer), message.id)
         if (!steer) yield* setStatus(session.id, "working")
       })
+    const endedTask = (output: Extract<HarnessOutput, { type: "task_ended" }>) =>
+      Effect.gen(function* () {
+        const task = writer.openTask(output.taskId)
+        // A notification for a task this run never listed, such as a foreground subagent.
+        if (task === undefined) return
+        const path = taskFiles.get(output.taskId)
+        taskFiles.delete(output.taskId)
+        const final =
+          task.kind === "command" && path !== undefined
+            ? yield* provider.readTaskOutput(path)
+            : null
+        yield* writer.record({ ...output, output: final })
+        yield* writer.afterTaskEnded(busy)
+      })
     const handle = (output: HarnessOutput) => {
       if (output.type === "delta") return writer.stream(output)
+      if (output.type === "task_output_file") {
+        taskFiles.set(output.taskId, output.path)
+        return Effect.void
+      }
+      if (output.type === "task_ended") return endedTask(output)
+      // Steps of a subagent the turn waits for are the tool call's own business, not a task's.
+      if ("parentToolCallId" in output && output.parentToolCallId !== undefined) {
+        return writer.runsTask(output.parentToolCallId) ? writer.record(output) : Effect.void
+      }
+      if (output.type === "task_started") {
+        return writer.record(output).pipe(Effect.andThen(writer.afterTaskStarted(busy)))
+      }
       if (output.type === "message_read") return readMessage(output.messageId)
       if (output.type === "provider_session") {
         if (output.providerSessionId === providerSessionId) return Effect.void

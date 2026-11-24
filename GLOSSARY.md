@@ -24,7 +24,7 @@ Where a session's agent runs: the checkout or one worktree. Several sessions may
 _Avoid_: cwd, workspace
 
 **Session**:
-One agent conversation, bound to a project folder, a working folder, a branch, a harness and its run options. Its status is preparing worktree, working, waiting (on the user, for an approval or a question, and the session says which), idle or failed. Owns a transcript. Its title comes from its first message, first its first line, then a short title a small model writes from it, until the agent or the user renames it; the agent never replaces the user's. An **archived** session is hidden from the sidebar, with no tab and no running agent, until the user restores it; deleting a session erases it with its transcript.
+One agent conversation, bound to a project folder, a working folder, a branch, a harness and its run options. Its status is preparing worktree, working, waiting (on the user, for an approval or a question, and the session says which), in background (no turn runs, but a task does), idle or failed. Owns a transcript. Its title comes from its first message, first its first line, then a short title a small model writes from it, until the agent or the user renames it; the agent never replaces the user's. An **archived** session is hidden from the sidebar, with no tab and no running agent, until the user restores it; deleting a session erases it with its transcript.
 _Avoid_: conversation, chat, thread
 
 **Harness**:
@@ -48,6 +48,10 @@ _Avoid_: attachment, placeholder
 
 **Transcript items**:
 The read model derived from a transcript's events, and what the UI and plugin hooks expose: a tool call merged with its result and status, a subagent with its nested items, streamed text assembled.
+
+**Task**:
+A subagent or a command the agent starts in the background: it keeps running after the turn that started it ends, and its end makes the agent start a turn of its own to report it. It belongs to the session's agent, so stopping the agent stops it, and it is shown by the tool call that started it and by a session in the **in background** status. A subagent's steps are items under that call; a command's output is the file the agent writes it to.
+_Avoid_: job, background job, process
 
 **Turn**:
 A user message that the agent reads while idle, and everything the agent does in answer to it, up to the next such message. The steers it reads on its way belong to it. Its **work** runs from its first item to its last tool call; its **answer** is the agent's text after that call, once the turn has ended. While the turn runs, that text is still part of its work.

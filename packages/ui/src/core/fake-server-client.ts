@@ -96,6 +96,10 @@ export interface FakeServer {
   // Marks the first turn after a change of run options as failed, as the server would.
   readonly failRelaunch: (sessionId: string, failure: RelaunchFailure) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
+  // What `session.taskOutput` returns for a running command, by `<sessionId>/<taskId>`.
+  readonly taskOutputs: Map<string, string>
+  // Changes the tasks a session lists, as the server does when a task starts or ends.
+  readonly setBackgroundTasks: (sessionId: string, tasks: Session["backgroundTasks"]) => void
   // The agent takes the session's pending messages into its running turn, as steers.
   readonly readPendingMessages: (sessionId: string) => void
   readonly sentMessages: ReadonlyArray<{
@@ -255,6 +259,7 @@ export const makeFakeServer = (
   const selectedTab = new Map<string, string | null>()
   const sessions = new Map<string, Session>()
   const transcripts = new Map<string, Array<TranscriptItem>>()
+  const taskOutputs = new Map<string, string>()
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
   const sessionChanges = Effect.runSync(PubSub.unbounded<SessionChange>())
   const annotations = new Map<string, Annotation>()
@@ -614,6 +619,7 @@ export const makeFakeServer = (
           relaunchFailure: null,
           pendingMessages: [],
           unreadMessages: [],
+          backgroundTasks: [],
           title: "New session",
           status: "idle",
           statusChangedAt: at,
@@ -715,6 +721,7 @@ export const makeFakeServer = (
         return saveSession({
           ...session,
           status: "idle",
+          backgroundTasks: [],
           pendingMessages: [],
           unreadMessages: [...session.unreadMessages, ...session.pendingMessages],
           lastActivityAt: tick(),
@@ -794,6 +801,7 @@ export const makeFakeServer = (
               ...session,
               pendingMessages: [...session.pendingMessages, unsent],
               unreadMessages: [],
+              backgroundTasks: [],
             })
           }
           publish({
@@ -828,6 +836,7 @@ export const makeFakeServer = (
             workingFolderDeleted: false,
             relaunchFailure: null,
             unreadMessages: [],
+            backgroundTasks: [],
             status: "working",
             title: isFirstMessage ? input.text : session.title,
             lastActivityAt: tick(),
@@ -1161,6 +1170,20 @@ export const makeFakeServer = (
         return updated
       }),
     "transcript.getItems": getItems,
+    "transcript.getTaskItems": ({
+      sessionId,
+      toolCallId,
+    }: {
+      sessionId: string
+      toolCallId: string
+    }) =>
+      Effect.sync(() =>
+        itemsOf(sessionId).filter(
+          (item) => "parentToolCallId" in item && item.parentToolCallId === toolCallId,
+        ),
+      ),
+    "session.taskOutput": ({ sessionId, taskId }: { sessionId: string; taskId: string }) =>
+      Effect.sync(() => taskOutputs.get(`${sessionId}/${taskId}`) ?? null),
     "transcript.watchUsage": ({ sessionId }: { sessionId: string }) =>
       Stream.unwrap(
         Effect.gen(function* () {
@@ -1361,6 +1384,9 @@ export const makeFakeServer = (
     failRelaunch: (sessionId, failure) =>
       void saveSession({ ...sessions.get(sessionId)!, relaunchFailure: failure }),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
+    taskOutputs,
+    setBackgroundTasks: (sessionId, backgroundTasks) =>
+      void saveSession({ ...sessions.get(sessionId)!, backgroundTasks }),
     readPendingMessages: (sessionId) => readMessages(sessions.get(sessionId)!, true),
     holdNextSend: () => {
       let settle!: (ok: boolean) => void

@@ -110,7 +110,7 @@ export const settingSections: ReadonlyArray<SettingSection> = [
         path: "agents.stopWhenIdleMinutes",
         label: "Stop an idle agent after",
         description:
-          "An agent whose session has had no turn for this long is stopped, which ends the background commands it started. The session stays as it was, and your next message starts the agent again. 0 keeps agents running until their tab closes.",
+          "An agent whose session has had no turn for this long is stopped, which ends the background commands it started; an agent that still runs background tasks is left alone. The session stays as it was, and your next message starts the agent again. 0 keeps agents running until their tab closes.",
         count: { min: 0, unit: "minutes" },
       },
     ],

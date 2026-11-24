@@ -48,3 +48,20 @@
   font-weight: var(--iv-weight-medium);
   line-height: var(--iv-text-2xl-lh);
 }
+
+.iv-session-view__dock {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  max-width: var(--iv-content-width);
+  margin: 0 auto;
+}
+
+/* The task sheet and the sheets under it read as one surface, squared where they meet. */
+.iv-session-view__dock[data-task-sheet] .iv-action-sheet,
+.iv-session-view__dock[data-task-sheet] .iv-message-field {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}

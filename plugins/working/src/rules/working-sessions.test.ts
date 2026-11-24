@@ -4,7 +4,7 @@ import { workingSessions } from "./working-sessions.ts"
 const session = (
   id: string,
   projectPath: string,
-  status: "working" | "waiting" | "idle" | "failed",
+  status: "working" | "waiting" | "in_background" | "idle" | "failed",
   since: number,
 ) => ({ id, projectPath, status, statusChangedAt: { epochMilliseconds: since } })
 
@@ -58,4 +58,14 @@ test("the session on screen and the sessions of closed projects are left out", (
 
   expect(ids(groups.needsYou)).toEqual(["other-tab"])
   expect(groups.running).toEqual([])
+})
+
+test("a session in background runs, sorted with the working ones", () => {
+  const groups = workingSessions(
+    [session("works", "/a", "working", 20), session("rests", "/a", "in_background", 10)],
+    projects,
+    null,
+  )
+
+  expect(ids(groups.running)).toEqual(["rests", "works"])
 })

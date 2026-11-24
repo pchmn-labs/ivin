@@ -27,6 +27,7 @@ export const createSession = (projectPath: string) =>
       relaunchFailure: null,
       pendingMessages: [],
       unreadMessages: [],
+      backgroundTasks: [],
       status: "idle",
       waitingFor: null,
       statusChangedAt: now,

@@ -38,6 +38,7 @@ const mountApp = async (options: { layout?: "rail" | "strip"; failVersion?: bool
     relaunchFailure: null,
     pendingMessages: [],
     unreadMessages: [],
+    backgroundTasks: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,

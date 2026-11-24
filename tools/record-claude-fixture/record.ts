@@ -91,6 +91,7 @@ export const record = async (recording: Recording, fixturesDir: string): Promise
     child.stdin.write(`${actionLine(action)}\n`)
     sent++
   }
+  if (recording.untilWait !== null) await Promise.race([waitFor(recording.untilWait), ended])
   const untilSeen = await Promise.race([
     lineSeen(recording.until).then(() => true),
     ended.then(() => false),

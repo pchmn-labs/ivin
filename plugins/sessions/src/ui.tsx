@@ -76,6 +76,7 @@ function SessionRow({ session, selected }: { session: Session; selected: boolean
               status={session.status}
               waitingFor={session.waitingFor}
               harness={session.harness}
+              tasks={session.backgroundTasks}
             />
           </span>
         }

@@ -37,14 +37,22 @@ function useNow() {
 
 const firstLine = (text: string) => text.split("\n", 1)[0] ?? ""
 
+// "[bg] Review the diff +2": the first task, and how many others run.
+const backgroundLine = (tasks: Session["backgroundTasks"]) =>
+  tasks.length === 0
+    ? undefined
+    : `[bg] ${tasks[0]!.description}${tasks.length > 1 ? ` +${tasks.length - 1}` : ""}`
+
 function Detail({
   project,
   command,
   question,
+  background,
 }: {
   project: string
   command?: string
   question?: string
+  background?: string
 }) {
   return (
     <Stack as="span" direction="row" gap={1} align="center">
@@ -69,6 +77,16 @@ function Detail({
           </Text>
           <Text size="xs" tone="muted" truncate data-testid="working-question">
             {question}
+          </Text>
+        </>
+      )}
+      {background === undefined ? null : (
+        <>
+          <Text size="xs" tone="faint">
+            ·
+          </Text>
+          <Text size="xs" tone="muted" truncate data-testid="working-background">
+            {background}
           </Text>
         </>
       )}
@@ -170,10 +188,18 @@ function RunningRow({ session, project, now }: { session: Session; project: stri
             status={session.status}
             waitingFor={session.waitingFor}
             harness={session.harness}
+            tasks={session.backgroundTasks}
           />
         }
         title={session.title}
-        subtitle={<Detail project={project} />}
+        subtitle={
+          <Detail
+            project={project}
+            {...(session.status === "in_background" && {
+              background: backgroundLine(session.backgroundTasks) ?? "In background",
+            })}
+          />
+        }
         meta={elapsed(session.statusChangedAt.epochMilliseconds, now)}
       />
     </Stack>

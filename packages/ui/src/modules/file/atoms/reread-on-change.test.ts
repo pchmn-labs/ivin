@@ -25,6 +25,7 @@ test("a burst of changes during a read gives one read after it, not one per chan
     relaunchFailure: null,
     pendingMessages: [],
     unreadMessages: [],
+    backgroundTasks: [],
     status: "idle",
     statusChangedAt: at,
     createdAt: at,

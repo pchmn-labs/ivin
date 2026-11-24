@@ -1,0 +1,122 @@
+.iv-task__dot {
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--iv-status-working);
+  animation: iv-background-pulse var(--iv-duration-pulse) ease-in-out infinite;
+}
+
+.iv-task__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--iv-space-1) 0 var(--iv-space-2);
+}
+
+.iv-task {
+  display: flex;
+  flex-direction: column;
+}
+
+.iv-task[data-active] > .iv-task__row {
+  background: var(--iv-bg-hover);
+}
+
+.iv-task__row {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  width: 100%;
+  min-height: 28px;
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-md);
+  background: none;
+  color: var(--iv-text);
+  font: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+.iv-task__row:hover {
+  background: var(--iv-bg-hover);
+}
+
+.iv-task__row:focus-visible {
+  outline: 2px solid var(--iv-focus-ring);
+  outline-offset: -2px;
+}
+
+.iv-task__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iv-task__spacer {
+  flex: 1;
+}
+
+.iv-task__pill {
+  flex: none;
+  padding: 1px var(--iv-space-2);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-pill);
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-xs);
+  opacity: 0;
+  cursor: default;
+}
+
+.iv-task__row:hover .iv-task__pill,
+.iv-task__row:focus-within .iv-task__pill,
+.iv-task[data-active] .iv-task__pill,
+.iv-task__pill:focus-visible {
+  opacity: 1;
+}
+
+.iv-task__pill:focus-visible {
+  outline: 2px solid var(--iv-focus-ring);
+  outline-offset: 1px;
+}
+
+.iv-task-meta {
+  flex: none;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-task__chevron {
+  display: inline-flex;
+  color: var(--iv-text-faint);
+  transition: transform var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.iv-task__chevron[data-open] {
+  transform: rotate(90deg);
+}
+
+.iv-task__peek {
+  margin: var(--iv-space-1) 0 var(--iv-space-2) 22px;
+}
+
+.iv-task__peek .iv-turn__timeline {
+  margin-top: 0;
+}
+
+.iv-task__peek .iv-turn__timeline::before {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-task__dot {
+    animation: none;
+  }
+
+  .iv-task__chevron {
+    transition: none;
+  }
+}

@@ -42,8 +42,8 @@ export const makeIdleStop = (idleLimit: Effect.Effect<Duration.Input>, later: La
             timers.delete(run)
             if (run.busy() || run.turn() !== idleTurn) return
             const pending = yield* sessions.pendingMessages(sessionId)
-            // Re-checked after another limit: neither ends with a turn of its own.
-            if (pending.length > 0 || writer.hasOpenRequests()) {
+            // Re-checked after another limit: none of them ends with a turn of its own.
+            if (pending.length > 0 || writer.hasOpenRequests() || writer.hasOpenTasks()) {
               return yield* start(sessionId, run, writer)
             }
             yield* run.stop

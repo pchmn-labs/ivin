@@ -8,11 +8,13 @@ import { sessionsOf } from "../atoms/list-sessions.ts"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useArchiveFromKey } from "../hooks/use-session-actions.ts"
 import { interruptSessionAtom } from "../atoms/interrupt-session.ts"
-import { isRunning } from "../rules/is-running.ts"
+import { isAgentBusy, isRunning } from "../rules/is-running.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { statusLabel } from "@ivin/plugin-api/ui"
 import { ImageViewer } from "../../transcript/ui/image-viewer.tsx"
+import { TaskSheet } from "../../transcript/ui/task-sheet.tsx"
+import { openTaskOf } from "../../transcript/atoms/background-tasks.ts"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import "./session-view.css"
 
@@ -35,13 +37,14 @@ function OpenSession({
   const projectName = useAtomValue(projectsAtom.value).projects.find(
     (project) => project.path === projectPath,
   )?.name
+  const taskOpen = useAtomValue(openTaskOf(sessionId)) !== null
   const interrupt = useAtomSet(interruptSessionAtom)
   const archiveFromKey = useArchiveFromKey(session)
   useCommandHandler("session.archive", archiveFromKey, session !== undefined)
   useCommandHandler(
     "session.interrupt",
     () => interrupt({ projectPath, sessionId }),
-    isRunning(status),
+    isAgentBusy(status),
   )
 
   // Not waiting for the transcript to load, so a new session does not open docked then jump.
@@ -64,6 +67,7 @@ function OpenSession({
             sessionId={sessionId}
             live={isRunning(status)}
             sessionGone={session === undefined && sessionsLoaded}
+            background={session?.backgroundTasks ?? []}
           />
         </div>
       )}
@@ -80,7 +84,10 @@ function OpenSession({
           <NotificationViewport />
         </div>
       )}
-      <Slot key={sessionId} slot="session.composer" props={{ sessionId }} />
+      <div className="iv-session-view__dock" data-task-sheet={taskOpen ? "" : undefined}>
+        <TaskSheet sessionId={sessionId} />
+        <Slot key={sessionId} slot="session.composer" props={{ sessionId }} />
+      </div>
       <ImageViewer sessionId={sessionId} />
     </div>
   )

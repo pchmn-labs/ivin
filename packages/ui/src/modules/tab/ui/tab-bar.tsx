@@ -7,7 +7,7 @@ import { ContextMenu } from "../../../core/components/menu/menu.tsx"
 import { unsavedPathsOf } from "../../file/atoms/file-edit.ts"
 import { fileName } from "../../file/rules/file-name.ts"
 import { settingsAtom } from "../../setting/atoms/settings.ts"
-import { isRunning } from "../../session/rules/is-running.ts"
+import { isAgentBusy } from "../../session/rules/is-running.ts"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
 import { useSessionActions } from "../../session/hooks/use-session-actions.ts"
 import { NewSessionButton } from "../../session/ui/new-session-button.tsx"
@@ -53,7 +53,7 @@ function TabItem({
   const actions = useSessionActions(session, false)
   if (!session) return null
 
-  const stopsAgent = settings.stopAgentOnClose && isRunning(session.status)
+  const stopsAgent = settings.stopAgentOnClose && isAgentBusy(session.status)
   const requestClose = () => {
     const paths = registry.get(unsavedPathsOf(sessionId, session.workingFolder))
     setUnsaved(paths)
@@ -131,6 +131,7 @@ function TabItem({
               status={session.status}
               waitingFor={session.waitingFor}
               harness={session.harness}
+              tasks={session.backgroundTasks}
             />
             <span className="iv-tab-bar__title" data-testid="tab-title" title={session.title}>
               {session.title}

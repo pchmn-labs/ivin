@@ -30,6 +30,7 @@ function InactiveSession({ session }: { session: Session }) {
           status={session.status}
           waitingFor={session.waitingFor}
           harness={session.harness}
+          tasks={session.backgroundTasks}
         />
       }
       title={session.title}

@@ -1,4 +1,5 @@
 import {
+  BackgroundTask,
   PendingMessage,
   RelaunchFailure,
   RunOptions,
@@ -35,6 +36,7 @@ interface SessionRow {
   unread_messages: string
   status: SessionStatus
   waiting_for: WaitingFor
+  background_tasks: string
   status_changed_at: number
   created_at: number
   last_activity_at: number
@@ -43,6 +45,7 @@ interface SessionRow {
 }
 
 const decodeMessages = rowDecoder(Schema.Array(PendingMessage), "session messages")
+const decodeBackgroundTasks = rowDecoder(Schema.Array(BackgroundTask), "session background tasks")
 const decodeRelaunchFailure = rowDecoder(RelaunchFailure, "session relaunch failure")
 const decodeRunOptions = rowDecoder(RunOptions, "session run options")
 
@@ -50,6 +53,11 @@ const messagesOf = (id: string, column: string, stored: string, report: Report) 
   const key = `${id}.${column}`
   const parsed = parseJson(stored, "session messages", key, report)
   return parsed === undefined ? [] : (decodeMessages(parsed, key, report) ?? [])
+}
+
+const backgroundTasksOf = (row: SessionRow, report: Report) => {
+  const parsed = parseJson(row.background_tasks, "session background tasks", row.id, report)
+  return parsed === undefined ? [] : (decodeBackgroundTasks(parsed, row.id, report) ?? [])
 }
 
 const relaunchFailureOf = (row: SessionRow, report: Report) => {
@@ -76,6 +84,7 @@ const toSession = (row: SessionRow, report: Report): Session => ({
   unreadMessages: messagesOf(row.id, "unread_messages", row.unread_messages, report),
   status: row.status,
   waitingFor: row.waiting_for,
+  backgroundTasks: backgroundTasksOf(row, report),
   statusChangedAt: DateTime.makeUnsafe(row.status_changed_at),
   createdAt: DateTime.makeUnsafe(row.created_at),
   lastActivityAt: DateTime.makeUnsafe(row.last_activity_at),
@@ -85,7 +94,7 @@ const toSession = (row: SessionRow, report: Report): Session => ({
 
 const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model,
   effort, permission_mode, relaunch_failure, pending_messages, unread_messages, status,
-  waiting_for, status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
+  waiting_for, background_tasks, status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
   ) AS started,
   (SELECT COALESCE(MAX(number), 0) FROM images i WHERE i.session_id = sessions.id) AS last_image_number`
@@ -286,10 +295,18 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             id,
           )
         }),
+      setBackgroundTasks: (id, tasks) =>
+        Effect.sync(() => {
+          db.prepare("UPDATE sessions SET background_tasks = ? WHERE id = ?").run(
+            JSON.stringify(tasks),
+            id,
+          )
+        }),
       resetRunning: Effect.sync(() => {
         const reset = db
           .prepare(
-            `UPDATE sessions SET status = 'idle', waiting_for = NULL, status_changed_at = last_activity_at
+            `UPDATE sessions SET status = 'idle', waiting_for = NULL, background_tasks = '[]',
+               status_changed_at = last_activity_at
              WHERE status NOT IN ('idle', 'failed') RETURNING id`,
           )
           .all() as { id: string }[]

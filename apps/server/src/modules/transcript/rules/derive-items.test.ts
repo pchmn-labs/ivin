@@ -1,6 +1,12 @@
 import type { TranscriptEvent } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
-import { applyEvent, emptyItemState, replay, unansweredEvents } from "./derive-items.ts"
+import {
+  applyEvent,
+  emptyItemState,
+  replay,
+  stoppedTaskEvents,
+  unansweredEvents,
+} from "./derive-items.ts"
 
 const kindOf = (name: string) => (name === "list_files" ? "search" : "other")
 const derive = (all: TranscriptEvent[]) => replay(all, kindOf).items
@@ -345,4 +351,76 @@ test("an interruption is its own item and closes the open assistant message", ()
     type: "interruption",
   })
   expect(items[3]).toMatchObject({ text: "two" })
+})
+
+const taskStarted = (taskId = "k1", toolCallId = "t1"): Body => ({
+  type: "task_started",
+  taskId,
+  toolCallId,
+  kind: "agent",
+  description: "Review the diff",
+})
+const taskEnded = (taskId = "k1", outcome = "completed"): Body => ({
+  type: "task_ended",
+  taskId,
+  outcome,
+  summary: "done",
+  output: null,
+})
+
+test("a task is one item that runs from its start and ends with its notification", () => {
+  const items = derive(events(call("t1"), taskStarted(), result("t1"), taskEnded()))
+
+  expect(items.map((item) => item.type)).toEqual(["tool_call", "task"])
+  expect(items[1]).toMatchObject({
+    id: "e2",
+    position: 2,
+    taskId: "k1",
+    toolCallId: "t1",
+    status: "completed",
+    summary: "done",
+  })
+})
+
+test("a task is open from its start to its end", () => {
+  const started = replay(events(taskStarted()), kindOf).state
+  const ended = replay(events(taskStarted(), taskEnded("k1", "failed")), kindOf).state
+
+  expect([...started.openTasks.keys()]).toEqual(["k1"])
+  expect(ended.openTasks.size).toBe(0)
+})
+
+test("the end of a task never started changes nothing", () => {
+  expect(derive(events(taskEnded("unknown")))).toEqual([])
+})
+
+test("a subagent's steps are items under their call, and leave the agent's own message open", () => {
+  const items = derive(
+    events(
+      assistant("working on it"),
+      { ...call("s1"), parentToolCallId: "t1" },
+      { ...result("s1"), parentToolCallId: "t1" },
+      { ...assistant("report"), parentToolCallId: "t1" },
+      assistant("and more"),
+    ),
+  )
+
+  expect(
+    items.map((item) => [item.type, "parentToolCallId" in item && item.parentToolCallId]),
+  ).toEqual([
+    ["message", false],
+    ["tool_call", "t1"],
+    ["message", "t1"],
+  ])
+  expect(items[0]).toMatchObject({ text: "working on it\n\nand more" })
+  expect(items[1]).toMatchObject({ status: "done", output: "out" })
+})
+
+test("stopping the run ends each open task and fails the calls its subagent left running", () => {
+  const { state } = replay(events(taskStarted(), { ...call("s1"), parentToolCallId: "t1" }), kindOf)
+
+  expect(stoppedTaskEvents(state)).toMatchObject([
+    { type: "tool_result", toolCallId: "s1", isError: true, parentToolCallId: "t1" },
+    { type: "task_ended", taskId: "k1", outcome: "stopped" },
+  ])
 })

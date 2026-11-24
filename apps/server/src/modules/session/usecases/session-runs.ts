@@ -26,7 +26,11 @@ import { makeIdleStop } from "./idle-stop.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { setSessionStatus } from "./session-status.ts"
 import { SessionStore } from "./session-store.ts"
-import { openTranscriptWriter, type TranscriptWriter } from "./transcript-writer.ts"
+import {
+  closeRequestsLeftOpen,
+  openTranscriptWriter,
+  type TranscriptWriter,
+} from "./transcript-writer.ts"
 
 export class SessionRuns extends Context.Service<
   SessionRuns,
@@ -47,7 +51,7 @@ export class SessionRuns extends Context.Service<
       session: Session,
       answer: QuestionAnswers,
     ) => Effect.Effect<void, QuestionNotOpen>
-    // No-op with no run.
+    // No-op with no run. With only background tasks running, stops the agent and so its tasks.
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
     // Stops the turn so the agent takes the pending messages as the next one; no-op without any.
     readonly sendNow: (sessionId: string) => Effect.Effect<void>
@@ -58,6 +62,8 @@ export class SessionRuns extends Context.Service<
       sessionId: string,
       effect: Effect.Effect<A, E, R>,
     ) => Effect.Effect<A, E, R>
+    // The end of a running background command's output, as the agent writes it; null with no such task.
+    readonly taskOutput: (sessionId: string, taskId: string) => Effect.Effect<string | null>
     // True from the agent's start until it stops, idle between turns included.
     readonly isRunning: (sessionId: string) => Effect.Effect<boolean>
     // Appends to the transcript with or without a run.
@@ -90,8 +96,6 @@ export const layerSessionRunsWith = (
 
       const openWriter = (session: Session) =>
         openTranscriptWriter(session).pipe(Effect.provideContext(context))
-
-      const leftRunning = yield* sessions.resetRunning
 
       // Closed together: one scope after another would add every agent's kill grace.
       yield* Effect.addFinalizer(() =>
@@ -169,11 +173,6 @@ export const layerSessionRunsWith = (
           }),
         )
 
-      const endInterrupted = (run: AgentRun) =>
-        guarded("record interruption", run.record({ type: "interruption", raw: null })).pipe(
-          Effect.andThen(run.stop),
-        )
-
       // An agent that ignores the interrupt keeps its turn; stopping it is the only way out.
       const interruptTurn = (sessionId: string, run: AgentRun) =>
         Effect.gen(function* () {
@@ -186,7 +185,7 @@ export const layerSessionRunsWith = (
             sessionId,
             run,
             Effect.suspend(() =>
-              run.busy() && run.turn() === turn ? endInterrupted(run) : Effect.void,
+              run.busy() && run.turn() === turn ? run.stopInterrupted : Effect.void,
             ),
           )
         })
@@ -195,14 +194,9 @@ export const layerSessionRunsWith = (
       const stopRun = (sessionId: string) =>
         Effect.suspend(() => runs.get(sessionId)?.stop ?? Effect.void)
 
-      const closeRequestsLeftOpen = (sessionId: string) =>
-        Effect.gen(function* () {
-          const session = yield* sessions.findById(sessionId)
-          if (session) yield* (yield* openWriter(session)).closeRequests
-        })
-      for (const sessionId of leftRunning) {
-        yield* guarded("close requests left open", closeRequestsLeftOpen(sessionId))
-      }
+      yield* closeRequestsLeftOpen(yield* sessions.resetRunning).pipe(
+        Effect.provideContext(context),
+      )
 
       return {
         send: (given, message) =>
@@ -258,8 +252,10 @@ export const layerSessionRunsWith = (
             Effect.gen(function* () {
               const run = runs.get(sessionId)
               if (!run) return
+              // No turn to stop: the tasks run in the agent, so the agent stops.
+              if (!run.busy() && run.hasTasks()) return yield* run.stopInterrupted
               const pending = yield* sessions.pendingMessages(sessionId)
-              yield* pending.length === 0 ? interruptTurn(sessionId, run) : endInterrupted(run)
+              yield* pending.length === 0 ? interruptTurn(sessionId, run) : run.stopInterrupted
             }),
           ),
         sendNow: (sessionId) =>
@@ -275,6 +271,8 @@ export const layerSessionRunsWith = (
         stop: (sessionId) => locked(sessionId, stopRun(sessionId)),
         close: (sessionId, effect) =>
           locked(sessionId, stopRun(sessionId).pipe(Effect.andThen(effect))),
+        taskOutput: (sessionId, taskId) =>
+          Effect.suspend(() => runs.get(sessionId)?.taskOutput(taskId) ?? Effect.succeed(null)),
         isRunning: (sessionId) => Effect.sync(() => runs.has(sessionId)),
         record: (session, event) =>
           locked(
