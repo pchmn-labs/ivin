@@ -25,7 +25,7 @@
     "@codemirror/search": "^6.7.2",
     "@codemirror/state": "^6.7.6",
     "@codemirror/view": "^6.43.15",
-    "@effect/atom-react": "4.1.4",
+    "@effect/atom-react": "4.1.5",
     "@headless-tree/core": "^1.8.0",
     "@headless-tree/react": "^1.8.0",
     "@ivin/contracts": "workspace:*",
@@ -34,24 +34,24 @@
     "@lezer/highlight": "^1.2.5",
     "@phosphor-icons/react": "^2.1.10",
     "@tanstack/react-virtual": "^3.14.26",
-    "effect": "4.1.4",
+    "effect": "4.1.5",
     "marked": "^18.2.1",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-markdown": "^10.1.0",
-    "react-virtuoso": "^4.18.23",
+    "react-virtuoso": "^4.18.24",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@rolldown/plugin-babel": "^0.3.0",
-    "@types/node": "^22.13.0",
+    "@types/node": "^26.6.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "6.3.0",
-    "@vitest/browser-playwright": "5.1.0",
+    "@vitest/browser-playwright": "5.1.1",
     "babel-plugin-react-compiler": "1.0.0",
     "playwright": "1.65.1",
-    "vitest": "5.1.0",
+    "vitest": "5.1.1",
     "vitest-browser-react": "^2.3.0"
   }
 }
