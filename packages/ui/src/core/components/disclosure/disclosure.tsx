@@ -10,10 +10,11 @@ export function Disclosure({
   children,
   defaultOpen = false,
   variant = "default",
+  actions,
   "data-testid": testId,
 }: DisclosureProps) {
   const [open, setOpen] = useState(defaultOpen)
-  return (
+  const details = (
     <details
       className={
         variant === "default" ? "iv-disclosure" : `iv-disclosure iv-disclosure--${variant}`
@@ -36,5 +37,13 @@ export function Disclosure({
       </summary>
       {open && <div className="iv-disclosure__body">{children}</div>}
     </details>
+  )
+  if (actions === undefined) return details
+  // Outside the summary, so using them does not fold it, and outside the body, so they show while folded.
+  return (
+    <div className="iv-disclosure-frame" data-variant={variant}>
+      {details}
+      <div className="iv-disclosure-frame__actions">{actions}</div>
+    </div>
   )
 }

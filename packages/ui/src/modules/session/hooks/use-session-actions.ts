@@ -12,7 +12,7 @@ import {
 } from "../atoms/session-action-failure.ts"
 import { sessionConfirmationAtom } from "../atoms/session-confirmation.ts"
 import type { ConfirmedAction } from "../rules/session-action-failure.ts"
-import { needsConfirmation } from "../rules/session-confirmation.ts"
+import { needsConfirmation, type ActionOnAll } from "../rules/session-confirmation.ts"
 
 export function useRequestSessionAction() {
   const confirm = useAtomSet(sessionConfirmationAtom)
@@ -83,5 +83,27 @@ export function useSessionActions(
       },
     ],
     failure,
+  }
+}
+
+export function useAllSessionsActions(sessions: ReadonlyArray<Session>): {
+  readonly items: ReadonlyArray<MenuItem>
+} {
+  const confirm = useAtomSet(sessionConfirmationAtom)
+  const registry = useContext(RegistryContext)
+  const request = (action: ActionOnAll) =>
+    confirm({
+      action,
+      sessions: sessions.map((session) => ({
+        session,
+        unsaved: registry.get(unsavedPathsOf(session.id, session.workingFolder)),
+      })),
+    })
+  return {
+    items: [
+      { label: "Archive all", icon: "archive", onSelect: () => request("archiveAll") },
+      "separator",
+      { label: "Delete all…", icon: "trash", danger: true, onSelect: () => request("deleteAll") },
+    ],
   }
 }

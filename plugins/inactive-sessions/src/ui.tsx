@@ -8,6 +8,7 @@ import {
   SessionMark,
   Stack,
   defineUi,
+  useAllSessionsActions,
   useOpenTab,
   useProjects,
   useSessionActions,
@@ -49,11 +50,21 @@ function InactiveSession({ session }: { session: Session }) {
 
 function InactiveSessions() {
   const sessions = inactiveSessions(useSessions(), useTabs(), useProjects().selectedPath)
+  const actions = useAllSessionsActions(sessions)
   if (sessions.length === 0) return null
   return (
     <Disclosure
       data-testid="inactive-sessions"
       variant="section"
+      actions={
+        <Menu
+          align="end"
+          trigger={
+            <IconButton icon="ellipsis" label="Actions for the inactive sessions" size="sm" />
+          }
+          items={actions.items}
+        />
+      }
       summary={
         <span>
           Inactive sessions · <span>{sessions.length}</span>

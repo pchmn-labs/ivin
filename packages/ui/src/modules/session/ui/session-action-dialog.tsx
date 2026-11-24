@@ -6,10 +6,10 @@ import { closeProjectAtom } from "../../project/atoms/close-project.ts"
 import { archiveSessionAtom } from "../atoms/archive-session.ts"
 import { deleteSessionAtom } from "../atoms/delete-session.ts"
 import { sessionConfirmationAtom } from "../atoms/session-confirmation.ts"
-import { confirmationText } from "../rules/session-confirmation.ts"
+import { confirmationText, type ConfirmationText } from "../rules/session-confirmation.ts"
 import "./session-action-dialog.css"
 
-const emptyText = { title: "", description: "", files: [], confirm: "" }
+const emptyText: ConfirmationText = { title: "", description: "", lists: [], confirm: "" }
 
 export function SessionActionDialog() {
   const [pending, setPending] = useAtom(sessionConfirmationAtom)
@@ -23,7 +23,11 @@ export function SessionActionDialog() {
   const confirm = () => {
     if (!pending) return
     if (pending.action === "closeProject") closeProject(pending.project.path)
-    else {
+    else if (pending.action === "archiveAll" || pending.action === "deleteAll") {
+      const run = pending.action === "archiveAll" ? archive : remove
+      for (const { session } of pending.sessions)
+        run({ projectPath: session.projectPath, sessionId: session.id })
+    } else {
       const target = { projectPath: pending.session.projectPath, sessionId: pending.session.id }
       if (pending.action === "archive") archive(target)
       else remove(target)
@@ -50,14 +54,27 @@ export function SessionActionDialog() {
         </>
       }
     >
-      {text.files.length > 0 && (
-        <ul className="iv-session-action-dialog__files">
-          {text.files.map((name, index) => (
-            <li key={`${index}:${name}`} className="iv-session-action-dialog__file">
-              {name}
-            </li>
+      {text.lists.length > 0 && (
+        <div className="iv-session-action-dialog__lists">
+          {text.lists.map((list, index) => (
+            <div key={index} className="iv-session-action-dialog__list">
+              {list.label !== null && (
+                <p className="iv-session-action-dialog__label">{list.label}</p>
+              )}
+              <ul
+                className="iv-session-action-dialog__items"
+                data-files={list.files || undefined}
+                data-marked={list.files || list.label !== null || undefined}
+              >
+                {list.items.map((item, itemIndex) => (
+                  <li key={`${itemIndex}:${item}`} className="iv-session-action-dialog__item">
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </Dialog>
   )

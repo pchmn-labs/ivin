@@ -10,13 +10,15 @@ import { recordingFailure } from "./session-action-failure.ts"
 export const deleteSessionAtom = serverRuntime.fn<{
   readonly projectPath: string
   readonly sessionId: string
-}>()(({ projectPath, sessionId }) =>
-  Effect.gen(function* () {
-    const client = yield* ServerClient
-    yield* client["session.delete"]({ sessionId })
-    yield* sessionsOf(projectPath).remove(sessionId)
-    yield* Atom.set(discardSessionEditsAtom, sessionId)
-    yield* tabsOf(projectPath).set(yield* client["tab.list"]({ projectPath }))
-    yield* Atom.refresh(archivedSessionsOf(projectPath))
-  }).pipe(recordingFailure("delete", sessionId)),
+}>()(
+  ({ projectPath, sessionId }) =>
+    Effect.gen(function* () {
+      const client = yield* ServerClient
+      yield* client["session.delete"]({ sessionId })
+      yield* sessionsOf(projectPath).remove(sessionId)
+      yield* Atom.set(discardSessionEditsAtom, sessionId)
+      yield* tabsOf(projectPath).set(yield* client["tab.list"]({ projectPath }))
+      yield* Atom.refresh(archivedSessionsOf(projectPath))
+    }).pipe(recordingFailure("delete", sessionId)),
+  { concurrent: true },
 )

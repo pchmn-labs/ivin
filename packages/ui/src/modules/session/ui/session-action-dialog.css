@@ -1,24 +1,46 @@
-.iv-session-action-dialog__files {
+.iv-session-action-dialog__lists {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-3);
+}
+
+.iv-session-action-dialog__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-1);
+}
+
+.iv-session-action-dialog__label {
+  margin: 0;
+  color: var(--iv-text-muted);
+}
+
+.iv-session-action-dialog__items {
   display: flex;
   flex-direction: column;
   gap: var(--iv-space-1);
   margin: 0;
   padding: 0;
   list-style: none;
-  font-family: var(--iv-font-mono);
-  font-size: var(--iv-text-xs);
-  line-height: var(--iv-text-xs-lh);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
   color: var(--iv-text);
 }
 
-.iv-session-action-dialog__file {
+.iv-session-action-dialog__items[data-files] {
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+}
+
+.iv-session-action-dialog__item {
   display: flex;
   align-items: center;
   gap: var(--iv-space-2);
   overflow-wrap: anywhere;
 }
 
-.iv-session-action-dialog__file::before {
+.iv-session-action-dialog__items[data-marked] > .iv-session-action-dialog__item::before {
   content: "";
   flex: none;
   width: 5px;
