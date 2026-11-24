@@ -1,6 +1,6 @@
 import type { ToolActivity } from "@ivin/harness"
-import { expect, test } from "vitest"
-import { folderAfterTool, needsWorktreeList } from "./agent-worktree.ts"
+import { describe, expect, test } from "vitest"
+import { folderAfterTool, folderMovedTo, needsWorktreeList } from "./agent-worktree.ts"
 
 const checkout = "/repo"
 const switched = `${checkout}/.claude/worktrees/try-adopt`
@@ -68,4 +68,32 @@ test("git's worktree list is read after a shell command or a folder switch only"
   expect(needsWorktreeList(shell("ls"))).toBe(true)
   expect(needsWorktreeList({ type: "folder_switch", path: switched })).toBe(true)
   expect(needsWorktreeList({ type: "other", text: "{}" })).toBe(false)
+})
+
+describe("folderMovedTo", () => {
+  const moved = (workingFolder: string, listed: string[], appeared: string[]) =>
+    folderMovedTo({ workingFolder, projectPath: "/p", listed: new Set(listed), appeared })
+
+  test("follows the working folder to the one worktree that appeared as it left the list", () => {
+    expect(moved("/p/.worktrees/a", ["/p/.worktrees/b"], ["/p/.worktrees/b"])).toBe(
+      "/p/.worktrees/b",
+    )
+  })
+
+  test("moves nothing when several worktrees appeared, since it cannot tell which", () => {
+    expect(
+      moved(
+        "/p/.worktrees/a",
+        ["/p/.worktrees/b", "/p/.worktrees/c"],
+        ["/p/.worktrees/b", "/p/.worktrees/c"],
+      ),
+    ).toBeNull()
+  })
+
+  test("moves nothing while the working folder is still listed, or is the checkout", () => {
+    expect(
+      moved("/p/.worktrees/a", ["/p/.worktrees/a", "/p/.worktrees/b"], ["/p/.worktrees/b"]),
+    ).toBeNull()
+    expect(moved("/p", ["/p/.worktrees/b"], ["/p/.worktrees/b"])).toBeNull()
+  })
 })

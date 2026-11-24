@@ -283,7 +283,7 @@ export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.pickWorkingFolder", {
     payload: { sessionId: Schema.String, workingFolder: WorkingFolderChoice },
     success: Session,
-    error: Schema.Union([SessionNotFound, WorktreeNotCreated]),
+    error: Schema.Union([SessionNotFound, SessionWorking, WorktreeNotCreated]),
   }),
   Rpc.make("session.answerApproval", {
     payload: { sessionId: Schema.String, requestId: Schema.String, allow: Schema.Boolean },

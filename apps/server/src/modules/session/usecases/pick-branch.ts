@@ -1,21 +1,10 @@
-import {
-  CheckoutRefused,
-  type Session,
-  SessionNotFound,
-  SessionWorking,
-} from "@ivin/contracts/session"
+import { CheckoutRefused, SessionNotFound, SessionWorking } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { resolveBranchPick } from "../../worktree/rules/branch-pick.ts"
 import { Git } from "../../worktree/usecases/git.ts"
+import { isBusy } from "../rules/busy-session.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
-
-const BUSY = new Set<Session["status"]>([
-  "preparing_worktree",
-  "working",
-  "waiting",
-  "in_background",
-])
 
 export const pickBranch = (sessionId: string, name: string, remote: boolean) =>
   Effect.gen(function* () {
@@ -24,7 +13,7 @@ export const pickBranch = (sessionId: string, name: string, remote: boolean) =>
     const git = yield* Git
     const session = yield* store.findById(sessionId)
     if (!session) return yield* new SessionNotFound({ sessionId })
-    if (BUSY.has(session.status)) return yield* new SessionWorking({ sessionId })
+    if (isBusy(session)) return yield* new SessionWorking({ sessionId })
 
     const refused = (error: { readonly message: string }) =>
       new CheckoutRefused({ sessionId, gitMessage: error.message })

@@ -1,5 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
-import type { Harness } from "@ivin/contracts/session"
+import type { Harness, SessionStatus } from "@ivin/contracts/session"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
@@ -707,7 +707,10 @@ test("the switch and pull buttons are gone once the first message is sent, and a
   await expect.element(page.getByRole("button", { name: /^Pull/ })).not.toBeInTheDocument()
 })
 
-const mountDeletedFolderSession = async ({ extraWorktrees = 0 } = {}) => {
+const mountDeletedFolderSession = async ({
+  extraWorktrees = 0,
+  status = "idle",
+}: { extraWorktrees?: number; status?: SessionStatus } = {}) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
@@ -733,7 +736,7 @@ const mountDeletedFolderSession = async ({ extraWorktrees = 0 } = {}) => {
     pendingMessages: [],
     unreadMessages: [],
     backgroundTasks: [],
-    status: "idle",
+    status,
     statusChangedAt: at,
     createdAt: at,
     lastActivityAt: at,
@@ -775,6 +778,20 @@ test("a session whose worktree was deleted shows the working folder picker inste
     { kind: "existing_worktree", path: "/p/.worktrees/docs-adr" },
   ])
   await expect.element(page.getByTestId("session-location")).toHaveTextContent("Worktreedocs/adr")
+})
+
+test("a working session whose worktree was deleted keeps its composer, and offers the picker once it stops", async () => {
+  const server = await mountDeletedFolderSession({ status: "working" })
+
+  await expect.element(page.getByRole("textbox", { name: "Message" })).toBeVisible()
+  await expect.element(page.getByText("Where should the agent continue?")).not.toBeInTheDocument()
+  await expect
+    .element(page.getByTestId("session-location"))
+    .toHaveTextContent("Worktree deletedivin/3f2a9c1e")
+
+  server.setStatus("s1", "idle")
+
+  await expect.element(page.getByText("Where should the agent continue?")).toBeVisible()
 })
 
 test("the working folder picker is answered from the keyboard", async () => {

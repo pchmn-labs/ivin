@@ -5,7 +5,7 @@ import type { ToolActivity, ToolOutcome, ToolUse } from "@ivin/harness"
 import { Effect } from "effect"
 import { Git } from "../../worktree/usecases/git.ts"
 import { listWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
-import { folderAfterTool, needsWorktreeList } from "../rules/agent-worktree.ts"
+import { folderAfterTool, folderMovedTo, needsWorktreeList } from "../rules/agent-worktree.ts"
 import { SessionStore } from "./session-store.ts"
 
 export const followAgentWorktree = (
@@ -62,21 +62,33 @@ export const followAgentWorktree = (
         calls.delete(output.toolCallId)
         if (!call || output.isError) return
         const activity = toolActivity(call, output)
+        const appeared: string[] = []
         if (needsWorktreeList(activity)) {
           for (const worktree of yield* refreshWorktrees) {
-            if (!known.has(worktree.path)) created.add(worktree.path)
+            if (!known.has(worktree.path)) {
+              created.add(worktree.path)
+              appeared.push(worktree.path)
+            }
             known.add(worktree.path)
           }
         } else if (created.size === 0) return
         const current = yield* store.findById(session.id)
         if (!current) return
         const listed = new Set(worktrees.map((w) => w.path))
-        const target = folderAfterTool({
-          activity,
+        const movedTo = folderMovedTo({
           workingFolder: current.workingFolder,
-          folders: [session.projectPath, ...listed],
-          created: [...created].filter((path) => listed.has(path)),
+          projectPath: session.projectPath,
+          listed,
+          appeared,
         })
+        const target =
+          movedTo ??
+          folderAfterTool({
+            activity,
+            workingFolder: current.workingFolder,
+            folders: [session.projectPath, ...listed],
+            created: [...created].filter((path) => listed.has(path)),
+          })
         if (target) yield* moveTo(target)
       })
 
