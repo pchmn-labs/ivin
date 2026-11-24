@@ -262,9 +262,9 @@ test("an open diff is back at launch, from the server", async () => {
   await expect.element(page.getByTestId("diff-view").getByText("Open daily.")).toBeVisible()
 })
 
-test("the Changes tab lists what the branch's commits changed under the uncommitted changes, and its label counts both", async () => {
+test("the Changes tab lists what the branch's commits changed under the uncommitted changes, and its label counts each changed file once", async () => {
   const server = await mount(makeServer())
-  await expect.element(changesTab()).toHaveTextContent("Changes3 · 3")
+  await expect.element(changesTab()).toHaveTextContent("Changes5")
   await expect.element(heading("Uncommitted")).toHaveTextContent("Uncommitted 3")
   await expect.element(heading("Committed")).toHaveTextContent("Committed 3")
   await expect
@@ -279,7 +279,7 @@ test("the Changes tab lists what the branch's commits changed under the uncommit
 
   server.changes.set(project, { kind: "listed", changes: [] })
   server.changeOnDisk(project, ["README.md"])
-  await expect.element(changesTab()).toHaveTextContent("Changes0 · 3")
+  await expect.element(changesTab()).toHaveTextContent("Changes3")
   await expect.element(page.getByText("No uncommitted changes.", { exact: false })).toBeVisible()
   await expect.element(committedRow("plan.md")).toBeVisible()
 })
@@ -350,7 +350,7 @@ test("Backspace on a change asks first, naming the file, then restores it", asyn
   await userEvent.keyboard("{Enter}")
   await expect.element(discardDialog()).not.toBeInTheDocument()
   await expect.element(row("README.md")).not.toBeInTheDocument()
-  await expect.element(changesTab()).toHaveTextContent("Changes2 · 3")
+  await expect.element(changesTab()).toHaveTextContent("Changes5")
 })
 
 test("Discard all asks with what goes back and what is deleted, and discards only the changes it showed", async () => {

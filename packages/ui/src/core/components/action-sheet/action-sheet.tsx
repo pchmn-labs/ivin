@@ -39,13 +39,13 @@ export function ActionSheet({
       <div className="iv-action-sheet__head">
         {icon === undefined ? null : <Icon name={icon} size={16} />}
         <span className="iv-action-sheet__title">{title}</span>
-        {detail === undefined ? null : (
-          <span className="iv-action-sheet__detail" title={detail}>
-            {detail}
-          </span>
-        )}
         {aside === undefined ? null : <div className="iv-action-sheet__aside">{aside}</div>}
       </div>
+      {detail === undefined ? null : (
+        <code className="iv-action-sheet__detail" title={detail}>
+          {detail}
+        </code>
+      )}
       {children}
       {hint === undefined ? null : <p className="iv-action-sheet__hint">{hint}</p>}
       {keys === undefined && note === undefined && actions === undefined ? null : (

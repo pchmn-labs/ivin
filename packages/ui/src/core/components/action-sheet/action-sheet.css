@@ -48,11 +48,17 @@
 
 .iv-action-sheet__detail {
   display: -webkit-box;
-  min-width: 0;
+  margin: 0 0 var(--iv-space-3);
+  padding: var(--iv-space-2) var(--iv-space-3);
   overflow: hidden;
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-bg-subtle);
+  color: var(--iv-text);
   font-family: var(--iv-font-mono);
-  font-size: var(--iv-text-sm);
-  font-weight: var(--iv-weight-regular);
+  font-size: var(--iv-text-mono);
+  line-height: var(--iv-text-mono-lh);
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;

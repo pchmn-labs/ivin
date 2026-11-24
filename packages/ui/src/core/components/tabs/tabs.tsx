@@ -27,11 +27,14 @@ export function Tabs({ tabs, value, onValueChange, children, "aria-label": ariaL
       <BaseTabs.List className="iv-tabs__list" aria-label={ariaLabel} activateOnFocus>
         {tabs.map((tab) => (
           <BaseTabs.Tab key={tab.value} value={tab.value} className="iv-tabs__tab">
-            {tab.icon === undefined ? null : <Icon name={tab.icon} size={14} />}
-            {tab.label}
+            <span className="iv-tabs__name">
+              {tab.icon === undefined ? null : <Icon name={tab.icon} size={14} />}
+              {tab.label}
+            </span>
             {tab.badge === undefined ? null : <span className="iv-tabs__badge">{tab.badge}</span>}
           </BaseTabs.Tab>
         ))}
+        <span className="iv-tabs__indicator" aria-hidden="true" />
       </BaseTabs.List>
       {children === undefined ? null : (
         <BaseTabs.Panel value={value} className="iv-tabs__panel">

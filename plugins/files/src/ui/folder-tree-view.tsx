@@ -50,6 +50,10 @@ export function FolderTreeView({ session, state }: { session: Session; state: Pl
   const setTree = (update: (current: FolderTree) => FolderTree) =>
     setView((current) => ({ ...current, tree: update(current.tree) }))
   const setFilter = (next: string) => setView((current) => ({ ...current, filter: next }))
+  const [searching, setSearching] = useState(filter !== "")
+  const stopSearching = () => {
+    if (filter.trim() === "") setSearching(false)
+  }
 
   const [showIgnored, setShowIgnored] = useState(state.showIgnored)
   useEffect(() => {
@@ -117,12 +121,27 @@ export function FolderTreeView({ session, state }: { session: Session; state: Pl
   return (
     <Stack direction="column" gap={2} grow>
       <Stack direction="row" gap={1} align="center">
-        <SearchField
-          label="Filter files by name"
-          placeholder="Filter files"
-          value={filter}
-          onChange={setFilter}
-        />
+        {searching ? (
+          <SearchField
+            label="Filter files by name"
+            placeholder="Filter files"
+            value={filter}
+            onChange={setFilter}
+            autoFocus
+            onBlur={stopSearching}
+            onEscape={stopSearching}
+          />
+        ) : (
+          <>
+            <FolderRow session={session} />
+            <IconButton
+              icon="search"
+              label="Filter files"
+              size="sm"
+              onClick={() => setSearching(true)}
+            />
+          </>
+        )}
         <IconButton
           icon={showIgnored ? "eye" : "eye-slash"}
           label={showIgnored ? "Hide ignored files" : "Show ignored files"}
@@ -138,7 +157,6 @@ export function FolderTreeView({ session, state }: { session: Session; state: Pl
           onClick={closeAll}
         />
       </Stack>
-      <FolderRow session={session} />
       {statusFailure.failure !== null && (
         <ErrorMessage
           message={statusFailure.failure.text}

@@ -67,6 +67,7 @@ const eagerIcons = {
   file: File,
   pencil: PencilSimple,
   "circle-alert": WarningCircle,
+  exclamation: WarningCircle,
   "triangle-alert": Warning,
   "circle-info": Info,
   "circle-check": CheckCircle,
@@ -142,7 +143,7 @@ const everyNameHasAGlyph: [Missing] extends [never] ? true : never = true
 void everyNameHasAGlyph
 
 // Drawn filled, as the session mark's status overlay is.
-const FILLED: ReadonlySet<IconName> = new Set(["question"])
+const FILLED: ReadonlySet<IconName> = new Set(["question", "exclamation"])
 
 export function Icon({ name, size = 16, label }: IconProps) {
   const props = {

@@ -1,7 +1,7 @@
 .iv-option-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--iv-space-1);
 }
 
 .iv-option-list__option {

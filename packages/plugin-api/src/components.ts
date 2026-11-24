@@ -61,6 +61,7 @@ export type IconName =
   | "clock"
   | "diff"
   | "question"
+  | "exclamation"
   | "undo"
   | "download"
   | "restart"
@@ -167,6 +168,8 @@ export interface StackProps {
   readonly justify?: "start" | "center" | "end" | "between"
   readonly wrap?: boolean
   readonly grow?: boolean
+  // Horizontal padding, in grid steps: lines a row up with the rows of a Tree or a ListRow.
+  readonly inset?: 1 | 2
   readonly as?: "div" | "span" | "ul" | "li" | "section" | "nav"
   readonly "aria-label"?: string
   readonly "data-testid"?: string
@@ -443,6 +446,8 @@ export interface SearchFieldProps {
   readonly value: string
   readonly onChange: (value: string) => void
   readonly placeholder?: string
+  readonly autoFocus?: boolean
+  readonly onBlur?: () => void
   // Escape empties a field that holds text; this runs on Escape in an empty one.
   readonly onEscape?: () => void
 }
