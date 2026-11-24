@@ -23,7 +23,7 @@
     ".claude/**",
     "**/dist/**",
     "**/out/**",
-    "**/release/**",
+    "apps/desktop/release/**",
     "**/playwright-report/**",
     "**/test-results/**"
   ],

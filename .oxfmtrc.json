@@ -10,7 +10,7 @@
     "pnpm-lock.yaml",
     "**/dist/**",
     "**/out/**",
-    "**/release/**",
+    "apps/desktop/release/**",
     "**/playwright-report/**",
     "**/test-results/**",
     "plugins/file-icons/theme/**"

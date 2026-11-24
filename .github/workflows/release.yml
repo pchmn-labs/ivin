@@ -43,7 +43,6 @@ jobs:
           ditto -c -k --keepParent apps/desktop/release/mac-arm64/ivin.app "ivin-$VERSION-arm64.zip"
           node tools/release/main.ts manifest "$VERSION" "ivin-$VERSION-arm64.zip" manifest.json
           node tools/release/main.ts notes notes.md
-      # Nothing is pushed before the build succeeds, so a failed build leaves no tag behind.
       - if: steps.check.outputs.release == 'true'
         run: git push --atomic origin HEAD "refs/tags/v$VERSION"
       - if: steps.check.outputs.release == 'true'

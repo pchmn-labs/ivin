@@ -4,7 +4,6 @@ export type Bump = "minor" | "patch" | "none"
 
 const TYPE = /^(\w+)(\([^)]*\))?!?:/
 
-// Breaking changes stay minor: the monorepo is 0.x until the switch.
 export const bumpLevel = (subjects: readonly string[]): Bump => {
   const types = new Set(subjects.map((subject) => TYPE.exec(subject)?.[1]))
   if (types.has("feat")) return "minor"

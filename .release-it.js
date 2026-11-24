@@ -1,5 +1,7 @@
 import { bumpLevel } from "./tools/release/release.ts"
 
+const LEVELS = { minor: 1, patch: 2 }
+
 export default {
   git: {
     commitMessage: "chore(release): v${version}",
@@ -18,7 +20,7 @@ export default {
       infile: "CHANGELOG.md",
       whatBump: (commits) => {
         const level = bumpLevel(commits.map((commit) => commit.header ?? ""))
-        return level === "none" ? undefined : { level: level === "minor" ? 1 : 2 }
+        return level === "none" ? undefined : { level: LEVELS[level] }
       },
     },
   },

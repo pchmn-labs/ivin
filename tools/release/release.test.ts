@@ -12,7 +12,9 @@ describe("bumpLevel", () => {
   })
 
   it("is none when no commit is a feat or a fix", () => {
-    expect(bumpLevel(["chore(deps): bump x", "docs: y", "refactor(server): z", "feature: not a type"])).toBe("none")
+    expect(
+      bumpLevel(["chore(deps): bump x", "docs: y", "refactor(server): z", "feature: not a type"]),
+    ).toBe("none")
     expect(bumpLevel([])).toBe("none")
   })
 })
@@ -20,7 +22,9 @@ describe("bumpLevel", () => {
 describe("withVersion", () => {
   it("replaces the version and keeps the rest of the file", () => {
     const text = '{\n  "name": "a",\n  "version": "0.0.0",\n  "private": true\n}\n'
-    expect(withVersion(text, "0.1.0")).toBe('{\n  "name": "a",\n  "version": "0.1.0",\n  "private": true\n}\n')
+    expect(withVersion(text, "0.1.0")).toBe(
+      '{\n  "name": "a",\n  "version": "0.1.0",\n  "private": true\n}\n',
+    )
   })
 
   it("leaves a file with no version alone", () => {
@@ -43,7 +47,8 @@ describe("manifest", () => {
 
 describe("latestSection", () => {
   it("takes the top version's notes without its heading", () => {
-    const changelog = "# Changelog\n\n## [0.2.0](url) (2026-01-02)\n\n### Features\n\n* a\n\n## 0.1.0 (2026-01-01)\n\n* b\n"
+    const changelog =
+      "# Changelog\n\n## [0.2.0](url) (2026-01-02)\n\n### Features\n\n* a\n\n## 0.1.0 (2026-01-01)\n\n* b\n"
     expect(latestSection(changelog)).toBe("### Features\n\n* a\n")
   })
 })
