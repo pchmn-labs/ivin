@@ -13,6 +13,7 @@ test("a missing or empty file holds the default settings: every switch on, the r
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
     agents: { stopWhenIdleMinutes: 10 },
+    updates: { automaticCheck: true },
   })
 })
 
@@ -24,6 +25,7 @@ test("a setting in the file replaces its default, and one left out falls back to
       files: { folderIcons: false },
       sidebar: { layout: "strip" as const },
       agents: { stopWhenIdleMinutes: 0 },
+      updates: { automaticCheck: true },
     },
     problem: null,
   }
@@ -42,6 +44,7 @@ test("a setting in the file replaces its default, and one left out falls back to
       files: { folderIcons: false },
       sidebar: { layout: "strip" },
       agents: { stopWhenIdleMinutes: 0 },
+      updates: { automaticCheck: true },
     },
     problem: null,
   })

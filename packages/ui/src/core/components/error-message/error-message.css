@@ -1,6 +1,6 @@
 .iv-error-message {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--iv-space-2);
   min-width: 0;
   color: var(--iv-danger);
@@ -11,9 +11,19 @@
 .iv-error-message__icon {
   display: inline-flex;
   flex: none;
+  margin-top: 1px;
 }
 
 .iv-error-message__text {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+/* The button is taller than a line: its centre is the first line's. */
+.iv-error-message:has(.iv-button) .iv-error-message__text {
+  padding-block: var(--iv-space-1);
+}
+
+.iv-error-message:has(.iv-button) .iv-error-message__icon {
+  margin-top: calc(var(--iv-space-1) + 1px);
 }

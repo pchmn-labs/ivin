@@ -10,18 +10,23 @@ import {
   utilityProcess,
   type UtilityProcess,
 } from "electron"
+import { readFileSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
-import { delimiter, join } from "node:path"
+import { delimiter, dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import {
+  CHECK_FOR_UPDATES,
   GET_SERVER_STATE,
+  GET_UPDATE_STATE,
   OPEN_SETTINGS_FILE,
   PICK_FOLDER,
   RESTART_SERVER,
+  RESTART_TO_UPDATE,
   RPC_PORT_REPLY,
   RPC_PORT_REQUEST,
   SERVER_STATE,
+  UPDATE_STATE,
 } from "./channels.ts"
 import { writeCliCommand } from "./cli-command.ts"
 import { linkTarget } from "./link-target.ts"
@@ -29,6 +34,8 @@ import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
 import { PLUGIN_SCHEME, pluginFile } from "./plugin-protocol.ts"
 import { PLUGIN_BUNDLE_SCHEME, pluginBundleFile } from "./plugin-bundle-protocol.ts"
 import { createRestartPolicy } from "./restart-policy.ts"
+import { automaticCheckFrom } from "./update-settings.ts"
+import { createUpdater, startSwap } from "./updater.ts"
 
 // A dev build keeps its own data, so it never shares a database with the installed app.
 if (!app.isPackaged && !app.commandLine.hasSwitch("user-data-dir")) {
@@ -200,6 +207,52 @@ ipcMain.handle(RESTART_SERVER, () => {
   startServer({ manual: true })
 })
 
+// Only a packaged macOS arm64 build ships a zip an update can replace itself with.
+const updatesEnabled = app.isPackaged && process.platform === "darwin" && process.arch === "arm64"
+const settingsFile = join(ivinHome, "settings.json")
+// Contents/MacOS/ivin sits two folders inside ivin.app.
+const appBundle = dirname(dirname(dirname(app.getPath("exe"))))
+let relaunchToUpdate = false
+const updater = createUpdater({
+  releaseUrl:
+    process.env["IVIN_UPDATE_URL"] ??
+    "https://api.github.com/repos/pchmn-labs/ivin/releases/latest",
+  current: app.getVersion(),
+  bundle: appBundle,
+  folder: join(app.getPath("userData"), "updates"),
+  autoCheck: () => {
+    try {
+      return automaticCheckFrom(readFileSync(settingsFile, "utf8"))
+    } catch {
+      return true
+    }
+  },
+  onState: (state) => {
+    for (const window of BrowserWindow.getAllWindows()) window.webContents.send(UPDATE_STATE, state)
+  },
+})
+ipcMain.handle(GET_UPDATE_STATE, () => updater.state())
+ipcMain.handle(CHECK_FOR_UPDATES, async () => {
+  if (updatesEnabled) await updater.check({ manual: true })
+  return updater.state()
+})
+ipcMain.handle(RESTART_TO_UPDATE, () => {
+  if (updater.state().kind !== "ready") return
+  relaunchToUpdate = true
+  app.quit()
+})
+app.on("quit", () => {
+  const staged = updater.staged()
+  if (!staged) return
+  startSwap({
+    pid: process.pid,
+    target: appBundle,
+    staged: staged.bundle,
+    relaunch: relaunchToUpdate,
+    args: process.argv.slice(1),
+  })
+})
+
 ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
   const file = join(ivinHome, "settings.json")
   try {
@@ -294,5 +347,6 @@ void app.whenReady().then(() => {
     })
   }
   startServer()
+  if (updatesEnabled) updater.start()
   return createWindow()
 })

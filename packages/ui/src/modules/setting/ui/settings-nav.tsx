@@ -22,6 +22,7 @@ const sectionIcons: Record<SettingsPageSectionKey, IconName> = {
   files: "folder",
   sidebar: "panel-left",
   agents: "robot",
+  updates: "download",
   commandLine: "terminal",
 }
 

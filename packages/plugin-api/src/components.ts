@@ -56,6 +56,9 @@ export type IconName =
   | "diff"
   | "question"
   | "undo"
+  | "download"
+  | "restart"
+  | "external-link"
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger"
 export type ButtonSize = "sm" | "md"

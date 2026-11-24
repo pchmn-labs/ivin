@@ -9,6 +9,7 @@ test("the known paths are the dotted paths of the settings schema's leaves", () 
     "files.folderIcons",
     "sidebar.layout",
     "agents.stopWhenIdleMinutes",
+    "updates.automaticCheck",
   ])
 })
 

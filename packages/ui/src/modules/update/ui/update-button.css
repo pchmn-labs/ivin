@@ -1,0 +1,88 @@
+.iv-update-button {
+  position: relative;
+}
+
+.iv-update-button[data-kind="ready"],
+.iv-update-button[data-kind="downloading"] {
+  color: var(--iv-accent);
+}
+
+.iv-update-button[data-kind="failed"] {
+  color: var(--iv-danger);
+}
+
+.iv-update-button[data-kind="checking"] {
+  color: var(--iv-text-faint);
+}
+
+.iv-update-button__dot {
+  position: absolute;
+  right: var(--iv-space-1);
+  bottom: var(--iv-space-1);
+  width: var(--iv-dot-size);
+  height: var(--iv-dot-size);
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-accent);
+  box-shadow: 0 0 0 var(--iv-line-bold) var(--iv-bg-card);
+  pointer-events: none;
+}
+
+.iv-update-button[data-kind="failed"] .iv-update-button__dot {
+  background: var(--iv-danger);
+}
+
+.iv-update-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-2);
+  width: 300px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: var(--iv-space-3) var(--iv-space-4);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+  box-shadow: var(--iv-shadow-overlay);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
+  transition:
+    opacity var(--iv-duration-fast) var(--iv-ease-out),
+    transform var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-update-card[data-starting-style],
+.iv-update-card[data-ending-style] {
+  opacity: 0;
+  transform: translateY(calc(-1 * var(--iv-space-1)));
+}
+
+.iv-update-card__title {
+  margin: 0;
+  color: var(--iv-text);
+  font-size: var(--iv-text-md);
+  line-height: var(--iv-text-md-lh);
+  font-weight: var(--iv-weight-semibold);
+}
+
+.iv-update-card__heading {
+  margin: 0 0 var(--iv-space-1);
+  color: var(--iv-text);
+  font-weight: var(--iv-weight-semibold);
+}
+
+.iv-update-card__notes {
+  color: var(--iv-text-muted);
+}
+
+.iv-update-card__link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  color: var(--iv-text-muted);
+}
+
+.iv-update-agents {
+  margin: 0;
+  padding-left: var(--iv-space-4);
+  color: var(--iv-text-muted);
+}

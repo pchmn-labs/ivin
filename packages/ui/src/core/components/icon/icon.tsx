@@ -1,10 +1,12 @@
 import {
   AppWindow,
   Archive,
+  ArrowClockwise,
   ArrowCounterClockwise,
   ArrowDown,
   ArrowLeft,
   ArrowRight,
+  ArrowSquareOut,
   ArrowsInLineVertical,
   Eye,
   EyeSlash,
@@ -20,6 +22,7 @@ import {
   CheckCircle,
   CircleNotch,
   Clock,
+  DownloadSimple,
   Copy,
   DotsThree,
   File,
@@ -106,6 +109,9 @@ const icons = {
   diff: GitDiff,
   question: Question,
   undo: ArrowUUpLeft,
+  download: DownloadSimple,
+  restart: ArrowClockwise,
+  "external-link": ArrowSquareOut,
 } satisfies Record<IconName, PhosphorIcon>
 
 // Drawn filled, as the session mark's status overlay is.

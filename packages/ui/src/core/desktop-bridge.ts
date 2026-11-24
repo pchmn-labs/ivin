@@ -1,3 +1,5 @@
+import type { UpdateState } from "@ivin/contracts/update"
+
 export type ServerState =
   | { readonly kind: "running" }
   | { readonly kind: "restarting" }
@@ -14,6 +16,11 @@ declare global {
       readonly restartServer: () => Promise<void>
       // Returns the function that stops listening.
       readonly onServerState: (listener: (state: ServerState) => void) => () => void
+      readonly getUpdateState: () => Promise<UpdateState>
+      // Runs a check now, and resolves with the state it ends in.
+      readonly checkForUpdates: () => Promise<UpdateState>
+      readonly restartToUpdate: () => Promise<void>
+      readonly onUpdateState: (listener: (state: UpdateState) => void) => () => void
     }
   }
 }

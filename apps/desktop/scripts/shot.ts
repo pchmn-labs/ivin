@@ -114,6 +114,30 @@ try {
   }
 
   await shoot("new-session")
+  // Only a packaged build checks for updates, so main sends the window the states it would.
+  const sendUpdateState = (state: object) =>
+    app.evaluate(({ BrowserWindow }, update) => {
+      for (const win of BrowserWindow.getAllWindows())
+        win.webContents.send("ivin:update:state", update)
+    }, state)
+  const release = {
+    current: "0.3.2",
+    version: "0.4.0",
+    notes:
+      "### Features\n\n- show a session whose agent runs background tasks as in background\n- resize the files card and show file icons in its tabs\n\n### Fixes\n\n- keep a running step's calls where the user wheeled up",
+    url: "https://github.com/pchmn-labs/ivin/releases/tag/v0.4.0",
+  }
+  await sendUpdateState({ kind: "ready", ...release })
+  await window.getByRole("button", { name: "Restart to update" }).hover()
+  await window.getByText("ivin 0.4.0 is ready. Restart to update.").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("update-ready")
+  await sendUpdateState({ kind: "failed", current: "0.3.2", reason: "notWritable" })
+  await window.getByRole("button", { name: "Update failed" }).hover()
+  await window.getByText(/Move ivin to a folder you can write to/).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("update-failed")
+  await sendUpdateState({ kind: "idle", current: "0.3.2" })
   await window.getByTestId("branch-picker").click()
   await window.getByTestId("branch-row").filter({ hasText: "feat/remote" }).waitFor()
   await window.waitForTimeout(300)
@@ -399,6 +423,13 @@ try {
   await window.getByRole("heading", { name: "Agents" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("settings-agents")
+  await window
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Updates" })
+    .click()
+  await window.getByRole("heading", { name: "Updates" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("settings-updates")
   await window
     .getByRole("navigation", { name: "Settings sections" })
     .getByRole("button", { name: "Command line" })

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { parseJsonc } from "./parse-jsonc.ts"
+import { parseJsonc } from "./jsonc.ts"
 
 test("comments and trailing commas are dropped, but not inside strings", () => {
   const text = `{
