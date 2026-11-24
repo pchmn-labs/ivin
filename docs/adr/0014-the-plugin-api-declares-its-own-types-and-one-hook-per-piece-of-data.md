@@ -6,7 +6,7 @@ A piece of data has one hook, with a parameter for its variants: `useChanges(ses
 
 ## Why
 
-- The API freezes as 1.0.0 at the switch. Types re-exported from the contracts would freeze the server's contracts with it.
+- The API is frozen as 1.0.0 when Codex and ACP are added (milestone 4). Types re-exported from the contracts would freeze the server's contracts with it.
 - Codex and ACP will change the transcript. Plugins must read items through types that the host converts to, not through the server's.
 - One hook per variant doubled the API for every feature with two modes, and a plugin that needs one item of the transcript should not re-render for every message.
 

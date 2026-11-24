@@ -120,9 +120,8 @@ function useFileList(session: Session, active: boolean) {
 function FolderTreeView({ session, state }: { session: Session; state: PluginState }) {
   const listFolder = useListFolder()
   const openFile = useOpenFile()
-  const { entries: statuses, failure: gitFailure, retry: retryGit } = useGitStatus(session.id)
+  const { entries: statuses, ...statusFailure } = useGitStatus(session.id)
   const marks = useMemo(() => gitMarks(statuses), [statuses])
-  const statusFailure = { failure: gitFailure, retry: retryGit }
   const [openFailure, setOpenFailure] = useState<({ path: string } & ActionFailure) | null>(null)
   const open = async (path: string) => {
     setOpenFailure(null)

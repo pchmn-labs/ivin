@@ -20,7 +20,7 @@ let renders = 0
 const Probe = memo(
   function Probe({ session }: SlotProps["composer.above"]) {
     renders += 1
-    return <p>{usePendingApproval(session.id)?.name ?? "nothing pending"}</p>
+    return <p>probe: {usePendingApproval(session.id)?.name ?? "nothing pending"}</p>
   },
   (before, after) => before.session.id === after.session.id,
 )
@@ -47,7 +47,7 @@ test("a composer.above sheet does not re-render when a message arrives in the tr
       </PluginsProvider>
     </RegistryProvider>,
   )
-  await expect.element(page.getByText("nothing pending")).toBeVisible()
+  await expect.element(page.getByText("probe: nothing pending")).toBeVisible()
 
   server.pushItem({
     ...item,
@@ -82,5 +82,6 @@ test("a composer.above sheet does not re-render when a message arrives in the tr
     input: { command: "ls" },
     decision: null,
   })
-  await expect.element(page.getByText("Bash", { exact: true })).toBeVisible()
+  await expect.element(page.getByText("probe: Bash")).toBeVisible()
+  expect(renders).toBeGreaterThan(before)
 })

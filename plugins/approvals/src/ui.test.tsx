@@ -42,7 +42,7 @@ const mount = async (
   const host: UiHost = {
     ...testUiHost,
     usePendingApproval: () =>
-      items.find(
+      items.findLast(
         (item): item is ApprovalItem => item.type === "approval" && item.decision === null,
       ),
     useAnswerApproval: () => answer,

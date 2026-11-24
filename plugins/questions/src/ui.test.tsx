@@ -42,7 +42,7 @@ const mount = async (
   const host: UiHost = {
     ...testUiHost,
     usePendingQuestion: () =>
-      items.find(
+      items.findLast(
         (item): item is QuestionItem => item.type === "question" && item.status === "open",
       ),
     useAnswerQuestion: () => answer,

@@ -1,7 +1,6 @@
 import { useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { PickWorkingFolderProps } from "@ivin/plugin-api/ui"
 import type { WorkingFolderChoice } from "@ivin/contracts/session"
-import type { ActionFailure } from "@ivin/plugin-api/ui"
+import type { ActionFailure, PickWorkingFolderProps } from "@ivin/plugin-api/ui"
 import { Cause, Exit } from "effect"
 import { AsyncResult } from "effect/reactivity"
 import { useEffect, useRef, useState } from "react"

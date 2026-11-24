@@ -73,11 +73,11 @@ const mountPanel = async (
     useSelectedSessionId: () => onScreen,
     useOpenTab: () => (sessionId) => void opened.push(sessionId),
     usePendingApproval: (sessionId) =>
-      transcripts[sessionId]?.find(
+      transcripts[sessionId]?.findLast(
         (item): item is ApprovalItem => item.type === "approval" && item.decision === null,
       ),
     usePendingQuestion: (sessionId) =>
-      transcripts[sessionId]?.find(
+      transcripts[sessionId]?.findLast(
         (item): item is QuestionItem => item.type === "question" && item.status === "open",
       ),
     useAnswerApproval: (sessionId) => async (answer) => {

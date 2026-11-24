@@ -116,9 +116,9 @@ export interface UiHost {
   }
   // Selects the session's project and its tab, opening one if it has none.
   readonly useOpenTab: () => (sessionId: string) => void
-  // The approval the session waits on: the last one still unanswered. Re-renders when it changes.
+  // The approval the session waits on: the last one still unanswered.
   readonly usePendingApproval: (sessionId: string) => ApprovalItem | undefined
-  // The questions the session waits on: the last ones still unanswered. Re-renders when they change.
+  // The questions the session waits on: the last ones still unanswered.
   readonly usePendingQuestion: (sessionId: string) => QuestionItem | undefined
   // Tokens and cost summed over the whole session by the server; null until it has any usage.
   readonly useUsage: (sessionId: string) => SessionUsage
@@ -200,9 +200,8 @@ export interface UiHost {
   }
   // The file the session's tab has selected beside its chat, or null.
   readonly useFileOnScreen: (sessionId: string) => string | null
-  // The changes of a working folder, kept up to date with the disk: `working` for the uncommitted
-  // ones, `committed` for what the commits of the session's branch changed since it left origin's
-  // default branch.
+  // `working`: the uncommitted changes; `committed`: what the branch's commits changed since it
+  // left origin's default branch. Kept up to date with the disk.
   readonly useChanges: <K extends ChangeKind>(
     sessionId: string,
     kind: K,

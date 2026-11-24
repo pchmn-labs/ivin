@@ -1,5 +1,10 @@
 import { expectTypeOf, test } from "vitest"
-import type { Annotation as ContractAnnotation } from "@ivin/contracts/annotation"
+import type {
+  Annotation as ContractAnnotation,
+  CitationAnnotationData,
+  IssueAnnotationData,
+  PrAnnotationData,
+} from "@ivin/contracts/annotation"
 import type { Change, FolderEntry, GitStatusEntry } from "@ivin/contracts/file"
 import type {
   OpenProjects as ContractOpenProjects,
@@ -13,14 +18,13 @@ import type {
 import type { Settings as ContractSettings } from "@ivin/contracts/setting"
 import type { Tab as ContractTab } from "@ivin/contracts/tab"
 import type {
+  ImageData,
   ImageRef,
   SessionUsage,
   TranscriptItem as ContractItem,
 } from "@ivin/contracts/transcript"
 import type * as Api from "@ivin/plugin-api/ui"
 
-// A contract type that gains or loses a field fails here, until the plugin API type and the
-// host's conversion follow it.
 type Item<T extends ContractItem["type"]> = Extract<ContractItem, { type: T }>
 type Dateless<T, K extends PropertyKey> = Omit<T, K & keyof T>
 
@@ -33,6 +37,10 @@ test("the plugin API's types match the contracts' they are converted from", () =
   expectTypeOf<ContractSettings>().toEqualTypeOf<Api.Settings>()
   expectTypeOf<ContractTab>().toEqualTypeOf<Api.Tab>()
   expectTypeOf<ImageRef>().toEqualTypeOf<Api.ImageRef>()
+  expectTypeOf<ImageData>().toEqualTypeOf<Api.ImageData>()
+  expectTypeOf<PrAnnotationData>().toEqualTypeOf<Api.PrAnnotationData>()
+  expectTypeOf<IssueAnnotationData>().toEqualTypeOf<Api.IssueAnnotationData>()
+  expectTypeOf<CitationAnnotationData>().toEqualTypeOf<Api.CitationAnnotationData>()
   expectTypeOf<SessionUsage>().toEqualTypeOf<Api.SessionUsage>()
   expectTypeOf<Item<"message">>().toEqualTypeOf<Api.MessageItem>()
   expectTypeOf<Item<"thinking">>().toEqualTypeOf<Api.ThinkingItem>()
@@ -54,6 +62,9 @@ test("the plugin API's types with dates match the contracts' apart from their da
   expectTypeOf<ContractSession>().toExtend<Api.Session>()
   expectTypeOf<Dateless<ContractProject, "lastOpenedAt">>().toEqualTypeOf<
     Dateless<Api.Project, "lastOpenedAt">
+  >()
+  expectTypeOf<Dateless<ContractOpenProjects, "projects">>().toEqualTypeOf<
+    Dateless<Api.OpenProjects, "projects">
   >()
   expectTypeOf<ContractOpenProjects>().toExtend<Api.OpenProjects>()
   expectTypeOf<Dateless<ContractAnnotation, "createdAt" | "updatedAt" | "data">>().toEqualTypeOf<
