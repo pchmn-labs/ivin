@@ -11,7 +11,7 @@ const EFFORTS: OfferedValue[] = [
 const PERMISSION_MODES: OfferedValue[] = [
   { value: "manual", name: "Manual", description: "Asks before edits and commands" },
   { value: "acceptEdits", name: "Accept edits", description: "Edits files without asking" },
-  { value: "auto", name: "Auto", description: "A classifier decides what to ask" },
+  { value: "auto", name: "Auto", description: "Blocks risky actions, runs the rest" },
   { value: "dontAsk", name: "Don't ask", description: "Denies what is not allowed" },
   { value: "plan", name: "Plan", description: "Reads and plans, changes nothing" },
   { value: "bypassPermissions", name: "Bypass permissions", description: "Never asks" },

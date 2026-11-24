@@ -900,13 +900,13 @@ test("keyboard only: open the menu, move to the effort column, pick low, and clo
   await expect.element(runOptions("Sonnet 5.5, Low, Manual")).toHaveFocus()
 })
 
-test("the footer describes the highlighted model or permission mode", async () => {
+test("each permission mode shows its description under its name, and models show none", async () => {
   await mountSession("idle")
   await runOptions("Sonnet 5.5, High, Manual").click()
-  const foot = page.getByText("For everyday tasks")
-  await expect.element(foot).toBeVisible()
-  await page.getByTestId("run-option-permissionMode-plan").hover()
-  await expect.element(page.getByText("Reads and plans, changes nothing")).toBeVisible()
+  await expect
+    .element(page.getByTestId("run-option-permissionMode-plan"))
+    .toHaveAccessibleDescription("Reads and plans, changes nothing")
+  await expect.element(page.getByText("For everyday tasks")).not.toBeInTheDocument()
 })
 
 test("while the agent works, the run options menu says the change waits for the end of the turn", async () => {
