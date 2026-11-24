@@ -240,7 +240,7 @@ function Composer({ sessionId }: { sessionId: string }) {
             </Stack>
             {running && text.trim() === "" ? (
               <IconButton
-                icon="square"
+                icon="stop"
                 label="Interrupt"
                 tooltip={interruptHint}
                 variant="secondary"

@@ -42,8 +42,10 @@ export function ActionSheet({
         {aside === undefined ? null : <div className="iv-action-sheet__aside">{aside}</div>}
       </div>
       {detail === undefined ? null : (
-        <code className="iv-action-sheet__detail" title={detail}>
-          {detail}
+        <code className="iv-action-sheet__detail">
+          <span className="iv-action-sheet__detail-text" title={detail}>
+            {detail}
+          </span>
         </code>
       )}
       {children}

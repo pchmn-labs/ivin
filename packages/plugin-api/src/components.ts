@@ -20,6 +20,7 @@ export type IconName =
   | "folder-open"
   | "send"
   | "square"
+  | "stop"
   | "check"
   | "x"
   | "chevron-down"
@@ -169,7 +170,7 @@ export interface StackProps {
   readonly wrap?: boolean
   readonly grow?: boolean
   // Horizontal padding, in grid steps: lines a row up with the rows of a Tree or a ListRow.
-  readonly inset?: 1 | 2
+  readonly inset?: 1
   readonly as?: "div" | "span" | "ul" | "li" | "section" | "nav"
   readonly "aria-label"?: string
   readonly "data-testid"?: string

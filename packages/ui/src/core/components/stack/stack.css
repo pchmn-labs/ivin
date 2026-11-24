@@ -24,10 +24,6 @@
   padding-inline: var(--iv-space-1);
 }
 
-.iv-stack--inset-2 {
-  padding-inline: var(--iv-space-2);
-}
-
 .iv-stack--gap-0 {
   gap: 0;
 }

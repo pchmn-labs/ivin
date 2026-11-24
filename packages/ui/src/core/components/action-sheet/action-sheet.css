@@ -47,10 +47,9 @@
 }
 
 .iv-action-sheet__detail {
-  display: -webkit-box;
+  display: block;
   margin: 0 0 var(--iv-space-3);
   padding: var(--iv-space-2) var(--iv-space-3);
-  overflow: hidden;
   border: 1px solid var(--iv-border);
   border-radius: var(--iv-radius-md);
   background: var(--iv-bg-subtle);
@@ -58,6 +57,12 @@
   font-family: var(--iv-font-mono);
   font-size: var(--iv-text-mono);
   line-height: var(--iv-text-mono-lh);
+}
+
+/* Clamped inside the padding, so no part of a fourth line shows in it. */
+.iv-action-sheet__detail-text {
+  display: -webkit-box;
+  overflow: hidden;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;

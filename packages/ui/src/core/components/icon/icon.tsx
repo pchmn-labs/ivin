@@ -59,6 +59,7 @@ const eagerIcons = {
   "folder-open": FolderOpen,
   send: ArrowUp,
   square: Stop,
+  stop: Stop,
   check: Check,
   x: X,
   "chevron-down": CaretDown,
@@ -143,7 +144,7 @@ const everyNameHasAGlyph: [Missing] extends [never] ? true : never = true
 void everyNameHasAGlyph
 
 // Drawn filled, as the session mark's status overlay is.
-const FILLED: ReadonlySet<IconName> = new Set(["question", "exclamation"])
+const FILLED: ReadonlySet<IconName> = new Set(["question", "exclamation", "stop"])
 
 export function Icon({ name, size = 16, label }: IconProps) {
   const props = {
