@@ -43,3 +43,10 @@ test("a query that extends the last one gives what a fresh search gives, and so 
   for (const query of asked)
     expect(rankFiles(index, query, 10)).toEqual(rankFiles(indexFiles(paths), query, 10))
 })
+
+test("the first results are the same whatever the limit", () => {
+  const many = Array.from({ length: 300 }, (_, i) => `src/${i % 7}/co${"x".repeat(i % 5)}n-${i}.ts`)
+  const index = indexFiles(many)
+  for (const query of ["c", "con", "cn", "src", "s0c", "3"])
+    expect(rankFiles(index, query, 5)).toEqual(rankFiles(indexFiles(many), query, 300).slice(0, 5))
+})
