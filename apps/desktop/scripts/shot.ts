@@ -1,7 +1,7 @@
 import { _electron as electron, type Locator } from "@playwright/test"
 import { execFileSync } from "node:child_process"
 import { appendFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
-import { dirname, join, relative } from "node:path"
+import { basename, dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeTempDir } from "../e2e/launch-app.ts"
 import { descendantsOf } from "../e2e/processes.ts"
@@ -474,4 +474,11 @@ try {
   await app.close()
 }
 
-for (const path of written) console.log(relative(process.cwd(), path))
+const smallDir = join(outDir, "small")
+mkdirSync(smallDir)
+for (const path of written) {
+  const small = join(smallDir, basename(path))
+  // An agent reads this copy: the Retina capture costs it 2 to 4 times the tokens.
+  execFileSync("sips", ["-Z", "1200", path, "--out", small], { stdio: "ignore" })
+  console.log(relative(process.cwd(), small))
+}
