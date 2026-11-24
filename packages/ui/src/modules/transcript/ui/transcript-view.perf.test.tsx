@@ -259,7 +259,6 @@ test(
   },
 )
 
-// Following the end reads the view frame by frame, so these run alone too.
 const message = (position: number, text = `message ${position}`): TranscriptItem => ({
   id: `m${position}`,
   sessionId: "s1",
