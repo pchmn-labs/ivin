@@ -91,12 +91,10 @@ const allText = (
   files: ReadonlyArray<string>,
 ): ConfirmationText => {
   const one = sessions.length === 1
-  const titles = sessions.map(({ session }) => session.title)
   const running = sessions
     .filter(({ session }) => isAgentBusy(session.status))
     .map(({ session }) => session.title)
   const lists: ReadonlyArray<ConfirmationList> = [
-    ...(action === "deleteAll" ? [{ label: null, items: titles, files: false }] : []),
     ...(running.length === 0
       ? []
       : [

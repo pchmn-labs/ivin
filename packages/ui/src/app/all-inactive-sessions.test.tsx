@@ -56,13 +56,13 @@ test("Archive all asks once, naming the running agent, then archives every inact
   expect(server.sessions.get("s1")?.archivedAt).toBeNull()
 })
 
-test("Delete all lists the sessions it erases, and erases them", async () => {
+test("Delete all erases every inactive session, listing none when no agent runs", async () => {
   const server = await mountApp()
 
   await pick("Delete all…")
   const dialog = page.getByRole("dialog")
   await expect.element(dialog.getByText("Delete 3 inactive sessions?")).toBeVisible()
-  await expect.element(dialog.getByRole("listitem")).toHaveLength(3)
+  expect(dialog.getByRole("listitem").query()).toBeNull()
   await dialog.getByRole("button", { name: "Delete all" }).click()
 
   await expect.element(page.getByText(/^Inactive sessions/)).not.toBeInTheDocument()

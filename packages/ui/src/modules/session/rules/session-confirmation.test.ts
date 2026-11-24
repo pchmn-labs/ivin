@@ -144,7 +144,7 @@ test("archiving all lists the sessions whose agent stops, then the files whose e
   ).toBe("Stop and archive all")
 })
 
-test("deleting all lists every session first and cannot be undone", () => {
+test("deleting all cannot be undone, and lists only the sessions whose agent stops", () => {
   const text = confirmationText({
     action: "deleteAll",
     sessions: [inactive("A", "working"), inactive("B", "idle", ["b.md"])],
@@ -153,7 +153,6 @@ test("deleting all lists every session first and cannot be undone", () => {
     title: "Delete 2 inactive sessions?",
     description: "The sessions and their transcripts are erased. This cannot be undone.",
     lists: [
-      { label: null, items: ["A", "B"], files: false },
       { label: "This agent is still running and stops:", items: ["A"], files: false },
       { label: "The unsaved edits to these files are lost:", items: ["b.md"], files: true },
     ],
