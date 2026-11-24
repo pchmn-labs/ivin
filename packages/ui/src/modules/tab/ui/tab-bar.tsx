@@ -1,5 +1,5 @@
 import { RegistryContext, useAtomMount, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useContext, useState, type DragEvent, type KeyboardEvent } from "react"
+import { useContext, useEffect, useRef, useState, type DragEvent, type KeyboardEvent } from "react"
 import { Button } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
@@ -51,6 +51,11 @@ function TabItem({
   const [unsaved, setUnsaved] = useState<ReadonlyArray<string>>([])
   const registry = useContext(RegistryContext)
   const actions = useSessionActions(session, false)
+  const item = useRef<HTMLDivElement>(null)
+  const present = session !== undefined
+  useEffect(() => {
+    if (selected && present) item.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
+  }, [selected, present])
   if (!session) return null
 
   const stopsAgent = settings.stopAgentOnClose && isAgentBusy(session.status)
@@ -89,6 +94,7 @@ function TabItem({
     <>
       <ContextMenu items={actions.items}>
         <div
+          ref={item}
           className="iv-tab-bar__item"
           role="presentation"
           draggable
