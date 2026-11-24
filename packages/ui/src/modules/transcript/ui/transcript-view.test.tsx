@@ -575,5 +575,5 @@ test("a session with no message yet says so", async () => {
     </RegistryProvider>,
   )
 
-  await expect.element(page.getByText("No messages yet")).toBeVisible()
+  await expect.element(page.getByText("No messages yet. Write to the agent below.")).toBeVisible()
 })

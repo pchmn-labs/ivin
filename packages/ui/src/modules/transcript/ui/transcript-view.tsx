@@ -64,7 +64,8 @@ export function TranscriptView({
 
   if (failed && !loaded) return <TranscriptFailure sessionGone={sessionGone} retry={retry} />
   if (!loaded) return <TranscriptEmpty>Loading the transcript…</TranscriptEmpty>
-  if (shown.length === 0) return <TranscriptEmpty>No messages yet</TranscriptEmpty>
+  if (shown.length === 0)
+    return <TranscriptEmpty>No messages yet. Write to the agent below.</TranscriptEmpty>
 
   return (
     <div className="iv-transcript" ref={root}>

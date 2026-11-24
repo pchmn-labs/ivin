@@ -10,7 +10,7 @@ export const testUiHost: UiHost = {
   useProjects: () => ({ projects: [], selectedPath: null }),
   useSelectedSessionId: () => null,
   useTabs: () => [],
-  useTabsLoaded: () => true,
+  useSessionListStatus: () => ({ loaded: true, failed: false, retry: () => {} }),
   useOpenTab: () => () => {},
   useTranscript: () => [],
   useUsage: () => null,

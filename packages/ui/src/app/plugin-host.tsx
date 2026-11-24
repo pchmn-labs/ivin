@@ -32,6 +32,7 @@ import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
 import { answerQuestionAtom } from "../modules/session/atoms/answer-question.ts"
+import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { openSessionsAtom } from "../modules/session/atoms/open-sessions.ts"
 import { useSessionActions } from "../modules/session/hooks/use-session-actions.ts"
 import { useSessionLocation } from "../modules/session/hooks/use-session-location.ts"
@@ -89,6 +90,26 @@ const LOADING = { kind: "loading" } as const satisfies ChangeListing
 
 const useProjectPath = () => useAtomValue(selectedProjectAtom)?.path ?? NO_PROJECT
 
+const hasFailed = (status: AsyncResult.AsyncResult<unknown, unknown> | undefined) =>
+  status !== undefined && AsyncResult.isFailure(status) && !status.waiting
+
+const useSessionListStatus = (): ReturnType<UiHost["useSessionListStatus"]> => {
+  const path = useProjectPath()
+  const loaded = useAtomValue(tabsOf(path).loaded)
+  const tabsFailed = hasFailed(useAtomValue(tabsOf(path).status))
+  const sessionsFailed = hasFailed(useAtomValue(sessionsOf(path).status))
+  const retryTabs = useAtomRefresh(tabsOf(path).status)
+  const retrySessions = useAtomRefresh(sessionsOf(path).status)
+  return {
+    loaded,
+    failed: tabsFailed || sessionsFailed,
+    retry: () => {
+      if (tabsFailed) retryTabs()
+      if (sessionsFailed) retrySessions()
+    },
+  }
+}
+
 const useOpenSubView = (kind: SubView["kind"]) => {
   const sessions = useAtomValue(openSessionsAtom)
   const open = useAtomSet(openSubViewAtom, { mode: "promiseExit" })
@@ -133,7 +154,7 @@ const host: UiHost = {
   useSelectedSessionId: () => useAtomValue(selectedSessionIdAtom),
   useSession: useOpenSession,
   useTabs: () => useAtomValue(tabsOf(useProjectPath()).value).tabs,
-  useTabsLoaded: () => useAtomValue(tabsOf(useProjectPath()).loaded),
+  useSessionListStatus,
   useOpenTab: () => {
     const openTab = useAtomSet(openTabAtom)
     return (sessionId) => openTab({ sessionId })

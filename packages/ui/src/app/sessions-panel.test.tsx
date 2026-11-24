@@ -174,3 +174,25 @@ test("a branch name too long for the row keeps its gap after the worktree icon",
   const branch = branchItem.getBoundingClientRect()
   expect(branch.left - icon.right).toBeGreaterThanOrEqual(4)
 })
+
+test("a tab list that cannot load says so with Retry, and Retry shows the sessions", async () => {
+  const server = makeFakeServer({
+    project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
+  server.failCalls("tab.list")
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <SidebarTabs />
+      </PluginsProvider>
+    </RegistryProvider>,
+  )
+
+  await expect.element(page.getByText("The sessions could not be loaded.")).toBeVisible()
+  expect(page.getByText(/No sessions in p/).query()).toBeNull()
+
+  server.recoverCalls("tab.list")
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByText(/No sessions in p yet/)).toBeVisible()
+  expect(page.getByText("The sessions could not be loaded.").query()).toBeNull()
+})
