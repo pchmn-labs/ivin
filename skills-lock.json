@@ -31,10 +31,10 @@
     },
     "code-review": {
       "source": "pchmn/skills",
-      "commit": "60708c9fbe5b24ac36d11b185c0777862ad6ca9e",
+      "commit": "1fbc70349ba9ccca6a295a3d123aab495637fa4c",
       "sourceType": "github",
       "skillPath": "skills/engineering/code-review/SKILL.md",
-      "computedHash": "662dfadc9cc561d18028948499b84a940e327fef205fe56dd16f36654eccab0a"
+      "computedHash": "150ae7a4e8eb850d8f4306eddc77b369f3cc5f2c8100da5bf0b9e3d74b266288"
     },
     "codebase-design": {
       "source": "pchmn/skills",
@@ -66,10 +66,10 @@
     },
     "implement": {
       "source": "pchmn/skills",
-      "commit": "1ec232a1b84d3d50e5f43a2a9d70e4ae47936a7c",
+      "commit": "1fbc70349ba9ccca6a295a3d123aab495637fa4c",
       "sourceType": "github",
       "skillPath": "skills/engineering/implement/SKILL.md",
-      "computedHash": "989aa20c5d4e64b9fa3e796264c42eb9b460d620410504a420bd4dac4956c764"
+      "computedHash": "d1bdb10617c914652fe6c2baa11e52cb6d47ed080cb136eabb971141bb6eeca4"
     },
     "improve-codebase-architecture": {
       "source": "pchmn/skills",
@@ -101,10 +101,10 @@
     },
     "setup-matt-pocock-skills": {
       "source": "pchmn/skills",
-      "commit": "271635b63257c85770a784a202b749d3ea05e5eb",
+      "commit": "1fbc70349ba9ccca6a295a3d123aab495637fa4c",
       "sourceType": "github",
       "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
-      "computedHash": "07094f4ab371b452e8b1e67fc0a0549ef0cc933b13b2bd50a15360fcb497d7d4"
+      "computedHash": "9b3c54608ec656ea11b1fef64e9c32ba2f3150973f8cd80ec35683d61e26fddc"
     },
     "tdd": {
       "source": "pchmn/skills",
