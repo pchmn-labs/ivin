@@ -38,7 +38,7 @@
   width: 300px;
   max-height: 340px;
   overflow-y: auto;
-  padding: var(--iv-space-3) var(--iv-space-4);
+  padding: var(--iv-space-3);
   border: 1px solid var(--iv-border-strong);
   border-radius: var(--iv-radius-lg);
   background: var(--iv-bg-raised);
@@ -48,6 +48,11 @@
   transition:
     opacity var(--iv-duration-fast) var(--iv-ease-out),
     transform var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+/* Retry's label sits 4px into its button from the top and 8px from the side: this evens the two. */
+.iv-update-card:has(> .iv-error-message) {
+  padding-right: var(--iv-space-2);
 }
 
 .iv-update-card[data-starting-style],
