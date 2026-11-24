@@ -8,13 +8,12 @@ const USER_SCROLL_EVENTS = ["wheel", "touchmove", "keydown", "pointerdown"] as c
 const freshTurn = (turn: string | undefined) => ({
   turn,
   drawn: false,
-  // Where the message was while below the top of the view; Virtuoso unmounts its row once above it.
+  // Where the message was while below the top of the view.
   contentTop: undefined as number | undefined,
   stopped: false,
   away: false,
 })
 
-// Follows the transcript's end, except once the last turn's user message has reached the top of the view.
 export function useFollowSentMessage({
   rows,
   list,
@@ -49,7 +48,7 @@ export function useFollowSentMessage({
     // Virtuoso unmounts the row once it is out of view, so a row seen before and gone has gone above.
     current.stopped = rowTop === null ? current.drawn : rowTop <= 0
     // A row that arrives taller than the view is followed in one jump, past the message.
-    if (snap && current.stopped && current.contentTop !== undefined) {
+    if (snap && !current.away && current.stopped && current.contentTop !== undefined) {
       view.scrollTop = Math.min(view.scrollTop, current.contentTop)
     }
   }
@@ -64,6 +63,7 @@ export function useFollowSentMessage({
       current.away = false
       current.stopped = false
       current.drawn = false
+      current.contentTop = undefined
     }
     stopIfReached(view, true)
   }, [])

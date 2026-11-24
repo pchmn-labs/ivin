@@ -228,6 +228,7 @@ test("scrolled back to the end, the transcript follows its end again", async () 
   server.pushItem(longAnswer(41))
   await expect.poll(() => fromEnd()).toBeGreaterThan(100)
 
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: 1 }))
   await vi.waitFor(() => {
     scroller().scrollTop = scroller().scrollHeight
     scroller().dispatchEvent(new Event("scroll"))
