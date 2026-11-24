@@ -16,7 +16,7 @@
   background: var(--iv-attention-subtle);
 }
 
-.iv-list-row[data-attention]:hover {
+.iv-list-row[data-attention]:not([data-selected]):hover {
   background: var(--iv-attention-hover);
 }
 

@@ -34,7 +34,7 @@ function useNow() {
   return now
 }
 
-// A shell line continuation joins its lines, so a command written over several shows whole.
+// Lines continued with a backslash are one shell line; past that, only the first line shows.
 const commandLine = (command: string) => command.replace(/\s*\\\n\s*/g, " ").split("\n", 1)[0] ?? ""
 
 // "[bg] Review the diff +2": the first task, and how many others run.
@@ -115,26 +115,18 @@ function WaitingRow({ session, project }: { session: Session; project: string })
           />
         }
         title={session.title}
-        {...(command === undefined && {
-          subtitle: <Detail project={project} {...(question !== undefined && { question })} />,
-        })}
+        {...(command === undefined
+          ? { subtitle: <Detail project={project} {...(question !== undefined && { question })} /> }
+          : { tooltip: { text: command, label: "Approval needed", mono: true } })}
         {...(command !== undefined && {
-          tooltip: { text: command, label: "Approval needed", mono: true },
-        })}
-        {...(pending !== undefined && {
           below: (
             <Stack direction="column" gap={2} grow>
-              {command !== undefined && (
-                <Text size="xs" code truncate data-testid="working-command">
-                  {commandLine(command)}
-                </Text>
-              )}
+              <Text size="xs" code truncate data-testid="working-command">
+                {commandLine(command)}
+              </Text>
               <Stack direction="row" gap={1} align="center">
-                <Stack as="span" direction="row" gap={1} align="center" grow>
-                  <ProjectMark name={project} size={12} />
-                  <Text size="xs" tone="faint" truncate>
-                    {project}
-                  </Text>
+                <Stack as="span" grow>
+                  <Detail project={project} />
                 </Stack>
                 <Button
                   size="sm"
