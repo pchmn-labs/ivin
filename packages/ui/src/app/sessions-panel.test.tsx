@@ -59,25 +59,10 @@ const setup = async (
   return Object.assign(server, { list })
 }
 
-test("a project with no tab says how to start a session", async () => {
-  await setup([])
-  await expect
-    .element(page.getByText("No sessions in p yet. Start one with New session."))
-    .toBeVisible()
-})
-
-test("a project whose sessions all have their tab closed says no session is open", async () => {
+test("a project with no open tab leaves its sentence to the main area", async () => {
   await setup(["Closed"])
-  await expect.element(page.getByText("No session open. Start one with New session.")).toBeVisible()
-  expect(page.getByText(/No sessions in p/).query()).toBeNull()
-})
-
-test("no empty message shows before the tab list has loaded", async () => {
-  const server = await setup([], { holdTabs: true })
-  await vi.waitFor(() => expect(server.callsOf("tab.list")).toBeGreaterThan(0))
-  expect(page.getByText(/Start one with New session/).query()).toBeNull()
-  server.list?.release()
-  await expect.element(page.getByText(/No sessions in p yet/)).toBeVisible()
+  await expect.element(page.getByText(/Inactive sessions/)).toBeVisible()
+  expect(page.getByText(/No session/).query()).toBeNull()
 })
 
 test("each row shows the session status and follows the server", async () => {
@@ -177,7 +162,7 @@ test("a branch name too long for the row keeps its gap after the worktree icon",
   expect(branch.left - icon.right).toBeGreaterThanOrEqual(4)
 })
 
-test("a tab list that cannot load says so with Retry, and Retry shows the sessions", async () => {
+test("a tab list that cannot load says so with Retry, and Retry clears it", async () => {
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
@@ -191,12 +176,10 @@ test("a tab list that cannot load says so with Retry, and Retry shows the sessio
   )
 
   await expect.element(page.getByText("The sessions could not be loaded.")).toBeVisible()
-  expect(page.getByText(/No sessions in p/).query()).toBeNull()
 
   server.recoverCalls("tab.list")
   await page.getByRole("button", { name: "Retry" }).click()
-  await expect.element(page.getByText(/No sessions in p yet/)).toBeVisible()
-  expect(page.getByText("The sessions could not be loaded.").query()).toBeNull()
+  await expect.element(page.getByText("The sessions could not be loaded.")).not.toBeInTheDocument()
 })
 
 test("no error shows in the list while the server restarts, since the window already says so", async () => {

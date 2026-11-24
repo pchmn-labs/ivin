@@ -10,7 +10,6 @@ import {
   SessionMark,
   Slot,
   Stack,
-  Text,
   TextField,
   defineUi,
   useOpenTab,
@@ -103,12 +102,11 @@ function SessionRow({ session, selected }: { session: Session; selected: boolean
 }
 
 function SessionsPanel() {
-  const { projects, selectedPath } = useProjects()
+  const { selectedPath } = useProjects()
   const sessions = useSessions()
   const tabs = useTabs()
   const { loaded: tabsLoaded, failed, retry } = useSessionListStatus()
   const selectedSessionId = useSelectedSessionId()
-  const projectName = projects.find((project) => project.path === selectedPath)?.name ?? ""
   const inProject = sessions.filter((session) => session.projectPath === selectedPath)
   const open = openSessions(inProject, tabs)
 
@@ -124,13 +122,6 @@ function SessionsPanel() {
       )}
       {!failed && (!tabsLoaded || (tabs.length > 0 && open.length === 0)) && (
         <ListSection label="Sessions" loading />
-      )}
-      {tabsLoaded && !failed && tabs.length === 0 && (
-        <Text as="p" size="sm" tone="faint">
-          {inProject.length === 0
-            ? `No sessions in ${projectName} yet. Start one with New session.`
-            : "No session open. Start one with New session."}
-        </Text>
       )}
       {open.length > 0 && (
         <ListSection label="Sessions" count={open.length}>

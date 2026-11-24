@@ -1,7 +1,10 @@
 import { useAtomValue } from "@effect/atom-react"
 import { Atom } from "effect/reactivity"
+import { Button } from "../../../core/components/button/button.tsx"
 import { NotificationViewport } from "../../../core/components/notification/notification.tsx"
+import { Stack } from "../../../core/components/stack/stack.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
+import { useStartSession } from "../../session/hooks/use-start-session.ts"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
 import { HARNESSES } from "../../session/rules/harnesses.ts"
 import { SessionView } from "../../session/ui/session-view.tsx"
@@ -62,13 +65,23 @@ export function TabView({ projectPath }: { projectPath: string }) {
   const tabs = tabsOf(projectPath)
   const { selectedSessionId } = useAtomValue(tabs.value)
   const loaded = useAtomValue(tabs.loaded)
+  const startSession = useStartSession()
 
   if (!loaded) return <div className="iv-tab-view" />
 
   if (selectedSessionId === null) {
     return (
       <div className="iv-tab-view iv-tab-view--empty">
-        <Text tone="muted">No session open. Create one from the sidebar.</Text>
+        <Stack align="center" gap={4}>
+          <Text tone="muted">No session open</Text>
+          <Button
+            variant="primary"
+            icon="new-session"
+            onClick={() => void startSession(projectPath)}
+          >
+            New session
+          </Button>
+        </Stack>
         <div className="iv-tab-view__notifications">
           <NotificationViewport />
         </div>

@@ -239,15 +239,16 @@ test("when git fails the panel shows its message, and Retry lists the changes ag
   await expect.element(row("README.md")).toBeVisible()
 })
 
-test("a working folder with no changes, or outside a git repository, says so", async () => {
+test("a branch with no change since its base, or a folder outside a git repository, says so in one sentence", async () => {
   const server = makeServer()
   server.changes.set(project, { kind: "listed", changes: [] })
   server.changes.set(worktree, { kind: "not_repository" })
   server.committedChanges.delete(project)
   await mount(server)
   await expect
-    .element(page.getByText("No uncommitted changes. What the agent changes shows up here."))
+    .element(page.getByText("No changes since origin/main. What the agent changes shows up here."))
     .toBeVisible()
+  expect(page.getByText(/^No (un)?committed changes/).query()).toBeNull()
   await expect.element(changesTab()).not.toMatchTextContent(/\d/)
 
   await sessionTab("Fix the cart").getByRole("tab").click()
@@ -445,7 +446,9 @@ test("discarding an untracked file says it deletes it", async () => {
       "Git does not track this file, so discarding its changes deletes it. This cannot be undone.",
     )
   await discardDialog().getByRole("button", { name: "Delete file" }).click()
-  await expect.element(page.getByText("No uncommitted changes.", { exact: false })).toBeVisible()
+  await expect
+    .element(page.getByText("No changes since origin/main.", { exact: false }))
+    .toBeVisible()
 })
 
 test("a failed discard shows git's message under the file's row", async () => {

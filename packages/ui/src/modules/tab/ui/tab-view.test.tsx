@@ -23,3 +23,17 @@ test("the empty message waits for the tab list to load", async () => {
   list.release()
   await expect.element(page.getByText(/No session open/)).toBeVisible()
 })
+
+test("with no session open, New session starts one and opens its tab", async () => {
+  const server = makeFakeServer({
+    project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
+  })
+  await render(
+    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <TabView projectPath="/p" />
+    </RegistryProvider>,
+  )
+  await page.getByRole("button", { name: "New session" }).click()
+  await vi.waitFor(() => expect(server.callsOf("session.create")).toBe(1))
+  await expect.element(page.getByRole("tabpanel")).toBeVisible()
+})

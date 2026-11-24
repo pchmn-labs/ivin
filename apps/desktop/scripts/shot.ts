@@ -66,6 +66,7 @@ export const formatTotal = (cents: number, currency = "EUR") =>
   git("remote", "add", "origin", `${dir}.origin.git`)
   git("branch", "feat/remote")
   git("push", "--quiet", "origin", "main", "feat/remote")
+  git("remote", "set-head", "origin", "main")
   git("branch", "-D", "--quiet", "feat/remote")
 }
 
@@ -89,6 +90,8 @@ try {
   await shoot("trust-project")
   await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).click()
   await window.getByTestId("project-name").getByText("my-project").waitFor()
+  await window.getByText("No session open", { exact: true }).waitFor()
+  await shoot("no-session-open")
   await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
 
   // The virtual list draws only the rows near the view, so a row above it is reached by scrolling.
@@ -114,6 +117,10 @@ try {
   }
 
   await shoot("new-session")
+  await window.getByRole("tab", { name: /^Changes/ }).click()
+  await window.getByText(/^No changes since/).waitFor()
+  await shoot("no-changes")
+  await window.getByRole("tab", { name: /^Sessions/ }).click()
   // Only a packaged build checks for updates, so main sends the window the states it would.
   const sendUpdateState = (state: object) =>
     app.evaluate(({ BrowserWindow }, update) => {

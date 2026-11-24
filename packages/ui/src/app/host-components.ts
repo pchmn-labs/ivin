@@ -6,6 +6,7 @@ import { Button, IconButton } from "../core/components/button/button.tsx"
 import { ChangeList } from "../core/components/change-list/change-list.tsx"
 import { CodeBlock } from "../core/components/code-block/code-block.tsx"
 import { Dialog } from "../core/components/dialog/dialog.tsx"
+import { EmptyMessage } from "../core/components/empty-message/empty-message.tsx"
 import { ErrorMessage } from "../core/components/error-message/error-message.tsx"
 import { Disclosure } from "../core/components/disclosure/disclosure.tsx"
 import { Icon } from "../core/components/icon/icon.tsx"
@@ -58,6 +59,7 @@ export const hostComponents = {
   OptionList,
   ChoiceList,
   Steps,
+  EmptyMessage,
   ErrorMessage,
   ListRow,
   ListSection,
