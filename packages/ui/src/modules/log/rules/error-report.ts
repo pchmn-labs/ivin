@@ -1,4 +1,5 @@
 import type { ErrorReport } from "@ivin/contracts/log"
+import { pluginBundleUrl } from "../../plugin/rules/plugin-bundle-url.ts"
 
 const field = (value: unknown, key: string): string | undefined => {
   if (typeof value !== "object" || value === null || !(key in value)) return undefined
@@ -18,13 +19,20 @@ export const errorReport = (action: string, error: unknown): ErrorReport => {
   }
 }
 
-// Matches unbundled plugin sources only: the packaged build merges plugins into the app bundle.
-const pluginPath = /\/plugins\/[^/]+\//
-
-export const thrownByPlugin = (filename: string | undefined, error: unknown): boolean => {
-  if (filename !== undefined && pluginPath.test(filename)) return true
+const locationOf = (filename: string | undefined, error: unknown): ReadonlyArray<string> => {
   const firstFrame = field(error, "stack")
     ?.split("\n")
     .find((line) => /^\s*at |@/.test(line))
-  return firstFrame !== undefined && pluginPath.test(firstFrame)
+  return [filename, firstFrame].filter((location) => location !== undefined)
+}
+
+// Built-in plugins are merged into the app bundle when packaged, so only user bundles are found.
+export const pluginOfError = (
+  filename: string | undefined,
+  error: unknown,
+  bundles: ReadonlyMap<string, string>,
+): string | null => {
+  for (const location of locationOf(filename, error))
+    for (const [bundle, id] of bundles) if (location.includes(pluginBundleUrl(bundle))) return id
+  return null
 }

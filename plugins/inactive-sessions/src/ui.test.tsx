@@ -72,7 +72,7 @@ test("the section lists exactly the selected project's sessions without a tab, f
   )
   await expect.element(fold()).toBeVisible()
   await expect.element(page.getByText("2", { exact: true })).toBeVisible()
-  await expect.element(page.getByText("Closed one")).not.toBeVisible()
+  await expect.element(page.getByText("Closed one")).not.toBeInTheDocument()
 
   await fold().click()
 
@@ -82,7 +82,7 @@ test("the section lists exactly the selected project's sessions without a tab, f
   expect(page.getByText("Another project's").query()).toBeNull()
 
   await fold().click()
-  await expect.element(page.getByText("Closed one")).not.toBeVisible()
+  await expect.element(page.getByText("Closed one")).not.toBeInTheDocument()
 })
 
 test("clicking an inactive session opens its tab", async () => {

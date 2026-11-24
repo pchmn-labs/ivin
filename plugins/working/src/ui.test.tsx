@@ -128,7 +128,7 @@ test("the panel folds and unfolds its rows", async () => {
   await expect.element(page.getByText("Add search")).toBeVisible()
 
   await summary.click()
-  await expect.element(page.getByText("Add search")).not.toBeVisible()
+  await expect.element(page.getByText("Add search")).not.toBeInTheDocument()
   await summary.click()
   await expect.element(page.getByText("Add search")).toBeVisible()
 })

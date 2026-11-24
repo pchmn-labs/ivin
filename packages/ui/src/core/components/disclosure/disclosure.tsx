@@ -1,4 +1,5 @@
 import type { DisclosureProps } from "@ivin/plugin-api/ui"
+import { useState } from "react"
 import { Icon } from "../icon/icon.tsx"
 import "./disclosure.css"
 
@@ -11,12 +12,14 @@ export function Disclosure({
   variant = "default",
   "data-testid": testId,
 }: DisclosureProps) {
+  const [open, setOpen] = useState(defaultOpen)
   return (
     <details
       className={
         variant === "default" ? "iv-disclosure" : `iv-disclosure iv-disclosure--${variant}`
       }
-      open={defaultOpen}
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
       data-testid={testId}
     >
       <summary
@@ -31,7 +34,7 @@ export function Disclosure({
         )}
         {summary}
       </summary>
-      <div className="iv-disclosure__body">{children}</div>
+      {open && <div className="iv-disclosure__body">{children}</div>}
     </details>
   )
 }

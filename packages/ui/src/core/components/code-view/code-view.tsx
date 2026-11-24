@@ -39,6 +39,16 @@ const lineBreakOf = (text: string) => {
 const textOf = (state: EditorState, lineBreak: string) =>
   state.doc.sliceString(0, state.doc.length, lineBreak)
 
+// Only the range that differs, so the cursor and the scroll stay where they are; both texts use "\n".
+const changedRange = (from: string, to: string) => {
+  let start = 0
+  const shortest = Math.min(from.length, to.length)
+  while (start < shortest && from[start] === to[start]) start++
+  let end = 0
+  while (end < shortest - start && from[from.length - 1 - end] === to[to.length - 1 - end]) end++
+  return { from: start, to: from.length - end, insert: to.slice(start, to.length - end) }
+}
+
 const noExtensions: Extension = []
 
 const replacedText = Annotation.define<true>()
@@ -183,7 +193,7 @@ export function CodeView({
     if (current !== text || newDiff) {
       editor.dispatch({
         ...(current !== text && {
-          changes: { from: 0, to: editor.state.doc.length, insert: text },
+          changes: changedRange(editor.state.doc.toString(), text.replace(/\r\n/g, "\n")),
         }),
         ...(newDiff && { effects: gutters.current.reconfigure(gutterOf(diff)) }),
         annotations: [replacedText.of(true), Transaction.addToHistory.of(false)],

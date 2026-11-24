@@ -1,6 +1,7 @@
 import type { AtomRegistry } from "effect/reactivity"
 import { notify } from "../../../core/components/notification/notification-manager.ts"
 import { CommandFailure } from "../rules/command-failure.ts"
+import { reportPluginFailureAtom } from "../../plugin/atoms/report-plugin-failure.ts"
 import { commandHandlersAtom, commandsAtom } from "./commands.ts"
 
 export const notifyCommandFailure = ({ message, retry }: CommandFailure): void =>
@@ -17,6 +18,10 @@ export const runCommand = (registry: AtomRegistry.AtomRegistry, commandId: strin
     if (error instanceof CommandFailure) return notifyCommandFailure(error)
     const title = registry.get(commandsAtom).find((c) => c.id === commandId)?.title ?? commandId
     notify({ message: `${title} failed.` })
+    if (handler.pluginId !== null) {
+      const reason = `Its command ${commandId} threw: ${error instanceof Error ? error.message : String(error)}`
+      return registry.set(reportPluginFailureAtom, { id: handler.pluginId, reason })
+    }
     // Left unhandled, so the window's error reporter writes it to the log.
     throw error
   })
