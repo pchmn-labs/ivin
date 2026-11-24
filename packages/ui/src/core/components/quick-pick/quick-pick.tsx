@@ -2,6 +2,7 @@ import { Dialog as BaseDialog } from "@base-ui/react/dialog"
 import type { QuickPickItem, QuickPickProps } from "@ivin/plugin-api/ui"
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react"
 import { Icon } from "../icon/icon.tsx"
+import { KeyHints } from "../key-hints/key-hints.tsx"
 import "./quick-pick.css"
 
 export type { QuickPickProps }
@@ -137,7 +138,13 @@ export function QuickPick({
             <div className="iv-quick-pick__message">{message}</div>
           )}
           <div className="iv-quick-pick__foot">
-            <span>↑↓ to move · ↩ to open · esc to close</span>
+            <KeyHints
+              hints={[
+                { key: "↑↓", label: "Move" },
+                { key: "↵", label: "Open" },
+                { key: "Esc", label: "Close" },
+              ]}
+            />
             {footer === undefined ? null : <span className="iv-quick-pick__count">{footer}</span>}
           </div>
         </BaseDialog.Popup>

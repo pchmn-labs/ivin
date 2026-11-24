@@ -1,5 +1,6 @@
 import type { HostComponents } from "@ivin/plugin-api/ui"
 import { ActionSheet } from "../core/components/action-sheet/action-sheet.tsx"
+import { KeyHints } from "../core/components/key-hints/key-hints.tsx"
 import { Block } from "../core/components/block/block.tsx"
 import { Button, IconButton } from "../core/components/button/button.tsx"
 import { ChangeList } from "../core/components/change-list/change-list.tsx"
@@ -51,6 +52,7 @@ export const hostComponents = {
   StatusMark,
   Markdown: SessionMarkdown,
   ActionSheet,
+  KeyHints,
   OptionList,
   ChoiceList,
   Steps,

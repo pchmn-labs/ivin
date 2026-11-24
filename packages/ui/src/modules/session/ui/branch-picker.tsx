@@ -11,6 +11,7 @@ import {
 } from "../../../core/components/composer-menu/composer-menu.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
+import { KeyHints } from "../../../core/components/key-hints/key-hints.tsx"
 import { branchesOf } from "../../worktree/atoms/list-branches.ts"
 import { pickBranchAtom } from "../atoms/pick-branch.ts"
 import { branchMark, pickPreview } from "../rules/branch-pick.ts"
@@ -162,7 +163,12 @@ export function BranchPicker({
             ? pickPreview(highlighted, branches, session)
             : `On ${branch}. Pick a branch to switch to it.`}
         </span>
-        <span className="iv-branch-picker__keys">↵ switch · esc</span>
+        <KeyHints
+          hints={[
+            { key: "↵", label: "Switch" },
+            { key: "Esc", label: "Close" },
+          ]}
+        />
       </div>
     </ComposerMenu>
   )

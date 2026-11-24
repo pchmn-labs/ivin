@@ -66,18 +66,7 @@
 }
 
 .iv-archived-session-list__keys {
-  display: flex;
   flex: none;
-  flex-wrap: wrap;
-  gap: var(--iv-space-1) var(--iv-space-3);
   padding: var(--iv-space-2) var(--iv-space-3);
   border-top: 1px solid var(--iv-border);
-  color: var(--iv-text-faint);
-  font-size: var(--iv-text-xs);
-  line-height: var(--iv-text-xs-lh);
-}
-
-.iv-archived-session-list__keys kbd {
-  margin-right: var(--iv-space-1);
-  font-family: var(--iv-font-sans);
 }

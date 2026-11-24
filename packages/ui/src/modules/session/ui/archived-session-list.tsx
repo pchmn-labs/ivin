@@ -4,6 +4,7 @@ import { AsyncResult } from "effect/reactivity"
 import { useEffect, useRef, type KeyboardEvent } from "react"
 import { IconButton } from "../../../core/components/button/button.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
+import { KeyHints } from "../../../core/components/key-hints/key-hints.tsx"
 import { ListRow } from "../../../core/components/list-row/list-row.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { useCommandKey } from "../../keybinding/hooks/use-key-hint.ts"
@@ -154,17 +155,13 @@ export function ArchivedSessionList({
       </div>
       {sessions.length > 0 && (
         <div className="iv-archived-session-list__keys" aria-hidden="true">
-          <span>
-            <kbd>↵</kbd>Restore
-          </span>
-          {deleteKey !== null && (
-            <span>
-              <kbd>{deleteKey}</kbd>Delete
-            </span>
-          )}
-          <span>
-            <kbd>esc</kbd>Back
-          </span>
+          <KeyHints
+            hints={[
+              { key: "↵", label: "Restore" },
+              ...(deleteKey === null ? [] : [{ key: deleteKey, label: "Delete" }]),
+              { key: "Esc", label: "Back" },
+            ]}
+          />
         </div>
       )}
     </nav>

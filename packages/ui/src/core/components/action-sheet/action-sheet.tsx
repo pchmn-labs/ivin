@@ -1,5 +1,6 @@
 import type { ActionSheetProps } from "@ivin/plugin-api/ui"
 import { Icon } from "../icon/icon.tsx"
+import { KeyHints } from "../key-hints/key-hints.tsx"
 import "./action-sheet.css"
 
 export type { ActionSheetProps }
@@ -50,13 +51,7 @@ export function ActionSheet({
       {keys === undefined && note === undefined && actions === undefined ? null : (
         <div className="iv-action-sheet__foot">
           <p className="iv-action-sheet__keys">
-            {note ??
-              keys?.map(({ key, label }) => (
-                <span key={key} className="iv-action-sheet__key">
-                  <kbd>{key}</kbd>
-                  {label}
-                </span>
-              ))}
+            {note ?? (keys === undefined ? null : <KeyHints hints={keys} />)}
           </p>
           {actions}
         </div>
