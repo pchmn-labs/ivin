@@ -11,7 +11,7 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { shownRows, type TranscriptRow as RowData } from "../rules/turns.ts"
 import { useLoadBefore } from "../hooks/use-load-before.ts"
 import { useRestoredPlace, useSavePlace } from "../hooks/use-transcript-place.ts"
-import { useSentMessageScroll } from "../hooks/use-sent-message-scroll.ts"
+import { useFollowSentMessage } from "../hooks/use-follow-sent-message.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
 import { BackgroundFold } from "./background-fold.tsx"
 import { TurnWork } from "./turn-work.tsx"
@@ -42,12 +42,8 @@ export function TranscriptView({
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
   const firstIndex = FIRST_ITEM_INDEX - prepended
   const restored = useRestoredPlace({ sessionId, loaded, firstIndex })
-  const { root, scrollerRef, followOutput, fitRoom, sentMessagePlace } = useSentMessageScroll({
-    loaded,
-    rows,
-    restored: restored?.sent,
-  })
-  const save = useSavePlace({ sessionId, firstIndex, sentMessagePlace })
+  const save = useSavePlace({ sessionId, firstIndex })
+  const { scrollerRef, followOutput } = useFollowSentMessage({ rows, list: save.list })
   const bothScrollerRefs = useCallback(
     (element: HTMLElement | Window | null) => {
       scrollerRef(element)
@@ -68,7 +64,7 @@ export function TranscriptView({
     return <TranscriptEmpty>No messages yet. Write to the agent below.</TranscriptEmpty>
 
   return (
-    <div className="iv-transcript" ref={root}>
+    <div className="iv-transcript">
       <Virtuoso
         ref={save.listRef}
         scrollerRef={bothScrollerRefs}
@@ -82,7 +78,6 @@ export function TranscriptView({
           : { initialTopMostItemIndex: { index: "LAST", align: "end" } as const })}
         computeItemKey={(_, row) => row.id}
         followOutput={followOutput}
-        totalListHeightChanged={fitRoom}
         components={{ Footer: TranscriptFooter }}
         context={{ sessionId, background }}
         rangeChanged={rangeChanged}

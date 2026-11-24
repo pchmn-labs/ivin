@@ -34,7 +34,7 @@ export function GoToFileList({
   }) => ReactNode
 }) {
   const { listing, retry } = useFileList(session, true)
-  const statuses = useGitStatus(session.id)
+  const { entries: statuses } = useGitStatus(session.id)
   const marks = useMemo(() => gitMarks(statuses), [statuses])
   const openFile = useOpenFile()
   const [failure, setFailure] = useState<({ path: string } & ActionFailure) | null>(null)

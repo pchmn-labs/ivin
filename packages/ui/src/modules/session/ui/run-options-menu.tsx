@@ -10,6 +10,7 @@ import {
 import { HarnessMark } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
+import { contractSession } from "../rules/plugin-session.ts"
 import { HARNESSES } from "../rules/harnesses.ts"
 import { isRunning } from "../rules/is-running.ts"
 import {
@@ -84,13 +85,14 @@ const columnsFor = (offered: HarnessRunOptions | null, session: Session): Column
 }
 
 export function RunOptionsMenu({
-  session,
+  session: pluginSession,
   offered,
   previous,
   state,
   onStateChange,
   onChange,
 }: RunOptionsMenuProps) {
+  const session = contractSession(pluginSession)
   useCommandHandler(COMMANDS.model, () => onStateChange({ open: true, start: "model" }))
   useCommandHandler(COMMANDS.effort, () => onStateChange({ open: true, start: "effort" }))
   useCommandHandler(COMMANDS.permissionMode, () =>
@@ -106,6 +108,7 @@ export function RunOptionsMenu({
   }
 
   const shown = shownRunOptions(offered, session)
+  const running = isRunning(session.status)
 
   return (
     <ColumnMenu
@@ -115,7 +118,7 @@ export function RunOptionsMenu({
       startColumn={state.start}
       columns={columnsFor(offered, session)}
       onPick={pick}
-      hint="Applies to this session from the next message"
+      hint={running ? "" : "Applies to this session from the next message"}
       trigger={
         <button
           type="button"
@@ -141,9 +144,7 @@ export function RunOptionsMenu({
         </button>
       }
     >
-      {isRunning(session.status) && (
-        <ColumnMenuNote>Applies once the agent finishes this turn.</ColumnMenuNote>
-      )}
+      {running && <ColumnMenuNote>Applies once the agent finishes this turn.</ColumnMenuNote>}
     </ColumnMenu>
   )
 }

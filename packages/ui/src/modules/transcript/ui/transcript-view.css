@@ -28,7 +28,6 @@
 }
 
 .iv-transcript__footer {
-  height: var(--iv-transcript-room, 0px);
   min-height: var(--iv-space-8);
 }
 

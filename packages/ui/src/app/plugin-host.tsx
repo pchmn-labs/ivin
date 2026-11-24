@@ -6,7 +6,7 @@ import {
   useAtomValue,
 } from "@effect/atom-react"
 import { Cause, Effect, Exit } from "effect"
-import { AsyncResult, AtomRegistry } from "effect/reactivity"
+import { AsyncResult, AtomRegistry, type Atom } from "effect/reactivity"
 import {
   useCallback,
   useContext,
@@ -22,8 +22,9 @@ import type { SubView } from "@ivin/contracts/tab"
 import {
   UiHostProvider,
   type ActionFailure,
-  type CommittedChangeListing,
+  type ChangeKind,
   type ChangeListing,
+  type CommittedChangeListing,
   type Draft,
   type UiHost,
 } from "@ivin/plugin-api/ui"
@@ -74,9 +75,13 @@ import {
 import { subViewsOf } from "../modules/tab/atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../modules/tab/atoms/open-sub-view.ts"
 import { openDiffFailure, openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
-import { transcriptOf } from "../modules/transcript/atoms/get-items.ts"
+import {
+  pendingApprovalOf,
+  pendingQuestionOf,
+} from "../modules/transcript/atoms/get-pending-items.ts"
 import { usageOf } from "../modules/transcript/atoms/get-usage.ts"
 import { settingsAtom } from "../modules/setting/atoms/settings.ts"
+import { contractSession } from "../modules/session/rules/plugin-session.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
@@ -88,6 +93,11 @@ const NO_PROJECT = ""
 const NO_CHANGES: ReadonlyArray<GitStatusEntry> = []
 
 const LOADING = { kind: "loading" } as const satisfies ChangeListing
+
+const diffSubViewOf = { working: "diff", committed: "committed_diff" } as const satisfies Record<
+  ChangeKind,
+  SubView["kind"]
+>
 
 const useProjectPath = () => useAtomValue(selectedProjectAtom)?.path ?? NO_PROJECT
 
@@ -114,11 +124,11 @@ const useSessionListStatus = (): ReturnType<UiHost["useSessionListStatus"]> => {
   }
 }
 
-const useOpenSubView = (kind: SubView["kind"]) => {
+const useOpenSubView = () => {
   const sessions = useAtomValue(openSessionsAtom)
   const open = useAtomSet(openSubViewAtom, { mode: "promiseExit" })
-  const failure = kind === "file" ? openFileFailure : openDiffFailure
-  return async (sessionId: string, path: string) => {
+  return async (sessionId: string, path: string, kind: SubView["kind"]) => {
+    const failure = kind === "file" ? openFileFailure : openDiffFailure
     const session = sessions.find((s) => s.id === sessionId)
     if (session === undefined) return failure({ _tag: "SessionNotFound" }, path)
     const exit = await open({
@@ -130,11 +140,11 @@ const useOpenSubView = (kind: SubView["kind"]) => {
   }
 }
 
-const useSubViewOnScreen = (sessionId: string, kind: SubView["kind"]) => {
+const useSubViewOnScreen = (sessionId: string) => {
   const workingFolder =
     useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)?.workingFolder ?? ""
   const { selected, sessionTabSelected } = useAtomValue(subViewsOf(sessionId, workingFolder).value)
-  return sessionTabSelected || selected?.kind !== kind ? null : selected.path
+  return sessionTabSelected ? null : selected
 }
 
 const useOpenSession = (sessionId: string) =>
@@ -163,7 +173,8 @@ const host: UiHost = {
     const openTab = useAtomSet(openTabAtom)
     return (sessionId) => openTab({ sessionId })
   },
-  useTranscript: (sessionId) => useAtomValue(transcriptOf(sessionId).list.items),
+  usePendingApproval: (sessionId) => useAtomValue(pendingApprovalOf(sessionId)),
+  usePendingQuestion: (sessionId) => useAtomValue(pendingQuestionOf(sessionId)),
   useUsage: (sessionId) => {
     const result = useAtomValue(usageOf(sessionId))
     return AsyncResult.isSuccess(result) ? result.value : null
@@ -188,7 +199,7 @@ const host: UiHost = {
       return Exit.isFailure(exit) ? answerQuestionFailure(Cause.squash(exit.cause)) : undefined
     }
   },
-  useSessionActions,
+  useSessionActions: (session) => useSessionActions(contractSession(session)),
   useRenameSession: (session) => {
     const rename = useAtomSet(renameSessionAtom)
     const failure = useAtomValue(renameFailureOf(session.id))
@@ -202,7 +213,7 @@ const host: UiHost = {
       },
     }
   },
-  useSessionLocation,
+  useSessionLocation: (session) => useSessionLocation(contractSession(session)),
   useDraft: (sessionId) => useAtom(draftOf(sessionId)),
   useSendMessage: (sessionId) => {
     const session = useOpenSession(sessionId)
@@ -288,7 +299,10 @@ const host: UiHost = {
       [registry],
     )
   },
-  useOpenFile: () => useOpenSubView("file"),
+  useOpenFile: () => {
+    const open = useOpenSubView()
+    return (sessionId, path) => open(sessionId, path, "file")
+  },
   useListFiles: () => {
     const registry = useContext(RegistryContext)
     return useCallback(
@@ -317,46 +331,45 @@ const host: UiHost = {
     )
   },
   useGitStatus: (sessionId) => {
-    const result = useAtomValue(gitStatusOf(sessionId))
-    return AsyncResult.isSuccess(result) ? result.value : NO_CHANGES
-  },
-  useGitStatusFailure: (sessionId) => {
     const atom = gitStatusOf(sessionId)
     const result = useAtomValue(atom)
     const retry = useAtomRefresh(atom)
     return {
+      entries: AsyncResult.isSuccess(result) ? result.value : NO_CHANGES,
       failure: AsyncResult.isFailure(result) ? gitStatusFailure(Cause.squash(result.cause)) : null,
       retry,
     }
   },
-  useFileOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "file"),
-  useChanges: (sessionId) => {
-    const atom = changesOf(sessionId)
+  useFileOnScreen: (sessionId) => {
+    const selected = useSubViewOnScreen(sessionId)
+    return selected?.kind === "file" ? selected.path : null
+  },
+  useChanges: (sessionId, kind) => {
+    const atom = (
+      kind === "committed" ? committedChangesOf(sessionId) : changesOf(sessionId)
+    ) as Atom.Atom<AsyncResult.AsyncResult<CommittedChangeListing, unknown>>
     const result = useAtomValue(atom)
     const retry = useAtomRefresh(atom)
-    const listing: ChangeListing = AsyncResult.isSuccess(result)
+    const listing = AsyncResult.isSuccess(result)
       ? result.value
       : AsyncResult.isFailure(result)
         ? changeListingFailure(Cause.squash(result.cause))
         : LOADING
-    return { listing, retry }
+    return { listing, retry } as never
   },
-  useOpenDiff: () => useOpenSubView("diff"),
-  useDiffOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "diff"),
+  useOpenDiff: () => {
+    const open = useOpenSubView()
+    return (sessionId, path, kind) => open(sessionId, path, diffSubViewOf[kind])
+  },
+  useDiffOnScreen: (sessionId) => {
+    const selected = useSubViewOnScreen(sessionId)
+    return selected?.kind === "diff"
+      ? { path: selected.path, kind: "working" }
+      : selected?.kind === "committed_diff"
+        ? { path: selected.path, kind: "committed" }
+        : null
+  },
   useSettings: () => useAtomValue(settingsAtom),
-  useCommittedChanges: (sessionId) => {
-    const atom = committedChangesOf(sessionId)
-    const result = useAtomValue(atom)
-    const retry = useAtomRefresh(atom)
-    const listing: CommittedChangeListing = AsyncResult.isSuccess(result)
-      ? result.value
-      : AsyncResult.isFailure(result)
-        ? changeListingFailure(Cause.squash(result.cause))
-        : LOADING
-    return { listing, retry }
-  },
-  useOpenCommittedDiff: () => useOpenSubView("committed_diff"),
-  useCommittedDiffOnScreen: (sessionId) => useSubViewOnScreen(sessionId, "committed_diff"),
   useDiscardChanges: () => {
     const discard = useAtomSet(discardChangesAtom, { mode: "promiseExit" })
     return async (sessionId, paths) => {

@@ -9,9 +9,8 @@ import {
   Steps,
   Text,
   defineUi,
-  pendingQuestion,
   useAnswerQuestion,
-  useTranscript,
+  usePendingQuestion,
 } from "@ivin/plugin-api/ui"
 import type { ActionFailure, QuestionAnswer, QuestionItem, SlotProps } from "@ivin/plugin-api/ui"
 import { OTHER, answersOf, emptyDrafts, isAnswered, nextStep, type Draft } from "./rules/drafts.ts"
@@ -226,7 +225,7 @@ function PendingSheet({
 }
 
 function QuestionSheet({ session, isEmptyComposer }: SlotProps["composer.above"]) {
-  const pending = pendingQuestion(useTranscript(session.id))
+  const pending = usePendingQuestion(session.id)
   if (pending === undefined) return null
   return (
     <PendingSheet

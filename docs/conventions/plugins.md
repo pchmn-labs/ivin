@@ -29,3 +29,11 @@ plugins/<id>/
 ## Failures the host contains
 
 An editor extension that CodeMirror rejects when the host builds an editor state with it, and a file icon function that throws, are turned off and reported in `ivin plugin logs <id>`; the rest of the plugin keeps working. A slot component that throws while rendering is reported there too.
+
+## The plugin API
+
+Reasons: [ADR-0014](../adr/0014-the-plugin-api-declares-its-own-types-and-one-hook-per-piece-of-data.md).
+
+- A piece of data has one hook in `@ivin/plugin-api/ui`, with a parameter for its variant (`useChanges(sessionId, "committed")`), never a second hook per variant. Acts stay separate hooks.
+- A hook that reads one item of a larger feed returns that item, so its component re-renders only when the item changes.
+- A type that describes the server's data (a session, a change, a transcript item…) and that a hook, a slot prop or a `UiContext` member exposes is declared in `packages/plugin-api/src/types.ts`, never re-exported from `@ivin/contracts`.

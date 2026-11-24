@@ -7,7 +7,6 @@ import {
   useFileOnScreen,
   useFolderChanges,
   useGitStatus,
-  useGitStatusFailure,
   useListFolder,
   useOpenFile,
   type ActionFailure,
@@ -30,9 +29,8 @@ import { FolderRow } from "./folder-row.tsx"
 export function FolderTreeView({ session, state }: { session: Session; state: PluginState }) {
   const listFolder = useListFolder()
   const openFile = useOpenFile()
-  const statuses = useGitStatus(session.id)
+  const { entries: statuses, ...statusFailure } = useGitStatus(session.id)
   const marks = useMemo(() => gitMarks(statuses), [statuses])
-  const statusFailure = useGitStatusFailure(session.id)
   const [openFailure, setOpenFailure] = useState<({ path: string } & ActionFailure) | null>(null)
   const open = async (path: string) => {
     setOpenFailure(null)

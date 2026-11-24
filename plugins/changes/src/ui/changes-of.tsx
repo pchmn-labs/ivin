@@ -4,11 +4,9 @@ import {
   ErrorMessage,
   Stack,
   useChanges,
-  useCommittedChanges,
-  useCommittedDiffOnScreen,
+  type ChangeKind,
   useDiffOnScreen,
   useDiscardChanges,
-  useOpenCommittedDiff,
   useOpenDiff,
   type ActionFailure,
   type ChangeGroup,
@@ -31,13 +29,11 @@ interface OpenFailure extends ActionFailure {
 }
 
 export function ChangesOf({ session, onScreen }: { session: Session; onScreen: OnScreen }) {
-  const { listing, retry } = useChanges(session.id)
-  const committed = useCommittedChanges(session.id)
+  const { listing, retry } = useChanges(session.id, "working")
+  const committed = useChanges(session.id, "committed")
   const openDiff = useOpenDiff()
-  const openCommittedDiff = useOpenCommittedDiff()
   const discard = useDiscardChanges()
   const diffOnScreen = useDiffOnScreen(session.id)
-  const committedOnScreen = useCommittedDiffOnScreen(session.id)
   const [openFailure, setOpenFailure] = useState<OpenFailure | null>(null)
   const [discarding, setDiscarding] = useState<Discarding | null>(null)
   const [discardFailures, setDiscardFailures] = useState<ReadonlyMap<string, DiscardFailure>>(
@@ -98,13 +94,10 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
       : []),
   ]
 
-  const run = async (
-    open: (sessionId: string, path: string) => Promise<ActionFailure | undefined>,
-    path: string,
-  ) => {
+  const run = async (path: string, kind: ChangeKind) => {
     setOpenFailure(null)
-    const failure = await open(session.id, path)
-    if (failure !== undefined) setOpenFailure({ ...failure, retry: () => void run(open, path) })
+    const failure = await openDiff(session.id, path, kind)
+    if (failure !== undefined) setOpenFailure({ ...failure, retry: () => void run(path, kind) })
   }
   const confirm = async (target: Discarding) => {
     setDiscarding(null)
@@ -155,13 +148,14 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
               groups={groups}
               selected={
                 diffOnScreen !== null
-                  ? { groupId: UNCOMMITTED, id: diffOnScreen }
-                  : committedOnScreen !== null
-                    ? { groupId: COMMITTED, id: committedOnScreen }
-                    : null
+                  ? {
+                      groupId: diffOnScreen.kind === "committed" ? COMMITTED : UNCOMMITTED,
+                      id: diffOnScreen.path,
+                    }
+                  : null
               }
               onOpen={(row) =>
-                void run(row.groupId === COMMITTED ? openCommittedDiff : openDiff, row.id)
+                void run(row.id, row.groupId === COMMITTED ? "committed" : "working")
               }
               onFocusRow={(row) => {
                 focusedRow.current = row

@@ -5,7 +5,6 @@ const place = (overrides: Partial<TranscriptPlace> = {}): TranscriptPlace => ({
   firstIndex: 1000,
   atEnd: false,
   list: { ranges: [], scrollTop: 120 },
-  sent: undefined,
   ...overrides,
 })
 
@@ -15,11 +14,6 @@ test("a transcript scrolled up opens where it was", () => {
 
 test("a transcript left at its end opens at its new end", () => {
   expect(placeToRestore(place({ atEnd: true }), 1000)).toBeUndefined()
-})
-
-test("a transcript left with a sent message at the top keeps it there, even at its end", () => {
-  const sent = { id: "m1", top: 400, room: 120, userScrolled: false }
-  expect(placeToRestore(place({ atEnd: true, sent }), 1000)?.sent).toEqual(sent)
 })
 
 test("a place measured before older items were loaded no longer applies", () => {

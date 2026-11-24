@@ -17,7 +17,7 @@ Scroll behaviours, as the existing transcript tests check them:
 - **A session opens on its last item.** Virtuoso: `initialTopMostItemIndex`. virtua: our own scroll to the end after each render while at the bottom.
 - **The view follows new output only while it is at the bottom.** Virtuoso: `followOutput`. virtua: our own, with the bottom measured from the DOM because the footer after the list is outside virtua's sizes.
 - **Loading older items above keeps the reading position.** Virtuoso: `firstItemIndex` and `startReached`. virtua: `shift`, plus a check near the top on every scroll and resize, since a list shorter than the view never scrolls.
-- **A sent message scrolls to the top of the view.** Unchanged: `useSentMessageScroll` works on the scroller element with either list.
+- **The transcript follows its end until a sent message reaches the top of the view.** Unchanged: `useFollowSentMessage` works on the scroller element with either list.
 - **Folding or unfolding a turn never moves the view.** Virtuoso: as is. virtua moves the view when a row that starts above it changes size. The spike puts the view back after a resize that follows a click in the transcript.
 
 ## Considered options
