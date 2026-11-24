@@ -217,7 +217,7 @@ export interface ListSectionProps {
   readonly count?: number
   // Marks the label for sessions that wait on the user.
   readonly attention?: boolean
-  // Shows placeholder rows in place of the children, while the rows are still loading.
+  // Placeholder rows replace the children.
   readonly loading?: boolean
   readonly "data-testid"?: string
   readonly children?: ReactNode

@@ -114,13 +114,17 @@ function SessionsPanel() {
 
   return (
     <Stack as="nav" aria-label="Sessions" direction="column">
-      {failed && open.length === 0 && (
-        <ErrorMessage message="The sessions could not be loaded." onRetry={retry} />
+      {failed && (
+        <ErrorMessage
+          message={
+            open.length === 0 ? "The sessions could not be loaded." : "Sessions may be out of date."
+          }
+          onRetry={retry}
+        />
       )}
-      {failed && open.length > 0 && (
-        <ErrorMessage message="Sessions may be out of date." onRetry={retry} />
+      {!failed && (!tabsLoaded || (tabs.length > 0 && open.length === 0)) && (
+        <ListSection label="Sessions" loading />
       )}
-      {!tabsLoaded && !failed && <ListSection label="Sessions" loading />}
       {tabsLoaded && !failed && tabs.length === 0 && (
         <Text as="p" size="sm" tone="faint">
           {inProject.length === 0

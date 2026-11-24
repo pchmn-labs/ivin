@@ -10,7 +10,7 @@ import { activate } from "./ui.tsx"
 
 type Status = ReturnType<UiHost["useSessionListStatus"]>
 
-const mountPanel = async (status: Partial<Status>, withSession = false) => {
+const mountPanel = async (status: Partial<Status>, withSession: boolean | "tab-only" = false) => {
   const added: Array<{ slot: string; component: ComponentType }> = []
   const ctx = {
     pluginId: "sessions",
@@ -28,7 +28,7 @@ const mountPanel = async (status: Partial<Status>, withSession = false) => {
       projects: [{ path: "/p", name: "p", lastOpenedAt: testDateTime(0) }],
       selectedPath: "/p",
     }),
-    useSessions: () => (withSession ? [session] : []),
+    useSessions: () => (withSession === true ? [session] : []),
     useTabs: () => (withSession ? [{ sessionId: "s1", projectPath: "/p" }] : []),
     useSessionListStatus: () => ({ loaded: true, failed: false, retry, ...status }),
   }
@@ -64,4 +64,11 @@ test("a failure after the list loaded keeps its rows under a notice", async () =
 
   await page.getByRole("button", { name: "Retry" }).click()
   expect(retry).toHaveBeenCalledTimes(1)
+})
+
+test("tabs that arrive before their sessions show placeholder rows, not an empty panel", async () => {
+  await mountPanel({}, "tab-only")
+  await expect
+    .element(page.getByRole("region", { name: "Sessions" }))
+    .toHaveAttribute("aria-busy", "true")
 })

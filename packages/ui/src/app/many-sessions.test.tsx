@@ -58,6 +58,7 @@ const mountMany = async (count: number) => {
     </RegistryProvider>,
   )
   await expect.element(page.getByTestId("project-name")).toBeVisible()
+  await expect.element(page.getByTestId("session-item").first()).toBeVisible()
 }
 
 test("a session picked in a list of 300 brings its tab into view in the bar", async () => {
@@ -94,4 +95,12 @@ test("a message of long unbroken lines keeps the Send button inside the window",
   await expect.poll(() => (field.element() as HTMLElement).innerText.length).toBeGreaterThan(1000)
 
   await expect.element(page.getByRole("button", { name: "Send" })).toBeInViewport()
+})
+
+test("a project name of 80 characters is cut inside the sidebar card", async () => {
+  await mountMany(1)
+  const name = page.getByTestId("project-name").element()
+  const card = page.getByRole("complementary").element().getBoundingClientRect()
+  expect(name.getBoundingClientRect().right).toBeLessThanOrEqual(card.right)
+  expect(name.scrollWidth).toBeGreaterThan(name.clientWidth)
 })

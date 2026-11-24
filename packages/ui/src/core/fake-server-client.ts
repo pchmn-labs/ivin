@@ -316,7 +316,7 @@ export const makeFakeServer = (
         : Effect.fail(new SessionNotFound({ sessionId })),
     )
   const failing = new Set<string>()
-  const failingForGood = new Set<string>()
+  const failingUntilRecovered = new Set<string>()
   const untrustedProjects = new Set<string>()
   const holding = new Map<string, Promise<boolean>>()
   const sentMessages: Array<FakeServer["sentMessages"][number]> = []
@@ -1309,7 +1309,7 @@ export const makeFakeServer = (
       (...args: Array<unknown>) => {
         calls.set(rpc, (calls.get(rpc) ?? 0) + 1)
         const run = () =>
-          failing.delete(rpc) || failingForGood.has(rpc)
+          failing.delete(rpc) || failingUntilRecovered.has(rpc)
             ? /\.watch/.test(rpc)
               ? Stream.die(new Error(`${rpc} failed`))
               : Effect.die(new Error(`${rpc} failed`))
@@ -1419,8 +1419,8 @@ export const makeFakeServer = (
       Effect.runSync(PubSub.publish(keybindingChanges, state))
     },
     failNextCall: (rpc) => void failing.add(rpc),
-    failCalls: (rpc) => void failingForGood.add(rpc),
-    recoverCalls: (rpc) => void failingForGood.delete(rpc),
+    failCalls: (rpc) => void failingUntilRecovered.add(rpc),
+    recoverCalls: (rpc) => void failingUntilRecovered.delete(rpc),
     untrustedProjects,
     callsOf: (rpc) => calls.get(rpc) ?? 0,
     holdNextCall: (rpc) => {
