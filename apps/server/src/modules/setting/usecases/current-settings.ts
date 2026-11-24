@@ -1,6 +1,7 @@
-import { defaultSettings, type Settings, type UserSettings } from "@ivin/contracts/setting"
+import { type Settings, type UserSettings } from "@ivin/contracts/setting"
 import { Context, Effect, Layer, Stream, SubscriptionRef } from "effect"
 import { readSettingsFile } from "../rules/read-settings-file.ts"
+import { SettingDefaults } from "./setting-defaults.ts"
 import { SettingsFile } from "./settings-file.ts"
 
 export class CurrentSettings extends Context.Service<
@@ -15,14 +16,15 @@ export class CurrentSettings extends Context.Service<
 export const layerCurrentSettings = Layer.effect(CurrentSettings)(
   Effect.gen(function* () {
     const file = yield* SettingsFile
+    const defaults = yield* SettingDefaults
     const ref = yield* SubscriptionRef.make<UserSettings>({
-      settings: defaultSettings,
+      settings: defaults,
       problem: null,
     })
     yield* file.contents.pipe(
       Stream.runForEach((text) =>
         SubscriptionRef.get(ref).pipe(
-          Effect.map((previous) => readSettingsFile(previous, text)),
+          Effect.map((previous) => readSettingsFile(previous, text, defaults)),
           Effect.tap(({ problem }) =>
             problem === null
               ? Effect.void

@@ -10,6 +10,7 @@ test("the known paths are the dotted paths of the settings schema's leaves", () 
     "sidebar.layout",
     "agents.stopWhenIdleMinutes",
     "updates.automaticCheck",
+    "updates.beta",
   ])
 })
 

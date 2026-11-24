@@ -32,7 +32,7 @@ export function Disclosure({
             <Icon name="chevron-right" size={12} />
           </span>
         )}
-        {typeof summary === "function" ? summary(open) : summary}
+        {summary}
       </summary>
       {open && <div className="iv-disclosure__body">{children}</div>}
     </details>

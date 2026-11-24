@@ -10,6 +10,7 @@ import { Cause, Deferred, Effect, Fiber, Layer } from "effect"
 import { homedir } from "node:os"
 import { join } from "node:path"
 import { parseArgs } from "node:util"
+import { defaultSettingsFor } from "@ivin/contracts/setting"
 import pkg from "../package.json" with { type: "json" }
 import {
   LOGIN_SHELL_TIMEOUT_MS,
@@ -21,6 +22,7 @@ import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
 import { layerFsUserPlugins } from "./modules/plugin/adapters/fs-user-plugins.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
+import { SettingDefaults } from "./modules/setting/usecases/setting-defaults.ts"
 import { layerFsSkillInstallation } from "./modules/skill/adapters/fs-skill-install.ts"
 import { layerServices } from "./rpc/handlers.ts"
 import { serveOverClosingPort, serveOverSocket } from "./rpc/serve.ts"
@@ -158,6 +160,7 @@ const startup = Effect.gen(function* () {
           layerLogger,
           layerFsKeybindingsFile(ivinHome),
           layerFsSettingsFile(ivinHome),
+          Layer.succeed(SettingDefaults)(defaultSettingsFor(pkg.version)),
           layerFsUserPlugins(ivinHome, pnpmFolder),
           layerShellCommand,
         ),

@@ -35,7 +35,7 @@ const releaseServer = async (bundle: string): Promise<FakeRelease> => {
   let base = ""
   const server: Server = createServer((request, response) => {
     requests.push(request.url ?? "")
-    if (request.url === "/release") {
+    if (request.url === "/releases/latest") {
       response.end(
         JSON.stringify({
           tag_name: `v${NEW_VERSION}`,
@@ -65,7 +65,7 @@ const releaseServer = async (bundle: string): Promise<FakeRelease> => {
   })
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
-  return { url: `${base}/release`, requests, close: () => server.close() }
+  return { url: `${base}/releases`, requests, close: () => server.close() }
 }
 
 // A copy of the packaged app to replace, so the build stays as it is.
@@ -144,7 +144,7 @@ test("with the automatic check off, no request leaves the app until Check for up
     await expect(page.getByRole("button", { name: "Restart to update" })).toBeVisible({
       timeout: 30_000,
     })
-    expect(release.requests).toContain("/release")
+    expect(release.requests).toContain("/releases/latest")
   } finally {
     release.close()
     await app.close()

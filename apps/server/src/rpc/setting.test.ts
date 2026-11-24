@@ -1,5 +1,6 @@
 import { layerScripted } from "@ivin/harness"
 import { Rpcs } from "@ivin/contracts/rpcs"
+import { defaultSettingsFor } from "@ivin/contracts/setting"
 import { Effect, Layer, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { mkdtempSync } from "node:fs"
@@ -8,6 +9,7 @@ import { join } from "node:path"
 import { expect, test } from "vitest"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
+import { SettingDefaults } from "../modules/setting/usecases/setting-defaults.ts"
 import { layerSettingsFileOf, SettingsFile } from "../modules/setting/usecases/settings-file.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
@@ -19,6 +21,7 @@ type Client = Effect.Success<ReturnType<typeof makeClient>>
 const withFile = <A, E>(
   text: string | null,
   use: (client: Client, file: SettingsFile["Service"]) => Effect.Effect<A, E>,
+  version = "1.2.3",
 ) =>
   Effect.runPromise(
     Effect.gen(function* () {
@@ -36,6 +39,7 @@ const withFile = <A, E>(
           Layer.provide(layerScripted([])),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provideMerge(layerSettingsFileOf([text])),
+          Layer.provide(Layer.succeed(SettingDefaults)(defaultSettingsFor(version))),
         ),
       ),
       Effect.scoped,
@@ -76,8 +80,28 @@ test("setting.set writes the value, and setting.watch and setting.get then give 
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
     agents: { stopWhenIdleMinutes: 10 },
-    updates: { automaticCheck: true },
+    updates: { automaticCheck: true, beta: false },
   })
+})
+
+test("a beta server gets beta versions until the file turns them off", async () => {
+  const beta = await withFile(
+    null,
+    (client) => client["setting.get"]({ path: "updates.beta" }),
+    "0.1.0-beta.0",
+  )
+  const off = await withFile(
+    '{ "updates": { "beta": false } }',
+    (client) =>
+      client["setting.watch"]().pipe(
+        Stream.filter(({ settings }) => !settings.updates.beta),
+        Stream.runHead,
+      ),
+    "0.1.0-beta.0",
+  )
+
+  expect(beta).toBe(true)
+  expect(off._tag).toBe("Some")
 })
 
 test("an unknown path or a value of the wrong type is refused, and the file is untouched", async () => {
@@ -102,6 +126,7 @@ test("an unknown path or a value of the wrong type is refused, and the file is u
     "sidebar.layout",
     "agents.stopWhenIdleMinutes",
     "updates.automaticCheck",
+    "updates.beta",
   ]
   expect(result.unknown).toMatchObject({
     _tag: "SettingPathUnknown",

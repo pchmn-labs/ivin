@@ -2,6 +2,7 @@ import { expect, test } from "vitest"
 import {
   compareVersions,
   decideUpdate,
+  newestRelease,
   readManifest,
   readRelease,
   type Manifest,
@@ -27,9 +28,18 @@ test("versions compare number by number, not as text", () => {
   expect(compareVersions("v0.4.0", "0.4.0")).toBe(0)
 })
 
-test("a version that is not three numbers compares as unknown", () => {
+test("a beta comes before its version and after the betas numbered below it", () => {
+  expect(compareVersions("0.1.0-beta.1", "0.1.0-beta.2")).toBe(-1)
+  expect(compareVersions("0.1.0-beta.10", "0.1.0-beta.9")).toBe(1)
+  expect(compareVersions("0.1.0-beta.2", "0.1.0")).toBe(-1)
+  expect(compareVersions("0.1.0", "0.1.0-beta.2")).toBe(1)
+  expect(compareVersions("0.2.0-beta.0", "0.1.0")).toBe(1)
+  expect(compareVersions("v0.1.0-beta.0", "0.1.0-beta.0")).toBe(0)
+})
+
+test("a version that is not three numbers, with or without a beta suffix, compares as unknown", () => {
   expect(compareVersions("0.4", "0.4.0")).toBeNull()
-  expect(compareVersions("0.4.0-beta.1", "0.3.0")).toBeNull()
+  expect(compareVersions("0.4.0-", "0.3.0")).toBeNull()
   expect(compareVersions("latest", "0.3.0")).toBeNull()
 })
 
@@ -82,4 +92,36 @@ test("a release whose manifest disagrees with it, or lacks its zip, is left alon
   expect(decideUpdate("0.3.2", release, { ...manifest, file: "other.zip" })).toEqual({
     kind: "none",
   })
+})
+
+const listed = (tag: string, extra: Record<string, unknown> = {}) => ({
+  tag_name: tag,
+  html_url: `https://example.test/${tag}`,
+  assets: [{ name: "manifest.json", browser_download_url: `https://example.test/${tag}/m` }],
+  ...extra,
+})
+
+test("the newest of a list of releases is the highest version, beta or not, drafts left out", () => {
+  expect(
+    newestRelease([
+      listed("v0.1.0-beta.1"),
+      listed("v0.2.0-beta.0", { draft: true }),
+      listed("v0.1.0-beta.10"),
+      listed("v0.1.0-beta.2"),
+      listed("nightly"),
+    ])?.version,
+  ).toBe("0.1.0-beta.10")
+  expect(newestRelease([listed("v0.1.0-beta.3"), listed("v0.1.0")])?.version).toBe("0.1.0")
+})
+
+test("a release whose manifest is not uploaded yet is passed over for the one below it", () => {
+  expect(
+    newestRelease([listed("v0.1.0-beta.2", { assets: [] }), listed("v0.1.0-beta.1")])?.version,
+  ).toBe("0.1.0-beta.1")
+})
+
+test("a list with no usable release, or no list, has no newest release", () => {
+  expect(newestRelease([])).toBeNull()
+  expect(newestRelease([listed("nightly")])).toBeNull()
+  expect(newestRelease({ message: "Not Found" })).toBeNull()
 })

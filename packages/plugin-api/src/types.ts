@@ -32,7 +32,7 @@ export interface Settings {
   readonly files: { readonly folderIcons: boolean }
   readonly sidebar: { readonly layout: "rail" | "strip" }
   readonly agents: { readonly stopWhenIdleMinutes: number }
-  readonly updates: { readonly automaticCheck: boolean }
+  readonly updates: { readonly automaticCheck: boolean; readonly beta: boolean }
 }
 
 export type SessionStatus =

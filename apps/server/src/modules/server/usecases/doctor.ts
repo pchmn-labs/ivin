@@ -26,7 +26,11 @@ export const doctor = Effect.gen(function* () {
     version,
     settings: {
       path: settingsFile.path,
-      problem: readSettingsFile({ settings: defaultSettings, problem: null }, settingsText).problem,
+      problem: readSettingsFile(
+        { settings: defaultSettings, problem: null },
+        settingsText,
+        defaultSettings,
+      ).problem,
     },
     keybindings: {
       path: keybindingsFile.path,

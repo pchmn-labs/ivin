@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { bumpLevel, latestSection, manifest, withVersion } from "./release.ts"
+import { baseTag, bumpLevel, releaseNotes, manifest, withVersion } from "./release.ts"
 
 describe("bumpLevel", () => {
   it("is minor for a feat, even a breaking one, while in 0.x", () => {
@@ -45,10 +45,50 @@ describe("manifest", () => {
   })
 })
 
-describe("latestSection", () => {
+describe("releaseNotes", () => {
   it("takes the top version's notes without its heading", () => {
     const changelog =
       "# Changelog\n\n## [0.2.0](url) (2026-01-02)\n\n### Features\n\n* a\n\n## 0.1.0 (2026-01-01)\n\n* b\n"
-    expect(latestSection(changelog)).toBe("### Features\n\n* a\n")
+    expect(releaseNotes(changelog)).toBe("### Features\n\n* a\n")
+  })
+
+  it("adds to a stable version the betas published since the previous stable one", () => {
+    const changelog = [
+      "# Changelog",
+      "## [0.2.0](url) (2026-01-04)",
+      "### Bug Fixes\n\n* c",
+      "## [0.2.0-beta.1](url) (2026-01-03)",
+      "### Bug Fixes\n\n* b",
+      "## 0.2.0-beta.0 (2026-01-02)",
+      "### Features\n\n* a",
+      "## 0.1.0 (2026-01-01)",
+      "* old",
+    ].join("\n\n")
+    expect(releaseNotes(changelog)).toBe(
+      "### Bug Fixes\n\n* c\n\n## [0.2.0-beta.1](url) (2026-01-03)\n\n### Bug Fixes\n\n* b\n\n## 0.2.0-beta.0 (2026-01-02)\n\n### Features\n\n* a\n",
+    )
+  })
+
+  it("keeps a beta's notes to its own section", () => {
+    const changelog =
+      "# Changelog\n\n## [0.2.0-beta.1](url) (2026-01-03)\n\n* b\n\n## 0.2.0-beta.0 (2026-01-02)\n\n* a\n"
+    expect(releaseNotes(changelog)).toBe("* b\n")
+  })
+})
+
+describe("baseTag", () => {
+  const tags = ["v0.2.0-beta.1", "v0.2.0-beta.0", "v0.1.0", "v0.1.0-beta.0"]
+
+  it("is the last tag of any kind for a beta", () => {
+    expect(baseTag(tags, "beta")).toBe("v0.2.0-beta.1")
+  })
+
+  it("is the last stable tag for a stable release, so a beta's commits count again", () => {
+    expect(baseTag(tags, "stable")).toBe("v0.1.0")
+    expect(baseTag(["v0.1.0-beta.0"], "stable")).toBeUndefined()
+  })
+
+  it("is undefined before the first release", () => {
+    expect(baseTag([], "beta")).toBeUndefined()
   })
 })

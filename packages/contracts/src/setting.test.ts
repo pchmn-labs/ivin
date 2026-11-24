@@ -1,6 +1,6 @@
 import { Schema } from "effect"
 import { expect, test } from "vitest"
-import { defaultSettings, settingSections, Settings } from "./setting.ts"
+import { defaultSettings, defaultSettingsFor, settingSections, Settings } from "./setting.ts"
 
 const leafPaths = (value: object, prefix = ""): string[] =>
   Object.entries(value).flatMap(([key, child]) =>
@@ -30,4 +30,10 @@ test("the idle stop is a whole number of minutes, 0 or more, that a number input
     .find((s) => s.path === "agents.stopWhenIdleMinutes")
   expect(setting?.count).toEqual({ min: 0, unit: "minutes" })
   expect(defaultSettings.agents.stopWhenIdleMinutes).toBe(10)
+})
+
+test("betas are on by default only when the installed version is itself a beta", () => {
+  expect(defaultSettingsFor("0.1.0-beta.0").updates.beta).toBe(true)
+  expect(defaultSettingsFor("0.1.0").updates.beta).toBe(false)
+  expect(defaultSettingsFor("0.0.0").updates).toEqual(defaultSettings.updates)
 })

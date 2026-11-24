@@ -10,6 +10,7 @@ import type { UpdateFailure, UpdateState } from "@ivin/contracts/update"
 import {
   decideUpdate,
   MANIFEST_NAME,
+  newestRelease,
   readManifest,
   readRelease,
   type Manifest,
@@ -21,11 +22,13 @@ const REQUEST_TIMEOUT_MS = 30_000
 const DOWNLOAD_TIMEOUT_MS = 10 * 60_000
 
 export interface UpdaterDeps {
-  readonly releaseUrl: string
+  // GitHub's releases endpoint of the repo, without a trailing slash.
+  readonly releasesUrl: string
   readonly current: string
   readonly bundle: string
   readonly folder: string
   readonly autoCheck: () => boolean
+  readonly beta: () => boolean
   readonly onState: (state: UpdateState) => void
 }
 
@@ -35,11 +38,15 @@ class UpdateError extends Error {
   }
 }
 
-const fetchJson = async (url: string): Promise<unknown> => {
+const fetchJson = async (
+  url: string,
+  options: { readonly missingIsNull?: boolean } = {},
+): Promise<unknown> => {
   const response = await fetch(url, {
     headers: { accept: "application/json" },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   })
+  if (response.status === 404 && options.missingIsNull) return null
   if (!response.ok) throw new UpdateError("network")
   return response.json()
 }
@@ -75,7 +82,10 @@ export const createUpdater = (deps: UpdaterDeps) => {
   }
 
   const run = async () => {
-    const release = readRelease(await fetchJson(deps.releaseUrl))
+    const release = deps.beta()
+      ? newestRelease(await fetchJson(deps.releasesUrl))
+      : // GitHub answers 404 here while the repo has no stable release.
+        readRelease(await fetchJson(`${deps.releasesUrl}/latest`, { missingIsNull: true }))
     const manifestAsset = release?.assets.find((asset) => asset.name === MANIFEST_NAME)
     if (!release || !manifestAsset) return set({ kind: "idle", current: deps.current })
     const manifest = readManifest(await fetchJson(manifestAsset.url))

@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { automaticCheckFrom } from "./update-settings.ts"
+import { automaticCheckFrom, betaFrom } from "./update-settings.ts"
 
 test("the check is on unless the file turns it off", () => {
   expect(automaticCheckFrom(null)).toBe(true)
@@ -18,4 +18,13 @@ test("a file that cannot be read keeps the check on", () => {
   expect(automaticCheckFrom("{ nope")).toBe(true)
   expect(automaticCheckFrom('["updates"]')).toBe(true)
   expect(automaticCheckFrom('{ "updates": 3 }')).toBe(true)
+})
+
+test("betas follow the file, and the installed version when the file says nothing", () => {
+  expect(betaFrom(null, "0.1.0-beta.0")).toBe(true)
+  expect(betaFrom("{}", "0.1.0")).toBe(false)
+  expect(betaFrom('{ "updates": { "beta": false } }', "0.1.0-beta.0")).toBe(false)
+  expect(betaFrom('{ "updates": { "beta": true } }', "0.1.0")).toBe(true)
+  expect(betaFrom('{ "updates": { "beta": "yes" } }', "0.1.0")).toBe(false)
+  expect(betaFrom("{ nope", "0.1.0-beta.0")).toBe(true)
 })

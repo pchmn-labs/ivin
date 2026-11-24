@@ -26,11 +26,25 @@ const zipOf = (marker: string) => {
 }
 
 interface Fake {
-  version: string
+  // Versions published, oldest first; a version with a "-" is a GitHub pre-release.
+  versions: string[]
   zip: Buffer
   manifestSha: string
   requests: string[]
 }
+
+const zipName = (version: string) => `ivin-${version}-arm64.zip`
+
+const releaseJson = (version: string) => ({
+  tag_name: `v${version}`,
+  body: "- a fix",
+  html_url: "https://example.test/release",
+  prerelease: version.includes("-"),
+  assets: [
+    { name: "manifest.json", browser_download_url: `${base}/${version}/manifest.json` },
+    { name: zipName(version), browser_download_url: `${base}/${version}/${zipName(version)}` },
+  ],
+})
 
 let server: Server
 let fake: Fake
@@ -39,36 +53,36 @@ let base: string
 beforeEach(async () => {
   const zip = zipOf("new")
   fake = {
-    version: "0.4.0",
+    versions: ["0.4.0"],
     zip,
     manifestSha: createHash("sha512").update(zip).digest("hex"),
     requests: [],
   }
   server = createServer((request, response) => {
-    fake.requests.push(request.url ?? "")
-    if (request.url === "/release") {
+    const url = request.url ?? ""
+    fake.requests.push(url)
+    const [, version, file] = /^\/([^/]+)\/(.+)$/.exec(url) ?? []
+    const latest = fake.versions.filter((v) => !v.includes("-")).at(-1)
+    if (url === "/releases/latest" && latest !== undefined) {
       response.setHeader("content-type", "application/json")
+      response.end(JSON.stringify(releaseJson(latest)))
+    } else if (url === "/releases") {
+      response.setHeader("content-type", "application/json")
+      response.end(JSON.stringify(fake.versions.map(releaseJson).reverse()))
+    } else if (
+      version !== undefined &&
+      fake.versions.includes(version) &&
+      file === "manifest.json"
+    ) {
       response.end(
         JSON.stringify({
-          tag_name: `v${fake.version}`,
-          body: "- a fix",
-          html_url: "https://example.test/release",
-          assets: [
-            { name: "manifest.json", browser_download_url: `${base}/manifest.json` },
-            { name: "ivin-0.4.0-arm64.zip", browser_download_url: `${base}/ivin-0.4.0-arm64.zip` },
-          ],
-        }),
-      )
-    } else if (request.url === "/manifest.json") {
-      response.end(
-        JSON.stringify({
-          version: fake.version,
-          file: "ivin-0.4.0-arm64.zip",
+          version,
+          file: zipName(version),
           size: fake.zip.length,
           sha512: fake.manifestSha,
         }),
       )
-    } else if (request.url === "/ivin-0.4.0-arm64.zip") {
+    } else if (version !== undefined && file === zipName(version)) {
       response.end(fake.zip)
     } else {
       response.statusCode = 404
@@ -81,7 +95,15 @@ beforeEach(async () => {
 
 afterEach(() => new Promise<void>((resolve) => server.close(() => resolve())))
 
-const setup = (options: { autoCheck?: boolean; releaseUrl?: string; chmod?: number } = {}) => {
+const setup = (
+  options: {
+    autoCheck?: boolean
+    beta?: boolean
+    current?: string
+    releasesUrl?: string
+    chmod?: number
+  } = {},
+) => {
   const home = temp()
   const installed = join(home, "Applications")
   mkdirSync(installed)
@@ -89,11 +111,12 @@ const setup = (options: { autoCheck?: boolean; releaseUrl?: string; chmod?: numb
   if (options.chmod !== undefined) chmodSync(installed, options.chmod)
   const states: UpdateState[] = []
   const updater = createUpdater({
-    releaseUrl: options.releaseUrl ?? `${base}/release`,
-    current: "0.3.2",
+    releasesUrl: options.releasesUrl ?? `${base}/releases`,
+    current: options.current ?? "0.3.2",
     bundle,
     folder: join(home, "updates"),
     autoCheck: () => options.autoCheck ?? true,
+    beta: () => options.beta ?? false,
     onState: (state) => states.push(state),
   })
   return { updater, states, bundle, installed, folder: join(home, "updates") }
@@ -141,17 +164,48 @@ test.skipIf(process.getuid?.() === 0)(
     chmodSync(installed, 0o755)
 
     expect(states.at(-1)).toMatchObject({ kind: "failed", reason: "notWritable" })
-    expect(fake.requests).not.toContain("/ivin-0.4.0-arm64.zip")
+    expect(fake.requests).not.toContain("/0.4.0/ivin-0.4.0-arm64.zip")
     expect(readFileSync(join(bundle, "Contents/Resources/marker"), "utf8")).toBe("old")
   },
 )
 
 test("a release server that cannot be reached fails as a network problem", async () => {
-  const { updater, states } = setup({ releaseUrl: "http://127.0.0.1:1/release" })
+  const { updater, states } = setup({ releasesUrl: "http://127.0.0.1:1/releases" })
 
   await updater.check({ manual: false })
 
   expect(states.at(-1)).toMatchObject({ kind: "failed", reason: "network" })
+})
+
+test("a repository with no release yet leaves the app current, not failed", async () => {
+  const { updater, states } = setup()
+  fake.versions = []
+
+  await updater.check({ manual: true })
+
+  expect(states.map((state) => state.kind)).toEqual(["checking", "idle"])
+})
+
+test("with betas off, a newer beta is not offered", async () => {
+  const { updater, states } = setup()
+  fake.versions = ["0.4.0-beta.0"]
+
+  await updater.check({ manual: true })
+
+  expect(states.map((state) => state.kind)).toEqual(["checking", "idle"])
+  expect(fake.requests).toEqual(["/releases/latest"])
+})
+
+test("with betas on, the newest release is downloaded, beta or stable", async () => {
+  fake.versions = ["0.4.0-beta.0", "0.4.0-beta.1"]
+  const beta = setup({ beta: true, current: "0.4.0-beta.0" })
+  await beta.updater.check({ manual: false })
+  expect(beta.states.at(-1)).toMatchObject({ kind: "ready", version: "0.4.0-beta.1" })
+
+  fake.versions = ["0.4.0-beta.1", "0.4.0"]
+  const stable = setup({ beta: true, current: "0.4.0-beta.1" })
+  await stable.updater.check({ manual: false })
+  expect(stable.states.at(-1)).toMatchObject({ kind: "ready", version: "0.4.0" })
 })
 
 test("a failed check is tried again by the next one", async () => {
@@ -167,7 +221,7 @@ test("a failed check is tried again by the next one", async () => {
 
 test("a manual check that finds nothing newer says the app is current", async () => {
   const { updater, states } = setup()
-  fake.version = "0.3.2"
+  fake.versions = ["0.3.2"]
 
   await updater.check({ manual: true })
 
@@ -183,7 +237,7 @@ test("with the automatic check off, no request leaves until a check is run by ha
   expect(fake.requests).toEqual([])
 
   await updater.check({ manual: true })
-  expect(fake.requests).toContain("/release")
+  expect(fake.requests).toContain("/releases/latest")
 })
 
 test("the relaunch starts the new app with the arguments the old one had", async () => {
@@ -227,7 +281,7 @@ test("two checks at once make one request series", async () => {
 
   await Promise.all([updater.check({ manual: true }), updater.check({ manual: true })])
 
-  expect(fake.requests.filter((url) => url === "/release")).toHaveLength(1)
+  expect(fake.requests.filter((url) => url === "/releases/latest")).toHaveLength(1)
 })
 
 test("a zip without the app inside is refused as unusable", async () => {
