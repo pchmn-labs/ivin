@@ -39,7 +39,7 @@ To run ivin, show it to the user, capture its screens or show a UI change in a p
 
 Run a tool through the root `package.json` script that wraps it, because the script carries the config. With no script for what you need, call Vite+ through `pnpm vp <command>`, and any other tool through `pnpm exec <tool>`, never `npx`.
 
-While building, run the test files you touch: `pnpm test <path>…`. The CI runs each test a pull request adds or changes 20 times, so do not repeat tests on your machine. Write tests that do not depend on timing: a browser test waits for what the user would see (`expect.element`, `expect.poll`), never for a fixed delay or a number of frames. When a test fails at random, find the cause in the app or the test, never hide it with `--retry` or a longer wait. When that CI job fails, `pnpm test:repeat-changed` reproduces it. Run `pnpm check` once, before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI. `pnpm install-app` packages ivin and replaces `/Applications/ivin.app`: run it only when the user asks.
+While building, run the test files you touch: `pnpm test <path>…`. Run `pnpm check` before the commit. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI. `pnpm install-app` packages ivin and replaces `/Applications/ivin.app`: run it only when the user asks.
 
 ### Grilling
 
