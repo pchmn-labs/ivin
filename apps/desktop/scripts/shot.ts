@@ -249,7 +249,11 @@ try {
   await window.getByTestId("question-sheet").waitFor()
   await window.waitForTimeout(300)
   await shoot("question")
-  await window.getByRole("complementary").getByRole("button", { name: "New session" }).first().click()
+  await window
+    .getByRole("complementary")
+    .getByRole("button", { name: "New session" })
+    .first()
+    .click()
   await window.getByTestId("working-question").waitFor()
   await window.waitForTimeout(300)
   await shoot("working-panel-question")

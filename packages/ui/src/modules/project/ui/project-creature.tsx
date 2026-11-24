@@ -1,7 +1,7 @@
 import { creature } from "../rules/creature.ts"
 import "./project-creature.css"
 
-export function ProjectCreature({ name, size = 20 }: { name: string; size?: 12 | 16 | 20 }) {
+export function ProjectCreature({ name, size = 20 }: { name: string; size?: 10 | 12 | 16 | 20 }) {
   const { hue, cells } = creature(name)
   return (
     <svg

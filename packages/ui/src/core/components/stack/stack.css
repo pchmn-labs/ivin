@@ -32,6 +32,10 @@
   gap: var(--iv-space-1, 0);
 }
 
+.iv-stack--gap-1-5 {
+  gap: calc(var(--iv-space-1) + var(--iv-space-half));
+}
+
 .iv-stack--gap-2 {
   gap: var(--iv-space-2, 0);
 }

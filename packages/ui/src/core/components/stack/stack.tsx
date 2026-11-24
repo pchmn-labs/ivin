@@ -19,7 +19,7 @@ export function Stack({
   const classes = [
     "iv-stack",
     `iv-stack--${direction}`,
-    `iv-stack--gap-${gap}`,
+    `iv-stack--gap-${String(gap).replace(".", "-")}`,
     align && `iv-stack--align-${align}`,
     justify && `iv-stack--justify-${justify}`,
     wrap && "iv-stack--wrap",

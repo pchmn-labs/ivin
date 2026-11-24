@@ -167,7 +167,7 @@ export interface TextProps {
 
 export interface StackProps {
   readonly direction?: "column" | "row"
-  readonly gap?: 0 | 1 | 2 | 3 | 4 | 6 | 8
+  readonly gap?: 0 | 1 | 1.5 | 2 | 3 | 4 | 6 | 8
   readonly align?: "start" | "center" | "end" | "stretch" | "baseline"
   readonly justify?: "start" | "center" | "end" | "between"
   readonly wrap?: boolean
@@ -259,7 +259,7 @@ export interface RelativeTimeProps {
 // The project's pixel creature, in its hue.
 export interface ProjectMarkProps {
   readonly name: string
-  readonly size?: 12 | 16 | 20
+  readonly size?: 10 | 12 | 16 | 20
 }
 
 export interface MarkdownProps {
