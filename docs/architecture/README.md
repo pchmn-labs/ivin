@@ -112,7 +112,7 @@ packages/             what is imported
   state/              atom families, optimistic writes, stream bridging (`@ivin/state`)
   plugin-api/         entry points `server.ts`, `ui.ts` and `editor.ts` (the host's CodeMirror): types + runtime shims (the only package plugins import)
 tools/                repo tooling: `lint-rules/` tests the ADR-0001 import rules of `.oxlintrc.json` and the UI style rules of `.oxlintrc.json` and `.stylelintrc.json`, `test-setup/` runs before every `node` test
-plugins/<id>/         built-in plugins, same format as user plugins; `src/rules/` beside the two halves when one has logic
+plugins/<id>/         built-in plugins, same format as user plugins; `src/rules/`, `src/ui/` and `src/hooks/` beside the two halves when one has logic or a UI too big for `ui.tsx`
 docs/
 ```
 
@@ -227,7 +227,9 @@ interface HarnessRun {
   README.md      what it does, for the next agent that edits it
   src/
     server.ts    optional, runs in the plugin host process
-    ui.tsx       optional, runs in the renderer
+    ui.tsx       optional, runs in the renderer: activate(ctx) only, its entry
+    ui/          optional, one component per file
+    hooks/       optional, one use-<name>.ts hook per file
     rules/       optional, the plugin's pure logic
 ```
 
