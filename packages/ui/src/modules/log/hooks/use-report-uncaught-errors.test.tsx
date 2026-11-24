@@ -1,8 +1,9 @@
-import { RegistryProvider } from "@effect/atom-react"
+import { RegistryContext } from "@effect/atom-react"
 import { expect, test, vi } from "vitest"
 import { render } from "vitest-browser-react"
-import { makeFakeServer } from "../../../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import type { UserPlugin } from "@ivin/contracts/plugin"
+import { makeTestRegistry } from "../../../core/test-registry.ts"
+import { listPluginsAtom } from "../../plugin/atoms/list-plugins.ts"
 import { useReportUncaughtErrors } from "./use-report-uncaught-errors.ts"
 
 function Reporter() {
@@ -10,13 +11,16 @@ function Reporter() {
   return null
 }
 
-const mount = async () => {
-  const server = makeFakeServer()
+const mount = async (plugins: ReadonlyArray<UserPlugin> = []) => {
+  const { server, registry } = makeTestRegistry()
+  server.userPlugins.push(...plugins)
   await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+    <RegistryContext.Provider value={registry}>
       <Reporter />
-    </RegistryProvider>,
+    </RegistryContext.Provider>,
   )
+  // The hook reads the plugin list as it arrives.
+  await vi.waitFor(() => expect(registry.get(listPluginsAtom)._tag).toBe("Success"))
   return server
 }
 
@@ -60,18 +64,23 @@ test("a rejected promise nobody handles is reported to the server", async () => 
   )
 })
 
-test("an error thrown by a plugin is not reported", async () => {
-  const server = await mount()
+test("an error or rejection from a user plugin's bundle goes to its log, not the app's", async () => {
+  const server = await mount([{ _tag: "compiled", id: "notes", name: "Notes", bundle: "n.js" }])
+  const url = "ivin-plugin-bundle://cache/n.js"
 
   window.dispatchEvent(
     new ErrorEvent("error", {
-      error: new Error("plugin bug"),
-      message: "plugin bug",
-      filename: "http://localhost/plugins/usage/src/ui.tsx",
+      error: new Error("handler bug"),
+      message: "handler bug",
+      filename: url,
     }),
   )
-
-  // Reports reach the server in order, so the second one arriving shows the first was dropped.
+  const reason = new Error("late")
+  reason.stack = `Error: late\n    at later (${url}:1:1)`
+  const promise = Promise.reject(reason)
+  promise.catch(() => {})
+  window.dispatchEvent(new PromiseRejectionEvent("unhandledrejection", { promise, reason }))
+  // Reports reach the server in order, so the app error arriving shows the others were routed away.
   window.dispatchEvent(
     new ErrorEvent("error", {
       error: new Error("app bug"),
@@ -79,6 +88,12 @@ test("an error thrown by a plugin is not reported", async () => {
       filename: "http://localhost/src/app/app.tsx",
     }),
   )
+
   await vi.waitFor(() => expect(server.errorReports).toHaveLength(1))
   expect(server.errorReports).toMatchObject([{ message: "app bug" }])
+  await vi.waitFor(() => expect(server.pluginFailures).toHaveLength(2))
+  expect(server.pluginFailures).toMatchObject([
+    { id: "notes", reason: expect.stringContaining("handler bug") },
+    { id: "notes", reason: expect.stringContaining("late") },
+  ])
 })

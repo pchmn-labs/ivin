@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { errorReport, thrownByPlugin } from "./error-report.ts"
+import { errorReport, pluginOfError } from "./error-report.ts"
 
 test("an error becomes a report with its name, message and stack", () => {
   const error = new TypeError("x is undefined")
@@ -25,18 +25,26 @@ test("a tagged error gives its tag as type, and a bare value its own type", () =
   })
 })
 
-test("an error whose file or first stack frame is under plugins/<id>/ comes from a plugin", () => {
-  expect(thrownByPlugin("http://localhost:5173/plugins/usage/src/ui.tsx", null)).toBe(true)
+test("an error is a plugin's when its file or first stack frame is that plugin's bundle", () => {
+  const bundles = new Map([["a b.js", "notes"]])
+  const url = "ivin-plugin-bundle://cache/a%20b.js"
+
+  expect(pluginOfError(url, null, bundles)).toBe("notes")
   expect(
-    thrownByPlugin(undefined, {
-      stack:
-        "Error: x\n    at onClick (http://localhost:5173/plugins/usage/src/ui.tsx:3:9)\n    at app.tsx:1",
-    }),
-  ).toBe(true)
+    pluginOfError(
+      undefined,
+      { stack: `Error: x\n    at onClick (${url}:3:9)\n    at app.tsx:1` },
+      bundles,
+    ),
+  ).toBe("notes")
   expect(
-    thrownByPlugin("http://localhost:5173/src/app/app.tsx", {
-      stack:
-        "Error: x\n    at run (http://localhost:5173/src/app/app.tsx:3:9)\n    at /plugins/usage/src/ui.tsx:1",
-    }),
-  ).toBe(false)
+    pluginOfError(
+      "http://localhost/src/app/app.tsx",
+      { stack: `Error: x\n    at run (http://localhost/src/app.tsx:3:9)\n    at ${url}:1` },
+      bundles,
+    ),
+  ).toBeNull()
+  expect(
+    pluginOfError("http://localhost/plugins/usage/src/ui.tsx", new Error("x"), bundles),
+  ).toBeNull()
 })

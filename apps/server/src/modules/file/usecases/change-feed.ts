@@ -73,16 +73,20 @@ export const layerChangeFeed = Layer.effect(ChangeFeed)(
     const listings = new Map<string, Listed>()
     const fileListings = new Map<string, ListedFiles>()
 
-    const watchFolderAt = (folder: string) =>
-      folders.subscribe(folder).pipe(
+    const watchFolderAt = (folder: string, skip?: (path: string) => boolean) =>
+      folders.subscribe(folder, skip).pipe(
         Effect.tapError((error) => Effect.logWarning(`could not watch ${folder}`, error)),
         Effect.orElseSucceed((): Stream.Stream<string> => Stream.empty),
       )
 
     const open = (root: string) =>
       Effect.gen(function* () {
-        const raw = yield* watchFolderAt(root)
         const gitDir = yield* git.gitDir(root)
+        // Folders found ignored: a change under one costs no git call.
+        const ignoredFolders = new Set<string>()
+        const isCovered = (path: string) =>
+          ancestorsOf(path).some((name) => ignoredFolders.has(name))
+        const raw = yield* watchFolderAt(root, isCovered)
         // A linked worktree keeps its HEAD and index outside the working folder.
         const gitRaw =
           gitDir === null || isWithin(root, gitDir)
@@ -98,13 +102,11 @@ export const layerChangeFeed = Layer.effect(ChangeFeed)(
         })
         yield* Effect.addFinalizer(() => end)
 
-        // Folders found ignored: a change under one costs no git call.
-        const ignoredFolders = new Set<string>()
         const withoutIgnored = (paths: ReadonlyArray<string>) =>
           Effect.gen(function* () {
-            const covered = (path: string) =>
-              ancestorsOf(path).some((name) => ignoredFolders.has(name))
-            const pending = paths.filter((path) => !covered(path))
+            // Outside a repository nothing is ignored, `node_modules` included.
+            if (gitDir === null) return paths
+            const pending = paths.filter((path) => !isCovered(path))
             if (pending.length === 0) return []
             const ignored = yield* git.ignoredNames(root, [
               ...new Set(pending.flatMap(ancestorsOf)),

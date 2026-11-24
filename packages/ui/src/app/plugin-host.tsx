@@ -372,21 +372,24 @@ export function PluginsProvider({
     }
     for (const plugin of all) {
       if (current.has(plugin)) continue
+      const showPanel = (tab: string) => showSidebarTab(registry, tab, { focus: true })
+      let failed = false
       const onFailure = userPlugins.plugins.includes(plugin)
-        ? (error: unknown) => dropFailedPlugin(plugin.manifest.id, error)
+        ? (error: unknown) => {
+            failed = true
+            dropFailedPlugin(plugin, error)
+            // Back in the same pass, so the replaced built-in plugin never leaves the screen.
+            const builtIn = plugins.find((p) => p.manifest.id === plugin.manifest.id)
+            if (builtIn !== undefined && !current.has(builtIn))
+              current.set(builtIn, activatePlugin(registry, builtIn, showPanel))
+          }
         : undefined
-      current.set(
-        plugin,
-        activatePlugin(
-          registry,
-          plugin,
-          (tab) => showSidebarTab(registry, tab, { focus: true }),
-          onFailure,
-        ),
-      )
+      const deactivate = activatePlugin(registry, plugin, showPanel, onFailure)
+      // Deactivating a failed plugin would remove its replaced built-in plugin's contributions, which share its id.
+      if (!failed) current.set(plugin, deactivate)
     }
     setActive(true)
-  }, [registry, all, userPlugins.plugins, dropFailedPlugin])
+  }, [registry, all, plugins, userPlugins.plugins, dropFailedPlugin])
   useEffect(
     () => () => {
       deactivations.current.forEach((deactivate) => deactivate())

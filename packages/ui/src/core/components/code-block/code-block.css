@@ -15,3 +15,10 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.iv-code-block__note {
+  margin: var(--iv-space-1) 0 0;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+}

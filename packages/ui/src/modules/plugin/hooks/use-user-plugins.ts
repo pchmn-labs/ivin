@@ -20,6 +20,9 @@ export function useUserPlugins(importBundle: ImportBundle) {
 
   // Started once per bundle, so a longer list neither imports nor reports a plugin twice.
   const loads = useRef(new Map<string, Promise<UiPluginEntry | null>>())
+  // A plugin whose activate threw stays off until its bundle changes or the window reloads.
+  const failed = useRef(new Set<string>())
+  const keys = useRef(new WeakMap<UiPluginEntry, string>())
 
   useEffect(() => {
     if (listed === null) return
@@ -42,11 +45,18 @@ export function useUserPlugins(importBundle: ImportBundle) {
       const key = `${plugin.id}\0${plugin.bundle}`
       const started = loads.current.get(key) ?? load(plugin.id, plugin.bundle)
       loads.current.set(key, started)
-      return [started]
+      return [
+        started.then((entry) => {
+          if (entry !== null) keys.current.set(entry, key)
+          return entry
+        }),
+      ]
     })
     void Promise.all(entries).then((loaded) => {
       if (stopped) return
-      const next = loaded.filter((entry) => entry !== null)
+      const next = loaded
+        .filter((entry) => entry !== null)
+        .filter((entry) => !failed.current.has(keys.current.get(entry)!))
       const current = shown.current
       if (current.length === next.length && current.every((entry, i) => entry === next[i])) return
       shown.current = next
@@ -58,8 +68,11 @@ export function useUserPlugins(importBundle: ImportBundle) {
   }, [listed, importBundle, report])
 
   const dropFailedPlugin = useCallback(
-    (id: string, error: unknown) => {
+    (entry: UiPluginEntry, error: unknown) => {
+      const id = entry.manifest.id
       report({ id, reason: `Its activate function threw: ${messageOf(error)}` })
+      const failedKey = keys.current.get(entry)
+      if (failedKey !== undefined) failed.current.add(failedKey)
       shown.current = shown.current.filter((plugin) => plugin.manifest.id !== id)
       setPlugins(shown.current)
     },
