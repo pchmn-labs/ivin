@@ -19,6 +19,7 @@ export const testUiHost: UiHost = {
   useAnswerApproval: () => async () => undefined,
   useAnswerQuestion: () => async () => undefined,
   useSessionActions: () => ({ items: [], failure: null }),
+  useAllSessionsActions: () => ({ items: [] }),
   useRenameSession: () => ({ rename: () => {}, failure: null }),
   useSessionLocation: () => ({ kind: "folder", label: "", branch: null }),
   useDraft: () => [emptyDraft, () => {}],

@@ -177,6 +177,10 @@ export interface UiHost {
     readonly items: ReadonlyArray<MenuItem>
     readonly failure: string | null
   }
+  // Archive all and Delete all for these sessions, each asking once; failures show through `useSessionActions`.
+  readonly useAllSessionsActions: (sessions: ReadonlyArray<Session>) => {
+    readonly items: ReadonlyArray<MenuItem>
+  }
   // Lists one level of a folder of the session's working folder; `path` is relative to it, "" for itself.
   readonly useListFolder: () => (sessionId: string, path: string) => Promise<FolderListing>
   // Opens a file of the session's working folder beside its chat, or selects it if open; `path` as above.

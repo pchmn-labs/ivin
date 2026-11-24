@@ -195,6 +195,8 @@ export interface DisclosureProps {
   // sidebar panel, and its summary stays in view while the rows scroll.
   // "row" has no chevron: its summary brightens on hover and while open.
   readonly variant?: "default" | "section" | "panel" | "row"
+  // Controls at the heading's right end, before the chevron, shown on hover or focus.
+  readonly actions?: ReactNode
   readonly "data-testid"?: string
   readonly children?: ReactNode
 }

@@ -36,7 +36,10 @@ import { answerQuestionAtom } from "../modules/session/atoms/answer-question.ts"
 import { serverStateAtom } from "../modules/server/atoms/server-state.ts"
 import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { openSessionsAtom } from "../modules/session/atoms/open-sessions.ts"
-import { useSessionActions } from "../modules/session/hooks/use-session-actions.ts"
+import {
+  useAllSessionsActions,
+  useSessionActions,
+} from "../modules/session/hooks/use-session-actions.ts"
 import { useSessionLocation } from "../modules/session/hooks/use-session-location.ts"
 import { draftOf } from "../modules/session/atoms/draft.ts"
 import { interruptSessionAtom } from "../modules/session/atoms/interrupt-session.ts"
@@ -201,6 +204,7 @@ const host: UiHost = {
     }
   },
   useSessionActions: (session) => useSessionActions(contractSession(session)),
+  useAllSessionsActions: (sessions) => useAllSessionsActions(sessions.map(contractSession)),
   useRenameSession: (session) => {
     const rename = useAtomSet(renameSessionAtom)
     const failure = useAtomValue(renameFailureOf(session.id))

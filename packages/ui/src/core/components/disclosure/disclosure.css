@@ -84,3 +84,32 @@
 .iv-disclosure--row > .iv-disclosure__body {
   padding-left: 22px;
 }
+
+.iv-disclosure-frame {
+  position: relative;
+}
+
+.iv-disclosure-frame__actions {
+  position: absolute;
+  top: 0;
+  right: calc(12px + var(--iv-space-1));
+  display: flex;
+  align-items: center;
+  height: 24px;
+  opacity: 0;
+  transition: opacity var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-disclosure-frame:has(> .iv-disclosure > .iv-disclosure__summary:hover)
+  > .iv-disclosure-frame__actions,
+.iv-disclosure-frame__actions:hover,
+.iv-disclosure-frame__actions:focus-within,
+.iv-disclosure-frame__actions:has([data-popup-open]) {
+  opacity: 1;
+}
+
+.iv-disclosure-frame[data-variant="section"] > .iv-disclosure-frame__actions {
+  top: var(--iv-space-2);
+  right: calc(var(--iv-space-2) + 12px + var(--iv-space-1));
+  height: 28px;
+}

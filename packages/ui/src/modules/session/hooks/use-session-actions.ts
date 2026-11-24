@@ -85,3 +85,25 @@ export function useSessionActions(
     failure,
   }
 }
+
+export function useAllSessionsActions(sessions: ReadonlyArray<Session>): {
+  readonly items: ReadonlyArray<MenuItem>
+} {
+  const confirm = useAtomSet(sessionConfirmationAtom)
+  const registry = useContext(RegistryContext)
+  const request = (action: "archiveAll" | "deleteAll") =>
+    confirm({
+      action,
+      sessions: sessions.map((session) => ({
+        session,
+        unsaved: registry.get(unsavedPathsOf(session.id, session.workingFolder)),
+      })),
+    })
+  return {
+    items: [
+      { label: "Archive all", icon: "archive", onSelect: () => request("archiveAll") },
+      "separator",
+      { label: "Delete all…", icon: "trash", danger: true, onSelect: () => request("deleteAll") },
+    ],
+  }
+}

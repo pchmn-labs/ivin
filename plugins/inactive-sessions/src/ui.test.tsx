@@ -35,6 +35,7 @@ const mountSection = async (
   >
   const opened: string[] = []
   const archived: string[] = []
+  const archivedAll: string[][] = []
   const host: UiHost = {
     ...testUiHost,
     useSessions: () => sessions,
@@ -45,13 +46,18 @@ const mountSection = async (
       items: [{ label: "Archive", onSelect: () => void archived.push(session.id) }],
       failure: session.title === "Failed" ? "The session was not archived." : null,
     }),
+    useAllSessionsActions: (sessions) => ({
+      items: [
+        { label: "Archive all", onSelect: () => void archivedAll.push(sessions.map((s) => s.id)) },
+      ],
+    }),
   }
   await render(
     <UiHostProvider host={host}>
       <Section />
     </UiHostProvider>,
   )
-  return { opened, archived }
+  return { opened, archived, archivedAll }
 }
 
 const fold = () => page.getByText(/^Inactive sessions/)
@@ -108,4 +114,17 @@ test("an inactive session's menu archives it, and a failure shows under its row"
 
   expect(archived).toEqual(["s1"])
   await expect.element(page.getByRole("alert")).toHaveTextContent("The session was not archived.")
+})
+
+test("the heading's menu acts on every inactive session, folded or not", async () => {
+  const { archivedAll } = await mountSection(
+    [session("s1", "Open one"), session("s2", "Closed one"), session("s3", "Closed two")],
+    ["s1"],
+  )
+  await fold().hover()
+  await page.getByRole("button", { name: "Actions for the inactive sessions" }).click()
+  await page.getByRole("menuitem", { name: "Archive all" }).click()
+
+  expect(archivedAll).toEqual([["s2", "s3"]])
+  await expect.element(page.getByText("Closed one")).not.toBeInTheDocument()
 })

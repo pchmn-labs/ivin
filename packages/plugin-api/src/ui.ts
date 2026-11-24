@@ -261,6 +261,8 @@ export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
 export const useAnswerQuestion = (sessionId: string) => useHost().useAnswerQuestion(sessionId)
 export const useSessionActions = (session: Session) => useHost().useSessionActions(session)
+export const useAllSessionsActions = (sessions: ReadonlyArray<Session>) =>
+  useHost().useAllSessionsActions(sessions)
 export const useRenameSession = (session: Session) => useHost().useRenameSession(session)
 export const useSessionLocation = (session: Session) => useHost().useSessionLocation(session)
 export const useDraft = (sessionId: string) => useHost().useDraft(sessionId)

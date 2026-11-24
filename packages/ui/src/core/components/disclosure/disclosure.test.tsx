@@ -26,3 +26,29 @@ test("a folded disclosure's content is not in the page until it is unfolded", as
   await page.getByText("Output").click()
   await expect.element(page.getByText("file contents")).not.toBeInTheDocument()
 })
+
+test("a section's actions sit in its heading, folded or open, and using them does not fold it", async () => {
+  let clicks = 0
+  await render(
+    <Disclosure
+      variant="section"
+      summary="Inactive sessions"
+      actions={
+        <button type="button" onClick={() => void clicks++}>
+          More
+        </button>
+      }
+    >
+      rows
+    </Disclosure>,
+  )
+  await page.getByRole("button", { name: "More" }).click()
+  expect(clicks).toBe(1)
+  expect(document.body.textContent).not.toContain("rows")
+
+  await page.getByText("Inactive sessions").click()
+  await expect.element(page.getByText("rows")).toBeVisible()
+  await page.getByRole("button", { name: "More" }).click()
+  expect(clicks).toBe(2)
+  await expect.element(page.getByText("rows")).toBeVisible()
+})
