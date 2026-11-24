@@ -37,7 +37,7 @@ import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
 import { PLUGIN_SCHEME, pluginFile } from "./plugin-protocol.ts"
 import { PLUGIN_BUNDLE_SCHEME, pluginBundleFile } from "./plugin-bundle-protocol.ts"
 import { createRestartPolicy } from "./restart-policy.ts"
-import { automaticCheckFrom } from "./update-settings.ts"
+import { automaticCheckFrom, betaFrom } from "./update-settings.ts"
 import { createUpdater, startSwap } from "./updater.ts"
 
 // A dev build keeps its own data, so it never shares a database with the installed app.
@@ -215,21 +215,22 @@ const updatesEnabled = app.isPackaged && process.platform === "darwin" && proces
 const settingsFile = join(ivinHome, "settings.json")
 // Contents/MacOS/ivin sits two folders inside ivin.app.
 const appBundle = dirname(dirname(dirname(app.getPath("exe"))))
+const readSettings = () => {
+  try {
+    return readFileSync(settingsFile, "utf8")
+  } catch {
+    return null
+  }
+}
 let relaunchToUpdate = false
 const updater = createUpdater({
-  releaseUrl:
-    process.env["IVIN_UPDATE_URL"] ??
-    "https://api.github.com/repos/pchmn-labs/ivin/releases/latest",
+  releasesUrl:
+    process.env["IVIN_UPDATE_URL"] ?? "https://api.github.com/repos/pchmn-labs/ivin/releases",
   current: app.getVersion(),
   bundle: appBundle,
   folder: join(app.getPath("userData"), "updates"),
-  autoCheck: () => {
-    try {
-      return automaticCheckFrom(readFileSync(settingsFile, "utf8"))
-    } catch {
-      return true
-    }
-  },
+  autoCheck: () => automaticCheckFrom(readSettings()),
+  beta: () => betaFrom(readSettings(), app.getVersion()),
   onState: (state) => {
     for (const window of BrowserWindow.getAllWindows()) window.webContents.send(UPDATE_STATE, state)
   },

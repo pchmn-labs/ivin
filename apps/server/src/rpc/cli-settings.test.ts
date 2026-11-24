@@ -29,7 +29,11 @@ const settings = (args: readonly string[], initial: string | null = text, readOn
   if (readOnlyHome) chmodSync(home, 0o500)
   return withCliServer(
     async (socketPath, run) => {
-      const loaded = readSettingsFile({ settings: defaultSettings, problem: null }, initial)
+      const loaded = readSettingsFile(
+        { settings: defaultSettings, problem: null },
+        initial,
+        defaultSettings,
+      )
       const firstSettings = (matches: (settings: Settings) => boolean) =>
         run(
           Effect.gen(function* () {
@@ -70,7 +74,7 @@ test("ivin settings set changes only that value in the file, and the app applies
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
     agents: { stopWhenIdleMinutes: 10 },
-    updates: { automaticCheck: true },
+    updates: { automaticCheck: true, beta: false },
   })
 }, 10_000)
 
@@ -133,7 +137,7 @@ test("ivin settings get prints every setting, or the one at a path", async () =>
 
   expect(all.code).toBe(0)
   expect(all.stdout).toBe(
-    'tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\nsidebar.layout = "rail"\nagents.stopWhenIdleMinutes = 10\nupdates.automaticCheck = true\n',
+    'tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\nsidebar.layout = "rail"\nagents.stopWhenIdleMinutes = 10\nupdates.automaticCheck = true\nupdates.beta = false\n',
   )
   expect(one.stdout).toBe("true\n")
   expect(section.stdout).toBe("tabs.stopAgentOnClose = true\n")
@@ -155,7 +159,7 @@ test("--json prints the values as JSON", async () => {
       files: { folderIcons: true },
       sidebar: { layout: "rail" },
       agents: { stopWhenIdleMinutes: 10 },
-      updates: { automaticCheck: true },
+      updates: { automaticCheck: true, beta: false },
     },
   })
   expect(JSON.parse(one.stdout)).toEqual({ ok: true, path: "tabs.stopAgentOnClose", value: true })

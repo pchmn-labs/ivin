@@ -1,9 +1,4 @@
-import {
-  defaultSettings,
-  Settings,
-  type SettingsFileProblem,
-  type UserSettings,
-} from "@ivin/contracts/setting"
+import { Settings, type SettingsFileProblem, type UserSettings } from "@ivin/contracts/setting"
 import { parseJsonc } from "@ivin/contracts/jsonc"
 
 class Invalid {
@@ -63,31 +58,26 @@ const choiceOf = <Value extends string>(
   return value as Value
 }
 
-const read = (text: string | null): Settings => {
-  if (text === null || text.trim() === "") return defaultSettings
+const read = (text: string | null, defaults: Settings): Settings => {
+  if (text === null || text.trim() === "") return defaults
   const parsed = parseJsonc(text)
   if (!parsed.ok) throw new Invalid({ reason: "notJson", setting: null })
   const file = parsed.value
   if (!isObject(file)) throw new Invalid({ reason: "notAnObject", setting: null })
   return {
     tabs: {
-      stopAgentOnClose: booleanOf(
-        file,
-        "tabs",
-        "stopAgentOnClose",
-        defaultSettings.tabs.stopAgentOnClose,
-      ),
+      stopAgentOnClose: booleanOf(file, "tabs", "stopAgentOnClose", defaults.tabs.stopAgentOnClose),
     },
     worktrees: {
       removeOnTabClose: booleanOf(
         file,
         "worktrees",
         "removeOnTabClose",
-        defaultSettings.worktrees.removeOnTabClose,
+        defaults.worktrees.removeOnTabClose,
       ),
     },
     files: {
-      folderIcons: booleanOf(file, "files", "folderIcons", defaultSettings.files.folderIcons),
+      folderIcons: booleanOf(file, "files", "folderIcons", defaults.files.folderIcons),
     },
     sidebar: {
       layout: choiceOf(
@@ -95,7 +85,7 @@ const read = (text: string | null): Settings => {
         "sidebar",
         "layout",
         Settings.fields.sidebar.fields.layout.literals,
-        defaultSettings.sidebar.layout,
+        defaults.sidebar.layout,
       ),
     },
     agents: {
@@ -103,23 +93,23 @@ const read = (text: string | null): Settings => {
         file,
         "agents",
         "stopWhenIdleMinutes",
-        defaultSettings.agents.stopWhenIdleMinutes,
+        defaults.agents.stopWhenIdleMinutes,
       ),
     },
     updates: {
-      automaticCheck: booleanOf(
-        file,
-        "updates",
-        "automaticCheck",
-        defaultSettings.updates.automaticCheck,
-      ),
+      automaticCheck: booleanOf(file, "updates", "automaticCheck", defaults.updates.automaticCheck),
+      beta: booleanOf(file, "updates", "beta", defaults.updates.beta),
     },
   }
 }
 
-export const readSettingsFile = (previous: UserSettings, text: string | null): UserSettings => {
+export const readSettingsFile = (
+  previous: UserSettings,
+  text: string | null,
+  defaults: Settings,
+): UserSettings => {
   try {
-    return { settings: read(text), problem: null }
+    return { settings: read(text, defaults), problem: null }
   } catch (error) {
     if (!(error instanceof Invalid)) throw error
     return { settings: previous.settings, problem: error.problem }

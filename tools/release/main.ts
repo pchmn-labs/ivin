@@ -2,14 +2,20 @@
 import { execFileSync } from "node:child_process"
 import { appendFileSync, readdirSync, readFileSync, writeFileSync } from "node:fs"
 import { basename } from "node:path"
-import { bumpLevel, latestSection, manifest, withVersion } from "./release.ts"
+import { baseTag, bumpLevel, releaseNotes, manifest, withVersion, type Channel } from "./release.ts"
 
 const git = (...args: string[]) => execFileSync("git", args, { encoding: "utf8" }).trim()
 
 const [command, ...args] = process.argv.slice(2)
 
 if (command === "check") {
-  const tag = git("tag", "--list", "v*", "--sort=-v:refname").split("\n")[0] || undefined
+  const [channel] = args
+  if (channel !== "stable" && channel !== "beta") throw new Error("usage: check <stable | beta>")
+  // Without the suffix setting, git sorts v0.1.0-beta.0 after v0.1.0.
+  const tags = git("-c", "versionsort.suffix=-", "tag", "--list", "v*", "--sort=-v:refname")
+    .split("\n")
+    .filter(Boolean)
+  const tag = baseTag(tags, channel satisfies Channel)
   const subjects = git("log", "--format=%s", tag ? `${tag}..HEAD` : "HEAD")
     .split("\n")
     .filter(Boolean)
@@ -19,7 +25,9 @@ if (command === "check") {
     ? `${level} release: ${subjects.length} commits since ${tag ?? "the start"}`
     : `Nothing to release: no feat or fix commit since ${tag ?? "the start"}.`
   console.log(release ? message : `::notice::${message}`)
-  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `release=${release}\n`)
+  if (process.env.GITHUB_OUTPUT) {
+    appendFileSync(process.env.GITHUB_OUTPUT, `release=${release}\nincrement=${level}\n`)
+  }
 } else if (command === "sync-version") {
   const [version] = args
   if (!version) throw new Error("usage: sync-version <version>")
@@ -37,7 +45,7 @@ if (command === "check") {
 } else if (command === "notes") {
   const [out] = args
   if (!out) throw new Error("usage: notes <out>")
-  writeFileSync(out, latestSection(readFileSync("CHANGELOG.md", "utf8")))
+  writeFileSync(out, releaseNotes(readFileSync("CHANGELOG.md", "utf8")))
 } else {
   throw new Error(`unknown command: ${command}`)
 }

@@ -2,6 +2,12 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      channel:
+        description: A beta is published as a GitHub pre-release, like v0.1.0-beta.0.
+        type: choice
+        options: [stable, beta]
+        default: stable
 
 concurrency:
   group: release
@@ -11,7 +17,7 @@ permissions:
 
 jobs:
   release:
-    name: Publish an unsigned GitHub Release
+    name: Publish an unsigned GitHub Release (${{ inputs.channel }})
     if: github.ref == 'refs/heads/main'
     runs-on: macos-latest
     timeout-minutes: 45
@@ -29,12 +35,21 @@ jobs:
           node-version-file: .node-version
       - run: pnpm install --frozen-lockfile
       - id: check
-        run: node tools/release/main.ts check
+        run: node tools/release/main.ts check "$CHANNEL"
+        env:
+          CHANNEL: ${{ inputs.channel }}
       - if: steps.check.outputs.release == 'true'
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          INCREMENT: ${{ steps.check.outputs.increment }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          pnpm exec release-it --ci
+          if [ "$CHANNEL" = beta ]; then
+            pnpm exec release-it --ci --preRelease=beta
+          else
+            pnpm exec release-it --ci --increment="$INCREMENT"
+          fi
           echo "VERSION=$(node -p 'require("./package.json").version')" >> "$GITHUB_ENV"
       - if: steps.check.outputs.release == 'true'
         run: pnpm package
@@ -48,4 +63,7 @@ jobs:
       - if: steps.check.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "v$VERSION" "ivin-$VERSION-arm64.zip" manifest.json --title "v$VERSION" --notes-file notes.md
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          gh release create "v$VERSION" "ivin-$VERSION-arm64.zip" manifest.json --title "v$VERSION" --notes-file notes.md \
+            $([ "$CHANNEL" = beta ] && echo --prerelease)
