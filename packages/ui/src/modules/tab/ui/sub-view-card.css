@@ -19,6 +19,7 @@
   bottom: var(--iv-radius-card);
   left: -1px;
   width: 1px;
+  border-radius: var(--iv-radius-pill);
 }
 
 .iv-sub-view-card__row {

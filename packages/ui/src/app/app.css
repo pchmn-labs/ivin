@@ -38,6 +38,7 @@
   right: -1px;
   bottom: var(--iv-radius-card);
   width: 1px;
+  border-radius: var(--iv-radius-pill);
 }
 
 .iv-app__card-top {
