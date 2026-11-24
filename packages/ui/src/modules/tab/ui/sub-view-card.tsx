@@ -1,5 +1,5 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useRef } from "react"
+import { Suspense, lazy, useRef } from "react"
 import { Button, IconButton } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
@@ -8,15 +8,22 @@ import { ResizeHandle } from "../../../core/components/resize-handle/resize-hand
 import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { fileName } from "../../file/rules/file-name.ts"
-import { DiffView } from "../../file/ui/diff-view.tsx"
-import { FileView } from "../../file/ui/file-view.tsx"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { subViewsOf } from "../atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
 import { useSubViewActions } from "../hooks/use-sub-view-actions.ts"
 import { adjacentRowTab, subViewKey } from "../rules/sub-views.ts"
 import { SubViewTabs } from "./sub-view-tabs.tsx"
+import { LoadingRows } from "../../../core/components/loading-rows/loading-rows.tsx"
 import "./sub-view-card.css"
+
+// CodeMirror comes with these two views, so the window does not load it before one opens.
+const DiffView = lazy(() =>
+  import("../../file/ui/diff-view.tsx").then((m) => ({ default: m.DiffView })),
+)
+const FileView = lazy(() =>
+  import("../../file/ui/file-view.tsx").then((m) => ({ default: m.FileView })),
+)
 
 const CARD_MIN = 280
 
@@ -164,25 +171,27 @@ export function SubViewCard({
               : fileName(selected.path)
           }
         >
-          {selected.kind !== "file" ? (
-            <DiffView
-              key={subViewKey(selected)}
-              kind={selected.kind}
-              sessionId={sessionId}
-              workingFolder={workingFolder}
-              path={selected.path}
-              onOpenFile={() =>
-                open({ sessionId, workingFolder, subView: { kind: "file", path: selected.path } })
-              }
-            />
-          ) : (
-            <FileView
-              key={subViewKey(selected)}
-              sessionId={sessionId}
-              workingFolder={workingFolder}
-              path={selected.path}
-            />
-          )}
+          <Suspense fallback={<LoadingRows label="Loading" />}>
+            {selected.kind !== "file" ? (
+              <DiffView
+                key={subViewKey(selected)}
+                kind={selected.kind}
+                sessionId={sessionId}
+                workingFolder={workingFolder}
+                path={selected.path}
+                onOpenFile={() =>
+                  open({ sessionId, workingFolder, subView: { kind: "file", path: selected.path } })
+                }
+              />
+            ) : (
+              <FileView
+                key={subViewKey(selected)}
+                sessionId={sessionId}
+                workingFolder={workingFolder}
+                path={selected.path}
+              />
+            )}
+          </Suspense>
         </div>
       )}
     </section>

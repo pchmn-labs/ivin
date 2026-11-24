@@ -1,5 +1,5 @@
 import { Effect } from "effect"
-import { readFileSync, writeFileSync } from "node:fs"
+import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import * as React from "react"
 import { renderToString } from "react-dom/server"
@@ -69,6 +69,29 @@ test("a plugin's UI half bundles the components and hooks it imports from src/ui
   expect(plugin).toMatchObject({ _tag: "compiled", id: "split" })
   const bundle = await importBundle(bundlePath(home, plugin))
   expect(renderToString(React.createElement(bundle["Answer"] as React.FC))).toBe("<span>42</span>")
+})
+
+test("a plugin's import() becomes a chunk beside its bundle that loads only when called", async () => {
+  const home = tempDir("home")
+  writePlugin(home, "lazy", {
+    "package.json": packageJson({ id: "lazy", name: "Lazy", ui: "src/ui.tsx" }),
+    "src/heavy.ts": 'export const heavy = () => "HEAVY-MARKER-" + 6 * 7\n',
+    "src/ui.tsx": `export const load = () => import("./heavy.ts").then((m) => m.heavy())
+export const activate = () => undefined
+`,
+  })
+
+  const [plugin] = await listPlugins(home)
+  const entry = bundlePath(home, plugin)
+  expect(readFileSync(entry, "utf8")).not.toContain("HEAVY-MARKER")
+  const chunks = readdirSync(entry.slice(0, -".js".length))
+  expect(chunks).toHaveLength(1)
+  expect(existsSync(join(entry.slice(0, -".js".length), chunks[0] ?? ""))).toBe(true)
+
+  const bundle = await importBundle(entry)
+  expect(await (bundle["load"] as () => Promise<string>)()).toBe("HEAVY-MARKER-42")
+
+  expect(bundlePath(home, (await listPlugins(home))[0])).toBe(entry)
 })
 
 test("an unchanged plugin is not compiled again, and a changed one is", async () => {

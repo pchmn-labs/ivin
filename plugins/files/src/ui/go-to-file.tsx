@@ -1,25 +1,25 @@
 import { useEffect, useState } from "react"
 import { QuickPick, useSelectedSessionId, useSession } from "@ivin/plugin-api/ui"
 import { FOLDER_DELETED } from "../rules/messages.ts"
-import { treeKey, type PluginState } from "../rules/plugin-state.ts"
+import { treeKey } from "../rules/plugin-state.ts"
 import { GoToFileList } from "./go-to-file-list.tsx"
 
-export function GoToFile({ state }: { state: PluginState }) {
-  const [open, setOpen] = useState(false)
+export function GoToFile({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   const [query, setQuery] = useState("")
   useEffect(() => {
-    const show = () => {
-      setQuery("")
-      setOpen(true)
-    }
-    state.openGoToFile.add(show)
-    return () => void state.openGoToFile.delete(show)
-  }, [state])
+    if (open) setQuery("")
+  }, [open])
   const sessionId = useSelectedSessionId()
   const session = useSession(sessionId ?? "")
   const common = {
     open,
-    onOpenChange: setOpen,
+    onOpenChange,
     label: "Go to file",
     query,
     onQueryChange: setQuery,
@@ -44,7 +44,7 @@ export function GoToFile({ state }: { state: PluginState }) {
       key={treeKey(session)}
       session={session}
       query={query}
-      onPicked={() => setOpen(false)}
+      onPicked={() => onOpenChange(false)}
     >
       {(props) => <QuickPick {...common} {...props} />}
     </GoToFileList>

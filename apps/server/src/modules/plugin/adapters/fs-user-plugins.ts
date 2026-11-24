@@ -13,14 +13,14 @@ import {
   stat,
   writeFile,
 } from "node:fs/promises"
-import { join, relative, resolve, sep } from "node:path"
+import { dirname, join, relative, resolve, sep } from "node:path"
 import { PluginNotCompiled, UserPlugins, type PluginFolder } from "../usecases/user-plugins.ts"
 import { makePluginDependencies, type Installed } from "./plugin-dependencies.ts"
 import { installedPnpmFolder } from "./pnpm.ts"
 
 const HOST_PREFIX = "\0ivin-host:"
 // Bumped when a change to how plugins compile must invalidate the cached bundles.
-const COMPILE_VERSION = `1 ${rolldownPackage.version} ${HOST_MODULES.join(" ")}`
+const COMPILE_VERSION = `2 ${rolldownPackage.version} ${HOST_MODULES.join(" ")}`
 const PROVIDED_PACKAGES = ["react", "react-dom", "@ivin/plugin-api"]
 
 const isBare = (specifier: string) =>
@@ -85,7 +85,7 @@ const loadRolldown = async () => {
 const isUnder = (path: string | undefined, folder: string) =>
   path !== undefined && path.startsWith(folder + sep)
 
-const bundle = async (folder: string, entry: string, installed: Installed | null) => {
+const bundle = async (folder: string, entry: string, installed: Installed | null, name: string) => {
   const { rolldown } = await loadRolldown()
   const build = await rolldown({
     input: entry,
@@ -139,8 +139,16 @@ const bundle = async (folder: string, entry: string, installed: Installed | null
     ],
   })
   try {
-    const { output } = await build.generate({ format: "esm", codeSplitting: false })
-    return output[0].code
+    // The chunks sit in a folder named after the entry, which imports them relatively.
+    const { output } = await build.generate({
+      format: "esm",
+      entryFileNames: name,
+      chunkFileNames: `${name.slice(0, -".js".length)}/[name]-[hash].js`,
+    })
+    return output.map((file) => ({
+      fileName: file.fileName,
+      code: file.type === "chunk" ? file.code : String(file.source),
+    }))
   } finally {
     await build.close()
   }
@@ -185,14 +193,21 @@ export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string) => {
             folder,
             (await readText(join(folder, "package.json"))) ?? "{}",
           )
-          const code = await bundle(folder, entryPath, installed).catch((error: unknown) => {
+          const files = await bundle(folder, entryPath, installed, name).catch((error: unknown) => {
             throw new Error(`Could not compile ${entry}: ${messageOf(error)}`)
           })
           await mkdir(cacheFolder, { recursive: true, mode: 0o700 })
-          // Renamed into place, so a killed write never leaves a partial bundle under a valid name.
-          const partial = `${file}.${process.pid}.partial`
-          await writeFile(partial, code)
-          await rename(partial, file)
+          // Chunks first and the entry last, so a bundle found in the cache is complete.
+          for (const { fileName, code } of files.toSorted(
+            (a, b) => Number(a.fileName === name) - Number(b.fileName === name),
+          )) {
+            const target = join(cacheFolder, fileName)
+            await mkdir(dirname(target), { recursive: true, mode: 0o700 })
+            // Renamed into place, so a killed write never leaves a partial file under a valid name.
+            const partial = `${target}.${process.pid}.partial`
+            await writeFile(partial, code)
+            await rename(partial, target)
+          }
           return name
         },
         catch: (error) => new PluginNotCompiled({ reason: messageOf(error) }),
