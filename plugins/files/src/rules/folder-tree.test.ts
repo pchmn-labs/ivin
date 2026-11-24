@@ -1,6 +1,12 @@
 import type { FolderEntry } from "@ivin/plugin-api/ui"
 import { expect, test } from "vitest"
-import { foldersToReload, listedFolders, withListing, type FolderTree } from "./folder-tree.ts"
+import {
+  foldersToReload,
+  listedFolders,
+  withListing,
+  type FolderState,
+  type FolderTree,
+} from "./folder-tree.ts"
 
 const entries = (...names: string[]): ReadonlyArray<FolderEntry> =>
   names.map((name) =>
@@ -52,12 +58,9 @@ test("the folders to list again are those holding a changed path, parents first,
 })
 
 test("only the folders that are listed give their entries", () => {
-  const tree: FolderTree = {
-    open: new Set(),
-    folders: new Map([
-      ["", listed("a.ts")],
-      ["loading", { kind: "loading" }],
-    ]),
-  }
-  expect([...listedFolders(tree).keys()]).toEqual([""])
+  const folders = new Map<string, FolderState>([
+    ["", listed("a.ts")],
+    ["loading", { kind: "loading" }],
+  ])
+  expect([...listedFolders({ open: new Set(), folders }).keys()]).toEqual([""])
 })
