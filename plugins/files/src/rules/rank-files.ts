@@ -64,8 +64,10 @@ interface Scored extends RankedFile {
   readonly score: number
 }
 
-const before = (a: Scored, b: Scored) =>
-  a.score - b.score || a.path.length - b.path.length || (a.path < b.path ? -1 : 1)
+const beforeScore = (score: number, path: string, b: Scored) =>
+  score - b.score || path.length - b.path.length || (path < b.path ? -1 : 1)
+
+const before = (a: Scored, b: Scored) => beforeScore(a.score, a.path, b)
 
 export const rankFiles = (
   index: FileIndex,
@@ -83,11 +85,14 @@ export const rankFiles = (
     last !== null && letters.startsWith(last.letters) ? last.matches : index.paths.keys()
   const matches: Array<number> = []
   const best: Array<Scored> = []
+  // No match is tighter than the letters side by side at the name's start.
+  const floor = (letters.length - 1) * 1000
   for (const at of candidates) {
     const lower = index.lower[at] ?? ""
     if (!hasLetters(lower, letters)) continue
     matches.push(at)
     const path = index.paths[at] ?? ""
+    if (best.length === limit && beforeScore(floor, path, best[limit - 1]!) >= 0) continue
     const nameStart = index.nameStarts[at] ?? 0
     const nameMatch = tightest(lower.slice(nameStart), letters)
     const scored: Scored =
