@@ -66,8 +66,9 @@
   border-radius: var(--iv-radius-pill);
   color: var(--iv-text-muted);
   font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
   opacity: 0;
-  cursor: default;
+  cursor: pointer;
 }
 
 .iv-task__row:hover .iv-task__pill,

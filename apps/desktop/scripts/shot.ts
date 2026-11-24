@@ -322,6 +322,7 @@ try {
   await window.getByTestId("tab").filter({ hasText: "How many files are there?" }).click()
   await window.getByTestId("background-line").click()
   await window.getByTestId("background-task").waitFor()
+  await window.getByTestId("task-details").hover()
   await window.waitForTimeout(500)
   await shoot("background-task-before-page")
   await closeTab("How many files are there?")
