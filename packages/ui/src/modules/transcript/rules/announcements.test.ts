@@ -47,3 +47,13 @@ test("an approval names the session and the first line of what it asks to run", 
     "Fix the cart needs your approval: pnpm test",
   )
 })
+
+test("a turn that ends before the agent writes anything has nothing to read", () => {
+  expect(
+    turnEndAnnouncement([
+      message("1", "user", "Fix the cart"),
+      message("2", "assistant", "The cart is fixed."),
+      message("3", "user", "Now the checkout"),
+    ]),
+  ).toBeNull()
+})

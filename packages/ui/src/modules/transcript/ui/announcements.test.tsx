@@ -10,12 +10,33 @@ import { makeTestSession } from "../../../core/test-session.ts"
 import { TabBar } from "../../tab/ui/tab-bar.tsx"
 import { Announcements } from "./announcements.tsx"
 
-const setup = async () => {
+const approval = (id: string, sessionId: string, command: string): TranscriptItem => ({
+  id,
+  sessionId,
+  position: 0,
+  at: 0,
+  type: "approval",
+  requestId: `r-${id}`,
+  toolCallId: null,
+  name: "Bash",
+  input: { command },
+  decision: null,
+})
+
+const setup = async (options: { waiting?: boolean } = {}) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
   server.sessions.set("s1", makeTestSession({ id: "s1", title: "Fix the cart" }))
-  server.sessions.set("s2", makeTestSession({ id: "s2", title: "Clean the build" }))
+  server.sessions.set(
+    "s2",
+    makeTestSession({
+      id: "s2",
+      title: "Clean the build",
+      ...(options.waiting && { status: "waiting", waitingFor: "approval" }),
+    }),
+  )
+  if (options.waiting) server.seedItems("s2", [approval("a0", "s2", "rm -rf cache")])
   server.openTab("s2")
   server.openTab("s1")
   await render(
@@ -93,20 +114,27 @@ test("a turn ending in another session, or switching to a session, announces not
 
 test("an approval asked in any session of the project is announced with its title and command", async () => {
   const server = await setup()
-  server.pushItem({
-    id: "a1",
-    sessionId: "s2",
-    position: 0,
-    at: 0,
-    type: "approval",
-    requestId: "r1",
-    toolCallId: null,
-    name: "Bash",
-    input: { command: "rm -rf dist\necho done" },
-    decision: null,
-  })
+  const texts = heard(approvals().element())
+  server.pushItem(approval("a1", "s2", "rm -rf dist\necho done"))
   server.setStatus("s2", "waiting", "approval")
   await expect
     .element(approvals())
     .toHaveTextContent("Clean the build needs your approval: rm -rf dist")
+
+  server.setStatus("s2", "working")
+  server.pushItem(approval("a2", "s2", "rm -rf dist"))
+  server.setStatus("s2", "waiting", "approval")
+  await expect.poll(() => texts.length).toBe(2)
+})
+
+test("an approval already waiting when the project shows is not announced", async () => {
+  const server = await setup({ waiting: true })
+  const texts = heard(approvals().element())
+  await expect
+    .element(tab("Clean the build").getByText("Waiting", { exact: false }))
+    .toBeInTheDocument()
+  server.pushItem(approval("a1", "s1", "pnpm test"))
+  server.setStatus("s1", "waiting", "approval")
+  await expect.element(approvals()).toHaveTextContent("Fix the cart needs your approval: pnpm test")
+  expect(texts).toEqual(["Fix the cart needs your approval: pnpm test"])
 })

@@ -1387,7 +1387,11 @@ export const makeFakeServer = (
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
     setStatus: (sessionId, status, waitingFor) => {
       const session = sessions.get(sessionId)!
-      saveSession({ ...session, status, waitingFor: waitingFor ?? session.waitingFor })
+      saveSession({
+        ...session,
+        status,
+        waitingFor: status === "waiting" ? (waitingFor ?? session.waitingFor) : null,
+      })
     },
     failRelaunch: (sessionId, failure) =>
       void saveSession({ ...sessions.get(sessionId)!, relaunchFailure: failure }),

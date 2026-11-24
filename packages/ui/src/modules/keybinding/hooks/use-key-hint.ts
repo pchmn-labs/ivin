@@ -6,9 +6,7 @@ import { keyOfCommand } from "../rules/resolve-keybindings.ts"
 
 // The key of the command as the platform writes it, such as "⇧⌘A"; null when it has none.
 export function useCommandKey(commandId: string): string | null {
-  const mac = isMac()
-  const key = keyOfCommand(useAtomValue(keybindingsOf(mac)), commandId)
-  return key === null ? null : formatKey(key, { mac })
+  return useCommandKeys()(commandId)?.label ?? null
 }
 
 // `title` followed by the key of the command, as a tooltip shows it: "Toggle sidebar (⌘\)".

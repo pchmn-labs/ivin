@@ -17,7 +17,7 @@ import { closeTabAtom } from "../atoms/close-tab.ts"
 import { tabsOf } from "../atoms/list-tabs.ts"
 import { openTabAtom } from "../atoms/open-tab.ts"
 import { reorderTabsAtom } from "../atoms/reorder-tabs.ts"
-import { moveTab } from "../rules/reorder.ts"
+import { moveBy, moveTab } from "../rules/reorder.ts"
 import "./tab-bar.css"
 
 type Placement = "before" | "after"
@@ -229,14 +229,13 @@ export function TabBar({ projectPath }: { projectPath: string }) {
   }
 
   const step = (by: -1 | 1) => {
-    const ids = tabs.map((tab) => tab.sessionId)
-    const at = selectedSessionId === null ? -1 : ids.indexOf(selectedSessionId)
-    const neighbour = ids[at + by]
-    if (at < 0 || neighbour === undefined) return
-    reorder({
-      projectPath,
-      sessionIds: moveTab(ids, ids[at]!, neighbour, by < 0 ? "before" : "after"),
-    })
+    if (selectedSessionId === null) return
+    const next = moveBy(
+      tabs.map((tab) => tab.sessionId),
+      selectedSessionId,
+      by,
+    )
+    if (next !== null) reorder({ projectPath, sessionIds: next })
   }
   useCommandHandlers({ "tab.moveLeft": () => step(-1), "tab.moveRight": () => step(1) })
 

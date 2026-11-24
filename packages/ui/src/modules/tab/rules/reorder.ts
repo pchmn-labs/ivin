@@ -5,6 +5,18 @@ export const reorder = (current: readonly string[], named: readonly string[]): s
   return [...first, ...current.filter((id) => !placed.has(id))]
 }
 
+// Null when the tab is not in the bar or already at that end.
+export const moveBy = (
+  ids: ReadonlyArray<string>,
+  moved: string,
+  by: -1 | 1,
+): ReadonlyArray<string> | null => {
+  const at = ids.indexOf(moved)
+  const neighbour = ids[at + by]
+  if (at < 0 || neighbour === undefined) return null
+  return moveTab(ids, moved, neighbour, by < 0 ? "before" : "after")
+}
+
 export const moveTab = (
   ids: ReadonlyArray<string>,
   moved: string,

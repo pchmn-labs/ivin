@@ -14,11 +14,14 @@ const forSpeech = (text: string): string => {
   return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`
 }
 
+const isTopLevelMessage = (item: TranscriptItem, role: "user" | "assistant") =>
+  item.type === "message" && item.role === role && item.parentToolCallId === undefined
+
 export const turnEndAnnouncement = (items: ReadonlyArray<TranscriptItem>): string | null => {
-  const last = items.findLast(
-    (item) =>
-      item.type === "message" && item.role === "assistant" && item.parentToolCallId === undefined,
+  const turnStart = items.findLastIndex(
+    (item) => isTopLevelMessage(item, "user") && item.type === "message" && !item.steer,
   )
+  const last = items.slice(turnStart + 1).findLast((item) => isTopLevelMessage(item, "assistant"))
   if (last?.type !== "message") return null
   const text = forSpeech(last.text)
   return text === "" ? null : text

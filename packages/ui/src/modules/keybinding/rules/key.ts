@@ -113,10 +113,10 @@ const KEY_LABELS: Readonly<Record<string, string>> = {
 
 const MAC_KEY_LABELS: Readonly<Record<string, string>> = { backspace: "⌫" }
 
+const capitalized = (key: string) => key[0]!.toUpperCase() + key.slice(1)
+
 const keyLabel = (key: string, { mac }: Platform) =>
-  (mac ? MAC_KEY_LABELS[key] : undefined) ??
-  KEY_LABELS[key] ??
-  (key.length === 1 ? key.toUpperCase() : key[0]!.toUpperCase() + key.slice(1))
+  (mac ? MAC_KEY_LABELS[key] : undefined) ?? KEY_LABELS[key] ?? capitalized(key)
 
 export const formatKey = (text: string, platform: Platform): string => {
   const chord = parse(text, platform)
@@ -151,11 +151,7 @@ const ARIA_KEY_NAMES: Readonly<Record<string, string>> = {
 export const ariaKey = (text: string, platform: Platform): string => {
   const chord = parse(text, platform)
   if (chord === null) return text
-  const key =
-    ARIA_KEY_NAMES[chord.key] ??
-    (chord.key.length === 1
-      ? chord.key.toUpperCase()
-      : chord.key[0]!.toUpperCase() + chord.key.slice(1))
+  const key = ARIA_KEY_NAMES[chord.key] ?? capitalized(chord.key)
   return [
     chord.ctrl && "Control",
     chord.alt && "Alt",
