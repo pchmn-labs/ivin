@@ -83,13 +83,13 @@ Effect v4 is recent, so agents will often write v3 idioms in the core. That cost
 apps/                 what runs: each has a `main` and is imported by nothing
   desktop/            Electron main + preload, packaging. Thin, flat
   server/src/
-    rpc/              the public seam: one handler per RPC, a use case given its dependencies
+    rpc/              the public seam: one handler per RPC, a use case given its dependencies; composes the Layers that need no configuration
     modules/<subject>/
       rules/          pure and synchronous
-      usecases/       Effect programs, one file per intention, and the ports they need
-      adapters/       Layers behind those ports: SQLite, child processes, file watchers, sockets
+      usecases/       Effect programs, one file per intention, the ports they need, and the stateful Layers that need no outside
+      adapters/       Layers that reach the outside: SQLite, child processes, file watchers, sockets
     shared/
-    main.ts           composition root: the one place that knows every Layer
+    main.ts           adds the configured Layers (paths, the harness, the database) and starts the server
   plugin-host/        (not built yet) entry of the plugin host process: loads server halves, implements `ctx` over RPC. Flat
   cli/                `ivin` binary (thin RPC client). Flat, one file per command
 packages/             what is imported
@@ -118,7 +118,7 @@ docs/
 
 ### Code layout
 
-The subject comes before the layer: a package with logic has one module per term of the domain model, named the same in `contracts`, `server` and `ui`, and what a test of a file needs decides its layer (`rules/`, `usecases/`, `atoms/`, `hooks/`, `ui/`, `adapters/`). Oxlint enforces that pure code imports nothing impure and that orchestration imports no adapter; every other direction is navigation. Packages too thin to have layers (`desktop`, `cli`, `contracts`, `state`, `plugin-api`) stay flat.
+The subject comes before the layer: a package with logic has one module per term of the domain model, named the same in `contracts`, `server` and `ui`, and what a test of a file needs decides its layer (`rules/`, `usecases/`, `atoms/`, `hooks/`, `ui/`, `adapters/`). Oxlint enforces that pure code imports nothing impure and that orchestration imports no adapter. The server's modules import each other in one order ([ADR-0012](../adr/0012-server-modules-import-each-other-in-one-order.md)); every other direction is navigation. Packages too thin to have layers (`desktop`, `cli`, `contracts`, `state`, `plugin-api`) stay flat.
 
 The rules per package are in [`docs/conventions/`](../conventions/README.md), the reasons in [ADR-0001](../adr/0001-code-grouped-by-subject-and-layered-by-test.md).
 

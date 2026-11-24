@@ -1,5 +1,10 @@
 import { expect, test } from "vitest"
-import { newSessionRunOptions, runOptionChanges, sameRunOptions } from "./run-options.ts"
+import {
+  firstTurnOutcome,
+  newSessionRunOptions,
+  runOptionChanges,
+  sameRunOptions,
+} from "./run-options.ts"
 
 const offer = (value: string) => ({ value, name: value.toUpperCase(), description: null })
 
@@ -53,4 +58,26 @@ test("two sets of options are the same when every value matches", () => {
   const options = { model: "a", effort: "low", permissionMode: "ask" }
   expect(sameRunOptions(options, { ...options })).toBe(true)
   expect(sameRunOptions(options, { ...options, effort: "high" })).toBe(false)
+})
+
+const previous = { model: "a", effort: "low", permissionMode: "ask" }
+const changed = { ...previous, effort: "high" }
+
+test("a first turn without an error confirms the options it ran with", () => {
+  expect(firstTurnOutcome(previous, changed, { message: "hi", error: null })).toEqual({
+    type: "confirmed",
+  })
+})
+
+test("a first turn that failed with changed options offers the previous ones back", () => {
+  expect(firstTurnOutcome(previous, changed, { message: "hi", error: "boom" })).toEqual({
+    type: "relaunchFailure",
+    failure: { previous, message: "hi", error: "boom" },
+  })
+})
+
+test("a first turn that failed offers nothing when no options were confirmed or none changed", () => {
+  const failed = { message: "hi", error: "boom" }
+  expect(firstTurnOutcome(null, changed, failed)).toEqual({ type: "none" })
+  expect(firstTurnOutcome(previous, { ...previous }, failed)).toEqual({ type: "none" })
 })

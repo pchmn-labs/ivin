@@ -8,8 +8,6 @@ import { ProjectNotFound } from "@ivin/contracts/project"
 import { SessionNotFound } from "@ivin/contracts/session"
 import { DateTime, Effect } from "effect"
 import type { Json } from "effect/Schema"
-import { ProjectStore } from "../../project/usecases/project-store.ts"
-import { SessionStore } from "../../session/usecases/session-store.ts"
 import { annotationKey, type KindDefinition } from "../rules/annotation-key.ts"
 import { AnnotationFeed } from "./annotation-feed.ts"
 import { AnnotationStore } from "./annotation-store.ts"
@@ -21,12 +19,10 @@ const definitionOf = (kind: string): KindDefinition | undefined =>
 
 const ensureTarget = (target: AnnotationTarget) =>
   Effect.gen(function* () {
-    if (target._tag === "session") {
-      const session = yield* (yield* SessionStore).findById(target.sessionId)
-      if (!session) return yield* new SessionNotFound({ sessionId: target.sessionId })
-    } else if (!(yield* (yield* ProjectStore).isKnown(target.projectPath))) {
-      return yield* new ProjectNotFound({ path: target.projectPath })
-    }
+    if (yield* (yield* AnnotationStore).targetExists(target)) return
+    return yield* target._tag === "session"
+      ? Effect.fail(new SessionNotFound({ sessionId: target.sessionId }))
+      : Effect.fail(new ProjectNotFound({ path: target.projectPath }))
   })
 
 export const addAnnotation = (target: AnnotationTarget, ns: string, kind: string, data: Json) =>

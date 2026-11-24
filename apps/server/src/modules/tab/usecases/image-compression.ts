@@ -1,7 +1,7 @@
 import { Context, Effect, FiberSet, Layer, Semaphore } from "effect"
 import { logFailure } from "../../log/usecases/log-error.ts"
-import { TabStore } from "../../tab/usecases/tab-store.ts"
-import { ImageStore } from "./image-store.ts"
+import { ImageStore } from "../../transcript/usecases/image-store.ts"
+import { TabStore } from "./tab-store.ts"
 
 export class ImageCompression extends Context.Service<
   ImageCompression,

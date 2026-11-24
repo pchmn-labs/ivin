@@ -1,6 +1,6 @@
 import type { Change } from "@ivin/contracts/file"
-import { parseChanges } from "../../file/rules/changes.ts"
-import { parseGitStatus } from "../../file/rules/git-status.ts"
+import { parseChanges } from "../rules/changes.ts"
+import { parseGitStatus } from "../rules/git-status.ts"
 import { Context, Effect, Layer } from "effect"
 import { execFile } from "node:child_process"
 import { realpathSync } from "node:fs"

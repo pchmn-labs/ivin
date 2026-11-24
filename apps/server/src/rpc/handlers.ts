@@ -66,11 +66,15 @@ import { layerSessionFeed } from "../modules/session/usecases/session-feed.ts"
 import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
 import { taskOutput } from "../modules/session/usecases/task-output.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
+import { layerWorktreeCleanup } from "../modules/session/usecases/worktree-cleanup.ts"
 import { layerCurrentSettings } from "../modules/setting/usecases/current-settings.ts"
 import { getSetting } from "../modules/setting/usecases/get-setting.ts"
 import { setSetting } from "../modules/setting/usecases/set-setting.ts"
 import { watchSettings } from "../modules/setting/usecases/watch-settings.ts"
 import { layerSqliteTabStore } from "../modules/tab/adapters/sqlite-tab-store.ts"
+import { layerImageCompression } from "../modules/tab/usecases/image-compression.ts"
+import { layerProjectTabs } from "../modules/tab/usecases/project-tabs.ts"
+import { layerSessionTabs } from "../modules/tab/usecases/session-tabs.ts"
 import { closeSubView } from "../modules/tab/usecases/close-sub-view.ts"
 import { closeTab } from "../modules/tab/usecases/close-tab.ts"
 import { listSubViews } from "../modules/tab/usecases/list-sub-views.ts"
@@ -84,7 +88,6 @@ import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlit
 import { layerFsImageStore } from "../modules/transcript/adapters/fs-image-store.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
 import { getTaskItems } from "../modules/transcript/usecases/get-task-items.ts"
-import { layerImageCompression } from "../modules/transcript/usecases/image-compression.ts"
 import { listImages } from "../modules/transcript/usecases/list-images.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
@@ -92,14 +95,15 @@ import { watchUsage } from "../modules/transcript/usecases/watch-usage.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
 import { layerFirstMessageReading } from "../modules/session/usecases/first-message-reading.ts"
 import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
-import { layerWorktreeCleanup } from "../modules/worktree/usecases/worktree-cleanup.ts"
 import { checkoutStatus } from "../modules/worktree/usecases/checkout-status.ts"
 import { listBranches } from "../modules/worktree/usecases/list-branches.ts"
 import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
 export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
-  Layer.mergeAll(layerWorktreeCleanup, layerImageCompression, layerFirstMessageReading).pipe(
+  Layer.mergeAll(layerProjectTabs, layerFirstMessageReading).pipe(
+    Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
+    Layer.provideMerge(layerSessionTabs),
     Layer.provideMerge(sessionRuns),
     Layer.provideMerge(layerCurrentSettings),
     Layer.provideMerge(layerSessionFeed),

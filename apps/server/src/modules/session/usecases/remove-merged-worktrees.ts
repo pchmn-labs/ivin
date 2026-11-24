@@ -1,15 +1,15 @@
 import type { Session } from "@ivin/contracts/session"
 import { Effect } from "effect"
-import { checkWorkingFolders } from "../../session/usecases/check-working-folder.ts"
-import { SessionRuns } from "../../session/usecases/session-runs.ts"
-import { SessionStore } from "../../session/usecases/session-store.ts"
 import { CurrentSettings } from "../../setting/usecases/current-settings.ts"
-import { TabStore } from "../../tab/usecases/tab-store.ts"
-import { isInUse, isRemovable, removalCandidates } from "../rules/worktree-removal.ts"
-import { Git } from "./git.ts"
-import { listWorktreesOrNone } from "./list-worktrees.ts"
-import { newWorktreeBase } from "./new-worktree-base.ts"
-import { OriginFetch } from "./origin-fetch.ts"
+import { isInUse, isRemovable, removalCandidates } from "../../worktree/rules/worktree-removal.ts"
+import { Git } from "../../worktree/usecases/git.ts"
+import { listWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
+import { newWorktreeBase } from "../../worktree/usecases/new-worktree-base.ts"
+import { OriginFetch } from "../../worktree/usecases/origin-fetch.ts"
+import { checkWorkingFolders } from "./check-working-folder.ts"
+import { SessionRuns } from "./session-runs.ts"
+import { SessionStore } from "./session-store.ts"
+import { SessionTabs } from "./session-tabs.ts"
 
 // Run once the closed sessions' agents have stopped: a running agent keeps its worktree.
 // `deletedSessions` are gone from the store, yet their worktrees count as just closed.
@@ -35,8 +35,7 @@ export const removeMergedWorktrees = (
         ...(yield* (yield* SessionStore).listByProject(projectPath)),
         ...deletedSessions,
       ]
-      const tabs = yield* (yield* TabStore).listByProject(projectPath)
-      const open = new Set(tabs.map((tab) => tab.sessionId))
+      const open = new Set(yield* (yield* SessionTabs).openSessionIds(projectPath))
       const runs = yield* SessionRuns
       const closed = new Set(closedSessionIds)
       return yield* Effect.forEach(sessions, (session) =>

@@ -5,6 +5,8 @@ export class AnnotationStore extends Context.Service<
   AnnotationStore,
   {
     readonly find: (id: string) => Effect.Effect<Annotation | null>
+    // True when the session or project the target names is stored, archived sessions included.
+    readonly targetExists: (target: AnnotationTarget) => Effect.Effect<boolean>
     readonly list: (
       target: AnnotationTarget,
       kind: string | null,

@@ -1,14 +1,14 @@
 import type { Session } from "@ivin/contracts/session"
 import { Context, Effect, FiberSet, Layer, Semaphore } from "effect"
 import { logFailure } from "../../log/usecases/log-error.ts"
-import type { SessionFeed } from "../../session/usecases/session-feed.ts"
-import type { SessionRuns } from "../../session/usecases/session-runs.ts"
-import type { SessionStore } from "../../session/usecases/session-store.ts"
 import type { CurrentSettings } from "../../setting/usecases/current-settings.ts"
-import type { TabStore } from "../../tab/usecases/tab-store.ts"
-import type { Git } from "./git.ts"
-import type { OriginFetch } from "./origin-fetch.ts"
+import type { Git } from "../../worktree/usecases/git.ts"
+import type { OriginFetch } from "../../worktree/usecases/origin-fetch.ts"
 import { removeMergedWorktrees } from "./remove-merged-worktrees.ts"
+import type { SessionFeed } from "./session-feed.ts"
+import type { SessionRuns } from "./session-runs.ts"
+import type { SessionStore } from "./session-store.ts"
+import type { SessionTabs } from "./session-tabs.ts"
 
 export class WorktreeCleanup extends Context.Service<
   WorktreeCleanup,
@@ -27,7 +27,7 @@ export class WorktreeCleanup extends Context.Service<
 export const layerWorktreeCleanup = Layer.effect(WorktreeCleanup)(
   Effect.gen(function* () {
     const context = yield* Effect.context<
-      CurrentSettings | Git | OriginFetch | SessionFeed | SessionRuns | SessionStore | TabStore
+      CurrentSettings | Git | OriginFetch | SessionFeed | SessionRuns | SessionStore | SessionTabs
     >()
     const fibers = yield* FiberSet.make()
     // One pass at a time, so two never judge the same worktree.

@@ -3,82 +3,34 @@ import {
   ApprovalNotOpen,
   QuestionNotOpen,
   SessionNotFound,
-  type RunOptions,
   type Session,
-  type SessionStatus,
-  type PendingMessage,
-  type WaitingFor,
 } from "@ivin/contracts/session"
-import type {
-  HarnessDelta,
-  HarnessEvent,
-  HarnessOutput,
-  ImageData,
-} from "@ivin/contracts/transcript"
+import type { HarnessEvent } from "@ivin/contracts/transcript"
 import {
-  HarnessProvider,
+  type HarnessProvider,
   type ApprovalDecision,
-  HarnessError,
   type QuestionAnswers,
   type RequestAnswer,
 } from "@ivin/harness"
-import {
-  Cause,
-  Context,
-  DateTime,
-  Duration,
-  Effect,
-  Exit,
-  Fiber,
-  Layer,
-  Option,
-  Scope,
-  Semaphore,
-  Stream,
-} from "effect"
-import {
-  applyEvent,
-  stoppedTaskEvents,
-  unansweredEvents,
-} from "../../transcript/rules/derive-items.ts"
-import {
-  applyDelta,
-  blockAfterEvent,
-  finishedEventId,
-  type StreamedBlock,
-} from "../../transcript/rules/streamed-block.ts"
-import { logError, logFailure } from "../../log/usecases/log-error.ts"
+import { Cause, Context, Duration, Effect, Layer, Semaphore } from "effect"
+import { guarded, logFailure } from "../../log/usecases/log-error.ts"
 import { ProjectTrust } from "../../project/usecases/project-trust.ts"
-import { ensureItems } from "../../transcript/usecases/ensure-items.ts"
-import { ItemFeed } from "../../transcript/usecases/item-feed.ts"
-import { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
-import { Git } from "../../worktree/usecases/git.ts"
-import { runOptionsOf, sameRunOptions } from "../rules/run-options.ts"
-import { followAgentWorktree } from "./follow-agent-worktree.ts"
 import { CurrentSettings } from "../../setting/usecases/current-settings.ts"
+import type { ItemFeed } from "../../transcript/usecases/item-feed.ts"
+import type { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
+import type { Git } from "../../worktree/usecases/git.ts"
+import { runOptionsOf, sameRunOptions } from "../rules/run-options.ts"
+import { type UserMessage, unsent } from "../rules/user-message.ts"
+import { type AgentRun, recordFailedStart, runFailed, startAgentRun } from "./agent-run.ts"
+import { makeIdleStop } from "./idle-stop.ts"
 import { SessionFeed } from "./session-feed.ts"
+import { setSessionStatus } from "./session-status.ts"
 import { SessionStore } from "./session-store.ts"
-
-interface UserMessage {
-  readonly id: string
-  readonly text: string
-  readonly images: readonly ImageData[]
-}
-
-const unsent = ({ id, text, images }: UserMessage | PendingMessage): PendingMessage => ({
-  id,
-  text,
-  images: images.map(({ id, number, mediaType }) => ({ id, number, mediaType })),
-})
-
-const userMessageEvent = (message: UserMessage | PendingMessage, steer = false): HarnessEvent => ({
-  type: "user_message",
-  text: message.text,
-  images: unsent(message).images,
-  // Left out of turn-starting messages, so they are stored as before steers existed.
-  steer: steer || undefined,
-  raw: null,
-})
+import {
+  closeRequestsLeftOpen,
+  openTranscriptWriter,
+  type TranscriptWriter,
+} from "./transcript-writer.ts"
 
 export class SessionRuns extends Context.Service<
   SessionRuns,
@@ -119,36 +71,6 @@ export class SessionRuns extends Context.Service<
   }
 >()("ivin/server/SessionRuns") {}
 
-interface ActiveRun {
-  readonly cwd: string
-  readonly options: RunOptions
-  readonly busy: () => boolean
-  readonly turn: () => number
-  readonly hasTasks: () => boolean
-  readonly turnStarted: Effect.Effect<void>
-  readonly taskFile: (taskId: string) => string | undefined
-  readonly record: (event: HarnessEvent, id?: string) => Effect.Effect<void>
-  readonly send: (message: UserMessage) => Effect.Effect<void, HarnessError>
-  // False when no request of the answer's kind is open under its id.
-  readonly decide: (answer: RequestAnswer) => Effect.Effect<boolean>
-  readonly respond: (answer: RequestAnswer) => Effect.Effect<void, HarnessError>
-  readonly interrupt: Effect.Effect<void>
-  readonly fail: (error: HarnessError) => Effect.Effect<void>
-  readonly end: Effect.Effect<void>
-}
-
-// Logs a failure of one cleanup step so the steps after it still run.
-const runFailed = new HarnessError({ message: "ivin failed while running the agent" })
-
-const guarded = <A, E, R>(action: string, effect: Effect.Effect<A, E, R>) =>
-  effect.pipe(
-    Effect.catchCause((cause) =>
-      Cause.hasInterruptsOnly(cause)
-        ? Effect.failCause(cause)
-        : logFailure(action, cause).pipe(Effect.as(undefined)),
-    ),
-  )
-
 // `idleLimit` is read each time a turn ends; 0 never stops the agent.
 export const layerSessionRunsWith = (
   interruptDeadline: Duration.Input,
@@ -156,17 +78,15 @@ export const layerSessionRunsWith = (
 ) =>
   Layer.effect(SessionRuns)(
     Effect.gen(function* () {
-      const provider = yield* HarnessProvider
+      const context = yield* Effect.context<
+        HarnessProvider | SessionStore | SessionFeed | TranscriptStore | ItemFeed | Git
+      >()
       const sessions = yield* SessionStore
-      const transcript = yield* TranscriptStore
-      const feed = yield* ItemFeed
       const sessionFeed = yield* SessionFeed
-      const git = yield* Git
       const trust = yield* ProjectTrust
-      const runs = new Map<string, ActiveRun>()
+      const runs = new Map<string, AgentRun>()
       const layerScope = yield* Effect.scope
       const locks = new Map<string, Semaphore.Semaphore>()
-      // The run fiber's exit path must never take this lock: `stop` holds it while closing the run.
       const locked = <A, E, R>(sessionId: string, effect: Effect.Effect<A, E, R>) =>
         Effect.suspend(() => {
           const lock = locks.get(sessionId) ?? Semaphore.makeUnsafe(1)
@@ -174,7 +94,8 @@ export const layerSessionRunsWith = (
           return lock.withPermits(1)(effect)
         })
 
-      const leftRunning = yield* sessions.resetRunning
+      const openWriter = (session: Session) =>
+        openTranscriptWriter(session).pipe(Effect.provideContext(context))
 
       // Closed together: one scope after another would add every agent's kill grace.
       yield* Effect.addFinalizer(() =>
@@ -186,424 +107,37 @@ export const layerSessionRunsWith = (
         ),
       )
 
-      const setStatus = (sessionId: string, status: SessionStatus, waitingFor: WaitingFor = null) =>
-        DateTime.now.pipe(
-          Effect.flatMap((at) => sessions.setStatus(sessionId, status, at, waitingFor)),
-          Effect.andThen(sessionFeed.publish(sessionId)),
+      // Forked out of the run's scope: stopping closes that scope, which would interrupt this fiber mid-stop.
+      const later = (
+        delay: Duration.Input,
+        sessionId: string,
+        run: AgentRun,
+        effect: Effect.Effect<void>,
+      ) =>
+        Effect.sleep(delay).pipe(
+          Effect.andThen(
+            locked(
+              sessionId,
+              Effect.suspend(() => (runs.get(sessionId) === run ? effect : Effect.void)),
+            ),
+          ),
+          Effect.forkIn(layerScope),
         )
 
-      const offerPreviousOptions = (
-        sessionId: string,
-        options: RunOptions,
-        message: string,
-        error: string | null,
-      ) =>
-        Effect.gen(function* () {
-          const previous = yield* sessions.confirmedRunOptions(sessionId)
-          if (previous === null || sameRunOptions(previous, options)) return
-          yield* sessions.setRelaunchFailure(sessionId, { previous, message, error })
-          yield* sessionFeed.publish(sessionId)
-        })
+      const idleStop = yield* makeIdleStop(idleLimit, later)
 
-      const makeWriter = (session: Session) =>
-        Effect.gen(function* () {
-          yield* ensureItems(session.id).pipe(
-            Effect.provideService(HarnessProvider, provider),
-            Effect.provideService(TranscriptStore, transcript),
-          )
-          let sequence = yield* transcript.lastSequence(session.id)
-          let itemState = yield* transcript.itemState(session.id)
-          let streamed: StreamedBlock | null = null
-          const writing = yield* Semaphore.make(1)
-
-          const write = (event: HarnessEvent, id?: string, { touch = true } = {}) =>
-            Effect.gen(function* () {
-              const at = yield* DateTime.now
-              sequence += 1
-              // A subagent's step is no part of the text the agent is streaming.
-              const stepOfTask = "parentToolCallId" in event && event.parentToolCallId !== undefined
-              const reserved =
-                !stepOfTask && (event.type === "assistant_text" || event.type === "thinking")
-                  ? finishedEventId(streamed, event.type)
-                  : undefined
-              if (!stepOfTask) streamed = blockAfterEvent(streamed, event)
-              const { raw: _raw, ...body } = event
-              const stored = {
-                ...body,
-                id: id ?? reserved ?? crypto.randomUUID(),
-                sessionId: session.id,
-                sequence,
-                at,
-              }
-              const next = applyEvent(itemState, stored, provider.toolKind)
-              yield* transcript.append(
-                stored,
-                {
-                  item: next.item,
-                  openMessageId: next.state.openMessage?.id ?? null,
-                },
-                touch ? at : null,
-              )
-              itemState = next.state
-              if (next.item) yield* feed.publish({ type: "upsert", item: next.item })
-              yield* sessionFeed.publish(session.id)
-            })
-
-          const syncTasks = Effect.suspend(() =>
-            sessions
-              .setBackgroundTasks(
-                session.id,
-                [...itemState.openTasks.values()].map(({ taskId, kind, description }) => ({
-                  taskId,
-                  kind,
-                  description,
-                })),
-              )
-              .pipe(Effect.andThen(sessionFeed.publish(session.id))),
-          )
-
-          const record = (event: HarnessEvent, id?: string) =>
-            writing.withPermits(1)(
-              write(event, id).pipe(
-                Effect.andThen(
-                  event.type === "approval_request"
-                    ? setStatus(session.id, "waiting", "approval")
-                    : event.type === "question_request"
-                      ? setStatus(session.id, "waiting", "question")
-                      : event.type === "task_started" || event.type === "task_ended"
-                        ? syncTasks
-                        : Effect.void,
-                ),
-              ),
-            )
-
-          // Check, decision and status share one permit so a turn-ending idle cannot land between them.
-          const decide = (answer: RequestAnswer) =>
-            writing.withPermits(1)(
-              Effect.gen(function* () {
-                const { requestId } = answer
-                const kind = "allow" in answer ? "approval" : "question"
-                if (itemState.openRequests.get(requestId)?.type !== kind) return false
-                yield* write(
-                  "allow" in answer
-                    ? { type: "approval_decision", requestId, allow: answer.allow, raw: null }
-                    : { type: "question_answer", requestId, answers: answer.answers, raw: null },
-                )
-                const stillOpen = [...itemState.openRequests.values()].at(-1)
-                yield* stillOpen === undefined
-                  ? setStatus(session.id, "working")
-                  : setStatus(session.id, "waiting", stillOpen.type)
-                return true
-              }),
-            )
-
-          // Not the user's activity, so the session keeps its place in the sidebar.
-          const writeUnanswered = Effect.suspend(() =>
-            Effect.forEach(
-              unansweredEvents(itemState),
-              (event) => write(event, undefined, { touch: false }),
-              { discard: true },
-            ),
-          )
-
-          // A run that ends takes its tasks with it.
-          const writeStoppedTasks = Effect.suspend(() =>
-            itemState.openTasks.size === 0
-              ? Effect.void
-              : Effect.forEach(
-                  stoppedTaskEvents(itemState),
-                  (event) => write(event, undefined, { touch: false }),
-                  { discard: true },
-                ).pipe(Effect.andThen(syncTasks)),
-          )
-
-          const closeRequests = writing.withPermits(1)(
-            writeUnanswered.pipe(Effect.andThen(writeStoppedTasks)),
-          )
-
-          // A turn that ends leaves the session in background while a task still runs.
-          const afterTurn = Effect.suspend(() =>
-            setStatus(session.id, itemState.openTasks.size > 0 ? "in_background" : "idle"),
-          )
-
-          const turnStatus = (status: "running" | "idle") =>
-            writing.withPermits(1)(
-              Effect.suspend(() =>
-                status === "running" && itemState.openRequests.size > 0
-                  ? Effect.void
-                  : status === "idle"
-                    ? writeUnanswered.pipe(Effect.andThen(afterTurn))
-                    : setStatus(session.id, "working"),
-              ),
-            )
-
-          // The last task ending with no turn running leaves nothing to show: the session is idle.
-          const afterTaskEnded = (turnOpen: boolean) =>
-            writing.withPermits(1)(
-              Effect.suspend(() =>
-                turnOpen || itemState.openTasks.size > 0
-                  ? Effect.void
-                  : setStatus(session.id, "idle"),
-              ),
-            )
-
-          const afterTaskStarted = (turnOpen: boolean) =>
-            writing.withPermits(1)(
-              Effect.suspend(() =>
-                turnOpen || itemState.openRequests.size > 0
-                  ? Effect.void
-                  : setStatus(session.id, "in_background"),
-              ),
-            )
-
-          const openTask = (taskId: string) => itemState.openTasks.get(taskId)
-          const hasOpenTasks = () => itemState.openTasks.size > 0
-          const runsTask = (toolCallId: string) =>
-            [...itemState.openTasks.values()].some((task) => task.toolCallId === toolCallId)
-
-          const stream = (delta: HarnessDelta) =>
-            writing.withPermits(1)(
-              Effect.suspend(() => {
-                const next = applyDelta(streamed, itemState, sequence, delta, () =>
-                  crypto.randomUUID(),
-                )
-                streamed = next.block
-                return feed.publish({ type: "delta", sessionId: session.id, ...next.change })
-              }),
-            )
-
-          const fail = (error: HarnessError) =>
-            logError("harness run", error).pipe(
-              Effect.andThen(
-                guarded(
-                  "record run error",
-                  record({ type: "error", message: error.message, raw: null }),
-                ),
-              ),
-              Effect.andThen(guarded("set failed status", setStatus(session.id, "failed"))),
-            )
-
-          const hasOpenRequests = () => itemState.openRequests.size > 0
-
-          return {
-            record,
-            decide,
-            turnStatus,
-            afterTaskStarted,
-            afterTaskEnded,
-            openTask,
-            hasOpenTasks,
-            runsTask,
-            stream,
-            fail,
-            closeRequests,
-            hasOpenRequests,
-          }
-        })
-
-      const buildRun = (
-        session: Session,
-        writer: Effect.Success<ReturnType<typeof makeWriter>>,
-        scope: Scope.Closeable,
-      ) =>
-        Effect.gen(function* () {
-          const storedProviderSessionId = yield* sessions.providerSessionId(session.id)
-          const options = runOptionsOf(session)
-          const harness = yield* provider
-            .start({
-              sessionId: session.id,
-              cwd: session.workingFolder,
-              options,
-              providerSessionId: storedProviderSessionId,
-            })
-            .pipe(Scope.provide(scope))
-
-          let idleTimer: Fiber.Fiber<void> | null = null
-          const cancelIdleTimer = Effect.suspend(() => {
-            const timer = idleTimer
-            idleTimer = null
-            return timer === null ? Effect.void : Fiber.interrupt(timer)
-          })
-
-          const end = Effect.suspend(() => {
-            if (runs.get(session.id) === run) runs.delete(session.id)
-            return cancelIdleTimer.pipe(
-              Effect.andThen(guarded("stop agent", Scope.close(scope, Exit.void))),
-              Effect.andThen(guarded("close open requests", writer.closeRequests)),
-              Effect.andThen(
-                guarded("move pending messages to unread", sessions.markPendingUnread(session.id)),
-              ),
-            )
-          })
-
-          const startIdleTimer: Effect.Effect<void> = Effect.gen(function* () {
-            yield* cancelIdleTimer
-            const limit = Duration.fromInputUnsafe(yield* idleLimit)
-            if (Duration.isZero(limit)) return
-            const idleTurn = turn
-            // Forked out of the run's scope: stopping closes that scope, which would interrupt this fiber mid-stop.
-            idleTimer = yield* Effect.sleep(limit).pipe(
-              Effect.andThen(
-                locked(
-                  session.id,
-                  Effect.gen(function* () {
-                    // This fiber is about to stop or re-arm the run, which must not interrupt it.
-                    idleTimer = null
-                    if (runs.get(session.id) !== run || busy || turn !== idleTurn) return
-                    const pending = yield* sessions.pendingMessages(session.id)
-                    if (pending.length > 0 || writer.hasOpenRequests() || writer.hasOpenTasks()) {
-                      // Re-checked after another limit: none of them ends with a turn of its own.
-                      return yield* startIdleTimer
-                    }
-                    yield* stopRun(session.id)
-                  }),
-                ),
-              ),
-              Effect.forkIn(layerScope),
-            )
-          })
-
-          const follower = yield* followAgentWorktree(
-            session,
-            writer.record,
-            provider.toolActivity,
-          ).pipe(Effect.provideService(Git, git), Effect.provideService(SessionStore, sessions))
-
-          let providerSessionId = storedProviderSessionId
-          // The file each running task writes its output to, until the run ends.
-          const taskFiles = new Map<string, string>()
-          let busy = false
-          let turn = 0
-          let firstTurn: { readonly message: string; error: string | null } | null = null
-          const endFirstTurn = Effect.suspend(() => {
-            const first = firstTurn
-            if (first === null) return Effect.void
-            firstTurn = null
-            return first.error !== null
-              ? offerPreviousOptions(session.id, options, first.message, first.error)
-              : sessions.setConfirmedRunOptions(session.id, options)
-          })
-          const readMessage = (messageId: string) =>
-            Effect.gen(function* () {
-              const message = yield* sessions.takePendingMessage(session.id, messageId)
-              if (message === null) return
-              const steer = busy
-              busy = true
-              if (!steer) turn += 1
-              if (!steer) yield* follower.turnStarted
-              yield* writer.record(userMessageEvent(message, steer), message.id)
-              if (!steer) yield* setStatus(session.id, "working")
-            })
-          const endedTask = (output: Extract<HarnessOutput, { type: "task_ended" }>) =>
-            Effect.gen(function* () {
-              const task = writer.openTask(output.taskId)
-              // A notification for a task this run never listed, such as a foreground subagent.
-              if (task === undefined) return
-              const path = taskFiles.get(output.taskId)
-              taskFiles.delete(output.taskId)
-              const final =
-                task.kind === "command" && path !== undefined
-                  ? yield* provider.readTaskOutput(path)
-                  : null
-              yield* writer.record({ ...output, output: final })
-              yield* writer.afterTaskEnded(busy)
-            })
-          const handle = (output: HarnessOutput) => {
-            if (output.type === "delta") return writer.stream(output)
-            if (output.type === "task_output_file") {
-              taskFiles.set(output.taskId, output.path)
-              return Effect.void
-            }
-            if (output.type === "task_ended") return endedTask(output)
-            // Steps of a subagent the turn waits for are the tool call's own business, not a task's.
-            if ("parentToolCallId" in output && output.parentToolCallId !== undefined) {
-              return writer.runsTask(output.parentToolCallId) ? writer.record(output) : Effect.void
-            }
-            if (output.type === "task_started") {
-              return writer.record(output).pipe(Effect.andThen(writer.afterTaskStarted(busy)))
-            }
-            if (output.type === "message_read") return readMessage(output.messageId)
-            if (output.type === "provider_session") {
-              if (output.providerSessionId === providerSessionId) return Effect.void
-              providerSessionId = output.providerSessionId
-              return sessions.setProviderSessionId(session.id, output.providerSessionId)
-            }
-            if (output.type === "status") {
-              if (output.status === "running" && !busy) turn += 1
-              busy = output.status === "running"
-            }
-            if (output.type === "error" && firstTurn !== null) firstTurn.error ??= output.message
-            const turnEnded = output.type === "status" && output.status === "idle"
-            return (turnEnded ? endFirstTurn : Effect.void).pipe(
-              Effect.andThen(writer.record(output)),
-              Effect.andThen(
-                output.type === "status" ? writer.turnStatus(output.status) : Effect.void,
-              ),
-              Effect.andThen(follower.observe(output)),
-              Effect.andThen(turnEnded ? startIdleTimer : Effect.void),
-            )
-          }
-
-          yield* Stream.runForEach(harness.events, handle).pipe(
-            Effect.onExit((exit) => {
-              if (Exit.isSuccess(exit)) {
-                return end.pipe(
-                  Effect.andThen(guarded("set idle status", setStatus(session.id, "idle"))),
-                )
-              }
-              // The scope closing, which `end` already does, interrupts this fiber.
-              if (Cause.hasInterruptsOnly(exit.cause)) return Effect.void
-              const failure = Cause.findErrorOption(exit.cause)
-              const error = Option.isSome(failure) ? failure.value : runFailed
-              return Effect.suspend(() => {
-                if (firstTurn !== null) firstTurn.error ??= error.message
-                return Option.isNone(failure)
-                  ? logError("harness run", Cause.squash(exit.cause))
-                  : Effect.void
-              }).pipe(
-                Effect.andThen(guarded("end first turn", endFirstTurn)),
-                Effect.andThen(end),
-                Effect.andThen(writer.fail(error)),
-              )
+      const startRun = (session: Session, writer: TranscriptWriter) =>
+        startAgentRun(session, writer, {
+          turnEnded: (run) => idleStop.start(session.id, run, writer),
+          ended: (run) =>
+            Effect.suspend(() => {
+              if (runs.get(session.id) === run) runs.delete(session.id)
+              return idleStop.cancel(run)
             }),
-            Effect.forkIn(scope),
-          )
-
-          let started = false
-          const run: ActiveRun = {
-            cwd: session.workingFolder,
-            options,
-            busy: () => busy,
-            turn: () => turn,
-            hasTasks: writer.hasOpenTasks,
-            turnStarted: follower.turnStarted,
-            taskFile: (taskId) => taskFiles.get(taskId),
-            record: writer.record,
-            send: (message) =>
-              Effect.suspend(() => {
-                if (!started) firstTurn = { message: message.text, error: null }
-                started = true
-                return harness.send(message)
-              }),
-            decide: writer.decide,
-            respond: harness.respond,
-            interrupt: harness.interrupt,
-            fail: writer.fail,
-            end,
-          }
-          runs.set(session.id, run)
-          return run
-        })
-
-      const startRun = (session: Session, writer: Effect.Success<ReturnType<typeof makeWriter>>) =>
-        Effect.gen(function* () {
-          const scope = yield* Scope.make()
-          return yield* buildRun(session, writer, scope).pipe(
-            Effect.onExit((exit) =>
-              Exit.isSuccess(exit) ? Effect.void : Scope.close(scope, Exit.void),
-            ),
-          )
-        })
+        }).pipe(
+          Effect.provideContext(context),
+          Effect.tap((run) => Effect.sync(() => runs.set(session.id, run))),
+        )
 
       const runOf = (session: Session, message: UserMessage) =>
         Effect.suspend(() => {
@@ -614,26 +148,16 @@ export const layerSessionRunsWith = (
           if (existing && (unchanged || existing.busy())) return Effect.succeed(existing)
           // The session moved or changed run options since the run started: its next turn resumes with them.
           return (existing?.end ?? Effect.void).pipe(
-            Effect.andThen(makeWriter(session)),
+            Effect.andThen(openWriter(session)),
             // Requests an earlier run left open, such as before runs closed theirs, die with it.
             Effect.tap((writer) => writer.closeRequests),
             Effect.flatMap((writer) =>
               startRun(session, writer).pipe(
                 Effect.catchTag("HarnessError", (error) =>
-                  writer
-                    .record(userMessageEvent(message), message.id)
-                    .pipe(
-                      Effect.andThen(
-                        offerPreviousOptions(
-                          session.id,
-                          runOptionsOf(session),
-                          message.text,
-                          error.message,
-                        ),
-                      ),
-                      Effect.andThen(writer.fail(error)),
-                      Effect.as(null),
-                    ),
+                  recordFailedStart(session, writer, message, error).pipe(
+                    Effect.provideContext(context),
+                    Effect.as(null),
+                  ),
                 ),
               ),
             ),
@@ -645,64 +169,33 @@ export const layerSessionRunsWith = (
           session.id,
           Effect.gen(function* () {
             const run = runs.get(session.id)
-            if (!run || !(yield* run.decide(answer))) return yield* Effect.fail(notOpen)
-            yield* run
-              .respond(answer)
-              .pipe(
-                Effect.catchTag("HarnessError", (error) =>
-                  run.end.pipe(Effect.andThen(run.fail(error))),
-                ),
-              )
+            if (!run || !(yield* run.answer(answer))) return yield* Effect.fail(notOpen)
           }),
         )
 
-      const endInterrupted = (sessionId: string, run: ActiveRun) =>
-        guarded("record interruption", run.record({ type: "interruption", raw: null })).pipe(
-          Effect.andThen(run.end),
-          Effect.andThen(guarded("set idle status", setStatus(sessionId, "idle"))),
-        )
-
       // An agent that ignores the interrupt keeps its turn; stopping it is the only way out.
-      const interruptTurn = (sessionId: string, run: ActiveRun) =>
+      const interruptTurn = (sessionId: string, run: AgentRun) =>
         Effect.gen(function* () {
           const turn = run.turn()
           const turnOpen = run.busy()
           yield* run.interrupt
           if (!turnOpen) return
-          yield* Effect.sleep(interruptDeadline).pipe(
-            Effect.andThen(
-              locked(
-                sessionId,
-                Effect.suspend(() =>
-                  runs.get(sessionId) === run && run.busy() && run.turn() === turn
-                    ? endInterrupted(sessionId, run)
-                    : Effect.void,
-                ),
-              ),
+          yield* later(
+            interruptDeadline,
+            sessionId,
+            run,
+            Effect.suspend(() =>
+              run.busy() && run.turn() === turn ? run.stopInterrupted : Effect.void,
             ),
-            Effect.forkIn(layerScope),
           )
         })
 
+      // Closing the run's scope also interrupts the fiber that would have set the status.
       const stopRun = (sessionId: string) =>
-        Effect.suspend(() => {
-          const run = runs.get(sessionId)
-          // Closing the run's scope also interrupts the fiber that would have set the status.
-          return run
-            ? run.end.pipe(Effect.andThen(guarded("set idle status", setStatus(sessionId, "idle"))))
-            : Effect.void
-        })
+        Effect.suspend(() => runs.get(sessionId)?.stop ?? Effect.void)
 
-      const closeRequestsLeftOpen = (sessionId: string) =>
-        Effect.gen(function* () {
-          const session = yield* sessions.findById(sessionId)
-          if (session) yield* (yield* makeWriter(session)).closeRequests
-        })
-
-      yield* Effect.forEach(
-        leftRunning,
-        (sessionId) => guarded("close requests left open", closeRequestsLeftOpen(sessionId)),
-        { discard: true },
+      yield* closeRequestsLeftOpen(yield* sessions.resetRunning).pipe(
+        Effect.provideContext(context),
       )
 
       return {
@@ -720,28 +213,12 @@ export const layerSessionRunsWith = (
               if (working?.busy()) {
                 yield* sessions.addPendingMessage(session.id, unsent(message))
                 yield* sessionFeed.publish(session.id)
-                return yield* working
-                  .send(message)
-                  .pipe(
-                    Effect.catchTag("HarnessError", (error) =>
-                      working.end.pipe(Effect.andThen(working.fail(error))),
-                    ),
-                  )
+                return yield* working.steer(message)
               }
-              yield* setStatus(session.id, "working")
+              yield* setSessionStatus(session.id, "working")
               yield* Effect.gen(function* () {
                 const run = yield* runOf(session, message)
-                if (!run) return
-                // Mid-turn, a worktree the agent just made would be taken for one that was already there.
-                if (!run.busy()) yield* run.turnStarted
-                yield* run.record(userMessageEvent(message), message.id)
-                yield* run
-                  .send(message)
-                  .pipe(
-                    Effect.catchTag("HarnessError", (error) =>
-                      run.end.pipe(Effect.andThen(run.fail(error))),
-                    ),
-                  )
+                if (run) yield* run.start(message)
               }).pipe(
                 Effect.onError((cause) => {
                   if (Cause.hasInterruptsOnly(cause)) return Effect.void
@@ -749,13 +226,13 @@ export const layerSessionRunsWith = (
                   return logFailure("send message", cause).pipe(
                     Effect.andThen(
                       run
-                        ? run.end.pipe(Effect.andThen(run.fail(runFailed)))
-                        : guarded("set failed status", setStatus(session.id, "failed")),
+                        ? run.fail(runFailed)
+                        : guarded("set failed status", setSessionStatus(session.id, "failed")),
                     ),
                   )
                 }),
               )
-            }),
+            }).pipe(Effect.provideContext(context)),
           ),
         answerApproval: (session, answer) =>
           answerRequest(
@@ -776,11 +253,9 @@ export const layerSessionRunsWith = (
               const run = runs.get(sessionId)
               if (!run) return
               // No turn to stop: the tasks run in the agent, so the agent stops.
-              if (!run.busy() && run.hasTasks()) return yield* endInterrupted(sessionId, run)
-              if ((yield* sessions.pendingMessages(sessionId)).length === 0) {
-                return yield* interruptTurn(sessionId, run)
-              }
-              yield* endInterrupted(sessionId, run)
+              if (!run.busy() && run.hasTasks()) return yield* run.stopInterrupted
+              const pending = yield* sessions.pendingMessages(sessionId)
+              yield* pending.length === 0 ? interruptTurn(sessionId, run) : run.stopInterrupted
             }),
           ),
         sendNow: (sessionId) =>
@@ -797,10 +272,7 @@ export const layerSessionRunsWith = (
         close: (sessionId, effect) =>
           locked(sessionId, stopRun(sessionId).pipe(Effect.andThen(effect))),
         taskOutput: (sessionId, taskId) =>
-          Effect.suspend(() => {
-            const path = runs.get(sessionId)?.taskFile(taskId)
-            return path === undefined ? Effect.succeed(null) : provider.readTaskOutput(path)
-          }),
+          Effect.suspend(() => runs.get(sessionId)?.taskOutput(taskId) ?? Effect.succeed(null)),
         isRunning: (sessionId) => Effect.sync(() => runs.has(sessionId)),
         record: (session, event) =>
           locked(
@@ -808,7 +280,7 @@ export const layerSessionRunsWith = (
             Effect.suspend(
               () =>
                 runs.get(session.id)?.record(event) ??
-                makeWriter(session).pipe(Effect.flatMap((writer) => writer.record(event))),
+                openWriter(session).pipe(Effect.flatMap((writer) => writer.record(event))),
             ),
           ),
       }
