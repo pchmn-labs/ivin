@@ -93,6 +93,15 @@ test("a click on a folder opens and closes it", async () => {
   await expect.element(item("main.ts")).not.toBeInTheDocument()
 })
 
+test("a file starts where the folders beside it do", async () => {
+  await render(<Harness />)
+  const left = (row: string, part: string) =>
+    item(row).element().querySelector(part)?.getBoundingClientRect().left
+  await expect
+    .poll(() => left("README.md", ".iv-tree__icon"))
+    .toBe(left("src", ".iv-tree__chevron"))
+})
+
 test("the arrows move, open and close, and the active row stays visible", async () => {
   await render(<Harness />)
   await expect.element(item("src")).toBeVisible()
