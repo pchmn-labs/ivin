@@ -67,7 +67,7 @@ function SessionInlineCode({ node: _node, ...props }: ComponentProps<"code"> & E
 const linkRendering: MarkdownLinkRendering = {
   component: SessionLink,
   urlTransform: (url) => (hasFileScheme(url) ? url : defaultUrlTransform(url)),
-  inlineCode: SessionInlineCode,
+  code: SessionInlineCode,
 }
 
 function LinkedMarkdown({ text, sessionId }: { text: string; sessionId: string }) {

@@ -271,7 +271,6 @@ ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
   return failure === "" ? null : `could not open ${file}: ${failure}`
 })
 
-// Never `shell.openPath`: the path comes from an agent's answer, and opening it could run it.
 ipcMain.handle(SHOW_IN_FOLDER, (_event, path: unknown) => {
   if (typeof path === "string" && isAbsolute(path)) shell.showItemInFolder(path)
 })

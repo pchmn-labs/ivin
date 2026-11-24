@@ -57,7 +57,7 @@ export function FileView({
   const write = useAtomSet(writeFileAtom)
   const save = (force = false) => write({ sessionId, workingFolder, path, force })
   const outside = isOutsidePath(path)
-  const [svgShown, setSvgShown] = useState<"image" | "source">("image")
+  const [svgShown, setSvgShown] = useState<SvgShown>("image")
 
   const read =
     !outside && AsyncResult.isSuccess(result) && result.value.kind === "text" ? result.value : null
@@ -138,7 +138,7 @@ export function FileView({
           />
         ) : (
           <>
-            {svg && <div className="iv-file-view__head">{switcher}</div>}
+            {svg && <FileHead path={path}>{switcher}</FileHead>}
             <CodeView
               text={text}
               fileName={name}
@@ -186,13 +186,9 @@ function OutsideBar({ path }: { path: string }) {
   )
 }
 
-function SvgSwitch({
-  shown,
-  onChange,
-}: {
-  shown: "image" | "source"
-  onChange: (shown: "image" | "source") => void
-}) {
+type SvgShown = "image" | "source"
+
+function SvgSwitch({ shown, onChange }: { shown: SvgShown; onChange: (shown: SvgShown) => void }) {
   return (
     <Segmented
       label="Show the SVG as"
@@ -203,6 +199,17 @@ function SvgSwitch({
         { value: "source", label: "Source" },
       ]}
     />
+  )
+}
+
+function FileHead({ path, children }: { path: string; children: ReactNode }) {
+  return (
+    <div className="iv-file-view__head">
+      <span className="iv-file-view__path" title={path}>
+        {path}
+      </span>
+      {children}
+    </div>
   )
 }
 
@@ -229,10 +236,7 @@ function ImageView({
   }
   return (
     <>
-      <div className="iv-file-view__head">
-        <span className="iv-file-view__path" title={path}>
-          {path}
-        </span>
+      <FileHead path={path}>
         {size !== null && (
           <span className="iv-file-view__meta">
             {size} · {byteSize(bytes)}
@@ -242,7 +246,7 @@ function ImageView({
           {actualSize ? "Fit" : "Actual size"}
         </Button>
         {controls}
-      </div>
+      </FileHead>
       <div className="iv-file-view__stage" data-actual-size={actualSize || undefined}>
         <img
           className="iv-file-view__image"

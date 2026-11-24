@@ -114,6 +114,8 @@ test("inline code shaped like a path, with an optional line, opens as a path", (
     "/Users/me/.zshrc",
     "file:///Users/me/notes.md",
     "origin/main",
+    // Shaped like a file with an extension; a click shows the file view's "no longer exists".
+    "console.log",
   ]) {
     expect(isPathShaped(code), code).toBe(true)
   }

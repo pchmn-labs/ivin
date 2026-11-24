@@ -5,7 +5,6 @@ import { isOutsidePath } from "../rules/file-link.ts"
 
 const family = Atom.family((key: string) => {
   const [sessionId = "", , path = ""] = key.split("\n")
-  // A file outside the working folder is read each time it is shown, never followed on disk.
   if (isOutsidePath(path)) {
     return serverRuntime.atom(
       Effect.gen(function* () {

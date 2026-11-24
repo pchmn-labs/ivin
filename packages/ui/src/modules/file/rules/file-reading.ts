@@ -27,7 +27,6 @@ const base64Bytes = (data: string) =>
 
 export const isSvgPath = (path: string): boolean => /\.svg$/i.test(path)
 
-// Through an <img>, an SVG's scripts never run.
 export const svgSource = (text: string): string =>
   `data:image/svg+xml;charset=utf-8,${encodeURIComponent(text)}`
 

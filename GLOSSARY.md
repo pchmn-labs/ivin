@@ -81,7 +81,7 @@ A folder of instructions an agent reads when its task calls for it, in the harne
 Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Beside its session, a tab shows its sub-views; in **full width** they cover the main area, and a Session tab in their row shows the session's chat. A session with no tab is **inactive**, listed under "Inactive sessions" in the sidebar.
 
 **Sub-view**:
-A file of the session's working folder, that file's uncommitted diff, or what the commits of the session's branch changed in it since it left origin's default branch, that a tab shows beside its chat, or across the main area in full width. A tab keeps its sub-views in the order they were opened, with one selected; they close when the session moves to another working folder.
+A file of the session's working folder, or a file outside it opened read-only, that file's uncommitted diff, or what the commits of the session's branch changed in it since it left origin's default branch, that a tab shows beside its chat, or across the main area in full width. A tab keeps its sub-views in the order they were opened, with one selected; they close when the session moves to another working folder.
 _Avoid_: editor, pane
 
 **Plugin**:

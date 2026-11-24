@@ -81,7 +81,6 @@
   display: flex;
   flex: none;
   align-items: center;
-  justify-content: flex-end;
   gap: var(--iv-space-2);
   height: 32px;
   padding: 0 var(--iv-space-2) 0 var(--iv-space-3);

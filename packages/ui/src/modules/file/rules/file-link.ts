@@ -76,7 +76,6 @@ export const fileLink = (href: string, workingFolder: string): FileLink => {
   return lines ? { ...found, lines } : found
 }
 
-// A sub-view's path is relative to the working folder, or absolute for a file outside it.
 export const isOutsidePath = (path: string): boolean => path.startsWith("/")
 
 const URL_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//
@@ -84,7 +83,6 @@ const LINE_TAIL = /(?::\d+(?::\d+|-\d+)?|#L\d+(?:-L?\d+)?)$/
 const NOT_IN_PATH = /[\s()<>{}[\]'"`,;:&|=*?$!#\\^]/
 const EXTENSION = /\.[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*$/
 
-// Runs on every inline code span of every answer: a regex test, never a look at the disk.
 export const isPathShaped = (code: string): boolean => {
   const target = (code.startsWith("file://") ? code.slice(7) : code).replace(LINE_TAIL, "")
   if (URL_SCHEME.test(target) || NOT_IN_PATH.test(target) || /^[@~]/.test(target)) return false

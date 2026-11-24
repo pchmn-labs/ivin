@@ -15,8 +15,8 @@ import { extendBlocks, splitBlocks } from "../../../modules/transcript/rules/spl
 export interface MarkdownLinkRendering {
   readonly component: ComponentType<ComponentProps<"a">>
   readonly urlTransform: UrlTransform
-  // Renders every `code`; inside a block, `useInCodeBlock` is true.
-  readonly inlineCode?: ComponentType<ComponentProps<"code"> & ExtraProps>
+  // Inside a code block, `useInCodeBlock` is true.
+  readonly code?: ComponentType<ComponentProps<"code"> & ExtraProps>
 }
 
 interface BlockProps {
@@ -26,7 +26,6 @@ interface BlockProps {
 
 const InBlock = createContext(false)
 
-// True inside a code block, where `inlineCode` must render plain code.
 export const useInCodeBlock = () => useContext(InBlock)
 
 function MarkdownCode({ node: _node, ...props }: ComponentProps<"pre"> & { node?: unknown }) {
@@ -46,7 +45,7 @@ const Block = memo(function Block({ source, linkRendering }: BlockProps) {
     ? {
         pre: MarkdownCode,
         a: linkRendering.component,
-        ...(linkRendering.inlineCode && { code: linkRendering.inlineCode }),
+        ...(linkRendering.code && { code: linkRendering.code }),
       }
     : { pre: MarkdownCode }
   return (
