@@ -1,3 +1,4 @@
+import { LockIcon as Lock } from "@phosphor-icons/react/dist/csr/Lock"
 import { useState, type ReactNode } from "react"
 import { Button } from "../../src/core/components/button/button.tsx"
 import { CodeView } from "../../src/core/components/code-view/code-view.tsx"
@@ -14,6 +15,7 @@ import markSvgSource from "./files/mark.svg?raw"
 import brokenPng from "./files/broken.png"
 
 type Direction = "quiet" | "headed" | "marked"
+type Bar = "neutral" | "attention"
 
 const FOLDER = "/Users/ana/code/ivin"
 
@@ -55,7 +57,8 @@ const isOutside = (path: string) => path.startsWith("/")
 const nameOf = (path: string) => path.slice(path.lastIndexOf("/") + 1)
 const shown = (path: string) => (isOutside(path) ? path.replace("/Users/ana", "~") : path)
 
-function Scene({ direction }: { direction: Direction }) {
+function Scene({ bar }: { bar: Bar }) {
+  const direction: Direction = "quiet"
   const [open, setOpen] = useState<string[]>(["apps/desktop/build/icon.png"])
   const [selected, setSelected] = useState("apps/desktop/build/icon.png")
   const openFile = (path: string) => {
@@ -159,7 +162,7 @@ function Scene({ direction }: { direction: Direction }) {
                 </div>
               </div>
               <div className="iv-sub-view-card__body" role="tabpanel" aria-label={nameOf(selected)}>
-                <FileStage key={selected} direction={direction} path={selected} />
+                <FileStage key={selected} bar={bar} path={selected} />
               </div>
             </section>
           )}
@@ -240,7 +243,7 @@ function ToolRow({
   )
 }
 
-function FileStage({ direction, path }: { direction: Direction; path: string }) {
+function FileStage({ bar, path }: { bar: Bar; path: string }) {
   const file = FILES[path]!
   const name = nameOf(path)
   const outside = isOutside(path)
@@ -249,11 +252,6 @@ function FileStage({ direction, path }: { direction: Direction; path: string }) 
   const [actual, setActual] = useState(false)
   const [failed, setFailed] = useState(false)
   const [dims, setDims] = useState<string | null>(null)
-
-  const reveal = () => setRevealed(true)
-  const revealNote = revealed && (
-    <span className="proto-note">Finder opens with {name} selected</span>
-  )
 
   if (file.kind === "too_large" || failed) {
     return (
@@ -268,124 +266,73 @@ function FileStage({ direction, path }: { direction: Direction; path: string }) 
   }
 
   const isSvg = file.kind === "image" && file.svgSource !== undefined
-  const body =
-    file.kind === "text" || source ? (
-      <CodeView
-        text={file.kind === "text" ? file.text : file.svgSource!}
-        fileName={name}
-        {...(!outside && { onChange: () => {} })}
-      />
-    ) : (
-      <ImageStage
-        direction={direction}
-        src={file.src}
-        name={name}
-        actual={actual}
-        onLoad={setDims}
-        onError={() => setFailed(true)}
-        caption={dims && `${dims} · ${file.size}`}
-      />
-    )
-
-  const svgSwitch = isSvg && (
-    <div className="proto-switch" role="radiogroup" aria-label="Show">
-      {(["Image", "Source"] as const).map((label) => (
-        <button
-          key={label}
-          type="button"
-          role="radio"
-          aria-checked={(label === "Source") === source}
-          className="proto-switch-option"
-          onClick={() => setSource(label === "Source")}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  )
-
-  if (direction === "quiet") {
-    return (
-      <div className="iv-file-view">
-        {outside && (
-          <div className="proto-ro proto-ro--quiet">
-            <Icon name="eye" size={14} />
-            <span className="proto-ro-text">
-              Outside the working folder, read-only. {revealNote}
-            </span>
-            <Button variant="ghost" size="sm" onClick={reveal}>
-              Show in Finder
-            </Button>
-          </div>
-        )}
-        <div className="proto-stage-wrap">
-          {body}
-          {isSvg && <div className="proto-float">{svgSwitch}</div>}
-        </div>
-      </div>
-    )
-  }
-
-  if (direction === "headed") {
-    const image = file.kind === "image" && !source
-    return (
-      <div className="iv-file-view">
-        {(outside || file.kind === "image") && (
-          <div className="iv-diff-view__head">
-            <span className="iv-diff-view__path" title={path}>
-              {shown(path)}
-            </span>
-            {image && dims && (
-              <span className="proto-meta">
-                {dims} · {file.size}
-              </span>
-            )}
-            {outside && <span className="proto-chip">Read-only</span>}
-            {revealNote}
-            {image && (
-              <Button variant="ghost" size="sm" onClick={() => setActual(!actual)}>
-                {actual ? "Fit" : "Actual size"}
-              </Button>
-            )}
-            {isSvg && (
-              <Button
-                variant="ghost"
-                size="sm"
-                icon={source ? "file" : "brackets-curly"}
-                onClick={() => setSource(!source)}
-              >
-                {source ? "Image" : "Source"}
-              </Button>
-            )}
-            {outside && (
-              <Button variant="ghost" size="sm" icon="folder-open" onClick={reveal}>
-                Show in Finder
-              </Button>
-            )}
-          </div>
-        )}
-        {body}
-      </div>
-    )
-  }
-
+  const image = file.kind === "image" && !source
   return (
     <div className="iv-file-view">
       {outside && (
-        <div className="proto-ro proto-ro--marked" role="status">
+        <div className={`proto-ro proto-ro--${bar}`} role="status">
           <span className="proto-ro-icon">
-            <Icon name="circle-info" size={14} />
+            <Lock size={14} />
           </span>
           <span className="proto-ro-text">
-            {name} is outside the working folder, so it cannot be edited. {revealNote}
+            {name} is outside the working folder, so it cannot be edited.{" "}
+            {revealed && <span className="proto-note">Finder opens with {name} selected</span>}
           </span>
-          <Button variant="secondary" size="sm" onClick={reveal}>
+          <Button variant={bar === "attention" ? "secondary" : "ghost"} size="sm" onClick={() => setRevealed(true)}>
             Show in Finder
           </Button>
         </div>
       )}
-      {isSvg && <div className="proto-strip">{svgSwitch}</div>}
-      {body}
+      {file.kind === "image" && (
+        <div className="iv-diff-view__head">
+          <span className="iv-diff-view__path" title={path}>
+            {shown(path)}
+          </span>
+          {image && dims && (
+            <span className="proto-meta">
+              {dims} · {file.size}
+            </span>
+          )}
+          {image && (
+            <Button variant="ghost" size="sm" onClick={() => setActual(!actual)}>
+              {actual ? "Fit" : "Actual size"}
+            </Button>
+          )}
+          {isSvg && (
+            <div className="proto-switch" role="radiogroup" aria-label="Show">
+              {(["Image", "Source"] as const).map((label) => (
+                <button
+                  key={label}
+                  type="button"
+                  role="radio"
+                  aria-checked={(label === "Source") === source}
+                  className="proto-switch-option"
+                  onClick={() => setSource(label === "Source")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {file.kind === "text" || source ? (
+        <CodeView
+          text={file.kind === "text" ? file.text : file.svgSource!}
+          fileName={name}
+          {...(!outside && { onChange: () => {} })}
+        />
+      ) : (
+        <ImageStage
+          direction="headed"
+          src={file.src}
+          name={name}
+          actual={actual}
+          onLoad={setDims}
+          onError={() => setFailed(true)}
+          caption={null}
+        />
+      )}
     </div>
   )
 }
@@ -427,6 +374,5 @@ function ImageStage({
   )
 }
 
-export const Quiet = () => <Scene direction="quiet" />
-export const Headed = () => <Scene direction="headed" />
-export const Marked = () => <Scene direction="marked" />
+export const Neutral = () => <Scene bar="neutral" />
+export const Attention = () => <Scene bar="attention" />
