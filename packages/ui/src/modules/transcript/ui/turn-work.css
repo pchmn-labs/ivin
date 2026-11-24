@@ -273,11 +273,23 @@
 
 /* SHOWN_CALLS_WHILE_LIVE (turns.ts) 28px call rows, and the 6px where the first branch starts. */
 .iv-turn__calls[data-scroll] {
-  max-height: calc(5 * 28px + 6px);
+  max-height: calc(8 * 28px + 6px);
   margin-top: -6px;
   padding-top: 6px;
   overflow-y: auto;
-  mask-image: linear-gradient(to bottom, transparent, var(--iv-bg) 14px);
+}
+
+/* A sticky overlay, not a mask: a mask makes the browser repaint the whole scroller on every scroll frame. */
+.iv-turn__calls[data-scroll]::before {
+  content: "";
+  position: sticky;
+  top: -6px;
+  z-index: 1;
+  display: block;
+  height: 14px;
+  margin: -6px 0 -8px -18px;
+  background: linear-gradient(to bottom, var(--iv-bg), transparent);
+  pointer-events: none;
 }
 
 .iv-turn__call {
