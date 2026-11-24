@@ -63,7 +63,6 @@ function Detail({
           <Text size="xs" tone="faint">
             ·
           </Text>
-          {/* Grows from zero width, so a long question truncates before the project name does. */}
           <Stack as="span" grow>
             <Text size="xs" tone="muted" truncate data-testid="working-question">
               {question}

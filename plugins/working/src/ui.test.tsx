@@ -256,6 +256,7 @@ test("a long question truncates before the project name does", async () => {
     { transcripts: { waits: [question] } },
   )
 
+  await expect.element(page.getByTestId("working-question")).toBeVisible()
   const project = page.getByText("blog", { exact: true }).element() as HTMLElement
   const shown = page.getByTestId("working-question").element() as HTMLElement
   expect(project.scrollWidth).toBeLessThanOrEqual(project.clientWidth)
