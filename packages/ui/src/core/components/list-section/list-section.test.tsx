@@ -13,6 +13,7 @@ test("a list section is a region named by its label, with its count and its rows
   const section = page.getByRole("region", { name: "Needs you" })
 
   await expect.element(section.getByRole("heading", { name: "Needs you 2" })).toBeVisible()
+  expect(section.getByRole("heading").element().textContent).toBe("Needs you·2")
   expect(section.getByRole("listitem").all()).toHaveLength(2)
   expect(section.getByRole("heading").element().hasAttribute("data-attention")).toBe(true)
 })
