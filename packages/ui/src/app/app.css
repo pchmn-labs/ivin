@@ -24,10 +24,21 @@
   width: var(--iv-card-width);
   min-height: 0;
   margin: var(--iv-space-2) 0 var(--iv-space-2) var(--iv-space-2);
-  overflow: hidden;
+  /* Clipped at the border box, so the resize line can draw over the border. */
+  overflow: clip;
+  overflow-clip-margin: border-box;
+  isolation: isolate;
   border: 1px solid var(--iv-border);
   border-radius: var(--iv-radius-card);
   background: var(--iv-bg-card);
+}
+
+.iv-app__card > .iv-resize-handle[data-edge="right"]::after {
+  top: var(--iv-radius-card);
+  right: -1px;
+  bottom: var(--iv-radius-card);
+  width: 1px;
+  border-radius: var(--iv-radius-pill);
 }
 
 .iv-app__card-top {

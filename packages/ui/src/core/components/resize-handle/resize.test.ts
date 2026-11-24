@@ -8,7 +8,8 @@ test("a size stays between its bounds, and a max under the min gives the min", (
   expect(clampSize(300, 240, 120)).toBe(240)
 })
 
-test("a right edge grows when dragged right, a top edge when dragged up", () => {
+test("a right edge grows when dragged right, a left edge when dragged left, a top edge when dragged up", () => {
   expect(draggedSize(300, { x: 10, y: 50 }, { x: 60, y: 0 }, "right")).toBe(350)
+  expect(draggedSize(300, { x: 60, y: 50 }, { x: 10, y: 0 }, "left")).toBe(350)
   expect(draggedSize(200, { x: 10, y: 50 }, { x: 60, y: 0 }, "top")).toBe(250)
 })

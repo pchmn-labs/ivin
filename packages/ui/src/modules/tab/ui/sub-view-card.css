@@ -1,14 +1,25 @@
 .iv-sub-view-card {
+  position: relative;
   display: flex;
-  flex: 1.15;
+  flex: 0 1 var(--iv-sub-view-card-width, calc((100% - var(--iv-space-2)) * 1.15 / 2.15));
   flex-direction: column;
   min-width: var(--iv-sub-view-card-min-width);
   min-height: 0;
   margin: 0 var(--iv-space-2) var(--iv-space-2) 0;
-  overflow: hidden;
+  overflow: clip;
+  overflow-clip-margin: border-box;
+  isolation: isolate;
   border: 1px solid var(--iv-border);
   border-radius: var(--iv-radius-card);
   background: var(--iv-bg-card);
+}
+
+.iv-sub-view-card > .iv-resize-handle[data-edge="left"]::after {
+  top: var(--iv-radius-card);
+  bottom: var(--iv-radius-card);
+  left: -1px;
+  width: 1px;
+  border-radius: var(--iv-radius-pill);
 }
 
 .iv-sub-view-card__row {
@@ -100,6 +111,12 @@
 .iv-sub-view-card__icon {
   display: inline-flex;
   color: var(--iv-text-faint);
+}
+
+.iv-sub-view-card__icon img {
+  display: block;
+  width: 14px;
+  height: 14px;
 }
 
 .iv-sub-view-card__item[data-selected] .iv-sub-view-card__icon {
