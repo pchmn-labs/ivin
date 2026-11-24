@@ -27,3 +27,17 @@ test("a list section without a count shows only its label", async () => {
   await expect.element(page.getByRole("heading", { name: "Running", exact: true })).toBeVisible()
   expect(page.getByRole("heading").element().hasAttribute("data-attention")).toBe(false)
 })
+
+test("a list section with a hidden label is still a region named by it", async () => {
+  await render(
+    <ListSection label="Needs you" count={1} attention hideLabel>
+      <li>Row</li>
+    </ListSection>,
+  )
+  const heading = page
+    .getByRole("region", { name: "Needs you" })
+    .getByRole("heading", { name: "Needs you 1" })
+
+  await expect.element(heading).toBeInTheDocument()
+  expect(heading.element().getBoundingClientRect().width).toBeLessThanOrEqual(1)
+})

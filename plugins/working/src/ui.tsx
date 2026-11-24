@@ -34,7 +34,8 @@ function useNow() {
   return now
 }
 
-const firstLine = (text: string) => text.split("\n", 1)[0] ?? ""
+// A shell line continuation joins its lines, so a command written over several shows whole.
+const commandLine = (command: string) => command.replace(/\s*\\\n\s*/g, " ").split("\n", 1)[0] ?? ""
 
 // "[bg] Review the diff +2": the first task, and how many others run.
 const backgroundLine = (tasks: Session["backgroundTasks"]) =>
@@ -44,12 +45,10 @@ const backgroundLine = (tasks: Session["backgroundTasks"]) =>
 
 function Detail({
   project,
-  command,
   question,
   background,
 }: {
   project: string
-  command?: string
   question?: string
   background?: string
 }) {
@@ -59,16 +58,6 @@ function Detail({
       <Text size="xs" tone="faint" truncate>
         {project}
       </Text>
-      {command === undefined ? null : (
-        <>
-          <Text size="xs" tone="faint">
-            ·
-          </Text>
-          <Text size="xs" tone="muted" mono truncate data-testid="working-command">
-            {firstLine(command)}
-          </Text>
-        </>
-      )}
       {question === undefined ? null : (
         <>
           <Text size="xs" tone="faint">
@@ -93,7 +82,7 @@ function Detail({
   )
 }
 
-function WaitingRow({ session, project, now }: { session: Session; project: string; now: number }) {
+function WaitingRow({ session, project }: { session: Session; project: string }) {
   const openTab = useOpenTab()
   const answer = useAnswerApproval(session.id)
   const pending = usePendingApproval(session.id)
@@ -126,21 +115,27 @@ function WaitingRow({ session, project, now }: { session: Session; project: stri
           />
         }
         title={session.title}
-        subtitle={
-          <Detail
-            project={project}
-            {...(command !== undefined && { command })}
-            {...(question !== undefined && { question })}
-          />
-        }
-        meta={elapsed(session.statusChangedAt.epochMilliseconds, now)}
+        {...(command === undefined && {
+          subtitle: <Detail project={project} {...(question !== undefined && { question })} />,
+        })}
         {...(command !== undefined && {
           tooltip: { text: command, label: "Approval needed", mono: true },
         })}
         {...(pending !== undefined && {
           below: (
             <Stack direction="column" gap={2} grow>
-              <Stack direction="row" gap={1}>
+              {command !== undefined && (
+                <Text size="xs" code truncate data-testid="working-command">
+                  {commandLine(command)}
+                </Text>
+              )}
+              <Stack direction="row" gap={1} align="center">
+                <Stack as="span" direction="row" gap={1} align="center" grow>
+                  <ProjectMark name={project} size={12} />
+                  <Text size="xs" tone="faint" truncate>
+                    {project}
+                  </Text>
+                </Stack>
                 <Button
                   size="sm"
                   variant="secondary"
@@ -233,9 +228,9 @@ function Panel({
       }
     >
       {needsYou.length > 0 && (
-        <ListSection label="Needs you" count={needsYou.length} attention>
+        <ListSection label="Needs you" count={needsYou.length} attention hideLabel>
           {needsYou.map((session) => (
-            <WaitingRow key={session.id} session={session} project={project(session)} now={now} />
+            <WaitingRow key={session.id} session={session} project={project(session)} />
           ))}
         </ListSection>
       )}
