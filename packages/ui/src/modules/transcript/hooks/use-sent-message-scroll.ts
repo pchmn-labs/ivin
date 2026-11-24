@@ -66,6 +66,14 @@ export function useSentMessageScroll({
     }
   }
 
+  // The list's very end shows only the room under the message, where the list draws no row.
+  const lastRowsTop = (view: HTMLElement) => {
+    const end = footer()
+    return end
+      ? Math.max(0, contentTop(view, end) - view.clientHeight)
+      : view.scrollHeight - view.clientHeight
+  }
+
   const animateToMessage = (view: HTMLElement) => {
     cancelAnimationFrame(frame.current)
     const duration = matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -76,13 +84,7 @@ export function useSentMessageScroll({
     frame.current = requestAnimationFrame(function step(now) {
       started ??= now
       const row = sentRow(view)
-      const end = footer()
-      // Until the list draws the message, its last rows are shown: the room under them alone draws none.
-      const target = row
-        ? contentTop(view, row)
-        : end
-          ? Math.max(0, contentTop(view, end) - view.clientHeight)
-          : view.scrollHeight - view.clientHeight
+      const target = row ? contentTop(view, row) : lastRowsTop(view)
       const progress = duration === 0 ? 1 : Math.min(1, (now - started) / duration)
       view.scrollTop = from + (target - from) * easeOut(progress)
       if (progress < 1 || (!row && now - started < 1000)) {
