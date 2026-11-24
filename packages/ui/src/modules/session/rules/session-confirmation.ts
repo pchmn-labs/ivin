@@ -2,7 +2,9 @@ import type { Session } from "@ivin/contracts/session"
 import { fileName } from "../../file/rules/file-name.ts"
 import { isAgentBusy } from "./is-running.ts"
 
-interface ConfirmationOfAll<Action extends "archiveAll" | "deleteAll"> {
+export type ActionOnAll = "archiveAll" | "deleteAll"
+
+interface ConfirmationOfAll<Action extends ActionOnAll> {
   readonly action: Action
   readonly sessions: ReadonlyArray<{
     readonly session: Session
@@ -84,7 +86,7 @@ const fileList = (
   files.length === 0 ? [] : [{ label, items: files, files: true }]
 
 const allText = (
-  action: "archiveAll" | "deleteAll",
+  action: ActionOnAll,
   sessions: ReadonlyArray<{ readonly session: Session }>,
   files: ReadonlyArray<string>,
 ): ConfirmationText => {

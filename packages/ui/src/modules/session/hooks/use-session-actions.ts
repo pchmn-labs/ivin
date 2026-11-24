@@ -12,7 +12,7 @@ import {
 } from "../atoms/session-action-failure.ts"
 import { sessionConfirmationAtom } from "../atoms/session-confirmation.ts"
 import type { ConfirmedAction } from "../rules/session-action-failure.ts"
-import { needsConfirmation } from "../rules/session-confirmation.ts"
+import { needsConfirmation, type ActionOnAll } from "../rules/session-confirmation.ts"
 
 export function useRequestSessionAction() {
   const confirm = useAtomSet(sessionConfirmationAtom)
@@ -91,7 +91,7 @@ export function useAllSessionsActions(sessions: ReadonlyArray<Session>): {
 } {
   const confirm = useAtomSet(sessionConfirmationAtom)
   const registry = useContext(RegistryContext)
-  const request = (action: "archiveAll" | "deleteAll") =>
+  const request = (action: ActionOnAll) =>
     confirm({
       action,
       sessions: sessions.map((session) => ({

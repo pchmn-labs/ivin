@@ -102,6 +102,8 @@
 
 .iv-disclosure-frame:has(> .iv-disclosure > .iv-disclosure__summary:hover)
   > .iv-disclosure-frame__actions,
+.iv-disclosure-frame:has(> .iv-disclosure > .iv-disclosure__summary:focus-visible)
+  > .iv-disclosure-frame__actions,
 .iv-disclosure-frame__actions:hover,
 .iv-disclosure-frame__actions:focus-within,
 .iv-disclosure-frame__actions:has([data-popup-open]) {
