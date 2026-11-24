@@ -7,6 +7,7 @@ import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { HarnessMark, type MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
+import { ResizeHandle } from "../../../core/components/resize-handle/resize-handle.tsx"
 import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { fileEditOf, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
@@ -16,6 +17,8 @@ import { fileName } from "../../file/rules/file-name.ts"
 import { DiffView } from "../../file/ui/diff-view.tsx"
 import { FileView } from "../../file/ui/file-view.tsx"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
+import { fileIconsAtom } from "../../plugin/atoms/contributions.ts"
+import { fileIconOf } from "../../plugin/rules/file-icon.ts"
 import { closeSubViewAtom } from "../atoms/close-sub-view.ts"
 import { subViewsOf } from "../atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
@@ -30,6 +33,16 @@ import { adjacentRowTab, sameSubView, subViewKey } from "../rules/sub-views.ts"
 import "./sub-view-card.css"
 
 const DIFF_LABELS = { diff: "diff", committed_diff: "committed" } as const
+const CARD_MIN = 280
+
+// The chat keeps its own minimum width beside the card.
+const cardMax = (card: HTMLElement) => {
+  const split = card.parentElement
+  if (split === null) return CARD_MIN
+  const chatMin = parseFloat(getComputedStyle(card).getPropertyValue("--iv-chat-min-width"))
+  const margin = parseFloat(getComputedStyle(card).marginRight)
+  return split.clientWidth - chatMin - margin
+}
 
 const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
   if (event.altKey || event.metaKey || event.ctrlKey) return
@@ -81,6 +94,7 @@ export function SubViewCard({
   const cardId = useId()
   const fullWidthHint = useKeyHint("Full width", "tab.toggleFullWidth")
   const besideHint = useKeyHint("Beside chat", "tab.toggleFullWidth")
+  const fileIcons = useAtomValue(fileIconsAtom)
 
   const closeNow = async (subView: SubView) => {
     const hadFocus = card.current?.contains(document.activeElement) ?? false
@@ -152,6 +166,16 @@ export function SubViewCard({
       aria-label="Open files"
       data-on-session={onSession || undefined}
     >
+      {!fullWidth && (
+        <ResizeHandle
+          label="Resize the files card"
+          edge="left"
+          property="--iv-sub-view-card-width"
+          name="sub-view-card"
+          min={CARD_MIN}
+          max={cardMax}
+        />
+      )}
       <div className="iv-sub-view-card__row">
         <div
           className="iv-sub-view-card__tabs"
@@ -215,7 +239,9 @@ export function SubViewCard({
                   onClick={() => open({ sessionId, workingFolder, subView })}
                 >
                   <span className="iv-sub-view-card__icon" aria-hidden>
-                    <Icon name={isDiff ? "diff" : "file"} size={14} />
+                    {fileIconOf(fileIcons, { name, folder: false, open: false }) ?? (
+                      <Icon name={isDiff ? "diff" : "file"} size={14} />
+                    )}
                   </span>
                   <span className="iv-sub-view-card__name">{name}</span>
                   {isDiff && (

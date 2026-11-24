@@ -45,6 +45,7 @@
 }
 
 .iv-tab-view__split[data-full-width] .iv-sub-view-card {
+  flex: 1;
   margin-left: var(--iv-space-2);
 }
 

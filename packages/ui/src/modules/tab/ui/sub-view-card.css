@@ -1,6 +1,8 @@
 .iv-sub-view-card {
+  position: relative;
   display: flex;
-  flex: 1.15;
+  /* Shares the split with the chat 1.15 to 1 until the user resizes it. */
+  flex: 0 1 var(--iv-sub-view-card-width, calc((100% - var(--iv-space-2)) * 1.15 / 2.15));
   flex-direction: column;
   min-width: var(--iv-sub-view-card-min-width);
   min-height: 0;
@@ -100,6 +102,12 @@
 .iv-sub-view-card__icon {
   display: inline-flex;
   color: var(--iv-text-faint);
+}
+
+.iv-sub-view-card__icon img {
+  display: block;
+  width: 14px;
+  height: 14px;
 }
 
 .iv-sub-view-card__item[data-selected] .iv-sub-view-card__icon {

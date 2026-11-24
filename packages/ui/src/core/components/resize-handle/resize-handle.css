@@ -12,6 +12,14 @@
   cursor: col-resize;
 }
 
+.iv-resize-handle[data-edge="left"] {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 6px;
+  cursor: col-resize;
+}
+
 .iv-resize-handle[data-edge="top"] {
   top: -3px;
   right: 0;
@@ -32,6 +40,13 @@
   top: 0;
   right: 0;
   bottom: 0;
+  width: var(--iv-line-bold);
+}
+
+.iv-resize-handle[data-edge="left"]::after {
+  top: 0;
+  bottom: 0;
+  left: 0;
   width: var(--iv-line-bold);
 }
 

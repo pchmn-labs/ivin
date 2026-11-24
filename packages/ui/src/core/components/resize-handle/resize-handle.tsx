@@ -1,9 +1,14 @@
 import { useLayoutEffect, useRef, useState } from "react"
 import { readStoredSize, storeSize } from "./stored-size.ts"
-import { clampSize, draggedSize } from "./resize.ts"
+import { clampSize, draggedSize, type Edge } from "./resize.ts"
 import "./resize-handle.css"
 
 const KEY_STEP = 16
+const KEYS = {
+  right: ["ArrowRight", "ArrowLeft"],
+  left: ["ArrowLeft", "ArrowRight"],
+  top: ["ArrowUp", "ArrowDown"],
+} as const
 
 export function ResizeHandle({
   label,
@@ -15,7 +20,7 @@ export function ResizeHandle({
 }: {
   label: string
   // The edge of its parent the handle sits on; the parent is what it resizes.
-  edge: "right" | "top"
+  edge: Edge
   // The CSS custom property on the parent that its stylesheet sizes it by.
   property: string
   name: string
@@ -35,7 +40,7 @@ export function ResizeHandle({
 
   const current = (element: HTMLElement) => {
     const box = element.getBoundingClientRect()
-    return edge === "right" ? box.width : box.height
+    return edge === "top" ? box.height : box.width
   }
   const apply = (element: HTMLElement, next: number) => {
     const clamped = clampSize(next, min, max(element))
@@ -54,7 +59,7 @@ export function ResizeHandle({
       data-edge={edge}
       role="separator"
       aria-label={label}
-      aria-orientation={edge === "right" ? "vertical" : "horizontal"}
+      aria-orientation={edge === "top" ? "horizontal" : "vertical"}
       aria-valuemin={min}
       aria-valuenow={size ?? undefined}
       tabIndex={0}
@@ -86,8 +91,7 @@ export function ResizeHandle({
       onKeyDown={(event) => {
         const element = target()
         if (element === null) return
-        const grow = edge === "right" ? "ArrowRight" : "ArrowUp"
-        const shrink = edge === "right" ? "ArrowLeft" : "ArrowDown"
+        const [grow, shrink] = KEYS[edge]
         if (event.key !== grow && event.key !== shrink) return
         event.preventDefault()
         const step = event.key === grow ? KEY_STEP : -KEY_STEP

@@ -369,3 +369,46 @@ test("a linked file that does not exist opens with the file view's message", asy
     .element(card().getByText("old.ts no longer exists. Retry once it is back."))
     .toBeVisible()
 })
+
+const resizeHandle = () => page.getByRole("separator", { name: "Resize the files card" })
+const cardWidth = () => card().element().getBoundingClientRect().width
+
+test("a file's tab shows the icon theme's icon for it", async () => {
+  await mount(makeServer())
+  await showFiles()
+  await item("README.md").click()
+
+  await expect
+    .poll(() => fileTab("README.md").element().querySelector("img")?.getAttribute("src"))
+    .toMatch(/^ivin-plugin:\/\/file-icons\/icons\/.+\.svg$/)
+})
+
+test("the files card's left edge resizes it, keeps the chat's minimum width, and the size is kept", async () => {
+  const server = makeServer()
+  const first = await mount(server)
+  await showFiles()
+  await item("README.md").click()
+  await expect.element(resizeHandle()).toBeInTheDocument()
+  const start = cardWidth()
+
+  ;(resizeHandle().element() as HTMLElement).focus()
+  await userEvent.keyboard("{ArrowLeft}{ArrowLeft}")
+  await expect.poll(cardWidth).toBe(Math.round(start) + 32)
+
+  for (let i = 0; i < 60; i++) await userEvent.keyboard("{ArrowLeft}")
+  const chat = page.getByRole("main").element().querySelector(".iv-tab-view__session")!
+  expect(chat.getBoundingClientRect().width).toBeGreaterThanOrEqual(320)
+  const widest = cardWidth()
+  await first.unmount()
+
+  await mount(server)
+  await expect.poll(cardWidth).toBe(widest)
+})
+
+test("the files card in full width has no resize handle", async () => {
+  await mount(makeServer())
+  await showFiles()
+  await item("README.md").click()
+  await card().getByRole("button", { name: "Full width" }).click()
+  await expect.element(resizeHandle()).not.toBeInTheDocument()
+})
