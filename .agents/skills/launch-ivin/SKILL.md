@@ -13,11 +13,11 @@ To try a session by hand, open `ivin-playground`, a folder beside the main check
 
 ## You see it
 
-Run `pnpm --filter @ivin/desktop shot` (about 10 s). It plays a scenario ending on a tool call waiting for approval, and prints the path of one window-only PNG per step in `apps/desktop/shots/`.
+Run `pnpm --filter @ivin/desktop shot` (about 10 s). It plays a scenario ending on a tool call waiting for approval, and writes one window-only PNG per step in `apps/desktop/shots/`, at full resolution. It prints the path of each one's reduced copy, in `apps/desktop/shots/small/` under the same name.
 
-Read one PNG at a time: each is a full-resolution capture, and several at once overflow the context.
+Read the reduced copies, one at a time.
 
-To look closely at a spacing or a colour, crop the capture with `sips --cropToHeightWidth <h> <w> --cropOffset <y> <x> <png> --out <out.png>` and enlarge the crop with `sips -z <h> <w> <out.png>`. Python has no PIL here.
+To look closely at a spacing or a colour, crop the full-resolution capture with `sips --cropToHeightWidth <h> <w> --cropOffset <y> <x> <png> --out <out.png>` and enlarge the crop with `sips -z <h> <w> <out.png>`. Python has no PIL here.
 
 To see another state, add a step to `apps/desktop/scripts/shot.ts`; the helpers of `apps/desktop/e2e/` drive the window.
 
@@ -25,7 +25,7 @@ To see another state, add a step to `apps/desktop/scripts/shot.ts`; the helpers 
 
 A pull request that changes what the user sees shows it in one or two captures. When no step of `shot` shows the change, add one to `apps/desktop/scripts/shot.ts` that does. Read the captures before the commit: they catch what the browser tests miss (a wrapped badge, a nameless row). When the work fixes something the user pointed at in a screenshot, show them the new capture and wait for their approval before the commit.
 
-Run `.agents/skills/launch-ivin/pr-shots.sh <png>...` from the branch with the chosen PNGs. It pushes them to `pr-screenshots`, a branch that holds only screenshots and is never merged, and prints the Markdown to paste into the body's Screenshots section.
+Run `.agents/skills/launch-ivin/pr-shots.sh <png>...` from the branch with the chosen full-resolution PNGs, without reading them again. It pushes them to `pr-screenshots`, a branch that holds only screenshots and is never merged, and prints the Markdown to paste into the body's Screenshots section.
 
 ## Other tools
 
