@@ -105,7 +105,7 @@ const session = (
 const panel = () => page.getByTestId("working-panel")
 const group = (label: string) => page.getByRole("region", { name: label })
 
-test("a session waiting for an approval shows under Needs you, with its project and elapsed time", async () => {
+test("a waiting session shows under Needs you with its project, and only a running one with its elapsed time", async () => {
   await mountPanel(
     [
       session("on-screen", "Fix the cart", "/shop", "working"),
@@ -119,9 +119,10 @@ test("a session waiting for an approval shows under Needs you, with its project 
   const needsYou = group("Needs you")
   await expect.element(needsYou.getByText("Write the post")).toBeVisible()
   await expect.element(needsYou.getByText("blog")).toBeVisible()
-  await expect.element(needsYou.getByText("12 min")).toBeVisible()
+  expect(needsYou.getByText("12 min").query()).toBeNull()
   await expect.element(needsYou.getByText("Waiting for you")).toBeVisible()
   await expect.element(group("Running").getByText("Add search")).toBeVisible()
+  await expect.element(group("Running").getByText("3 min")).toBeVisible()
   expect(page.getByText("Fix the cart").query()).toBeNull()
   expect(page.getByText("Old idea").query()).toBeNull()
 })
@@ -167,10 +168,21 @@ test("a waiting session shows the command it asks for, and Allow answers it with
   )
 
   await expect.element(page.getByTestId("working-command")).toHaveTextContent("rm -rf drafts/old")
+  expect(page.getByTestId("working-command").element().textContent).not.toContain("echo done")
   await page.getByRole("button", { name: "Allow: Write the post" }).click()
 
   expect(answers).toEqual([{ sessionId: "waits", requestId: "waits-request", allow: true }])
   expect(opened).toEqual([])
+})
+
+test("a command continued over several lines with backslashes shows on one line", async () => {
+  await mountPanel([session("waits", "Write the post", "/blog", "waiting")], null, {
+    transcripts: { waits: [approval("waits", "git commit -m wip \\\n  --no-verify")] },
+  })
+
+  await expect
+    .element(page.getByTestId("working-command"))
+    .toHaveTextContent("git commit -m wip --no-verify")
 })
 
 test("Deny answers no, and a failed answer shows the host's message with a retry", async () => {

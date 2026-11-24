@@ -153,6 +153,8 @@ export interface TextProps {
   readonly tone?: "default" | "muted" | "faint" | "danger" | "attention" | "accent"
   readonly weight?: "regular" | "medium" | "semibold"
   readonly mono?: boolean
+  // Mono on the subtle ground in a hairline frame, as a command reads.
+  readonly code?: boolean
   readonly italic?: boolean
   readonly preWrap?: boolean
   readonly truncate?: boolean
@@ -231,6 +233,8 @@ export interface ListSectionProps {
   readonly count?: number
   // Marks the label for sessions that wait on the user.
   readonly attention?: boolean
+  // Read by screen readers only, for a group its surroundings already name.
+  readonly hideLabel?: boolean
   // Placeholder rows replace the children.
   readonly loading?: boolean
   readonly "data-testid"?: string
