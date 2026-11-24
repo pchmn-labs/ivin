@@ -6,7 +6,9 @@
   min-width: var(--iv-sub-view-card-min-width);
   min-height: 0;
   margin: 0 var(--iv-space-2) var(--iv-space-2) 0;
-  overflow: hidden;
+  overflow: clip;
+  overflow-clip-margin: border-box;
+  isolation: isolate;
   border: 1px solid var(--iv-border);
   border-radius: var(--iv-radius-card);
   background: var(--iv-bg-card);
@@ -15,7 +17,8 @@
 .iv-sub-view-card > .iv-resize-handle[data-edge="left"]::after {
   top: var(--iv-radius-card);
   bottom: var(--iv-radius-card);
-  border-radius: var(--iv-radius-pill);
+  left: -1px;
+  width: 1px;
 }
 
 .iv-sub-view-card__row {
