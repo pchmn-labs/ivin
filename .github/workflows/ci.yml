@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
         with:
           cache: true
@@ -40,7 +42,10 @@ jobs:
         run: pnpm --filter @ivin/ui exec playwright install --with-deps chromium
       - if: steps.browsers.outputs.cache-hit == 'true'
         run: pnpm --filter @ivin/ui exec playwright install-deps chromium
-      - run: pnpm test
+      - if: github.event_name == 'pull_request'
+        run: pnpm vp test run --changed origin/${{ github.base_ref }}
+      - if: github.event_name != 'pull_request'
+        run: pnpm test
 
   repeat-changed-tests:
     name: Changed tests, 20 runs each

@@ -55,6 +55,8 @@ The `node` test project puts a failing `claude` first on the PATH, so a test tha
 
 A test does not depend on timing: a browser test waits for what the user would see (`expect.element`, `expect.poll`), never for a fixed delay or a number of frames. The CI runs each test a pull request adds or changes 20 times; when that job fails, `pnpm test:repeat-changed` reproduces it. Find the cause in the app or the test, never hide it with `--retry` or a longer wait.
 
+On a pull request, the CI and `pnpm check` run only the tests the changes reach through imports; a push to `main` runs them all. A test that fails only on `main` reads a file or a process its changed code does not import.
+
 ## Flat packages
 
 No modules and no layers; one file per concern, kebab-case.
