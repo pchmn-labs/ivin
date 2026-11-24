@@ -1,4 +1,4 @@
-import type { FolderListing } from "@ivin/plugin-api/ui"
+import type { FolderEntry, FolderListing } from "@ivin/plugin-api/ui"
 import { parentOf } from "./paths.ts"
 
 export type FolderState = { readonly kind: "loading" } | FolderListing
@@ -40,3 +40,10 @@ export const foldersToReload = (
     .sort((a, b) =>
       a === "" ? -1 : b === "" ? 1 : a.split("/").length - b.split("/").length || (a < b ? -1 : 1),
     )
+
+export const listedFolders = (tree: FolderTree) => {
+  const listed = new Map<string, ReadonlyArray<FolderEntry>>()
+  for (const [path, state] of tree.folders)
+    if (state.kind === "listed") listed.set(path, state.entries)
+  return listed
+}
