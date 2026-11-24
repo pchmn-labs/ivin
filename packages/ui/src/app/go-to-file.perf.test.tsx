@@ -27,7 +27,7 @@ vi.mock("../../../../plugins/files/src/rules/rank-files.ts", async (load) => {
     rankFiles: (...args: Parameters<typeof actual.rankFiles>) => {
       const started = performance.now()
       const ranked = actual.rankFiles(...args)
-      rankings.set(args[1], performance.now() - started)
+      rankings.set(args[1], Math.max(rankings.get(args[1]) ?? 0, performance.now() - started))
       return ranked
     },
   }
@@ -73,10 +73,9 @@ test("typing 8 keys in Go to file over 50,000 paths while changes arrive ranks e
     await userEvent.keyboard(key)
     await expect.element(field).toHaveValue(QUERY.slice(0, at + 1))
   }
-  await expect.element(page.getByRole("option").first()).toBeVisible()
+  // A deferred query can be skipped when the next key comes first; the last one is always ranked.
+  await expect.poll(() => rankings.has(QUERY)).toBe(true)
 
-  const typed = Array.from(QUERY, (_, at) => QUERY.slice(0, at + 1))
-  expect([...rankings.keys()]).toEqual(expect.arrayContaining(typed))
-  for (const query of typed) expect(rankings.get(query)).toBeLessThan(FRAME_BUDGET_MS)
+  for (const [query, took] of rankings) expect(took, query).toBeLessThan(FRAME_BUDGET_MS)
   expect(server.fileListings() - listedBefore).toBeLessThanOrEqual(QUERY.length)
 })

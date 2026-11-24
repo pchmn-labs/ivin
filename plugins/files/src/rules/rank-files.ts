@@ -57,6 +57,9 @@ const tightest = (text: string, query: string): Array<number> | null => {
 
 const spread = (found: ReadonlyArray<number>) => (found.at(-1) ?? 0) - (found[0] ?? 0)
 
+// A tighter run first, then one nearer the name's start.
+const nameScore = (spreadOf: number, start: number) => spreadOf * 1000 + start
+
 // Above any name match's score, so a match across the path always ranks after.
 const PATH_MATCH = 1_000_000
 
@@ -86,7 +89,7 @@ export const rankFiles = (
   const matches: Array<number> = []
   const best: Array<Scored> = []
   // No match is tighter than the letters side by side at the name's start.
-  const floor = (letters.length - 1) * 1000
+  const floor = nameScore(letters.length - 1, 0)
   for (const at of candidates) {
     const lower = index.lower[at] ?? ""
     if (!hasLetters(lower, letters)) continue
@@ -97,8 +100,7 @@ export const rankFiles = (
     const nameMatch = tightest(lower.slice(nameStart), letters)
     const scored: Scored =
       nameMatch !== null
-        ? // A tighter run first, then one nearer the name's start.
-          { path, nameMatch, score: spread(nameMatch) * 1000 + (nameMatch[0] ?? 0) }
+        ? { path, nameMatch, score: nameScore(spread(nameMatch), nameMatch[0] ?? 0) }
         : { path, nameMatch: null, score: PATH_MATCH + spread(tightest(lower, letters) ?? []) }
     if (best.length === limit && before(scored, best[limit - 1]!) >= 0) continue
     let place = best.length
