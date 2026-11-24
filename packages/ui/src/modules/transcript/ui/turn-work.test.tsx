@@ -428,45 +428,62 @@ const callList = () =>
   page.getByTestId("turn-step").last().element().querySelector<HTMLElement>(".iv-turn__calls")!
 const atListEnd = (list: HTMLElement) => list.scrollHeight - list.scrollTop - list.clientHeight < 2
 
-test("while the turn runs, an open step of 8 calls shows 5 rows that follow the newest call", async () => {
+test("while the turn runs, an open step of 11 calls shows 8 rows that follow the newest call", async () => {
   const { user, text, call } = items(Date.now())
   const server = await mount(
-    [user("u1"), text("t1", "Running"), ...Array.from({ length: 8 }, (_, i) => call(`c${i + 1}`))],
+    [user("u1"), text("t1", "Running"), ...Array.from({ length: 11 }, (_, i) => call(`c${i + 1}`))],
     true,
   )
-  await expect.element(page.getByText("tool-c8")).toBeVisible()
+  await expect.element(page.getByText("tool-c11")).toBeVisible()
   const list = callList()
   const row = list.querySelector<HTMLElement>(".iv-turn__call")!.offsetHeight
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight)
-  expect(Math.round(list.clientHeight / row)).toBe(5)
+  expect(Math.round(list.clientHeight / row)).toBe(8)
   await vi.waitFor(() => expect(atListEnd(list)).toBe(true))
 
   list.scrollTop = 0
   list.dispatchEvent(new Event("scroll"))
-  server.pushItem(call("c9"))
-  await expect.element(page.getByText("tool-c9")).toBeInTheDocument()
+  server.pushItem(call("c12"))
+  await expect.element(page.getByText("tool-c12")).toBeInTheDocument()
   expect(callList().scrollTop).toBe(0)
 
   list.scrollTop = list.scrollHeight
   list.dispatchEvent(new Event("scroll"))
-  server.pushItem(call("c10"))
-  await expect.element(page.getByText("tool-c10")).toBeVisible()
+  server.pushItem(call("c13"))
+  await expect.element(page.getByText("tool-c13")).toBeVisible()
   await vi.waitFor(() => expect(atListEnd(callList())).toBe(true))
 })
 
-test("an open step of 5 calls does not scroll", async () => {
+test("a wheel up in the calls keeps their place when a call arrives before the scroll event", async () => {
   const { user, text, call } = items(Date.now())
-  await mount(
-    [user("u1"), text("t1", "Running"), ...Array.from({ length: 5 }, (_, i) => call(`c${i + 1}`))],
+  const server = await mount(
+    [user("u1"), text("t1", "Running"), ...Array.from({ length: 11 }, (_, i) => call(`c${i + 1}`))],
     true,
   )
-  await expect.element(page.getByText("tool-c5")).toBeVisible()
+  await expect.element(page.getByText("tool-c11")).toBeVisible()
+  const list = callList()
+  await vi.waitFor(() => expect(atListEnd(list)).toBe(true))
+
+  list.dispatchEvent(new WheelEvent("wheel", { deltaY: -40, bubbles: true }))
+  list.scrollTop = 0
+  server.pushItem(call("c12"))
+  await expect.element(page.getByText("tool-c12")).toBeInTheDocument()
+  expect(callList().scrollTop).toBe(0)
+})
+
+test("an open step of 8 calls does not scroll", async () => {
+  const { user, text, call } = items(Date.now())
+  await mount(
+    [user("u1"), text("t1", "Running"), ...Array.from({ length: 8 }, (_, i) => call(`c${i + 1}`))],
+    true,
+  )
+  await expect.element(page.getByText("tool-c8")).toBeVisible()
   expect(callList().scrollHeight).toBe(callList().clientHeight)
 })
 
 test("once the turn ends, the earlier steps line and the scrolling calls are gone", async () => {
   const { interruption, call } = items(Date.now())
-  const extra = Array.from({ length: 7 }, (_, i) => ({ ...call(`x${i}`), position: 100 + i }))
+  const extra = Array.from({ length: 9 }, (_, i) => ({ ...call(`x${i}`), position: 100 + i }))
   const seeded = [...stepsOf(12), ...extra]
   const server = makeFakeServer()
   server.seedItems("s1", seeded)
@@ -481,17 +498,17 @@ test("once the turn ends, the earlier steps line and the scrolling calls are gon
   expect(earlierLine().query()).toBeNull()
   expect(page.getByTestId("turn-step").all()).toHaveLength(12)
   await page.getByTestId("step-summary").last().click()
-  await expect.element(page.getByText("tool-x6")).toBeVisible()
+  await expect.element(page.getByText("tool-x8")).toBeVisible()
   expect(callList().scrollHeight).toBe(callList().clientHeight)
 })
 
-test("while the turn runs, a step of 6 calls the user unfolds also stops at 5 rows", async () => {
+test("while the turn runs, a step of 9 calls the user unfolds also stops at 8 rows", async () => {
   const { user, text, call } = items(Date.now())
   await mount(
     [
       user("u1"),
       text("t1", "Reading"),
-      ...Array.from({ length: 6 }, (_, i) => call(`c${i + 1}`, "read")),
+      ...Array.from({ length: 9 }, (_, i) => call(`c${i + 1}`, "read")),
       text("t2", "Running"),
       call("r1", "command", "running"),
     ],
@@ -499,7 +516,7 @@ test("while the turn runs, a step of 6 calls the user unfolds also stops at 5 ro
   )
 
   await page.getByTestId("step-summary").first().click()
-  await expect.element(page.getByText("tool-c6")).toBeInTheDocument()
+  await expect.element(page.getByText("tool-c9")).toBeInTheDocument()
   const list = page
     .getByTestId("turn-step")
     .first()

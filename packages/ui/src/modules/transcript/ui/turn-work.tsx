@@ -106,6 +106,7 @@ export function StepView({
           className="iv-turn__calls"
           data-scroll={scrolls || undefined}
           onScroll={scrolls ? follow.onScroll : undefined}
+          onWheel={scrolls ? follow.onWheel : undefined}
         >
           {shown.map((item) => (
             <div key={item.id} className="iv-turn__call">
