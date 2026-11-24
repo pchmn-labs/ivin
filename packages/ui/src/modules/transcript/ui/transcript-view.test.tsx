@@ -215,19 +215,85 @@ test("while the agent works, the transcript follows the end of its turn, however
   await expect.poll(fromEnd).toBeLessThan(2)
 })
 
-test("a turn that ends with a long answer stops with its message at the top of the view", async () => {
+const everyFrame = <T,>(read: (frame: number) => T, done: (seen: T[]) => boolean) =>
+  new Promise<T[]>((resolve) => {
+    const seen: T[] = []
+    const step = () => {
+      seen.push(read(seen.length))
+      if (done(seen)) resolve(seen)
+      else requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  })
+
+const streamLine = (index: number) =>
+  ({
+    type: "delta",
+    sessionId: "s1",
+    itemId: "m42",
+    position: 42,
+    kind: "message",
+    text: `line ${index}\n\n`,
+  }) as const
+
+test("while the answer streams in fast, its last line stays in view", async () => {
   const server = makeFakeServer()
-  const screen = await sendQuestion(server)
+  await sendQuestion(server)
   server.pushItem(toolCall(41))
-  server.pushItem(longAnswer(42))
   await expect.poll(fromEnd).toBeLessThan(2)
 
-  await screen.rerender(sessionView(server, 300, false))
+  const lags = await everyFrame(
+    (frame) => {
+      server.pushChange(streamLine(frame))
+      return fromEnd()
+    },
+    (seen) => seen.length === 40,
+  )
 
-  const messageRowTop = () =>
-    document.querySelector('[data-row-id="m40"]')!.getBoundingClientRect().top -
-    scroller().getBoundingClientRect().top
-  await expect.poll(() => Math.abs(messageRowTop())).toBeLessThan(2)
+  expect(Math.max(...lags)).toBeLessThan(80)
+})
+
+test("while the answer streams in, the view moves at a steady pace", async () => {
+  const server = makeFakeServer()
+  await sendQuestion(server)
+  server.pushItem(toolCall(41))
+  await expect.poll(fromEnd).toBeLessThan(2)
+
+  const tops = await everyFrame(
+    (frame) => {
+      if (frame % 4 === 0) server.pushChange(streamLine(frame / 4))
+      return scroller().scrollTop
+    },
+    (seen) => seen.length === 80,
+  )
+
+  const steps = tops.slice(41).map((top, index) => top - tops[40 + index]!)
+  expect(Math.max(...steps)).toBeLessThan(2 * Math.max(1, Math.min(...steps)))
+})
+
+const messageRowTop = () => {
+  const row = document.querySelector('[data-row-id="m40"]')
+  return row && Math.round(row.getBoundingClientRect().top - scroller().getBoundingClientRect().top)
+}
+
+test("a turn that ends with a long answer moves its message to the top of the view in one step", async () => {
+  const server = makeFakeServer()
+  const screen = await sendQuestion(server)
+  for (let position = 41; position < 47; position++) server.pushItem(toolCall(position))
+  server.pushItem(longAnswer(47))
+  await expect.poll(fromEnd).toBeLessThan(2)
+
+  void screen.rerender(sessionView(server, 300, false))
+  const frames = await everyFrame(
+    // Read cheaply, or the frames between Virtuoso's corrections are not seen.
+    () => ({ top: messageRowTop(), answer: document.querySelector('[data-row-id="m47"]') }),
+    (seen) => Math.abs(seen.at(-1)!.top ?? Number.POSITIVE_INFINITY) < 2,
+  )
+
+  // Before the turn ends, its message is above the view and not drawn.
+  const ended = frames.filter((frame) => frame.top !== null)
+  expect(ended).toHaveLength(1)
+  expect(ended[0]!.answer).not.toBeNull()
   expect(fromEnd()).toBeGreaterThan(100)
 })
 
@@ -238,10 +304,10 @@ test("a turn that ends with a short answer stays at the end, its message in view
   server.pushItem(message(42))
   await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
 
-  await screen.rerender(sessionView(server, 300, false))
+  void screen.rerender(sessionView(server, 300, false))
+  const lags = await everyFrame(fromEnd, () => messageRowTop() !== null)
 
-  await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
-  await expect.poll(fromEnd).toBeLessThan(2)
+  expect(Math.max(...lags)).toBeLessThan(2)
   expect(inView("question 40")).toBe(true)
 })
 
@@ -526,6 +592,20 @@ test("a long answer that came while the transcript was closed opens at its end",
 
   await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
   await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
+})
+
+test("a transcript closed after a turn ended with a long answer opens again at the turn's message", async () => {
+  const server = makeFakeServer()
+  const screen = await sendMessage(server)
+  server.pushItem(toolCall(41))
+  server.pushItem(longAnswer(42))
+  await expect.poll(fromEnd).toBeLessThan(2)
+  await screen.rerender(switchableView(server, true, false))
+  await expect.poll(() => Math.abs(messageRowTop() ?? Number.POSITIVE_INFINITY)).toBeLessThan(2)
+
+  await closeAndOpen(screen, server)
+
+  await expect.poll(() => Math.abs(messageRowTop() ?? Number.POSITIVE_INFINITY)).toBeLessThan(2)
 })
 
 test("a session with no message yet says so", async () => {

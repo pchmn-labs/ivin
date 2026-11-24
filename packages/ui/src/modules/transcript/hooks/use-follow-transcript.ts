@@ -5,8 +5,12 @@ import { lastTurnMessageId, type TranscriptRow } from "../rules/turns.ts"
 const END_SLACK = 2
 // A scroll this long after a key, a touch or a wheel turn is the user's, not a row that changed size.
 const USER_SCROLL_MS = 300
-// The glide covers 95% of the way in three times this.
-const GLIDE_MS = 50
+// The glide stays under two lines behind the end, so the line being written stays in view.
+const MAX_LAG = 40
+const MIN_GROWTH_GAP_MS = 50
+const FIRST_GROWTH_GAP_MS = 150
+// A longer wait between two growths is a pause, not the pace of the stream.
+const MAX_GROWTH_GAP_MS = 500
 
 const UP_KEYS = new Set(["ArrowUp", "PageUp", "Home"])
 
@@ -42,12 +46,18 @@ export function useFollowTranscript({
   list: React.RefObject<VirtuosoHandle | null>
 }) {
   const scroller = useRef<HTMLElement | null>(null)
-  // Set when a turn ends while followed: the view then stops with the turn's message at its top.
+  // Set when a turn ends while followed: the view then keeps the turn's message at its top.
   const anchor = useRef<string | undefined>(undefined)
   const userAt = useRef(Number.NEGATIVE_INFINITY)
   const scrollbarHeld = useRef(false)
   const lastTop = useRef(0)
   const frame = useRef(0)
+  const glide = useRef({
+    end: 0,
+    grewAt: Number.NEGATIVE_INFINITY,
+    gap: FIRST_GROWTH_GAP_MS,
+    speed: 0,
+  })
   const reading = useRef<ReturnType<typeof readingPlace>>(null)
   const latest = useRef({ rows, shown })
   latest.current = { rows, shown }
@@ -69,21 +79,32 @@ export function useFollowTranscript({
     if (reducedMotion() || end() - view.scrollTop > view.clientHeight) {
       stopGlide()
       view.scrollTop = end()
+      glide.current.end = end()
       return
     }
     if (frame.current) return
     let last = performance.now()
     const step = (now: number) => {
-      const remaining = end() - view.scrollTop
+      const state = glide.current
+      const target = end()
+      if (target > state.end + 0.5) {
+        const gap = now - state.grewAt
+        if (gap <= MAX_GROWTH_GAP_MS) state.gap = Math.max(MIN_GROWTH_GAP_MS, (state.gap + gap) / 2)
+        state.grewAt = now
+        // Covers the way left by the time the next growth is due, so a steady stream moves steadily.
+        state.speed = (target - view.scrollTop) / state.gap
+      }
+      state.end = target
+      const remaining = target - view.scrollTop
       if (!following.current || remaining < 1) {
         frame.current = 0
-        if (following.current) view.scrollTop = end()
+        if (following.current) view.scrollTop = target
         return
       }
-      const moved = remaining * (1 - Math.exp(-(now - last) / GLIDE_MS))
-      last = now
       // A move under a pixel can round to none and never arrive.
-      view.scrollTop += Math.max(1, moved)
+      const moved = Math.max(1, state.speed * (now - last))
+      last = now
+      view.scrollTop = Math.max(view.scrollTop + moved, target - MAX_LAG)
       frame.current = requestAnimationFrame(step)
     }
     frame.current = requestAnimationFrame(step)
@@ -103,30 +124,34 @@ export function useFollowTranscript({
     reading.current = readingPlace(view)
   }
 
+  const placeAnchor = (view: HTMLElement, id: string, index: number) => {
+    stopGlide()
+    const top = rowTop(view, id)
+    if (top === null) {
+      list.current?.scrollToIndex({ index, align: "start" })
+      return
+    }
+    // Virtuoso's offsets are estimates until it measures the rows; the page's are not.
+    // Past the end the view stops at the end, so a short answer stays at the end with its message.
+    if (Math.abs(top) > 1) view.scrollTop += top
+    // At the top the view no longer follows the end, so closing the transcript saves this place.
+    if (Math.abs(rowTop(view, id) ?? Number.POSITIVE_INFINITY) <= 1) following.current = false
+  }
+
   const settle = () => {
     const view = scroller.current
     if (!view) return
-    if (!following.current) {
-      keepReadingPlace(view)
-      return
-    }
     const id = anchor.current
     const index = id === undefined ? -1 : latest.current.shown.findIndex((row) => row.id === id)
-    if (id === undefined || index < 0) {
+    if (id !== undefined && index >= 0) placeAnchor(view, id, index)
+    else {
       anchor.current = undefined
-      glideToEnd(view)
-      return
+      if (following.current) glideToEnd(view)
+      else keepReadingPlace(view)
     }
-    const top = rowTop(view, id)
-    if (top !== null && Math.abs(top) <= 1) {
-      stopFollowing()
-      return
-    }
-    stopGlide()
-    // Past the end Virtuoso stops at the end, so a short answer stays at the end with its message.
-    list.current?.scrollToIndex({ index, align: "start" })
   }
 
+  const placing = useRef(0)
   const onScroll = useCallback(() => {
     const view = scroller.current
     if (!view) return
@@ -135,10 +160,15 @@ export function useFollowTranscript({
     const up = view.scrollTop < lastTop.current - 1
     lastTop.current = view.scrollTop
     const byUser = scrollbarHeld.current || performance.now() - userAt.current < USER_SCROLL_MS
-    const id = anchor.current
-    if (id !== undefined && following.current) {
-      const top = rowTop(view, id)
-      if (top !== null && Math.abs(top) <= 1) stopFollowing()
+    if (anchor.current !== undefined) {
+      // The anchor holds until the user scrolls: Virtuoso moves the view as it measures the rows above.
+      if (byUser) stopFollowing()
+      // Virtuoso draws the rows of a jump on its scroll event; the anchor is placed once they are drawn.
+      else if (!placing.current)
+        placing.current = requestAnimationFrame(() => {
+          placing.current = 0
+          settle()
+        })
     }
     if (atEnd) {
       if (anchor.current === undefined) following.current = true
