@@ -2,6 +2,7 @@
   "name": "ivin",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "lint": "vp lint -c .oxlintrc.json --deny-warnings && stylelint --max-warnings 0 'packages/ui/src/**/*.css'",
