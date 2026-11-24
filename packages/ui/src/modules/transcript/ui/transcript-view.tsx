@@ -1,5 +1,5 @@
 import { useAtomRefresh, useAtomSet, useAtomValue } from "@effect/atom-react"
-import { useCallback, useMemo } from "react"
+import { useMemo, useRef } from "react"
 import { Virtuoso } from "react-virtuoso"
 import { transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
@@ -11,7 +11,7 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { shownRows, type TranscriptRow as RowData } from "../rules/turns.ts"
 import { useLoadBefore } from "../hooks/use-load-before.ts"
 import { useRestoredPlace, useSavePlace } from "../hooks/use-transcript-place.ts"
-import { useFollowSentMessage } from "../hooks/use-follow-sent-message.ts"
+import { useFollowTranscript } from "../hooks/use-follow-transcript.ts"
 import { TranscriptRow } from "./transcript-row.tsx"
 import { BackgroundFold } from "./background-fold.tsx"
 import { TurnWork } from "./turn-work.tsx"
@@ -42,15 +42,15 @@ export function TranscriptView({
   const liveId = live ? shown.findLast((row) => row.type === "work")?.id : undefined
   const firstIndex = FIRST_ITEM_INDEX - prepended
   const restored = useRestoredPlace({ sessionId, loaded, firstIndex })
-  const save = useSavePlace({ sessionId, firstIndex })
-  const { scrollerRef, followOutput } = useFollowSentMessage({ rows, list: save.list })
-  const bothScrollerRefs = useCallback(
-    (element: HTMLElement | Window | null) => {
-      scrollerRef(element)
-      save.scrollerRef(element instanceof HTMLElement ? element : null)
-    },
-    [scrollerRef, save.scrollerRef],
-  )
+  const following = useRef(restored === undefined)
+  const save = useSavePlace({ sessionId, firstIndex, following })
+  const { scrollerRef, totalListHeightChanged } = useFollowTranscript({
+    rows,
+    shown,
+    live,
+    following,
+    list: save.list,
+  })
   const { rangeChanged, startReached } = useLoadBefore({
     rows,
     firstIndex,
@@ -67,7 +67,7 @@ export function TranscriptView({
     <div className="iv-transcript">
       <Virtuoso
         ref={save.listRef}
-        scrollerRef={bothScrollerRefs}
+        scrollerRef={scrollerRef}
         data-testid="transcript"
         className="iv-transcript__list"
         data={shown}
@@ -77,7 +77,7 @@ export function TranscriptView({
           ? { restoreStateFrom: restored.list }
           : { initialTopMostItemIndex: { index: "LAST", align: "end" } as const })}
         computeItemKey={(_, row) => row.id}
-        followOutput={followOutput}
+        totalListHeightChanged={totalListHeightChanged}
         components={{ Footer: TranscriptFooter }}
         context={{ sessionId, background }}
         rangeChanged={rangeChanged}

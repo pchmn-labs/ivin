@@ -97,6 +97,9 @@ export interface BackgroundTask {
   readonly taskId: string
   readonly kind: "agent" | "command"
   readonly description: string
+  readonly itemId: string
+  readonly toolCallId: string
+  readonly at: number
 }
 
 export interface Session {

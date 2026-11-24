@@ -116,6 +116,7 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
 
   const scrolled = scrollEvent()
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -250 }))
   scroller().scrollTop -= 250
   await scrolled
   const scrolledUpTo = scroller().scrollTop
@@ -197,38 +198,80 @@ const sendQuestion = async (server: ReturnType<typeof makeFakeServer>) => {
   return screen
 }
 
-test("a short answer to a sent message is shown at the end of the view, with no empty room under it", async () => {
+test("while the agent works, the transcript follows the end of its turn, however long", async () => {
   const server = makeFakeServer()
   await sendQuestion(server)
 
-  server.pushItem(message(41))
-  await expect.element(page.getByText("message 41", { exact: true })).toBeVisible()
+  server.pushItem(toolCall(41))
+  server.pushItem(longAnswer(42))
+  await expect.element(page.getByText("line 29", { exact: true })).toBeInTheDocument()
+  await expect.poll(fromEnd).toBeLessThan(2)
+  expect(
+    page.getByText("question 40", { exact: true }).query() !== null && inView("question 40"),
+  ).toBe(false)
+
+  server.pushItem(toolCall(43))
+  await expect.element(page.getByText("command 43")).toBeInTheDocument()
+  await expect.poll(fromEnd).toBeLessThan(2)
+})
+
+test("a turn that ends with a long answer stops with its message at the top of the view", async () => {
+  const server = makeFakeServer()
+  const screen = await sendQuestion(server)
+  server.pushItem(toolCall(41))
+  server.pushItem(longAnswer(42))
+  await expect.poll(fromEnd).toBeLessThan(2)
+
+  await screen.rerender(sessionView(server, 300, false))
+
+  const messageRowTop = () =>
+    document.querySelector('[data-row-id="m40"]')!.getBoundingClientRect().top -
+    scroller().getBoundingClientRect().top
+  await expect.poll(() => Math.abs(messageRowTop())).toBeLessThan(2)
+  expect(fromEnd()).toBeGreaterThan(100)
+})
+
+test("a turn that ends with a short answer stays at the end, its message in view", async () => {
+  const server = makeFakeServer()
+  const screen = await sendQuestion(server)
+  server.pushItem(toolCall(41))
+  server.pushItem(message(42))
+  await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
+
+  await screen.rerender(sessionView(server, 300, false))
+
+  await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
   await expect.poll(fromEnd).toBeLessThan(2)
   expect(inView("question 40")).toBe(true)
 })
 
-test("a long answer stops scrolling the view once the sent message reaches its top", async () => {
+test("scrolled up while the agent works, the transcript stays put", async () => {
   const server = makeFakeServer()
   await sendQuestion(server)
-
   server.pushItem(longAnswer(41))
-  await expect.element(page.getByText("line 0", { exact: true })).toBeVisible()
-  await expect.poll(() => fromEnd()).toBeGreaterThan(100)
-  const stoppedAt = scroller().scrollTop
-  server.pushItem(message(42))
-  await expect
-    .poll(() => scroller().scrollHeight - scroller().clientHeight)
-    .toBeGreaterThan(stoppedAt + 100)
-  expect(scroller().scrollTop).toBe(stoppedAt)
+  await expect.poll(fromEnd).toBeLessThan(2)
+
+  const scrolled = scrollEvent()
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -200 }))
+  scroller().scrollTop -= 200
+  await scrolled
+  const scrolledUpTo = scroller().scrollTop
+  const heightBefore = scroller().scrollHeight
+  server.pushItem(longAnswer(42))
+  await expect.poll(() => scroller().scrollHeight).toBeGreaterThan(heightBefore)
+  expect(scroller().scrollTop).toBe(scrolledUpTo)
 })
 
 test("scrolled back to the end, the transcript follows its end again", async () => {
   const server = makeFakeServer()
   await sendQuestion(server)
   server.pushItem(longAnswer(41))
-  await expect.poll(() => fromEnd()).toBeGreaterThan(100)
+  await expect.poll(fromEnd).toBeLessThan(2)
+  const scrolled = scrollEvent()
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -200 }))
+  scroller().scrollTop -= 200
+  await scrolled
 
-  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: 1 }))
   await vi.waitFor(() => {
     scroller().scrollTop = scroller().scrollHeight
     scroller().dispatchEvent(new Event("scroll"))
@@ -323,6 +366,7 @@ test("the transcript opens again where the user had scrolled it", async () => {
   server.seedItems("s1", fortyMessages())
   const screen = await render(switchableView(server, true))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -250 }))
   scroller().scrollTop -= 250
   // The browser would send it a frame later.
   scroller().dispatchEvent(new Event("scroll"))
@@ -387,6 +431,7 @@ test("a transcript left at its end keeps only its last page, and scrolling up lo
 
   await screen.rerender(heldView(server, true))
   await expect.element(page.getByText(`message ${total - 1}`, { exact: true })).toBeVisible()
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -100 }))
   await vi.waitFor(() => {
     scroller().scrollTop = 0
     expect(page.getByText(`message ${PAGE_SIZE}`, { exact: true }).query()).not.toBeNull()
@@ -402,6 +447,7 @@ test("a transcript left scrolled back keeps the pages it has", async () => {
   )
   const screen = await render(heldView(server, true))
   await expect.element(page.getByText(`message ${total - 1}`, { exact: true })).toBeVisible()
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -100 }))
   await vi.waitFor(() => {
     scroller().scrollTop = 0
     expect(page.getByText(`message ${PAGE_SIZE}`, { exact: true }).query()).not.toBeNull()

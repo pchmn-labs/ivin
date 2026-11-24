@@ -77,11 +77,16 @@ export const openTranscriptWriter = (session: Session) =>
       sessions
         .setBackgroundTasks(
           session.id,
-          [...itemState.openTasks.values()].map(({ taskId, kind, description }) => ({
-            taskId,
-            kind,
-            description,
-          })),
+          [...itemState.openTasks.values()].map(
+            ({ id, taskId, toolCallId, kind, description, at }) => ({
+              taskId,
+              kind,
+              description,
+              itemId: id,
+              toolCallId,
+              at,
+            }),
+          ),
         )
         .pipe(Effect.andThen(sessionFeed.publish(session.id))),
     )

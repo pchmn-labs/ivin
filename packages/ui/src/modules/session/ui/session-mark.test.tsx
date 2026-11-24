@@ -20,8 +20,22 @@ test("a session waiting on an approval keeps the exclamation mark", async () => 
 })
 
 const tasks = [
-  { taskId: "k1", kind: "agent", description: "Review the diff" },
-  { taskId: "k2", kind: "command", description: "Dev server" },
+  {
+    taskId: "k1",
+    kind: "agent",
+    description: "Review the diff",
+    itemId: "i-k1",
+    toolCallId: "t-k1",
+    at: 0,
+  },
+  {
+    taskId: "k2",
+    kind: "command",
+    description: "Dev server",
+    itemId: "i-k2",
+    toolCallId: "t-k2",
+    at: 0,
+  },
 ] as const
 
 test("a session in background shows a pulsing dot, apart from the working spinner, and says so", async () => {

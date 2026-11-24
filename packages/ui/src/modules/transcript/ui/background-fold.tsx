@@ -1,8 +1,10 @@
 import { useAtom, useAtomValue } from "@effect/atom-react"
 import type { BackgroundTask } from "@ivin/contracts/session"
+import { useRef } from "react"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { foldsOf } from "../atoms/folds.ts"
-import { openTaskOf, tasksOf, taskStepsOf, type TaskItem } from "../atoms/background-tasks.ts"
+import { openTaskOf, tasksOf, taskStepsOf } from "../atoms/background-tasks.ts"
+import { runningTasks, type TaskItem } from "../rules/background-tasks.ts"
 import { AgentRun, CommandOutput } from "./task-run.tsx"
 import { ElapsedClock } from "./turn-work.tsx"
 import "./background-fold.css"
@@ -102,20 +104,29 @@ export function BackgroundFold({
   const [folds, setFolds] = useAtom(foldsOf(sessionId))
   const items = useAtomValue(tasksOf(sessionId))
   const open = folds.get(FOLD_KEY) ?? false
-  const running = tasks.flatMap((task) => {
-    const item = items.find((candidate) => candidate.taskId === task.taskId)
-    return item ? [item] : []
-  })
+  const running = runningTasks(sessionId, tasks, items)
+  const fold = useRef<HTMLDivElement>(null)
   if (tasks.length === 0) return null
+  const toggle = () => {
+    setFolds(new Map(folds).set(FOLD_KEY, !open))
+    // The fold sits under the last turn, so the tasks it lists would open below the view.
+    if (!open)
+      requestAnimationFrame(() =>
+        fold.current?.scrollIntoView({
+          block: "nearest",
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        }),
+      )
+  }
   return (
-    <div className="iv-transcript__column" data-testid="background-fold">
+    <div className="iv-transcript__column" data-testid="background-fold" ref={fold}>
       <div className="iv-transcript__item">
         <button
           type="button"
           className="iv-turn__line iv-turn__line--toggle"
           aria-expanded={open}
           data-testid="background-line"
-          onClick={() => setFolds(new Map(folds).set(FOLD_KEY, !open))}
+          onClick={toggle}
         >
           <span className="iv-turn__lead">
             <span className="iv-turn__mark" data-state="running">

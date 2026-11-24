@@ -5,8 +5,6 @@ import { transcriptOf } from "../atoms/get-items.ts"
 import { trimTranscriptAtom } from "../atoms/trim-transcript.ts"
 import { placeToRestore } from "../rules/transcript-place.ts"
 
-const END_SLACK = 2
-
 export function useRestoredPlace({
   sessionId,
   loaded,
@@ -24,42 +22,39 @@ export function useRestoredPlace({
   return restored
 }
 
-export function useSavePlace({ sessionId, firstIndex }: { sessionId: string; firstIndex: number }) {
+export function useSavePlace({
+  sessionId,
+  firstIndex,
+  following,
+}: {
+  sessionId: string
+  firstIndex: number
+  following: React.RefObject<boolean>
+}) {
   const registry = useContext(RegistryContext)
   // React clears the list's ref before the effects' cleanup runs, so this keeps the last one.
   const list = useRef<VirtuosoHandle | null>(null)
-  const scroller = useRef<HTMLElement | null>(null)
-  const atEnd = useRef(true)
   const latestFirstIndex = useRef(firstIndex)
   latestFirstIndex.current = firstIndex
 
   useEffect(
     () => () => {
       list.current?.getState((state) => {
-        const place = { firstIndex: latestFirstIndex.current, atEnd: atEnd.current, list: state }
+        const place = {
+          firstIndex: latestFirstIndex.current,
+          atEnd: following.current,
+          list: state,
+        }
         registry.set(transcriptOf(sessionId).place, place)
         // Reopening at the end needs only the last page; a place scrolled back keeps what it has.
         if (place.atEnd) registry.set(trimTranscriptAtom, sessionId)
       })
     },
-    [registry, sessionId],
+    [registry, sessionId, following],
   )
 
-  const onScroll = useCallback(() => {
-    const view = scroller.current
-    if (view) atEnd.current = view.scrollHeight - view.clientHeight - view.scrollTop < END_SLACK
-  }, [])
   const listRef = useCallback((handle: VirtuosoHandle | null) => {
     if (handle) list.current = handle
   }, [])
-  // A detached scroller has no layout left to measure, so the end is tracked as the user scrolls.
-  const scrollerRef = useCallback(
-    (element: HTMLElement | null) => {
-      scroller.current?.removeEventListener("scroll", onScroll)
-      scroller.current = element
-      element?.addEventListener("scroll", onScroll)
-    },
-    [onScroll],
-  )
-  return { list, listRef, scrollerRef }
+  return { list, listRef }
 }
