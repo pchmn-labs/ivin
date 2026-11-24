@@ -22,9 +22,13 @@
   width: var(--iv-dot-size);
   height: var(--iv-dot-size);
   border-radius: var(--iv-radius-pill);
-  background: currentColor;
+  background: var(--iv-accent);
   box-shadow: 0 0 0 var(--iv-line-bold) var(--iv-bg-card);
   pointer-events: none;
+}
+
+.iv-update-button[data-kind="failed"] .iv-update-button__dot {
+  background: var(--iv-danger);
 }
 
 .iv-update-card {
