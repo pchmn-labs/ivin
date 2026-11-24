@@ -51,7 +51,8 @@ const setup = async (startColumn?: string) => {
   return { onPick }
 }
 
-const highlighted = () => document.querySelector('[role="option"][data-highlighted]')?.textContent
+const highlighted = () =>
+  document.querySelector('[role="option"][data-highlighted] .iv-column-menu__label')?.textContent
 
 test("the menu opens above its button with one listbox per column, on the current value", async () => {
   await setup()
@@ -103,14 +104,16 @@ test("picking keeps the menu open and names the column", async () => {
   await expect.element(page.getByRole("listbox", { name: "Fruit" })).toBeVisible()
 })
 
-test("the footer describes the highlighted item, or gives the hint", async () => {
+test("an item's description shows under its label, and the footer keeps the hint", async () => {
   await setup()
   await page.getByRole("button", { name: "Basket" }).click()
   const foot = () => document.querySelector(".iv-column-menu__hint")?.textContent
 
-  expect(foot()).toBe("Pick what goes in")
+  const apple = page.getByRole("option", { name: "apple" })
+  await expect.element(apple).toHaveAccessibleDescription("Crunchy")
+  await expect.element(apple.getByText("Crunchy")).toBeVisible()
   await userEvent.keyboard("{ArrowUp}")
-  expect(foot()).toBe("Crunchy")
+  expect(foot()).toBe("Pick what goes in")
 })
 
 test("escape closes the menu and gives focus back to its button", async () => {

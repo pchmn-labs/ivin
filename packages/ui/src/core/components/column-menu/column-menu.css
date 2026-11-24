@@ -32,7 +32,7 @@
 .iv-column-menu__column {
   flex: 1 1 0;
   min-width: 0;
-  max-height: min(236px, calc(var(--available-height) - 48px));
+  max-height: min(296px, calc(var(--available-height) - 48px));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -88,12 +88,30 @@
   color: var(--iv-text-faint);
 }
 
-.iv-column-menu__label {
+.iv-column-menu__item:has(.iv-column-menu__description) {
+  height: auto;
+  padding-block: var(--iv-space-1);
+}
+
+.iv-column-menu__text {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.iv-column-menu__label {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.iv-column-menu__description {
+  overflow-wrap: anywhere;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
 }
 
 .iv-column-menu__check {

@@ -92,7 +92,11 @@ export interface ScriptedOptions {
   readonly taskOutputs?: Readonly<Record<string, string>>
 }
 
-const offered = (value: string, name: string) => ({ value, name, description: null })
+const offered = (value: string, name: string, description: string | null = null) => ({
+  value,
+  name,
+  description,
+})
 
 export const scriptedRunOptions: HarnessRunOptions = {
   model: {
@@ -103,7 +107,13 @@ export const scriptedRunOptions: HarnessRunOptions = {
     default: "scripted",
   },
   effort: { values: [offered("low", "Low"), offered("high", "High")], default: "low" },
-  permissionMode: { values: [offered("ask", "Ask"), offered("auto", "Auto")], default: "ask" },
+  permissionMode: {
+    values: [
+      offered("ask", "Ask", "Asks before edits and commands"),
+      offered("auto", "Auto", "Blocks risky actions, runs the rest"),
+    ],
+    default: "ask",
+  },
 }
 
 export const layerScripted = (

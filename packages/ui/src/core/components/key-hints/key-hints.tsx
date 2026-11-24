@@ -8,7 +8,7 @@ export function KeyHints({ hints }: KeyHintsProps) {
     <span className="iv-key-hints">
       {hints.map(({ key, label }) => (
         <span key={`${key} ${label}`} className="iv-key-hints__hint">
-          <kbd>{key}</kbd>
+          <kbd data-key={key}>{key}</kbd>
           <span>{label}</span>
         </span>
       ))}

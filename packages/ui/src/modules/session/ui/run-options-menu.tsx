@@ -38,7 +38,7 @@ const items = (
   offeredValues(offered, option, current).map(({ value, name, description }) => ({
     value,
     label: name,
-    description,
+    description: option === "permissionMode" ? description : null,
     checked: value === current,
     disabled: disabled(value),
     testId: `run-option-${option}-${value}`,

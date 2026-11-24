@@ -214,6 +214,10 @@ export function ColumnMenu({
                               id={optionId(at)}
                               className="iv-column-menu__item"
                               role="option"
+                              aria-labelledby={`${optionId(at)}-label`}
+                              aria-describedby={
+                                item.description ? `${optionId(at)}-description` : undefined
+                              }
                               aria-selected={item.checked}
                               aria-disabled={item.disabled || undefined}
                               data-highlighted={(isHighlighted && !item.disabled) || undefined}
@@ -223,8 +227,22 @@ export function ColumnMenu({
                               }}
                               onClick={() => pick(at)}
                             >
-                              <span className="iv-column-menu__label" title={item.label}>
-                                {item.label}
+                              <span className="iv-column-menu__text">
+                                <span
+                                  id={`${optionId(at)}-label`}
+                                  className="iv-column-menu__label"
+                                  title={item.label}
+                                >
+                                  {item.label}
+                                </span>
+                                {item.description && (
+                                  <span
+                                    id={`${optionId(at)}-description`}
+                                    className="iv-column-menu__description"
+                                  >
+                                    {item.description}
+                                  </span>
+                                )}
                               </span>
                               <span className="iv-column-menu__check">
                                 {item.checked && !item.disabled && (
@@ -243,10 +261,10 @@ export function ColumnMenu({
             </div>
             {children}
             <div className="iv-column-menu__foot">
-              <span className="iv-column-menu__hint">{highlighted?.description ?? hint}</span>
+              <span className="iv-column-menu__hint">{hint}</span>
               <KeyHints
                 hints={[
-                  { key: "←↑↓→", label: "Move" },
+                  { key: "↑↓ ←→", label: "Move" },
                   { key: "↵", label: "Pick" },
                   { key: "Esc", label: "Close" },
                 ]}
