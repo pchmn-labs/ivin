@@ -27,7 +27,7 @@ export function ListSection({
         {label}
         {count === undefined ? null : (
           <>
-            {hideLabel && " "}
+            {hideLabel ? " " : <span aria-hidden="true">·</span>}
             <span className="iv-list-section__count">{count}</span>
           </>
         )}
