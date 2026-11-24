@@ -88,8 +88,8 @@ test("with folder icons turned off in the settings, a folder shows no icon and f
       problem: null,
     })
   folderIcons(false)
-  await expect.poll(() => iconBox("src") && getComputedStyle(iconBox("src")!).display).toBe("none")
-  expect(iconBox("stuff")!.childElementCount).toBe(0)
+  await expect.poll(() => iconBox("src")).toBeNull()
+  expect(iconBox("stuff")).toBeNull()
   expect(iconOf("main.ts")).toBe(icon("typescript"))
 
   folderIcons(true)

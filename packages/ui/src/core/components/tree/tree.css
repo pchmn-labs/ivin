@@ -55,11 +55,19 @@
   place-items: center;
   width: var(--iv-tree-indent);
   color: var(--iv-text-faint);
+}
+
+.iv-tree__chevron svg {
   transition: transform var(--iv-duration-fast) var(--iv-ease-out);
 }
 
-.iv-tree__row[aria-expanded="true"] .iv-tree__chevron {
+.iv-tree__row[aria-expanded="true"] .iv-tree__chevron svg {
   transform: rotate(90deg);
+}
+
+/* The caret's glyph starts 4px into its svg; this puts it at the box's left edge. */
+.iv-tree:not([data-folder-icons]) .iv-tree__chevron svg {
+  translate: -4px;
 }
 
 .iv-tree__icon {
@@ -69,8 +77,9 @@
   color: var(--iv-text-faint);
 }
 
-.iv-tree__icon:empty {
-  display: none;
+.iv-tree[data-folder-icons] .iv-tree__row:not([aria-expanded]) .iv-tree__icon {
+  /* A folder's chevron box and the row's gap. */
+  margin-left: calc(var(--iv-tree-indent) + var(--iv-space-1));
 }
 
 .iv-tree__icon img {

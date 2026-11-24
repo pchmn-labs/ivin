@@ -454,6 +454,13 @@ try {
   await shoot("settings-command-line")
   await window
     .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Files" })
+    .click()
+  await window.getByRole("switch", { name: "Show folder icons" }).click()
+  await window.waitForTimeout(300)
+  await shoot("settings-files")
+  await window
+    .getByRole("navigation", { name: "Settings sections" })
     .getByRole("button", { name: "Sidebar" })
     .click()
   await window.getByRole("combobox", { name: "Projects" }).selectOption("strip")
@@ -463,6 +470,20 @@ try {
   await window.getByRole("group", { name: "Projects" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("strip-layout")
+  await sidebar.getByRole("tab", { name: "Files" }).click()
+  await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("files-tab-no-folder-icons")
+  await window.keyboard.press(process.platform === "darwin" ? "Meta+Comma" : "Control+Comma")
+  await window
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Files" })
+    .click()
+  await window.waitForTimeout(300)
+  await window.getByRole("switch", { name: "Show folder icons" }).click()
+  await window.getByRole("switch", { name: "Show folder icons", checked: true }).waitFor()
+  await window.getByRole("button", { name: "Back to sessions" }).click()
+  await sidebar.getByRole("treeitem", { name: "src", exact: true }).locator("img").waitFor()
   // A repository git cannot read: the lists and the status fail instead of showing nothing.
   appendFileSync(join(repo, ".git/config"), "[broken\n")
   // The status is read again after a change on disk.

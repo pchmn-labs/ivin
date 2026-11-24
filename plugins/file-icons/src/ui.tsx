@@ -1,4 +1,4 @@
-import { defineUi, useSettings, type FileIconRow } from "@ivin/plugin-api/ui"
+import { defineUi, type FileIconRow } from "@ivin/plugin-api/ui"
 import { iconPathOf, indexTheme, type IconTheme, type ThemeIndex } from "./rules/icon-theme.ts"
 import { languageOfExtension } from "./rules/languages.ts"
 
@@ -12,15 +12,10 @@ function ThemeIcon({ dark, light }: { dark: string; light: string }) {
   )
 }
 
-function FolderIcon(props: { dark: string; light: string }) {
-  return useSettings().files.folderIcons ? <ThemeIcon {...props} /> : null
-}
-
 const iconFor = (index: ThemeIndex, url: (path: string) => string) => (row: FileIconRow) => {
   const dark = iconPathOf(index, row, false)
   if (dark === null) return null
-  const urls = { dark: url(dark), light: url(iconPathOf(index, row, true) ?? dark) }
-  return row.folder ? <FolderIcon {...urls} /> : <ThemeIcon {...urls} />
+  return <ThemeIcon dark={url(dark)} light={url(iconPathOf(index, row, true) ?? dark)} />
 }
 
 export const activate = defineUi((ctx) => {
