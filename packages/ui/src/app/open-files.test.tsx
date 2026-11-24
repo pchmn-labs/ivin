@@ -395,7 +395,9 @@ test("the files card's left edge resizes it, keeps the chat's minimum width, and
   await userEvent.keyboard("{ArrowLeft}{ArrowLeft}")
   await expect.poll(cardWidth).toBe(Math.round(start) + 32)
 
-  for (let i = 0; i < 60; i++) await userEvent.keyboard("{ArrowLeft}")
+  const handle = resizeHandle().element()
+  for (let i = 0; i < 60; i++)
+    handle.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowLeft", bubbles: true }))
   const chat = page.getByRole("main").element().querySelector(".iv-tab-view__session")!
   expect(chat.getBoundingClientRect().width).toBeGreaterThanOrEqual(320)
   const widest = cardWidth()

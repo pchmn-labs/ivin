@@ -12,6 +12,12 @@
   background: var(--iv-bg-card);
 }
 
+.iv-sub-view-card > .iv-resize-handle[data-edge="left"]::after {
+  top: var(--iv-radius-card);
+  bottom: var(--iv-radius-card);
+  border-radius: var(--iv-radius-pill);
+}
+
 .iv-sub-view-card__row {
   display: flex;
   flex: none;
