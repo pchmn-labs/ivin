@@ -1,26 +1,42 @@
-import { useAtomSet } from "@effect/atom-react"
-import { useEffect } from "react"
+import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { AsyncResult } from "effect/reactivity"
+import { useEffect, useRef } from "react"
+import { listPluginsAtom } from "../../plugin/atoms/list-plugins.ts"
+import { reportPluginFailureAtom } from "../../plugin/atoms/report-plugin-failure.ts"
 import { writeErrorAtom } from "../atoms/write-error.ts"
-import { errorReport, thrownByPlugin } from "../rules/error-report.ts"
+import { errorReport, pluginOfError } from "../rules/error-report.ts"
 
 export const useReportUncaughtErrors = () => {
   const writeError = useAtomSet(writeErrorAtom)
+  const reportPlugin = useAtomSet(reportPluginFailureAtom)
+  const listed = useAtomValue(listPluginsAtom)
+  const bundles = useRef(new Map<string, string>())
+  bundles.current = new Map(
+    AsyncResult.isSuccess(listed)
+      ? listed.value.flatMap((plugin) =>
+          plugin._tag === "compiled" ? [[plugin.bundle, plugin.id]] : [],
+        )
+      : [],
+  )
 
   useEffect(() => {
-    const onError = (event: ErrorEvent) => {
-      const error: unknown = event.error ?? event.message
-      if (thrownByPlugin(event.filename, error)) return
-      writeError(errorReport("uncaught error", error))
+    const report = (action: string, filename: string | undefined, error: unknown) => {
+      const pluginId = pluginOfError(filename, error, bundles.current)
+      if (pluginId === null) return writeError(errorReport(action, error))
+      reportPlugin({
+        id: pluginId,
+        reason: `Its code threw (${action}): ${errorReport(action, error).message}`,
+      })
     }
-    const onRejection = (event: PromiseRejectionEvent) => {
-      if (thrownByPlugin(undefined, event.reason)) return
-      writeError(errorReport("unhandled rejection", event.reason))
-    }
+    const onError = (event: ErrorEvent) =>
+      report("uncaught error", event.filename, event.error ?? event.message)
+    const onRejection = (event: PromiseRejectionEvent) =>
+      report("unhandled rejection", undefined, event.reason)
     window.addEventListener("error", onError)
     window.addEventListener("unhandledrejection", onRejection)
     return () => {
       window.removeEventListener("error", onError)
       window.removeEventListener("unhandledrejection", onRejection)
     }
-  }, [writeError])
+  }, [writeError, reportPlugin])
 }

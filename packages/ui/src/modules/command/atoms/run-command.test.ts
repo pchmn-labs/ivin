@@ -1,5 +1,6 @@
 import { AtomRegistry } from "effect/reactivity"
 import { afterEach, expect, test, vi } from "vitest"
+import { makeTestRegistry } from "../../../core/test-registry.ts"
 import { notificationManager } from "../../../core/components/notification/notification-manager.ts"
 import { CommandFailure } from "../rules/command-failure.ts"
 import { commandsAtom } from "./commands.ts"
@@ -75,5 +76,23 @@ test("a command that throws still counts as run", async () => {
   expect(runCommand(registry, "a.b")).toBe(true)
 
   await vi.waitFor(() => expect(unhandled).toHaveBeenCalledOnce())
+  process.off("unhandledRejection", unhandled)
+})
+
+test("a plugin's command that throws is written to the plugin's log, and the app's reporter hears nothing", async () => {
+  const { registry, server } = makeTestRegistry()
+  vi.spyOn(notificationManager, "add").mockReturnValue("n")
+  const unhandled = vi.fn()
+  process.on("unhandledRejection", unhandled)
+  addCommandHandler(registry, "notes.add", () => Promise.reject(new Error("raw")), "notes")
+
+  runCommand(registry, "notes.add")
+
+  await vi.waitFor(() =>
+    expect(server.pluginFailures).toEqual([
+      { id: "notes", reason: "Its command notes.add threw: raw" },
+    ]),
+  )
+  expect(unhandled).not.toHaveBeenCalled()
   process.off("unhandledRejection", unhandled)
 })

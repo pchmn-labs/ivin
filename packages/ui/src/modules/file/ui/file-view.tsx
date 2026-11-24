@@ -46,10 +46,7 @@ export function FileView({
   const write = useAtomSet(writeFileAtom)
   const save = (force = false) => write({ sessionId, workingFolder, path, force })
 
-  const read =
-    AsyncResult.isSuccess(result) && !result.waiting && result.value.kind === "text"
-      ? result.value
-      : null
+  const read = AsyncResult.isSuccess(result) && result.value.kind === "text" ? result.value : null
   useEffect(() => {
     if (read !== null) registry.set(editAtom, withRead(registry.get(editAtom), read))
   }, [read, registry, editAtom])

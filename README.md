@@ -4,7 +4,7 @@ A desktop app to run and supervise coding agents (Claude Code, Codex, ACP agents
 
 ## Status
 
-Work in progress, version 0.x: the app runs from source, with Claude Code as its only harness. No release is published, and the packaged app is unsigned. The design is in [docs/architecture/](docs/architecture/README.md), and the plugin API may change without notice until 1.0.
+Work in progress, version 0.x: the app runs from source, with Claude Code as its only harness. Releases are published by hand as unsigned macOS zips. The design is in [docs/architecture/](docs/architecture/README.md), and the plugin API may change without notice until 1.0.
 
 ## What it is
 

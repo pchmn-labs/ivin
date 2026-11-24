@@ -375,6 +375,28 @@ test("Discard all asks with what goes back and what is deleted, and discards onl
   await expect.element(committedRow("plan.md")).toBeVisible()
 })
 
+test("Discard all with 300 changes keeps its buttons on screen and scrolls the list, and a long name wraps", async () => {
+  const server = makeServer()
+  const longName = `${"a".repeat(300)}.ts`
+  server.changes.set(project, {
+    kind: "listed",
+    changes: [
+      change(longName, "modified"),
+      ...Array.from({ length: 299 }, (_, i) => change(`src/file-${i}.ts`, "modified")),
+    ],
+  })
+  await mount(server)
+  await page.getByRole("button", { name: "Discard all uncommitted changes" }).click()
+  await expect.element(discardDialog()).toBeVisible()
+  const box = discardDialog().element().getBoundingClientRect()
+  expect(box.height).toBeLessThanOrEqual(window.innerHeight - 32)
+  const discard = discardDialog().getByRole("button", { name: "Discard all" }).element()
+  expect(discard.getBoundingClientRect().bottom).toBeLessThanOrEqual(window.innerHeight)
+  const body = discardDialog().element().querySelector<HTMLElement>(".iv-dialog__body")!
+  expect(body.scrollHeight).toBeGreaterThan(body.clientHeight)
+  expect(body.scrollWidth).toBeLessThanOrEqual(body.clientWidth)
+})
+
 test("⌘Backspace in the list asks to discard every uncommitted change", async () => {
   await mount(makeServer())
   ;(committedRow("plan.md").element() as HTMLElement).focus()

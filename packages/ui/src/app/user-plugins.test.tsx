@@ -136,3 +136,48 @@ test("a plugin listed later, once its dependencies install, loads beside those a
   await expect.element(page.getByText("second plugin")).toBeVisible()
   await expect.element(page.getByText("first plugin")).toBeVisible()
 })
+
+test("a user plugin whose activate throws leaves the built-in in place, logged once, through later listings", async () => {
+  let builtInActivations = 0
+  const builtIn: UiPluginEntry = {
+    manifest: { id: "changes" },
+    activate: defineUi((ctx) => {
+      builtInActivations++
+      ctx.slots.add("sidebar.section", () => <span>built-in changes</span>)
+    }),
+  }
+  let wasAbsent = false
+  const observer = new MutationObserver(() => {
+    if (document.body.textContent?.includes("built-in changes") === false) wasAbsent = true
+  })
+  const { server } = await renderWith(
+    [builtIn],
+    importFromSource({
+      "bad.js": `export const activate = () => { throw new Error("boom") }`,
+      "a.js": textBundle("plugin a"),
+      "b.js": textBundle("plugin b"),
+    }),
+    (server) =>
+      server.userPlugins.push({
+        _tag: "compiled",
+        id: "changes",
+        name: "Changes",
+        bundle: "bad.js",
+      }),
+  )
+  await expect.element(page.getByText("built-in changes")).toBeVisible()
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+
+  server.addUserPlugin({ _tag: "compiled", id: "a", name: "A", bundle: "a.js" })
+  await expect.element(page.getByText("plugin a")).toBeVisible()
+  server.addUserPlugin({ _tag: "compiled", id: "b", name: "B", bundle: "b.js" })
+  await expect.element(page.getByText("plugin b")).toBeVisible()
+  observer.disconnect()
+
+  expect(server.pluginFailures).toEqual([
+    { id: "changes", reason: "Its activate function threw: boom" },
+  ])
+  expect(builtInActivations).toBe(2)
+  expect(wasAbsent).toBe(false)
+  await expect.element(page.getByText("built-in changes")).toBeVisible()
+})

@@ -49,7 +49,7 @@ test("a tool call shows its icon, name and input on one row, its result opening 
   await mount(tool("done", "file contents"))
   const row = page.getByTestId("tool-output").element().querySelector("summary")!
   expect(row.textContent).toBe("Read/a.ts")
-  await expect.element(page.getByText("file contents")).not.toBeVisible()
+  await expect.element(page.getByText("file contents")).not.toBeInTheDocument()
   await page.getByText("Read").click()
   await expect.element(page.getByText("file contents")).toBeVisible()
 })

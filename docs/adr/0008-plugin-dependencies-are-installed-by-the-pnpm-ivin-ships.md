@@ -20,3 +20,4 @@ pnpm 11 rather than 12: pnpm 12 runs only as a native executable per platform (4
 - A `file:` dependency must be an absolute path: the dependencies are installed and locked outside the plugin's folder.
 - The plugin's other `package.json` fields (`peerDependencies` on `@ivin/plugin-api`, `devDependencies`) are not installed. Missing peers of a dependency are not installed either: `react` and `react-dom` come from the window.
 - Upgrading the shipped pnpm to a major that changes the lockfile format needs a check that it still installs lockfiles written by the previous one.
+- Reopen this choice when pnpm 11 stops receiving fixes, or when ivin is signed and distributed: the executable's size and signing are then the cost of staying current.

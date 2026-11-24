@@ -17,9 +17,9 @@
   },
   "dependencies": {
     "@ivin/contracts": "workspace:*",
-    "effect": "4.1.4"
+    "effect": "4.1.5"
   },
   "devDependencies": {
-    "vitest": "5.1.0"
+    "vitest": "5.1.1"
   }
 }

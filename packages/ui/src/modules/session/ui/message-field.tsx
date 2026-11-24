@@ -2,6 +2,7 @@ import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { DraftImage, MessageFieldProps } from "@ivin/plugin-api/ui"
 import { useImperativeHandle, useRef, useState } from "react"
 import { hoveredImageAtom, imageViewerAtom } from "../../transcript/atoms/image-viewer.ts"
+import { imageMarker } from "../../transcript/rules/message-parts.ts"
 import { imageDataUrl } from "../../transcript/rules/image-url.ts"
 import { ImagePreview } from "../../transcript/ui/image-preview.tsx"
 import { readImageFile } from "../adapters/read-image-file.ts"
@@ -12,6 +13,14 @@ import { type ImageRefusal, imageRefusal, refusalMessage } from "../rules/image-
 import { DraftImages } from "./draft-images.tsx"
 import { type MessageEditorHandle, MessageEditor, carriesFiles } from "./message-editor.tsx"
 import "./message-field.css"
+
+// Images still being read, per session; module-level so a read outlives the composer it began in.
+const readsInFlight = new Map<string, { count: number; highest: number }>()
+
+const withMarkers = (text: string, images: ReadonlyArray<DraftImage>) => {
+  const markers = images.map((image) => imageMarker(image.number)).join(" ")
+  return text === "" || /\s$/.test(text) ? text + markers : `${text} ${markers}`
+}
 
 export function MessageField({
   ref,
@@ -55,8 +64,17 @@ export function MessageField({
         : refusalMessage(refused, harness?.name ?? "the agent", maxImageBytes),
     )
     if (accepted.length === 0) return
-    const contents = await Promise.all(accepted.map(readImageFile))
-    let number = nextImageNumber(session?.lastImageNumber ?? 0, draft)
+    const reading = readsInFlight.get(sessionId) ?? { count: 0, highest: 0 }
+    let number = nextImageNumber(Math.max(session?.lastImageNumber ?? 0, reading.highest), draft)
+    readsInFlight.set(sessionId, {
+      count: reading.count + 1,
+      highest: number + accepted.length - 1,
+    })
+    const contents = await Promise.all(accepted.map(readImageFile)).finally(() => {
+      const left = readsInFlight.get(sessionId)!
+      if (left.count === 1) readsInFlight.delete(sessionId)
+      else readsInFlight.set(sessionId, { ...left, count: left.count - 1 })
+    })
     const added: Array<DraftImage> = accepted.map((file, i) => ({
       id: crypto.randomUUID(),
       number: number++,
@@ -64,8 +82,12 @@ export function MessageField({
       base64: contents[i] ?? "",
       name: file.name || "Pasted image",
     }))
-    onDraftChange((current) => ({ ...current, images: [...current.images, ...added] }))
-    editor.current?.insertImages(added, at)
+    const handle = editor.current
+    onDraftChange((current) => ({
+      text: handle ? current.text : withMarkers(current.text, added),
+      images: [...current.images, ...added],
+    }))
+    handle?.insertImages(added, at)
   }
 
   const openDraftImage = (imageId: string) => openViewer({ sessionId, images: "draft", imageId })

@@ -160,7 +160,7 @@ export const stepOpenByDefault = (work: TurnWork, index: number, live: boolean) 
   live ? index === work.steps.length - 1 : work.calls <= OPEN_STEPS_UP_TO
 
 export const SHOWN_STEPS_WHILE_LIVE = 3
-export const SHOWN_CALLS_WHILE_LIVE = 5
+export const SHOWN_CALLS_WHILE_LIVE = 8
 
 export const earlierSteps = (work: TurnWork, live: boolean): ReadonlyArray<Step> =>
   live ? work.steps.slice(0, Math.max(0, work.steps.length - SHOWN_STEPS_WHILE_LIVE)) : []

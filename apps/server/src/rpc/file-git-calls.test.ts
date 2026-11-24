@@ -3,7 +3,7 @@ import { layerScripted } from "@ivin/harness"
 import { Effect, Layer, type Scope, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
@@ -180,6 +180,60 @@ test("two sessions in one working folder run one check-ignore per batch", async 
           first.batches === second.batches &&
           gitLog.calls().filter(isCheckIgnore).length === first.batches,
       )
+    }),
+  )
+})
+
+test("changes in a folder outside a repository run no git process, node_modules included", async () => {
+  const plain = join(root, "plain")
+  mkdirSync(join(plain, "node_modules"), { recursive: true })
+  const { listed, calls } = await withServer((client) =>
+    Effect.gen(function* () {
+      const { id: sessionId } = yield* client["session.create"]({ projectPath: plain })
+      const seen: string[] = []
+      yield* client["file.watch"]({ sessionId }).pipe(
+        Stream.runForEach((batch) => Effect.sync(() => void seen.push(...batch.paths))),
+        Effect.forkScoped,
+      )
+      yield* until(() => {
+        writeFileSync(join(plain, "node_modules", "dep.js"), String(Math.random()))
+        return seen.some((path) => path.startsWith("node_modules"))
+      })
+      return { listed: seen, calls: gitLog.calls() }
+    }),
+  )
+  expect(listed.length).toBeGreaterThan(0)
+  expect(calls.filter(isCheckIgnore)).toEqual([])
+})
+
+test("once a folder is known ignored, a change under it queues nothing and runs no check-ignore", async () => {
+  mkdirSync(join(project, "dist"))
+  writeFileSync(join(project, ".gitignore"), "dist\n")
+  await withServer((client) =>
+    Effect.gen(function* () {
+      const { id: sessionId } = yield* client["session.create"]({ projectPath: project })
+      const reader: Reader = { batches: 0, reads: 0 }
+      const seen: string[] = []
+      yield* client["file.watch"]({ sessionId }).pipe(
+        Stream.runForEach((batch) =>
+          Effect.sync(() => {
+            reader.batches++
+            seen.push(...batch.paths)
+          }),
+        ),
+        Effect.forkScoped,
+      )
+      yield* untilWatched([reader])
+      writeFileSync(join(project, "dist", "first.js"), "1")
+      yield* Effect.sleep("500 millis")
+      yield* until(() => reader.batches > 0)
+      gitLog.clear()
+      const before = reader.batches
+      writeFileSync(join(project, "dist", "second.js"), "2")
+      yield* Effect.sleep("500 millis")
+      expect(reader.batches).toBe(before)
+      expect(gitLog.calls().filter(isCheckIgnore)).toEqual([])
+      expect(seen.filter((path) => path.startsWith("dist"))).toEqual([])
     }),
   )
 })
