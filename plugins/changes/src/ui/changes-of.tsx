@@ -19,7 +19,7 @@ import { changeItems } from "../rules/change-items.ts"
 import type { Discarding } from "../rules/discarding.ts"
 import { AREA, COMMITTED, UNCOMMITTED } from "../rules/groups.ts"
 import { listError } from "../rules/list-error.ts"
-import { FOLDER_DELETED, committedMessage, nothingChangedMessage } from "../rules/messages.ts"
+import { FOLDER_DELETED, emptyMessages } from "../rules/messages.ts"
 import type { OnScreen } from "../rules/on-screen.ts"
 import { DiscardDialog } from "./discard-dialog.tsx"
 import { ListingFailure } from "./listing-failure.tsx"
@@ -134,8 +134,7 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
     case "failed":
       return <ListingFailure listing={listing} retry={retry} />
     case "listed": {
-      const below = committedMessage(committed.listing)
-      const nothingChanged = nothingChangedMessage(changes.length, committed.listing)
+      const empty = emptyMessages(changes.length, committed.listing)
       return (
         <Stack direction="column" gap={3}>
           {openFailure !== null && (
@@ -144,12 +143,7 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
               {...(openFailure.retryable && { onRetry: openFailure.retry })}
             />
           )}
-          {nothingChanged !== null && <EmptyMessage>{nothingChanged}</EmptyMessage>}
-          {changes.length === 0 && nothingChanged === null && (
-            <EmptyMessage>
-              No uncommitted changes. What the agent changes shows up here.
-            </EmptyMessage>
-          )}
+          {empty.uncommitted !== null && <EmptyMessage>{empty.uncommitted}</EmptyMessage>}
           {groups.length > 0 && (
             <ChangeList
               label="Changes"
@@ -171,7 +165,7 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
               }}
             />
           )}
-          {below !== null && nothingChanged === null && <EmptyMessage>{below}</EmptyMessage>}
+          {empty.committed !== null && <EmptyMessage>{empty.committed}</EmptyMessage>}
           {committed.listing.kind === "failed" && (
             <ListingFailure listing={committed.listing} retry={committed.retry} />
           )}

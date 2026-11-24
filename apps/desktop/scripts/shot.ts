@@ -66,6 +66,7 @@ export const formatTotal = (cents: number, currency = "EUR") =>
   git("remote", "add", "origin", `${dir}.origin.git`)
   git("branch", "feat/remote")
   git("push", "--quiet", "origin", "main", "feat/remote")
+  git("remote", "set-head", "origin", "main")
   git("branch", "-D", "--quiet", "feat/remote")
 }
 
@@ -117,7 +118,7 @@ try {
 
   await shoot("new-session")
   await window.getByRole("tab", { name: /^Changes/ }).click()
-  await window.waitForTimeout(1000)
+  await window.getByText(/^No changes since/).waitFor()
   await shoot("no-changes")
   await window.getByRole("tab", { name: /^Sessions/ }).click()
   // Only a packaged build checks for updates, so main sends the window the states it would.
