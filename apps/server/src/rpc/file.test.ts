@@ -1,4 +1,4 @@
-import { FILE_LIST_LIMIT, FILE_SIZE_LIMIT } from "@ivin/contracts/file"
+import { FILE_LIST_LIMIT, FILE_SIZE_LIMIT, IMAGE_SIZE_LIMIT } from "@ivin/contracts/file"
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { layerScripted } from "@ivin/harness"
 import { Effect, Layer, type Scope, Stream } from "effect"
@@ -245,13 +245,56 @@ test("a file above the size limit is reported with its size, and one at the limi
 
   const [atLimit, big] = await readIn(project, "limit.txt", "big.txt")
   expect(atLimit).toMatchObject({ kind: "binary" })
-  expect(big).toEqual({ kind: "too_large", size: FILE_SIZE_LIMIT + 1 })
+  expect(big).toEqual({
+    kind: "too_large",
+    size: FILE_SIZE_LIMIT + 1,
+    limit: FILE_SIZE_LIMIT,
+  })
+})
+
+const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
+
+test("a raster image is returned in base64 with its MIME type, an svg as text", async () => {
+  writeFileSync(join(project, "shot.png"), PNG)
+  writeFileSync(join(project, "UP.JPG"), PNG)
+  write(join(project, "logo.svg"), "<svg/>")
+
+  expect(await readIn(project, "shot.png", "UP.JPG", "logo.svg")).toEqual([
+    {
+      kind: "image",
+      mimeType: "image/png",
+      data: PNG.toString("base64"),
+      version: expect.any(String),
+    },
+    {
+      kind: "image",
+      mimeType: "image/jpeg",
+      data: PNG.toString("base64"),
+      version: expect.any(String),
+    },
+    { kind: "text", text: "<svg/>", version: expect.any(String) },
+  ])
+})
+
+test("an image is limited by the image limit, not the file limit", async () => {
+  writeFileSync(join(project, "ok.png"), "")
+  truncateSync(join(project, "ok.png"), FILE_SIZE_LIMIT + 1)
+  writeFileSync(join(project, "big.png"), "")
+  truncateSync(join(project, "big.png"), IMAGE_SIZE_LIMIT + 1)
+
+  const [ok, big] = await readIn(project, "ok.png", "big.png")
+  expect(ok).toMatchObject({ kind: "image", mimeType: "image/png" })
+  expect(big).toEqual({
+    kind: "too_large",
+    size: IMAGE_SIZE_LIMIT + 1,
+    limit: IMAGE_SIZE_LIMIT,
+  })
 })
 
 test("a file with a zero byte at its start is binary", async () => {
-  writeFileSync(join(project, "image.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2]))
+  writeFileSync(join(project, "image.dat"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2]))
 
-  expect(await readIn(project, "image.png")).toEqual([{ kind: "binary" }])
+  expect(await readIn(project, "image.dat")).toEqual([{ kind: "binary" }])
 })
 
 test("a missing file and a folder are not read", async () => {
@@ -312,6 +355,65 @@ test("reading in a deleted working folder, and for an unknown session, fails", a
   expect(
     await withServer((client) =>
       client["file.readFile"]({ sessionId: "nope", path: "a.txt" }).pipe(
+        Effect.catch((error) => Effect.succeed(error._tag)),
+      ),
+    ),
+  ).toBe("SessionNotFound")
+})
+
+// Reads `paths` outside the working folder in a new session of `project`, and the error's tag when it fails.
+const readOutside = (...paths: string[]) =>
+  withServer((client) =>
+    Effect.gen(function* () {
+      const { id } = yield* client["session.create"]({ projectPath: project })
+      return yield* Effect.forEach(paths, (path) =>
+        client["file.readOutsideFile"]({ sessionId: id, path }).pipe(
+          Effect.catch((error) =>
+            Effect.succeed(
+              error._tag === "FileNotRead" ? `FileNotRead:${error.reason}` : error._tag,
+            ),
+          ),
+        ),
+      )
+    }),
+  )
+
+test("reads a text file and an image outside the working folder", async () => {
+  write(join(root, "elsewhere/notes.txt"), "hello\n")
+  writeFileSync(join(root, "elsewhere/shot.png"), PNG)
+  writeFileSync(join(root, "elsewhere/big.png"), "")
+  truncateSync(join(root, "elsewhere/big.png"), IMAGE_SIZE_LIMIT + 1)
+  write(join(root, "elsewhere/bin.dat"), "a\0b")
+
+  expect(
+    await readOutside(
+      join(root, "elsewhere/notes.txt"),
+      join(root, "elsewhere/shot.png"),
+      join(root, "elsewhere/big.png"),
+      join(root, "elsewhere/bin.dat"),
+    ),
+  ).toEqual([
+    { kind: "text", text: "hello\n", version: expect.any(String) },
+    {
+      kind: "image",
+      mimeType: "image/png",
+      data: PNG.toString("base64"),
+      version: expect.any(String),
+    },
+    { kind: "too_large", size: IMAGE_SIZE_LIMIT + 1, limit: IMAGE_SIZE_LIMIT },
+    { kind: "binary" },
+  ])
+})
+
+test("reading outside the working folder needs an existing absolute path and a session", async () => {
+  write(join(project, "a.txt"), "inside")
+
+  expect(await readOutside(join(root, "nowhere.txt"), "a.txt", "../a.txt", root)).toEqual(
+    Array(4).fill("FileNotRead:missing"),
+  )
+  expect(
+    await withServer((client) =>
+      client["file.readOutsideFile"]({ sessionId: "nope", path: join(root, "a.txt") }).pipe(
         Effect.catch((error) => Effect.succeed(error._tag)),
       ),
     ),

@@ -59,7 +59,11 @@ const makeServer = () => {
   server.files.set(`${project}/README.md`, { kind: "text", text: "# Shop\n" })
   server.files.set(`${project}/src/main.ts`, { kind: "text", text: 'export const shop = "open"\n' })
   server.files.set(`${project}/logo.png`, { kind: "binary" })
-  server.files.set(`${project}/bundle.js`, { kind: "too_large", size: 3 * 1024 * 1024 })
+  server.files.set(`${project}/bundle.js`, {
+    kind: "too_large",
+    size: 3 * 1024 * 1024,
+    limit: 2 * 1024 * 1024,
+  })
   server.openTab("s2")
   server.openTab("s1")
   return server

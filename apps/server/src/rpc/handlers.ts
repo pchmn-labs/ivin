@@ -19,6 +19,7 @@ import { layerChangeFeed } from "../modules/file/usecases/change-feed.ts"
 import { watchFolder } from "../modules/file/usecases/watch-folder.ts"
 import { listFolder } from "../modules/file/usecases/list-folder.ts"
 import { readFile } from "../modules/file/usecases/read-file.ts"
+import { readOutsideFile } from "../modules/file/usecases/read-outside-file.ts"
 import { listChanges } from "../modules/file/usecases/list-changes.ts"
 import { readDiff } from "../modules/file/usecases/read-diff.ts"
 import {
@@ -225,6 +226,7 @@ export const handlers = Rpcs.toLayer(
       "worktree.listBranches": ({ projectPath }) => listBranches(projectPath),
       "file.listFolder": ({ sessionId, path }) => listFolder(sessionId, path),
       "file.readFile": ({ sessionId, path }) => readFile(sessionId, path),
+      "file.readOutsideFile": ({ sessionId, path }) => readOutsideFile(sessionId, path),
       "file.listFiles": ({ sessionId }) => listFiles(sessionId),
       "file.gitStatus": ({ sessionId }) => readGitStatus(sessionId),
       "file.listChanges": ({ sessionId }) => listChanges(sessionId),

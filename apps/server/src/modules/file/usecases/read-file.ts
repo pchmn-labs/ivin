@@ -1,17 +1,10 @@
-import {
-  FILE_SIZE_LIMIT,
-  type FileContent,
-  FileNotRead,
-  PathOutsideWorkingFolder,
-} from "@ivin/contracts/file"
+import { FileNotRead, PathOutsideWorkingFolder } from "@ivin/contracts/file"
 import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
-import { isBinary } from "../rules/binary-content.ts"
 import { isWithin, relativeNames } from "../rules/folder-path.ts"
-import { contentVersion } from "./content-version.ts"
-import { FileReader } from "./file-reader.ts"
 import { FolderReader } from "./folder-reader.ts"
+import { readContent } from "./read-content.ts"
 
 export const readFile = (sessionId: string, path: string) =>
   Effect.gen(function* () {
@@ -26,16 +19,5 @@ export const readFile = (sessionId: string, path: string) =>
     const file = yield* folders.realPath([root, ...names].join("/"))
     if (file === null) return yield* new FileNotRead({ sessionId, path, reason: "missing" })
     if (!isWithin(root, file)) return yield* new PathOutsideWorkingFolder({ sessionId, path })
-    const toError = ({ reason }: { reason: "missing" | "unreadable" }) =>
-      new FileNotRead({ sessionId, path, reason })
-    const reader = yield* FileReader
-    const size = yield* reader.size(file).pipe(Effect.mapError(toError))
-    if (size > FILE_SIZE_LIMIT) return { kind: "too_large", size } satisfies FileContent
-    const bytes = yield* reader.read(file).pipe(Effect.mapError(toError))
-    if (isBinary(bytes)) return { kind: "binary" } satisfies FileContent
-    return {
-      kind: "text",
-      text: new TextDecoder().decode(bytes),
-      version: yield* contentVersion(bytes),
-    } satisfies FileContent
+    return yield* readContent(sessionId, path, file)
   })

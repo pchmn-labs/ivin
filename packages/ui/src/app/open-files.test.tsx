@@ -1,7 +1,7 @@
 import { RegistryProvider } from "@effect/atom-react"
 import type { FolderEntry } from "@ivin/contracts/file"
 import { DateTime } from "effect"
-import { afterEach, beforeEach, expect, test } from "vitest"
+import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
@@ -59,7 +59,11 @@ const makeServer = () => {
   server.files.set(`${project}/README.md`, { kind: "text", text: "# Shop\n" })
   server.files.set(`${project}/src/main.ts`, { kind: "text", text: 'export const shop = "open"\n' })
   server.files.set(`${project}/logo.png`, { kind: "binary" })
-  server.files.set(`${project}/bundle.js`, { kind: "too_large", size: 3 * 1024 * 1024 })
+  server.files.set(`${project}/bundle.js`, {
+    kind: "too_large",
+    size: 3 * 1024 * 1024,
+    limit: 2 * 1024 * 1024,
+  })
   server.openTab("s2")
   server.openTab("s1")
   return server
@@ -331,19 +335,91 @@ test("a web link is left to the browser and opens no file", async () => {
     .toHaveAttribute("href", "https://github.com/pchmn-labs/ivin")
 })
 
-test("a link outside the working folder opens nothing and says why", async () => {
+const outsideBar = () =>
+  page.getByText(".zshrc is outside the working folder, so it cannot be edited.")
+
+test("a link outside the working folder opens the file read-only, under a bar that says so", async () => {
   const server = makeServer()
+  server.files.set("/Users/me/.zshrc", { kind: "text", text: 'export EDITOR="vim"\n' })
   server.seedItems("s1", [answer("[zshrc](/Users/me/.zshrc)")])
   await mount(server)
   await transcriptLink("zshrc").click()
-  await expect
-    .element(
-      page.getByText(
-        "/Users/me/.zshrc is outside the session's working folder, so it is not opened.",
-      ),
-    )
-    .toBeVisible()
-  await expect.element(card()).not.toBeInTheDocument()
+  await expect.element(code(".zshrc")).toHaveTextContent('export EDITOR="vim"')
+  await expect.element(outsideBar()).toBeVisible()
+  ;(code(".zshrc").element() as HTMLElement).focus()
+  await userEvent.keyboard("xyz")
+  await expect.element(code(".zshrc")).toHaveTextContent('export EDITOR="vim"')
+  expect(server.subViews.get("s1")?.subViews).toEqual([{ kind: "file", path: "/Users/me/.zshrc" }])
+})
+
+test("the bar of a file outside the working folder shows it in the platform's file manager", async () => {
+  const showInFolder = vi.fn(() => Promise.resolve())
+  vi.stubGlobal("ivin", { platform: "darwin", showInFolder })
+  try {
+    const server = makeServer()
+    server.files.set("/Users/me/.zshrc", { kind: "text", text: "alias gs=git\n" })
+    server.seedItems("s1", [answer("See `/Users/me/.zshrc:1`.")])
+    await mount(server)
+    await transcriptLink("/Users/me/.zshrc:1").click()
+    await page.getByRole("button", { name: "Show in Finder" }).click()
+    expect(showInFolder).toHaveBeenCalledWith("/Users/me/.zshrc")
+  } finally {
+    vi.unstubAllGlobals()
+  }
+})
+
+test("a path in inline code opens its file scrolled to its line, with the mouse or the keyboard", async () => {
+  const server = makeServer()
+  server.files.set(`${project}/src/main.ts`, { kind: "text", text: longMain })
+  server.seedItems("s1", [answer("Start in `src/main.ts:1500`, then read `README.md`.")])
+  await mount(server)
+  await transcriptLink("src/main.ts:1500").click()
+  await expect.element(code("main.ts").getByText("line 1500", { exact: true })).toBeInViewport()
+  ;(transcriptLink("README.md").element() as HTMLElement).focus()
+  await userEvent.keyboard("{Enter}")
+  await expect.element(code("README.md")).toHaveTextContent("# Shop")
+})
+
+test("an absolute path or a file URL in inline code opens the same file", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [answer("`/dev/shop/README.md` and `file:///dev/shop/src/main.ts`")])
+  await mount(server)
+  await transcriptLink("/dev/shop/README.md").click()
+  await expect.element(code("README.md")).toHaveTextContent("# Shop")
+  await transcriptLink("file:///dev/shop/src/main.ts").click()
+  await expect.element(fileTab("main.ts")).toHaveAttribute("aria-selected", "true")
+})
+
+test("inline code that is not a path, or code in a block, stays plain code", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [
+    answer("Run `npm install`, call `foo()`, see `https://example.com`.\n\n```\nsrc/main.ts\n```"),
+  ])
+  await mount(server)
+  await expect.element(page.getByText("npm install")).toBeVisible()
+  expect(page.getByRole("link").elements()).toEqual([])
+})
+
+test("the file on a tool row that read it opens beside the chat", async () => {
+  const server = makeServer()
+  server.seedItems("s1", [
+    {
+      sessionId: "s1",
+      id: "t1",
+      position: 0,
+      at: 0,
+      type: "tool_call" as const,
+      toolCallId: "tc1",
+      name: "Read",
+      kind: "read" as const,
+      input: { file_path: "/dev/shop/README.md" },
+      status: "done" as const,
+      output: "# Shop",
+    },
+  ])
+  await mount(server)
+  await transcriptLink("/dev/shop/README.md").click()
+  await expect.element(code("README.md")).toHaveTextContent("# Shop")
 })
 
 test("a linked file that fails to open says so next to the answer, and Retry opens it", async () => {
@@ -368,6 +444,125 @@ test("a linked file that does not exist opens with the file view's message", asy
   await expect
     .element(card().getByText("old.ts no longer exists. Retry once it is back."))
     .toBeVisible()
+})
+
+const PNG =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
+const GIF = "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+const jpeg = () => {
+  const canvas = document.createElement("canvas")
+  canvas.width = 3
+  canvas.height = 2
+  return canvas.toDataURL("image/jpeg").split(",")[1]!
+}
+const SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4"/></svg>\n'
+const image = (name: string) => card().getByRole("img", { name })
+
+test("a png, a jpg, a gif and an svg open as images, each with its size", async () => {
+  const server = makeServer()
+  server.folders.set(project, folder("logo.png", "photo.jpg", "spin.gif", "mark.svg"))
+  server.files.set(`${project}/logo.png`, {
+    kind: "image",
+    mimeType: "image/png",
+    data: PNG,
+    version: "1",
+  })
+  server.files.set(`${project}/photo.jpg`, {
+    kind: "image",
+    mimeType: "image/jpeg",
+    data: jpeg(),
+    version: "1",
+  })
+  server.files.set(`${project}/spin.gif`, {
+    kind: "image",
+    mimeType: "image/gif",
+    data: GIF,
+    version: "1",
+  })
+  server.files.set(`${project}/mark.svg`, { kind: "text", text: SVG })
+  await mount(server)
+  await showFiles()
+  await item("logo.png").click()
+  await expect.element(image("logo.png")).toBeVisible()
+  await expect.element(card().getByText(/^1 × 1 · \d+ B$/)).toBeVisible()
+  await item("photo.jpg").click()
+  await expect.element(card().getByText(/^3 × 2 · /)).toBeVisible()
+  await item("spin.gif").click()
+  await expect.element(image("spin.gif")).toBeVisible()
+  await item("mark.svg").click()
+  await expect.element(card().getByText(/^4 × 4 · /)).toBeVisible()
+})
+
+test("an svg switches to its source, editable, and back to the image", async () => {
+  const server = makeServer()
+  server.folders.set(project, folder("mark.svg"))
+  server.files.set(`${project}/mark.svg`, { kind: "text", text: SVG })
+  await mount(server)
+  await showFiles()
+  await item("mark.svg").click()
+  await expect.element(image("mark.svg")).toBeVisible()
+  await card().getByRole("button", { name: "Source" }).click()
+  await expect.poll(() => code("mark.svg").element().textContent).toContain("rect width")
+  ;(code("mark.svg").element() as HTMLElement).focus()
+  await userEvent.keyboard("<!-- -->")
+  await expect.poll(() => code("mark.svg").element().textContent).toContain("<!-- --><svg")
+  await card().getByRole("button", { name: "Image" }).click()
+  await expect.element(image("mark.svg")).toBeVisible()
+})
+
+test("an image over the limit, and one that does not decode, say so in place of the image", async () => {
+  const server = makeServer()
+  server.folders.set(project, folder("demo.gif", "broken.png"))
+  server.files.set(`${project}/demo.gif`, {
+    kind: "too_large",
+    size: 48 * 1024 * 1024,
+    limit: 10 * 1024 * 1024,
+  })
+  server.files.set(`${project}/broken.png`, {
+    kind: "image",
+    mimeType: "image/png",
+    data: btoa("not a png"),
+    version: "1",
+  })
+  await mount(server)
+  await showFiles()
+  await item("demo.gif").click()
+  await expect
+    .element(card().getByText("demo.gif is 48 MB, over the 10 MB ivin shows, so it is not shown."))
+    .toBeVisible()
+  await item("broken.png").click()
+  await expect
+    .element(
+      card().getByText(
+        "broken.png cannot be shown: its data is damaged or in a format ivin cannot read.",
+      ),
+    )
+    .toBeVisible()
+  await expect.element(card().getByRole("img")).not.toBeInTheDocument()
+})
+
+test("an image changed on disk shows again", async () => {
+  const server = makeServer()
+  server.folders.set(project, folder("logo.png"))
+  server.files.set(`${project}/logo.png`, {
+    kind: "image",
+    mimeType: "image/png",
+    data: PNG,
+    version: "1",
+  })
+  await mount(server)
+  await showFiles()
+  await item("logo.png").click()
+  await expect.element(card().getByText(/^1 × 1 · /)).toBeVisible()
+  server.files.set(`${project}/logo.png`, {
+    kind: "image",
+    mimeType: "image/jpeg",
+    data: jpeg(),
+    version: "2",
+  })
+  server.changeOnDisk(project, ["logo.png"])
+  await expect.element(card().getByText(/^3 × 2 · /)).toBeVisible()
 })
 
 const resizeHandle = () => page.getByRole("separator", { name: "Resize the files card" })

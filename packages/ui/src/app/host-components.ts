@@ -22,6 +22,7 @@ import { QuickPick } from "../core/components/quick-pick/quick-pick.tsx"
 import { SearchField } from "../core/components/search-field/search-field.tsx"
 import { ListRow } from "../core/components/list-row/list-row.tsx"
 import { ListSection } from "../core/components/list-section/list-section.tsx"
+import { FilePath } from "../modules/file/ui/file-path.tsx"
 import { SessionMarkdown } from "../modules/file/ui/session-markdown.tsx"
 import { ProjectCreature } from "../modules/project/ui/project-creature.tsx"
 import { RelativeTime } from "../modules/session/ui/relative-time.tsx"
@@ -51,6 +52,7 @@ export const hostComponents = {
   CodeBlock,
   StatusMark,
   Markdown: SessionMarkdown,
+  FilePath,
   ActionSheet,
   KeyHints,
   OptionList,

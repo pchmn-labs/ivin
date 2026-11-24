@@ -5,7 +5,7 @@ export interface LineRange {
 
 export type FileLink =
   | { readonly kind: "file"; readonly path: string; readonly lines?: LineRange }
-  | { readonly kind: "outside"; readonly path: string }
+  | { readonly kind: "outside"; readonly path: string; readonly lines?: LineRange }
   | { readonly kind: "none" }
 
 const NONE: FileLink = { kind: "none" }
@@ -68,12 +68,26 @@ export const fileLink = (href: string, workingFolder: string): FileLink => {
   if (path === null || path === "") return NONE
   const folder = normalized(workingFolder)
   const absolute = normalized(path.startsWith("/") ? path : `${folder}/${path}`)
-  if (!absolute.startsWith(`${folder}/`)) {
-    return absolute === folder ? NONE : { kind: "outside", path: absolute }
-  }
-  const relative = absolute.slice(folder.length + 1)
-  return lines ? { kind: "file", path: relative, lines } : { kind: "file", path: relative }
+  if (absolute === folder) return NONE
+  const inside = absolute.startsWith(`${folder}/`)
+  const found = inside
+    ? ({ kind: "file", path: absolute.slice(folder.length + 1) } as const)
+    : ({ kind: "outside", path: absolute } as const)
+  return lines ? { ...found, lines } : found
 }
 
-export const outsideFileFailure = (path: string): string =>
-  `${path} is outside the session's working folder, so it is not opened.`
+// A sub-view's path is relative to the working folder, or absolute for a file outside it.
+export const isOutsidePath = (path: string): boolean => path.startsWith("/")
+
+const URL_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//
+const LINE_TAIL = /(?::\d+(?::\d+|-\d+)?|#L\d+(?:-L?\d+)?)$/
+const NOT_IN_PATH = /[\s()<>{}[\]'"`,;:&|=*?$!#\\^]/
+const EXTENSION = /\.[a-zA-Z0-9]*[a-zA-Z][a-zA-Z0-9]*$/
+
+// Runs on every inline code span of every answer: a regex test, never a look at the disk.
+export const isPathShaped = (code: string): boolean => {
+  const target = (code.startsWith("file://") ? code.slice(7) : code).replace(LINE_TAIL, "")
+  if (URL_SCHEME.test(target) || NOT_IN_PATH.test(target) || /^[@~]/.test(target)) return false
+  if (!/[a-zA-Z]/.test(target)) return false
+  return target.includes("/") || EXTENSION.test(target)
+}

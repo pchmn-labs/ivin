@@ -118,6 +118,9 @@ const lazyIcons = {
       default: m.ArrowsInLineVerticalIcon,
     })),
   ),
+  lock: lazy(() =>
+    import("@phosphor-icons/react/dist/csr/Lock").then((m) => ({ default: m.LockIcon })),
+  ),
   eye: lazy(() =>
     import("@phosphor-icons/react/dist/csr/Eye").then((m) => ({ default: m.EyeIcon })),
   ),

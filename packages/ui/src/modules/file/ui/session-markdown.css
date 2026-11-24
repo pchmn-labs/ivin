@@ -1,3 +1,17 @@
 .iv-session-markdown__failure {
   margin-top: var(--iv-space-2);
 }
+
+.iv-session-markdown__path {
+  color: inherit;
+  text-decoration: none;
+}
+
+.iv-session-markdown__path:hover code {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.iv-session-markdown__path:focus-visible {
+  border-radius: var(--iv-radius-sm);
+}

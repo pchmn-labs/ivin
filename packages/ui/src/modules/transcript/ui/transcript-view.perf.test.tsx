@@ -36,7 +36,7 @@ const answer = (turn: number) =>
     "    .map((item) => ({ id: item.id, text: item.text.trim() }))",
     "    .reduce((rows, row) => [...rows, row], [] as Row[])",
     "```",
-    "Run the tests with `pnpm test`, then open a long session and scroll it from top to bottom.",
+    `Run the tests with \`pnpm test\`, then read \`packages/ui/src/modules/transcript/ui/turn-${turn}.tsx:42\` and scroll a long session from top to bottom.`,
   ].join("\n\n")
 
 // Eight items a turn: a user message, four tool calls in two steps, and a Markdown answer.
@@ -75,11 +75,15 @@ const transcript = (turns: number) => {
         ...base(`c${turn}-${call}`),
         type: "tool_call",
         toolCallId: `c${turn}-${call}`,
-        name: "Bash",
-        kind: TOOL_KINDS[call % TOOL_KINDS.length]!,
-        input: {
-          command: `rg "transcript" packages/ui/src --glob '*.tsx' -n | head -${call + 10}`,
-        },
+        ...(call === 1
+          ? { name: "Read", kind: "read", input: { file_path: `packages/ui/src/turn-${turn}.ts` } }
+          : {
+              name: "Bash",
+              kind: TOOL_KINDS[call % TOOL_KINDS.length]!,
+              input: {
+                command: `rg "transcript" packages/ui/src --glob '*.tsx' -n | head -${call + 10}`,
+              },
+            }),
         status: "done",
         output: `packages/ui/src/modules/transcript/ui/transcript-view.tsx:${call + 1}: match`,
       })

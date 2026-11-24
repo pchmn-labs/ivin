@@ -12,6 +12,10 @@ declare global {
       readonly pickFolder: () => Promise<string | null>
       // Null once opened, else why the system could not open the file.
       readonly openSettingsFile: () => Promise<string | null>
+      // Node's `process.platform`.
+      readonly platform: string
+      // Opens the system's file manager on the folder of `path`, with `path` selected.
+      readonly showInFolder: (path: string) => Promise<void>
       readonly getServerState: () => Promise<ServerState>
       readonly restartServer: () => Promise<void>
       // Returns the function that stops listening.

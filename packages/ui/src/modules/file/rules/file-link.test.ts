@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { fileLink, hasFileScheme } from "./file-link.ts"
+import { fileLink, hasFileScheme, isPathShaped } from "./file-link.ts"
 
 const folder = "/Users/me/repo"
 
@@ -71,6 +71,11 @@ test("a path that leaves the working folder is outside", () => {
     kind: "outside",
     path: "/Users/me/other/a.ts",
   })
+  expect(fileLink("/Users/me/.zshrc:11", folder)).toEqual({
+    kind: "outside",
+    path: "/Users/me/.zshrc",
+    lines: { start: 11, end: 11 },
+  })
 })
 
 test("a web link, an anchor or the working folder itself is not a file link", () => {
@@ -94,4 +99,47 @@ test("a file URL or a name followed by a line has a file scheme; a web or script
   expect(hasFileScheme("https://github.com")).toBe(false)
   expect(hasFileScheme("http://localhost:3000")).toBe(false)
   expect(hasFileScheme("src/main.ts")).toBe(false)
+})
+
+test("inline code shaped like a path, with an optional line, opens as a path", () => {
+  for (const code of [
+    "packages/ui/src/x.ts",
+    "packages/ui/src/x.ts:42",
+    "x.ts:42:7",
+    "x.ts:42-50",
+    "x.ts#L42-L50",
+    "x.ts",
+    ".env",
+    "src/",
+    "/Users/me/.zshrc",
+    "file:///Users/me/notes.md",
+    "origin/main",
+  ]) {
+    expect(isPathShaped(code), code).toBe(true)
+  }
+})
+
+test("inline code that is a command, a call, a URL or a name stays code", () => {
+  for (const code of [
+    "npm install",
+    "foo()",
+    "a && b",
+    "https://example.com",
+    "https://example.com/x.ts",
+    "@types/node",
+    "~/.zshrc",
+    "1.2.3",
+    "PNPM_HOME",
+    "Makefile:12",
+    "std::vector",
+    "a#b/c",
+    "x = 1",
+    "<div>",
+    "a,b/c",
+    "/",
+    "//",
+    "",
+  ]) {
+    expect(isPathShaped(code), code).toBe(false)
+  }
 })
