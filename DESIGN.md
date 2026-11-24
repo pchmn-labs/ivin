@@ -319,7 +319,7 @@ The palette is green-tinted neutrals, one yew-green accent, an amber and a curso
 
 **The Amber Asks, Red Fails Rule.** Amber marks only what needs the user (waiting, an approval); cursor red marks only what went wrong (error, failure). A status colour goes through `--iv-status-working`, `--iv-status-waiting`, `--iv-status-idle` or `--iv-status-failed`, never a raw colour.
 
-**The Token-Only Rule.** No colour, font or size outside the `--iv-` tokens. Derived tints use `color-mix()` on a token (accent blocks at 8% fill and 40% border, the bubble at 14% or 16%, the checkout buttons at 14% and 22% on hover, the amber wash at 8% and 13%, the amber outline at 60%, the composer's focus border at 45% over the strong hairline). The exceptions are a harness mark's brand colour, which belongs to the harness, not the theme, and a file icon theme's icons in the Files tab, which keep the icon theme's colours.
+**The Token-Only Rule.** No colour, font or size outside the `--iv-` tokens. Derived tints use `color-mix()` on a token (accent blocks at 8% fill and 40% border, the bubble at 14% or 16%, the selected tab at 12%, the checkout buttons at 14% and 22% on hover, the amber wash at 8% and 13%, the amber outline at 60%, the composer's focus border at 45% over the strong hairline). The exceptions are a harness mark's brand colour, which belongs to the harness, not the theme, and a file icon theme's icons in the Files tab, which keep the icon theme's colours.
 
 ## Typography
 
@@ -377,7 +377,7 @@ The app is flat at rest. Depth comes from four ground tones and 1px hairlines. T
 ### Shadow Vocabulary
 - **Overlay** (`--iv-shadow-overlay`): menus, tooltips and dialogs. In dark, `0 8px 24px rgba(0,0,0,0.45), 0 2px 6px rgba(0,0,0,0.3)`; in light, the same shape in a soft green-black.
 
-A zero-blur `box-shadow` ring that stands in for a border (the selected rail button's and the selected tab's 1px hairline ring, the badge's 2px card-coloured ring, the idle status ring) is a line, not elevation.
+A zero-blur `box-shadow` ring that stands in for a border (the selected rail button's and the selected tab's 1px ring, the badge's 2px card-coloured ring, the idle status ring) is a line, not elevation.
 
 ### Named Rules
 **The Overlays-Only Rule.** A shadow means "this floats above the window". Blocks, the sidebar card, the composer, the action sheet, rows and buttons never cast one.
