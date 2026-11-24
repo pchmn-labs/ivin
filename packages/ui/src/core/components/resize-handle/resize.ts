@@ -3,7 +3,6 @@ export const clampSize = (size: number, min: number, max: number) =>
 
 export type Edge = "left" | "right" | "top"
 
-// A handle grows its target when dragged away from it: a right edge to the right, a left edge to the left.
 export const draggedSize = (
   start: number,
   from: { readonly x: number; readonly y: number },

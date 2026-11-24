@@ -35,11 +35,11 @@ import "./sub-view-card.css"
 const DIFF_LABELS = { diff: "diff", committed_diff: "committed" } as const
 const CARD_MIN = 280
 
-// The chat keeps its own minimum width beside the card.
 const cardMax = (card: HTMLElement) => {
   const split = card.parentElement
-  if (split === null) return CARD_MIN
-  const chatMin = parseFloat(getComputedStyle(card).getPropertyValue("--iv-chat-min-width"))
+  const chat = split?.querySelector(".iv-tab-view__session")
+  if (split == null || chat == null) return CARD_MIN
+  const chatMin = parseFloat(getComputedStyle(chat).minWidth)
   const margin = parseFloat(getComputedStyle(card).marginRight)
   return split.clientWidth - chatMin - margin
 }

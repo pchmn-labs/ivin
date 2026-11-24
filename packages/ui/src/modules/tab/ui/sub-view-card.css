@@ -1,7 +1,6 @@
 .iv-sub-view-card {
   position: relative;
   display: flex;
-  /* Shares the split with the chat 1.15 to 1 until the user resizes it. */
   flex: 0 1 var(--iv-sub-view-card-width, calc((100% - var(--iv-space-2)) * 1.15 / 2.15));
   flex-direction: column;
   min-width: var(--iv-sub-view-card-min-width);
