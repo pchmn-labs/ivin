@@ -701,7 +701,7 @@ const approvalTurn = (command: string): ScriptedElement[] => [
   { type: "status", status: "idle", raw: null },
 ]
 
-test("a session follows its worktree when the agent moves it, whatever the command calls the paths", async () => {
+test("a session follows its worktree when the agent moves it with paths relative to another folder", async () => {
   const path = addWorktree("old")
   const moved = join(project, ".worktrees", "new")
   const move = `cd ${project} && git worktree move .worktrees/old .worktrees/new && cd .worktrees/new`

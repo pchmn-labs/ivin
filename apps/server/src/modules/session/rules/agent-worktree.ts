@@ -40,7 +40,7 @@ const lastMentioned = (text: string, folders: readonly string[], from: string) =
   return best?.folder ?? null
 }
 
-// `git worktree move` of the working folder, spotted by its result whatever the command calls the paths.
+// `git worktree move` of the working folder, read from the worktree list rather than the command.
 export const folderMovedTo = ({
   workingFolder,
   projectPath,

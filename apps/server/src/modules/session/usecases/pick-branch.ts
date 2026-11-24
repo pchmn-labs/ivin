@@ -1,8 +1,8 @@
 import { CheckoutRefused, SessionNotFound, SessionWorking } from "@ivin/contracts/session"
 import { Effect } from "effect"
-import { isBusy } from "../rules/busy-session.ts"
 import { resolveBranchPick } from "../../worktree/rules/branch-pick.ts"
 import { Git } from "../../worktree/usecases/git.ts"
+import { isBusy } from "../rules/busy-session.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
 

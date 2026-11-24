@@ -75,14 +75,14 @@ export const followAgentWorktree = (
         const current = yield* store.findById(session.id)
         if (!current) return
         const listed = new Set(worktrees.map((w) => w.path))
-        const moved = folderMovedTo({
+        const movedTo = folderMovedTo({
           workingFolder: current.workingFolder,
           projectPath: session.projectPath,
           listed,
           appeared,
         })
         const target =
-          moved ??
+          movedTo ??
           folderAfterTool({
             activity,
             workingFolder: current.workingFolder,
