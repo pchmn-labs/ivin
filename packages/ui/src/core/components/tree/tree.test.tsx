@@ -3,15 +3,16 @@ import { useState, type ReactNode } from "react"
 import { expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
+import { defaultSettings } from "@ivin/contracts/setting"
 import type { TreeRow } from "@ivin/plugin-api/ui"
 import { useKeyboardHandler } from "../../../modules/keybinding/hooks/use-keyboard-handler.ts"
-import { makeFakeServer } from "../../fake-server-client.ts"
+import { makeFakeServer, type FakeServer } from "../../fake-server-client.ts"
 import { serverClientLayerAtom } from "../../server-client.ts"
 import { Tree } from "./tree.tsx"
 
 // The tree's keys are commands, run by the window's keyboard handler.
-function WithKeys({ children }: { children: ReactNode }) {
-  const [server] = useState(() => makeFakeServer())
+function WithKeys({ children, server: given }: { children: ReactNode; server?: FakeServer }) {
+  const [server] = useState(() => given ?? makeFakeServer())
   return (
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <KeyboardHandler />
@@ -53,10 +54,10 @@ const visible = (list: ReadonlyArray<Node>, open: ReadonlySet<string>, base = ""
       : [row]
   })
 
-function Harness({ onOpen }: { onOpen?: (id: string) => void }) {
+function Harness({ onOpen, server }: { onOpen?: (id: string) => void; server?: FakeServer }) {
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
   return (
-    <WithKeys>
+    <WithKeys {...(server && { server })}>
       <div style={{ display: "flex", height: 300 }}>
         <Tree
           label="Files"
@@ -93,13 +94,29 @@ test("a click on a folder opens and closes it", async () => {
   await expect.element(item("main.ts")).not.toBeInTheDocument()
 })
 
-test("a file starts where the folders beside it do", async () => {
+const left = (row: string, part: string) =>
+  item(row).element().querySelector(part)?.getBoundingClientRect().left ?? Number.NaN
+
+test("a file's icon starts where the icons of the folders beside it do", async () => {
   await render(<Harness />)
-  const left = (row: string, part: string) =>
-    item(row).element().querySelector(part)?.getBoundingClientRect().left
   await expect
-    .poll(() => left("README.md", ".iv-tree__icon"))
-    .toBe(left("src", ".iv-tree__chevron"))
+    .poll(() => left("README.md", ".iv-tree__icon") - left("src", ".iv-tree__icon"))
+    .toBe(0)
+})
+
+test("with folder icons off, a file's icon starts where the glyph of the folders' chevrons and its folder's name do", async () => {
+  const server = makeFakeServer()
+  server.setUserSettings({
+    settings: { ...defaultSettings, files: { folderIcons: false } },
+    problem: null,
+  })
+  await render(<Harness server={server} />)
+  await expect.poll(() => item("src").element().querySelector(".iv-tree__icon")).toBeNull()
+  await expect
+    .poll(() => left("README.md", ".iv-tree__icon") - left("src", ".iv-tree__chevron path"))
+    .toBeCloseTo(0, 0)
+  await item("src").click()
+  await expect.poll(() => left("main.ts", ".iv-tree__icon") - left("src", ".iv-tree__name")).toBe(0)
 })
 
 test("the arrows move, open and close, and the active row stays visible", async () => {

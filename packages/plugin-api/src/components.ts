@@ -88,7 +88,7 @@ export interface ButtonProps {
 export interface IconButtonProps {
   readonly icon: IconName
   readonly label: string
-  readonly tooltip?: string
+  readonly tooltip?: ReactNode
   readonly size?: ButtonSize
   readonly variant?: ButtonVariant
   readonly onClick?: () => void
@@ -418,8 +418,15 @@ export interface ChangeGroup {
   readonly items: ReadonlyArray<ChangeListItem>
   // The row's Discard button, shown on hover, focus or selection.
   readonly onDiscard?: (id: string) => void
+  // The command that discards the focused row, whose key the row and the button's tooltip show.
+  readonly discardCommand?: string
   // The heading's button, always shown.
-  readonly discardAll?: { readonly label: string; readonly onDiscard: () => void }
+  readonly discardAll?: {
+    readonly label: string
+    readonly onDiscard: () => void
+    // Its key shows on the heading and in the button's tooltip.
+    readonly command?: string
+  }
   // Shown under the heading, such as why discarding them all failed.
   readonly error?: ChangeListError
 }

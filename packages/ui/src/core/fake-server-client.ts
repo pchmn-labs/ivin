@@ -38,6 +38,7 @@ import type {
   Session,
   SessionChange,
   SessionStatus,
+  WaitingFor,
   WorkingFolderChoice,
 } from "@ivin/contracts/session"
 import {
@@ -92,7 +93,7 @@ export interface FakeServer {
   // Streams any change (a delta, say) to watchers without storing it.
   readonly pushChange: (change: TranscriptItemChange) => void
   // Changes a session's status as the server would, and streams it to `session.watch`.
-  readonly setStatus: (sessionId: string, status: SessionStatus) => void
+  readonly setStatus: (sessionId: string, status: SessionStatus, waitingFor?: WaitingFor) => void
   // Marks the first turn after a change of run options as failed, as the server would.
   readonly failRelaunch: (sessionId: string, failure: RelaunchFailure) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
@@ -1384,7 +1385,14 @@ export const makeFakeServer = (
     failCheckoutWith: (gitMessage) => void (checkoutFailure = gitMessage),
     pushItem: publish,
     pushChange: (change) => Effect.runSync(PubSub.publish(pubsub, change)),
-    setStatus: (sessionId, status) => void saveSession({ ...sessions.get(sessionId)!, status }),
+    setStatus: (sessionId, status, waitingFor) => {
+      const session = sessions.get(sessionId)!
+      saveSession({
+        ...session,
+        status,
+        waitingFor: status === "waiting" ? (waitingFor ?? session.waitingFor) : null,
+      })
+    },
     failRelaunch: (sessionId, failure) =>
       void saveSession({ ...sessions.get(sessionId)!, relaunchFailure: failure }),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
