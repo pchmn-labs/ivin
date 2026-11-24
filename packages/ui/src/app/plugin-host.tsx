@@ -32,6 +32,7 @@ import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
 import { answerApprovalAtom } from "../modules/session/atoms/answer-approval.ts"
 import { answerQuestionAtom } from "../modules/session/atoms/answer-question.ts"
+import { serverStateAtom } from "../modules/server/atoms/server-state.ts"
 import { sessionsOf } from "../modules/session/atoms/list-sessions.ts"
 import { openSessionsAtom } from "../modules/session/atoms/open-sessions.ts"
 import { useSessionActions } from "../modules/session/hooks/use-session-actions.ts"
@@ -99,11 +100,13 @@ const useSessionListStatus = (): ReturnType<UiHost["useSessionListStatus"]> => {
   const loaded = useAtomValue(tabsOf(path).loaded)
   const tabsFailed = hasFailed(useAtomValue(tabsOf(path).status))
   const sessionsFailed = hasFailed(useAtomValue(sessionsOf(path).status))
+  // A stopped server is reported by the window; the feeds start again with its new client.
+  const serverRunning = useAtomValue(serverStateAtom).kind === "running"
   const retryTabs = useAtomRefresh(tabsOf(path).status)
   const retrySessions = useAtomRefresh(sessionsOf(path).status)
   return {
     loaded,
-    failed: tabsFailed || sessionsFailed,
+    failed: serverRunning && (tabsFailed || sessionsFailed),
     retry: () => {
       if (tabsFailed) retryTabs()
       if (sessionsFailed) retrySessions()
