@@ -302,7 +302,7 @@
         "packages/ui/src/modules/session/ui/pick-working-folder.tsx",
         "packages/ui/src/modules/session/ui/run-options-menu.tsx",
         "packages/ui/src/modules/session/ui/working-folder-picker.tsx",
-        "packages/ui/src/modules/tab/ui/sub-view-card.tsx",
+        "packages/ui/src/modules/tab/ui/sub-view-tabs.tsx",
         "packages/ui/src/modules/tab/ui/tab-bar.tsx",
         "packages/ui/src/modules/transcript/ui/background-fold.tsx",
         "packages/ui/src/modules/transcript/ui/image-marker.tsx",

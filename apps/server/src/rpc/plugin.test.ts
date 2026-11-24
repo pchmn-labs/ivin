@@ -55,6 +55,22 @@ test("a plugin's UI half compiles into a bundle whose command returns its value 
   )
 })
 
+test("a plugin's UI half bundles the components and hooks it imports from src/ui and src/hooks", async () => {
+  const home = tempDir("home")
+  writePlugin(home, "split", {
+    "package.json": packageJson({ id: "split", name: "Split", ui: "src/ui.tsx" }),
+    "src/hooks/use-answer.ts": "export const useAnswer = () => 42\n",
+    "src/ui/answer.tsx":
+      'import { useAnswer } from "../hooks/use-answer.ts"\nexport const Answer = () => <span>{useAnswer()}</span>\n',
+    "src/ui.tsx": 'export { Answer } from "./ui/answer.tsx"\nexport const activate = () => {}\n',
+  })
+
+  const [plugin] = await listPlugins(home)
+  expect(plugin).toMatchObject({ _tag: "compiled", id: "split" })
+  const bundle = await importBundle(bundlePath(home, plugin))
+  expect(renderToString(React.createElement(bundle["Answer"] as React.FC))).toBe("<span>42</span>")
+})
+
 test("an unchanged plugin is not compiled again, and a changed one is", async () => {
   const home = tempDir("home")
   writePlugin(home, "greeter", greeter)

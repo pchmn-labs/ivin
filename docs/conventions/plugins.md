@@ -8,13 +8,17 @@ plugins/<id>/
   README.md             what it does, for the next agent that edits it
   src/
     server.ts           optional: the server half, activate(ctx)
-    ui.tsx              optional: the UI half, activate(ctx)
+    ui.tsx              optional: the UI half's entry, activate(ctx) only
+    ui/<name>.tsx       optional: one component per file
+    hooks/use-<name>.ts optional: one hook per file, use- in the filename and in every export
     rules/              optional: the plugin's pure logic, read by both halves
 ```
 
 | Layer | Test of membership |
 |---|---|
 | `rules/` | a test calls it with no `ctx`, no mock and no `await` |
+| `hooks/` | a test needs a mounted component |
+| `ui/` | a test needs a renderer |
 | `server.ts`, `ui.tsx` | a test needs a `ctx` |
 
 ## Tests

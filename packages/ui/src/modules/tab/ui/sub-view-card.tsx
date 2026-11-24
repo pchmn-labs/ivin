@@ -1,38 +1,23 @@
-import { RegistryContext, useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { SubView } from "@ivin/contracts/tab"
-import { Exit } from "effect"
-import { useContext, useId, useRef, useState, type KeyboardEvent } from "react"
+import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { useRef } from "react"
 import { Button, IconButton } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
-import { HarnessMark, type MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
-import { Icon } from "../../../core/components/icon/icon.tsx"
+import type { MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { ResizeHandle } from "../../../core/components/resize-handle/resize-handle.tsx"
 import { Tooltip } from "../../../core/components/tooltip/tooltip.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
-import { fileEditOf, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
-import { writeFileAtom } from "../../file/atoms/write-file.ts"
-import { noEdit } from "../../file/rules/file-edit.ts"
 import { fileName } from "../../file/rules/file-name.ts"
 import { DiffView } from "../../file/ui/diff-view.tsx"
 import { FileView } from "../../file/ui/file-view.tsx"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
-import { fileIconsAtom } from "../../plugin/atoms/contributions.ts"
-import { fileIconOf } from "../../plugin/rules/file-icon.ts"
-import { closeSubViewAtom } from "../atoms/close-sub-view.ts"
 import { subViewsOf } from "../atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
-import { selectSessionTabAtom } from "../atoms/select-session-tab.ts"
-import { setFullWidthAtom } from "../atoms/set-full-width.ts"
-import {
-  closeFileFailure,
-  selectSessionTabFailure,
-  switchModeFailure,
-} from "../rules/sub-view-failure.ts"
-import { adjacentRowTab, sameSubView, subViewKey } from "../rules/sub-views.ts"
+import { useSubViewActions } from "../hooks/use-sub-view-actions.ts"
+import { adjacentRowTab, subViewKey } from "../rules/sub-views.ts"
+import { SubViewTabs } from "./sub-view-tabs.tsx"
 import "./sub-view-card.css"
 
-const DIFF_LABELS = { diff: "diff", committed_diff: "committed" } as const
 const CARD_MIN = 280
 
 const cardMax = (card: HTMLElement) => {
@@ -42,29 +27,6 @@ const cardMax = (card: HTMLElement) => {
   const chatMin = parseFloat(getComputedStyle(chat).minWidth)
   const margin = parseFloat(getComputedStyle(card).marginRight)
   return split.clientWidth - chatMin - margin
-}
-
-const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
-  if (event.altKey || event.metaKey || event.ctrlKey) return
-  const tabs = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
-  const current = tabs.indexOf(document.activeElement as HTMLButtonElement)
-  const target = { ArrowLeft: current - 1, ArrowRight: current + 1, Home: 0, End: tabs.length - 1 }[
-    event.key
-  ]
-  const next = target === undefined ? undefined : tabs[target]
-  if (current < 0 || next === undefined || target === current) return
-  event.preventDefault()
-  next.focus()
-  next.click()
-}
-
-const stopMiddleClickScroll = (event: { button: number; preventDefault: () => void }) => {
-  if (event.button === 1) event.preventDefault()
-}
-
-interface Failure {
-  readonly message: string
-  readonly retry: () => void
 }
 
 export function SubViewCard({
@@ -80,66 +42,21 @@ export function SubViewCard({
   const { subViews, selected, fullWidth } = state
   const onSession = fullWidth && state.sessionTabSelected
   const open = useAtomSet(openSubViewAtom)
-  const close = useAtomSet(closeSubViewAtom, { mode: "promiseExit" })
-  const setFullWidth = useAtomSet(setFullWidthAtom, { mode: "promiseExit" })
-  const selectSessionTab = useAtomSet(selectSessionTabAtom, { mode: "promiseExit" })
-  const [failure, setFailure] = useState<Failure | null>(null)
-  const unsaved = useAtomValue(unsavedPathsOf(sessionId, workingFolder))
-  // Kept once the prompt closes, so its text stays while it fades out.
-  const [closing, setClosing] = useState<SubView | null>(null)
-  const [confirming, setConfirming] = useState(false)
-  const write = useAtomSet(writeFileAtom, { mode: "promise" })
-  const registry = useContext(RegistryContext)
   const card = useRef<HTMLElement>(null)
-  const cardId = useId()
+  const {
+    failure,
+    closing,
+    confirming,
+    setConfirming,
+    isUnsaved,
+    closeFile,
+    closeNow,
+    saveAndClose,
+    switchMode,
+    showSession,
+  } = useSubViewActions(sessionId, workingFolder, card)
   const fullWidthHint = useKeyHint("Full width", "tab.toggleFullWidth")
   const besideHint = useKeyHint("Beside chat", "tab.toggleFullWidth")
-  const fileIcons = useAtomValue(fileIconsAtom)
-
-  const closeNow = async (subView: SubView) => {
-    const hadFocus = card.current?.contains(document.activeElement) ?? false
-    setFailure(null)
-    const exit = await close({ sessionId, workingFolder, subView })
-    if (Exit.isFailure(exit))
-      return setFailure({
-        message: closeFileFailure(subView.path),
-        retry: () => void closeNow(subView),
-      })
-    if (subView.kind === "file")
-      registry.set(fileEditOf(sessionId, workingFolder, subView.path), noEdit)
-    // The focused close button is gone with its tab.
-    if (hadFocus)
-      card.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
-  }
-
-  const isUnsaved = (subView: SubView) => subView.kind === "file" && unsaved.includes(subView.path)
-
-  const closeFile = async (subView: SubView) => {
-    if (!isUnsaved(subView)) return closeNow(subView)
-    setClosing(subView)
-    setConfirming(true)
-  }
-
-  const saveAndClose = async (subView: SubView) => {
-    setConfirming(false)
-    if (await write({ sessionId, workingFolder, path: subView.path })) await closeNow(subView)
-    // Its failure shows in its own view.
-    else open({ sessionId, workingFolder, subView })
-  }
-
-  const switchMode = async (to: boolean) => {
-    setFailure(null)
-    const exit = await setFullWidth({ sessionId, workingFolder, fullWidth: to })
-    if (Exit.isFailure(exit))
-      setFailure({ message: switchModeFailure(to), retry: () => void switchMode(to) })
-  }
-
-  const showSession = async () => {
-    setFailure(null)
-    const exit = await selectSessionTab({ sessionId, workingFolder })
-    if (Exit.isFailure(exit))
-      setFailure({ message: selectSessionTabFailure, retry: () => void showSession() })
-  }
 
   const selectAdjacent = (step: 1 | -1) => {
     const next = adjacentRowTab(state, step)
@@ -177,98 +94,18 @@ export function SubViewCard({
         />
       )}
       <div className="iv-sub-view-card__row">
-        <div
-          className="iv-sub-view-card__tabs"
-          role="tablist"
-          aria-label="Open files"
-          onKeyDown={moveFocus}
-        >
-          {fullWidth && (
-            <>
-              <div
-                className="iv-sub-view-card__item"
-                role="presentation"
-                data-selected={onSession || undefined}
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  className="iv-sub-view-card__tab iv-sub-view-card__tab--session"
-                  aria-selected={onSession}
-                  tabIndex={onSession ? 0 : -1}
-                  onClick={() => void showSession()}
-                >
-                  <span className="iv-sub-view-card__icon" aria-hidden>
-                    <HarnessMark mark={harnessMark} size={14} />
-                  </span>
-                  <span className="iv-sub-view-card__name">Session</span>
-                </button>
-              </div>
-              <span className="iv-sub-view-card__separator" role="presentation" />
-            </>
-          )}
-          {subViews.map((subView) => {
-            const isSelected = !onSession && sameSubView(subView, selected)
-            const unsavedEdits = isUnsaved(subView)
-            const name = fileName(subView.path)
-            const isDiff = subView.kind !== "file"
-            const unsavedId = `${cardId}-${subViewKey(subView)}-unsaved`
-            const closeThis = () => closeFile(subView)
-            return (
-              <div
-                key={subViewKey(subView)}
-                className="iv-sub-view-card__item"
-                role="presentation"
-                data-selected={isSelected || undefined}
-                data-unsaved={unsavedEdits || undefined}
-                onMouseDown={stopMiddleClickScroll}
-                onAuxClick={(event) => {
-                  if (event.button !== 1) return
-                  event.preventDefault()
-                  void closeThis()
-                }}
-              >
-                <button
-                  type="button"
-                  role="tab"
-                  className="iv-sub-view-card__tab"
-                  aria-selected={isSelected}
-                  tabIndex={isSelected ? 0 : -1}
-                  title={subView.path}
-                  aria-describedby={unsavedEdits ? unsavedId : undefined}
-                  onClick={() => open({ sessionId, workingFolder, subView })}
-                >
-                  <span className="iv-sub-view-card__icon" aria-hidden>
-                    {fileIconOf(fileIcons, { name, folder: false, open: false }) ?? (
-                      <Icon name={isDiff ? "diff" : "file"} size={14} />
-                    )}
-                  </span>
-                  <span className="iv-sub-view-card__name">{name}</span>
-                  {isDiff && (
-                    <>
-                      {" "}
-                      <span className="iv-sub-view-card__kind">{DIFF_LABELS[subView.kind]}</span>
-                    </>
-                  )}
-                </button>
-                {unsavedEdits && (
-                  <span id={unsavedId} className="iv-visually-hidden">
-                    Unsaved edits
-                  </span>
-                )}
-                <button
-                  type="button"
-                  className="iv-sub-view-card__close"
-                  aria-label={`Close ${isDiff ? `the ${subView.kind === "diff" ? "" : "committed "}diff of ${name}` : name}`}
-                  onClick={() => void closeThis()}
-                >
-                  <span className="iv-sub-view-card__unsaved" aria-hidden />
-                  <Icon name="x" size={12} />
-                </button>
-              </div>
-            )
-          })}
-        </div>
+        <SubViewTabs
+          sessionId={sessionId}
+          workingFolder={workingFolder}
+          subViews={subViews}
+          selected={selected}
+          fullWidth={fullWidth}
+          onSession={onSession}
+          harnessMark={harnessMark}
+          isUnsaved={isUnsaved}
+          closeFile={closeFile}
+          showSession={showSession}
+        />
         {fullWidth ? (
           <Tooltip content={besideHint}>
             <Button variant="ghost" size="sm" icon="split" onClick={() => void switchMode(false)}>
