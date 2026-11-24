@@ -26,6 +26,7 @@ import { tabTranscriptsAtom } from "../modules/transcript/atoms/tab-transcripts.
 import { AreaFailureBoundary, MainAreaBoundary } from "./failure-boundary.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { builtinPlugins } from "./builtin-plugins.ts"
+import { Announcements } from "../modules/transcript/ui/announcements.tsx"
 import { MainTopBar } from "./main-top-bar.tsx"
 import { ShellControls } from "./shell-controls.tsx"
 import { SidebarTabs } from "./sidebar-tabs.tsx"
@@ -203,6 +204,7 @@ export function App() {
               </MainAreaBoundary>
             </main>
             <SessionActionDialog />
+            <Announcements projectPath={projectPath} />
             <Slot slot="window.overlay" props={{}} />
           </div>
         )}

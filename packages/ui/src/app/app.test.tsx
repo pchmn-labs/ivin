@@ -193,10 +193,10 @@ test("each tab shows its session, closes on its button, and the bar reorders by 
   await openSessions()
     .getByRole("tab", { name: /Second/ })
     .hover()
-  await page.getByRole("button", { name: "Close Second" }).click()
+  await page.getByRole("button", { name: "Close Second", includeHidden: true }).click()
   await expect.element(tabs).toHaveLength(1)
   await openSessions().getByRole("tab", { name: /First/ }).hover()
-  await page.getByRole("button", { name: "Close First" }).click()
+  await page.getByRole("button", { name: "Close First", includeHidden: true }).click()
   await expect.element(page.getByRole("main").getByText(/No session open/)).toBeVisible()
 })
 
@@ -252,7 +252,9 @@ test("every tab has the same width, which hovering a tab does not change", async
   expect(before[0]).toBe(before[1])
 
   await openSessions().getByRole("tab", { name: /Crée/ }).hover()
-  await expect.element(page.getByRole("button", { name: "Close Crée un fichier" })).toBeVisible()
+  await expect
+    .element(page.getByRole("button", { name: "Close Crée un fichier", includeHidden: true }))
+    .toBeVisible()
 
   expect(widths()).toEqual(before)
 })

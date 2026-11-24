@@ -134,11 +134,11 @@ test("closing a file selects its neighbour, and closing the last one closes the 
   await item("README.md").click()
   await item("logo.png").click()
 
-  await page.getByRole("button", { name: "Close logo.png" }).click()
+  await page.getByRole("button", { name: "Close logo.png", includeHidden: true }).click()
   await expect.element(fileTab("logo.png")).not.toBeInTheDocument()
   await expect.element(fileTab("README.md")).toHaveAttribute("aria-selected", "true")
 
-  await page.getByRole("button", { name: "Close README.md" }).click()
+  await page.getByRole("button", { name: "Close README.md", includeHidden: true }).click()
   await expect.element(card()).not.toBeInTheDocument()
   expect(server.subViews.get("s1")?.subViews).toEqual([])
 })
@@ -243,7 +243,7 @@ test("a close that fails keeps the file and says so, and Retry closes it", async
   await item("README.md").click()
   server.failNextCall("tab.closeSubView")
 
-  await page.getByRole("button", { name: "Close README.md" }).click()
+  await page.getByRole("button", { name: "Close README.md", includeHidden: true }).click()
   await expect.element(card().getByText("README.md could not be closed. Retry.")).toBeVisible()
   await expect.element(fileTab("README.md")).toBeVisible()
   await card().getByRole("button", { name: "Retry" }).click()

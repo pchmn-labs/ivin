@@ -83,7 +83,7 @@ export function SubViewTabs({
               <span className="iv-sub-view-card__name">Session</span>
             </button>
           </div>
-          <span className="iv-sub-view-card__separator" role="presentation" />
+          <span className="iv-sub-view-card__separator" aria-hidden />
         </>
       )}
       {subViews.map((subView) => {
@@ -138,6 +138,8 @@ export function SubViewTabs({
             <button
               type="button"
               className="iv-sub-view-card__close"
+              tabIndex={-1}
+              aria-hidden
               aria-label={`Close ${isDiff ? `the ${subView.kind === "diff" ? "" : "committed "}diff of ${name}` : name}`}
               onClick={() => void closeThis()}
             >

@@ -76,7 +76,12 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
               return failure === undefined ? item : { ...item, error: listError(failure) }
             }),
             onDiscard: askOne,
-            discardAll: { label: "Discard all uncommitted changes", onDiscard: askAll },
+            discardCommand: "changes.discard",
+            discardAll: {
+              label: "Discard all uncommitted changes",
+              onDiscard: askAll,
+              command: "changes.discardAll",
+            },
             ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
           },
         ]

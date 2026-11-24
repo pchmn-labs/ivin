@@ -1,5 +1,5 @@
 import { expect, test } from "vitest"
-import { eventKeys, formatKey, normalizeKey } from "./key.ts"
+import { ariaKey, eventKeys, formatKey, normalizeKey } from "./key.ts"
 
 const press = (
   key: string,
@@ -72,4 +72,16 @@ test("a key shows as the platform writes it", () => {
   expect(formatKey("alt+shift+b", { mac: false })).toBe("Shift+Alt+B")
   expect(formatKey("mod+shift+backspace", mac)).toBe("⇧⌘⌫")
   expect(formatKey("mod+shift+backspace", { mac: false })).toBe("Ctrl+Shift+Backspace")
+})
+
+test.each([
+  ["backspace", { mac: true }, "Backspace"],
+  ["mod+backspace", { mac: true }, "Meta+Backspace"],
+  ["mod+backspace", { mac: false }, "Control+Backspace"],
+  ["ctrl+shift+pageup", { mac: true }, "Control+Shift+PageUp"],
+  ["alt+arrowdown", { mac: false }, "Alt+ArrowDown"],
+  ["mod+w", { mac: true }, "Meta+W"],
+  ["space", { mac: true }, "Space"],
+])("%s on %o is written %s in aria-keyshortcuts", (key, platform, aria) => {
+  expect(ariaKey(key, platform)).toBe(aria)
 })

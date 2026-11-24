@@ -86,7 +86,7 @@ const dialog = () => page.getByRole("dialog")
 const closeSessionTab = async (title: string) => {
   await sessionTab(title).hover()
   await sessionTab(title)
-    .getByRole("button", { name: `Close ${title}` })
+    .getByRole("button", { name: `Close ${title}`, includeHidden: true })
     .click()
 }
 const fileOf = (server: FakeServer, path = readme) => {
@@ -147,13 +147,13 @@ test("closing an unsaved file asks first; Cancel keeps it, Close without saving 
   await mount(server)
   await typeAtEnd("README.md", " draft")
 
-  await card().getByRole("button", { name: "Close README.md" }).click()
+  await card().getByRole("button", { name: "Close README.md", includeHidden: true }).click()
   await expect.element(dialog().getByText("Close README.md without saving?")).toBeVisible()
   await dialog().getByRole("button", { name: "Cancel" }).click()
   await expect.element(fileTab("README.md")).toBeVisible()
   await expect.element(code("README.md")).toHaveTextContent("# Shop draft")
 
-  await card().getByRole("button", { name: "Close README.md" }).click()
+  await card().getByRole("button", { name: "Close README.md", includeHidden: true }).click()
   await dialog().getByRole("button", { name: "Close without saving" }).click()
   await expect.element(fileTab("README.md")).not.toBeInTheDocument()
   expect(fileOf(server)).toBe("# Shop")
@@ -181,7 +181,7 @@ test("a Save in the close prompt that fails keeps the file open and shows it wit
   await fileTab("main.ts").click()
   server.unwritable = true
 
-  await card().getByRole("button", { name: "Close README.md" }).click()
+  await card().getByRole("button", { name: "Close README.md", includeHidden: true }).click()
   await dialog().getByRole("button", { name: "Save", exact: true }).click()
   await expect.element(fileTab("README.md")).toHaveAttribute("aria-selected", "true")
   await expect
