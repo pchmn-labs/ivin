@@ -241,7 +241,6 @@ ipcMain.handle(RESTART_TO_UPDATE, () => {
   relaunchToUpdate = true
   app.quit()
 })
-// The bundle can only be replaced once this process is gone.
 app.on("quit", () => {
   const staged = updater.staged()
   if (!staged) return

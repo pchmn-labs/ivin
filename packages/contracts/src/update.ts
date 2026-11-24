@@ -26,6 +26,5 @@ const failed = Schema.Struct({
   reason: UpdateFailure,
 })
 
-// What the desktop app tells the window about the app's own update.
 export const UpdateState = Schema.Union([idle, checking, downloading, ready, failed])
 export type UpdateState = typeof UpdateState.Type

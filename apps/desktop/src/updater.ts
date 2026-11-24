@@ -16,12 +16,13 @@ import {
 } from "./update-rules.ts"
 import { extractZip } from "./extract-zip.ts"
 
-export const CHECK_INTERVAL_MS = 60 * 60 * 1000
+const CHECK_INTERVAL_MS = 60 * 60 * 1000
+const REQUEST_TIMEOUT_MS = 30_000
+const DOWNLOAD_TIMEOUT_MS = 10 * 60_000
 
 export interface UpdaterDeps {
   readonly releaseUrl: string
   readonly current: string
-  // The running app bundle: the one an update replaces.
   readonly bundle: string
   readonly folder: string
   readonly autoCheck: () => boolean
@@ -35,7 +36,10 @@ class UpdateError extends Error {
 }
 
 const fetchJson = async (url: string): Promise<unknown> => {
-  const response = await fetch(url, { headers: { accept: "application/json" } })
+  const response = await fetch(url, {
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  })
   if (!response.ok) throw new UpdateError("network")
   return response.json()
 }
@@ -46,7 +50,7 @@ const download = async (
   manifest: Manifest,
   onPercent: (percent: number) => void,
 ): Promise<void> => {
-  const response = await fetch(url)
+  const response = await fetch(url, { signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS) })
   if (!response.ok || !response.body) throw new UpdateError("network")
   const hash = createHash("sha512")
   let received = 0
@@ -99,7 +103,11 @@ export const createUpdater = (deps: UpdaterDeps) => {
       const extracted = join(folder, "extracted")
       await extractZip(zip, extracted)
       await rm(zip, { force: true })
-      staged = { bundle: join(extracted, "ivin.app"), version }
+      const unpacked = join(extracted, "ivin.app")
+      await access(unpacked).catch(() => {
+        throw new UpdateError("fingerprint")
+      })
+      staged = { bundle: unpacked, version }
     } catch (error) {
       await rm(deps.folder, { recursive: true, force: true })
       throw error
@@ -107,13 +115,23 @@ export const createUpdater = (deps: UpdaterDeps) => {
     set({ kind: "ready", ...base })
   }
 
-  const check = async (options: { readonly manual: boolean }): Promise<void> => {
-    if (state.kind === "checking" || state.kind === "downloading" || state.kind === "ready") return
-    if (!options.manual && !deps.autoCheck()) return
-    if (options.manual) set({ kind: "checking", current: deps.current })
+  let inFlight: Promise<void> | null = null
+  const check = (options: { readonly manual: boolean }): Promise<void> => {
+    if (state.kind === "ready") return Promise.resolve()
+    if (inFlight) return inFlight
+    if (!options.manual && !deps.autoCheck()) return Promise.resolve()
+    inFlight = attempt(options.manual).finally(() => {
+      inFlight = null
+    })
+    return inFlight
+  }
+
+  const attempt = async (manual: boolean): Promise<void> => {
+    if (manual) set({ kind: "checking", current: deps.current })
     try {
       await run()
     } catch (error) {
+      if (!(error instanceof UpdateError)) console.error("update check failed", error)
       set({
         kind: "failed",
         current: deps.current,
@@ -131,8 +149,6 @@ export const createUpdater = (deps: UpdaterDeps) => {
   return { check, start, state: () => state, staged: () => staged }
 }
 
-export type Updater = ReturnType<typeof createUpdater>
-
 // Run after the app has quit: the bundle cannot be replaced while it runs.
 const SWAP = `
 pid=$1 target=$2 staged=$3 relaunch=$4
@@ -140,9 +156,9 @@ shift 4
 while kill -0 "$pid" 2>/dev/null; do sleep 0.2; done
 old="$target.old"
 rm -rf "$old"
-mv "$target" "$old" || exit 1
-if ! mv "$staged" "$target"; then mv "$old" "$target"; exit 1; fi
-rm -rf "$old"
+if mv "$target" "$old"; then
+  if mv "$staged" "$target"; then rm -rf "$old"; else mv "$old" "$target"; fi
+fi
 if [ "$relaunch" = 1 ]; then exec "$target/Contents/MacOS/ivin" "$@"; fi
 `
 

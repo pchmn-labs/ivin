@@ -519,7 +519,7 @@ Layout features (stacked or swapped panels, sub-tabs) are where the slot model i
 - **One version.** The whole monorepo carries a single semver version, `0.x` until the switch. The plugin API's version, `@ivin/plugin-api`'s, is separate and does not follow it.
 - **Packaging.** electron-builder, macOS arm64 only at first; CI also builds a Linux x64 folder that only the end-to-end tests use. `node-pty` is the one native module: it is rebuilt for Electron and unpacked from the asar archive.
 - **Releases** ([ADR-0013](../adr/0013-releases-are-unsigned-and-published-by-a-workflow-started-by-hand.md)). A workflow started by hand (`release.yml`) runs release-it, which bumps the version from the conventional commits, writes `CHANGELOG.md` and tags `vX.Y.Z`, then builds the unsigned macOS arm64 app and publishes it as a GitHub Release. The app reports the monorepo's version.
-- **Updates** (planned). An in-app updater reads the manifest and the zip of the latest release. `electron-updater` is out: macOS auto-update needs a signed app, so an Apple Developer ID, which would reopen the choice.
+- **Updates** (how it works: Updating the app, under Processes). The app reads the manifest and the zip of the latest release itself. `electron-updater` is out: macOS auto-update needs a signed app, so an Apple Developer ID, which would reopen the choice.
 - **Packaged early.** CI builds the packaged app and launches it from milestone 1 on, because `utilityProcess` paths, the asar archive and the native module only fail there.
 
 ## Milestones

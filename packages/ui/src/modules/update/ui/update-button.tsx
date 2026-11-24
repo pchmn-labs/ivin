@@ -74,13 +74,13 @@ export function UpdateButton() {
 
   const running = sessions.filter((session) => isAgentBusy(session.status))
   const retry = () => void checkForUpdates()
+  const prompt = state.kind === "ready" ? restartPrompt(state.version, running.length) : null
   const onClick = () => {
     if (state.kind === "failed") return retry()
     if (state.kind !== "ready") return
-    if (restartPrompt(state.version, running.length) === null) return void restartToUpdate()
+    if (prompt === null) return void restartToUpdate()
     setConfirming(true)
   }
-  const prompt = state.kind === "ready" ? restartPrompt(state.version, running.length) : null
   return (
     <>
       <PreviewCard.Root>

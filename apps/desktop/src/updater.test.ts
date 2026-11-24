@@ -206,3 +206,41 @@ test("the relaunch starts the new app with the arguments the old one had", async
 
   await vi.waitFor(() => expect(readFileSync(launched, "utf8")).toBe("--user-data-dir=/data\n"))
 })
+
+test("a swap that fails keeps the current app and still relaunches it", async () => {
+  const { bundle } = setup()
+  const executable = join(bundle, "Contents/MacOS/ivin")
+  const launched = join(bundle, "launched")
+  mkdirSync(join(bundle, "Contents/MacOS"), { recursive: true })
+  writeFileSync(executable, `#!/bin/sh\necho again > "${launched}"\n`)
+  chmodSync(executable, 0o755)
+  const dead = execFileSync("sh", ["-c", "echo $$"]).toString().trim()
+
+  startSwap({ pid: Number(dead), target: bundle, staged: join(temp(), "missing"), relaunch: true })
+
+  await vi.waitFor(() => expect(readFileSync(launched, "utf8")).toBe("again\n"))
+  expect(readFileSync(join(bundle, "Contents/Resources/marker"), "utf8")).toBe("old")
+})
+
+test("two checks at once make one request series", async () => {
+  const { updater } = setup()
+
+  await Promise.all([updater.check({ manual: true }), updater.check({ manual: true })])
+
+  expect(fake.requests.filter((url) => url === "/release")).toHaveLength(1)
+})
+
+test("a zip without the app inside is refused as unusable", async () => {
+  const { updater, states } = setup()
+  const folder = temp()
+  mkdirSync(join(folder, "other.app"))
+  writeFileSync(join(folder, "other.app/file"), "x")
+  execFileSync("zip", ["-qry", "bad.zip", "other.app"], { cwd: folder })
+  fake.zip = readFileSync(join(folder, "bad.zip"))
+  fake.manifestSha = createHash("sha512").update(fake.zip).digest("hex")
+
+  await updater.check({ manual: false })
+
+  expect(states.at(-1)).toMatchObject({ kind: "failed", reason: "fingerprint" })
+  expect(updater.staged()).toBeNull()
+})
