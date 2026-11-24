@@ -188,11 +188,11 @@ test("closing files in full width keeps the mode, and closing the last one leave
   await openTwoFiles()
   await fullWidthButton().click()
 
-  await card().getByRole("button", { name: "Close main.ts" }).click()
+  await card().getByRole("button", { name: "Close main.ts", includeHidden: true }).click()
   await expect.element(rowTab("README.md")).toHaveAttribute("aria-selected", "true")
   await expect.element(besideButton()).toBeVisible()
   await rowTab("Session").click()
-  await card().getByRole("button", { name: "Close README.md" }).click()
+  await card().getByRole("button", { name: "Close README.md", includeHidden: true }).click()
 
   await expect.element(card()).not.toBeInTheDocument()
   await expect.element(composer()).toBeVisible()
@@ -257,4 +257,20 @@ test("a mode switch the server refuses goes back", async () => {
   await card().getByRole("button", { name: "Retry" }).click()
   await expect.element(besideButton()).toBeVisible()
   await expect.element(card().getByText(/could not switch/)).not.toBeInTheDocument()
+})
+
+test("the file tab list holds only tabs: its close buttons and separator are hidden from screen readers", async () => {
+  const server = makeServer()
+  await mount(server)
+  await openTwoFiles()
+  await fullWidthButton().click()
+  await expect.element(rowTab("Session")).toBeVisible()
+
+  const list = card().getByRole("tablist", { name: "Open files" }).element()
+  const hidden = list.querySelectorAll(".iv-sub-view-card__close, .iv-sub-view-card__separator")
+  expect(hidden).toHaveLength(3)
+  for (const element of hidden) {
+    expect(element.getAttribute("aria-hidden")).toBe("true")
+    if (element.tagName === "BUTTON") expect(element.getAttribute("tabindex")).toBe("-1")
+  }
 })

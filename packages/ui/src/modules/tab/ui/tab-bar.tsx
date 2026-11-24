@@ -4,6 +4,7 @@ import { Button } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { ContextMenu } from "../../../core/components/menu/menu.tsx"
+import { useCommandHandler, useCommandHandlers } from "../../command/hooks/use-command-handler.ts"
 import { unsavedPathsOf } from "../../file/atoms/file-edit.ts"
 import { fileName } from "../../file/rules/file-name.ts"
 import { settingsAtom } from "../../setting/atoms/settings.ts"
@@ -56,15 +57,17 @@ function TabItem({
   useEffect(() => {
     if (selected && present) item.current?.scrollIntoView({ block: "nearest", inline: "nearest" })
   }, [selected, present])
-  if (!session) return null
-
-  const stopsAgent = settings.stopAgentOnClose && isAgentBusy(session.status)
+  const stopsAgent = settings.stopAgentOnClose && isAgentBusy(session?.status)
   const requestClose = () => {
+    if (!session) return
     const paths = registry.get(unsavedPathsOf(sessionId, session.workingFolder))
     setUnsaved(paths)
     if (stopsAgent || paths.length > 0) setConfirming(true)
     else closeTab({ projectPath, sessionId })
   }
+  useCommandHandler("tab.close", requestClose, selected && present)
+  if (!session) return null
+
   const unsavedNames = unsaved.map(fileName)
   const unsavedText =
     unsavedNames.length === 1
@@ -146,7 +149,10 @@ function TabItem({
           <button
             type="button"
             className="iv-tab-bar__close"
+            tabIndex={-1}
+            aria-hidden
             aria-label={`Close ${session.title}`}
+            data-testid="tab-close"
             onClick={requestClose}
           >
             <Icon name="x" size={14} />
@@ -221,6 +227,18 @@ export function TabBar({ projectPath }: { projectPath: string }) {
     }
     end()
   }
+
+  const step = (by: -1 | 1) => {
+    const ids = tabs.map((tab) => tab.sessionId)
+    const at = selectedSessionId === null ? -1 : ids.indexOf(selectedSessionId)
+    const neighbour = ids[at + by]
+    if (at < 0 || neighbour === undefined) return
+    reorder({
+      projectPath,
+      sessionIds: moveTab(ids, ids[at]!, neighbour, by < 0 ? "before" : "after"),
+    })
+  }
+  useCommandHandlers({ "tab.moveLeft": () => step(-1), "tab.moveRight": () => step(1) })
 
   const focusableId = selectedSessionId ?? tabs[0]?.sessionId
 

@@ -328,6 +328,7 @@ test("the committed list says when the repository has no origin, or git does not
 
 test("Backspace on a change asks first, naming the file, then restores it", async () => {
   await mount(makeServer())
+  await expect.element(row("README.md")).toHaveAttribute("aria-keyshortcuts", "Backspace")
   ;(row("README.md").element() as HTMLElement).focus()
   await userEvent.keyboard("{Backspace}")
   await expect.element(discardDialog()).toHaveAccessibleName("Discard the changes to “README.md”?")

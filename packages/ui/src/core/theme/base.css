@@ -95,4 +95,12 @@ kbd {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* A spinner that stops makes a waiting screen look stuck. */
+  .iv-icon--spin,
+  .iv-session-mark[data-status="working"] .iv-session-mark__overlay,
+  .iv-session-mark[data-status="preparing_worktree"] .iv-session-mark__overlay {
+    animation-duration: var(--iv-duration-spin) !important;
+    animation-iteration-count: infinite !important;
+  }
 }

@@ -7,10 +7,12 @@ import type {
   ChangeListRow,
 } from "@ivin/plugin-api/ui"
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react"
+import { useCommandKeys, type CommandKey } from "../../../modules/keybinding/hooks/use-key-hint.ts"
 import { fileIconsAtom } from "../../../modules/plugin/atoms/contributions.ts"
 import { fileIconOf } from "../../../modules/plugin/rules/file-icon.ts"
 import { IconButton } from "../button/button.tsx"
 import { Icon } from "../icon/icon.tsx"
+import { KeyHints } from "../key-hints/key-hints.tsx"
 import "./change-list.css"
 
 export type { ChangeGroup, ChangeListItem, ChangeListProps, ChangeListRow }
@@ -19,6 +21,9 @@ const LETTERS = { modified: "M", added: "A", deleted: "D", renamed: "R", untrack
 
 const headingKey = (group: ChangeGroup) => `heading\n${group.id}`
 const rowKey = (group: ChangeGroup, item: ChangeListItem) => `row\n${group.id}\n${item.id}`
+
+const withKey = (text: string, key: CommandKey | null) =>
+  key === null ? text : <KeyHints hints={[{ key: key.label, label: text }]} />
 
 function ErrorLines({ error }: { error: ChangeListError }) {
   return (
@@ -32,6 +37,7 @@ function ErrorLines({ error }: { error: ChangeListError }) {
 
 export function ChangeList({ label, groups, selected, onOpen, area, onFocusRow }: ChangeListProps) {
   const fileIcons = useAtomValue(fileIconsAtom)
+  const keyOf = useCommandKeys()
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set())
   const [focusedKey, setFocusedKey] = useState<string | null>(null)
   const root = useRef<HTMLDivElement>(null)
@@ -118,6 +124,8 @@ export function ChangeList({ label, groups, selected, onOpen, area, onFocusRow }
       {groups.map((group) => {
         const open = !folded.has(group.id)
         const key = headingKey(group)
+        const discardAllKey = group.discardAll ? keyOf(group.discardAll.command) : null
+        const discardKey = group.onDiscard ? keyOf(group.discardCommand) : null
         return (
           <section key={group.id} className="iv-change-list__group" aria-label={group.heading}>
             <div className="iv-change-list__heading">
@@ -127,6 +135,7 @@ export function ChangeList({ label, groups, selected, onOpen, area, onFocusRow }
                 aria-expanded={open}
                 title={group.title}
                 tabIndex={key === tabStop ? 0 : -1}
+                aria-keyshortcuts={discardAllKey?.aria}
                 data-nav="heading"
                 data-key={key}
                 data-group={group.id}
@@ -145,7 +154,7 @@ export function ChangeList({ label, groups, selected, onOpen, area, onFocusRow }
                 <IconButton
                   icon="undo"
                   label={group.discardAll.label}
-                  tooltip={`${group.discardAll.label}…`}
+                  tooltip={withKey(`${group.discardAll.label}…`, discardAllKey)}
                   size="sm"
                   tabIndex={-1}
                   onClick={group.discardAll.onDiscard}
@@ -170,6 +179,7 @@ export function ChangeList({ label, groups, selected, onOpen, area, onFocusRow }
                           className="iv-change-list__main"
                           tabIndex={itemKey === tabStop ? 0 : -1}
                           aria-current={isSelected ? "true" : undefined}
+                          aria-keyshortcuts={discardKey?.aria}
                           title={item.title}
                           data-nav="row"
                           data-key={itemKey}
@@ -207,7 +217,7 @@ export function ChangeList({ label, groups, selected, onOpen, area, onFocusRow }
                             <IconButton
                               icon="undo"
                               label={`Discard the changes to ${item.name}`}
-                              tooltip="Discard changes…"
+                              tooltip={withKey("Discard changes…", discardKey)}
                               size="sm"
                               tabIndex={-1}
                               onClick={() => {

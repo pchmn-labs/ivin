@@ -137,3 +137,32 @@ export const formatKey = (text: string, platform: Platform): string => {
     .filter(Boolean)
     .join("+")
 }
+
+const ARIA_KEY_NAMES: Readonly<Record<string, string>> = {
+  arrowup: "ArrowUp",
+  arrowdown: "ArrowDown",
+  arrowleft: "ArrowLeft",
+  arrowright: "ArrowRight",
+  pageup: "PageUp",
+  pagedown: "PageDown",
+}
+
+// The form `aria-keyshortcuts` takes: modifiers and key named as `KeyboardEvent.key` names them.
+export const ariaKey = (text: string, platform: Platform): string => {
+  const chord = parse(text, platform)
+  if (chord === null) return text
+  const key =
+    ARIA_KEY_NAMES[chord.key] ??
+    (chord.key.length === 1
+      ? chord.key.toUpperCase()
+      : chord.key[0]!.toUpperCase() + chord.key.slice(1))
+  return [
+    chord.ctrl && "Control",
+    chord.alt && "Alt",
+    chord.shift && "Shift",
+    chord.meta && "Meta",
+    key,
+  ]
+    .filter(Boolean)
+    .join("+")
+}

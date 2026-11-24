@@ -2,6 +2,11 @@ import { RegistryProvider } from "@effect/atom-react"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
+import { isMac } from "../../../modules/keybinding/adapters/platform.ts"
+import {
+  defaultKeybindingsAtom,
+  type DefaultKeybinding,
+} from "../../../modules/keybinding/atoms/keybindings.ts"
 import { ChangeList, type ChangeGroup, type ChangeListItem } from "./change-list.tsx"
 
 const item = (
@@ -30,9 +35,13 @@ const groups = (actions: {
     heading: "Uncommitted",
     label: "Uncommitted changes",
     items: [item("a.ts", "modified", 2, 1), item("notes.md", "untracked", null, null)],
-    ...(actions.onDiscard && { onDiscard: actions.onDiscard }),
+    ...(actions.onDiscard && { onDiscard: actions.onDiscard, discardCommand: "changes.discard" }),
     ...(actions.onDiscardAll && {
-      discardAll: { label: "Discard all uncommitted changes", onDiscard: actions.onDiscardAll },
+      discardAll: {
+        label: "Discard all uncommitted changes",
+        onDiscard: actions.onDiscardAll,
+        command: "changes.discardAll",
+      },
     }),
   },
   {
@@ -43,9 +52,12 @@ const groups = (actions: {
   },
 ]
 
-const mount = (props: Partial<Parameters<typeof ChangeList>[0]> = {}) =>
+const mount = (
+  props: Partial<Parameters<typeof ChangeList>[0]> = {},
+  keybindings: ReadonlyArray<DefaultKeybinding> = [],
+) =>
   render(
-    <RegistryProvider>
+    <RegistryProvider initialValues={[[defaultKeybindingsAtom, keybindings]]}>
       <ChangeList
         label="Changes"
         groups={groups({})}
@@ -115,4 +127,39 @@ test("each row shows its status letter, name, folder and counts", async () => {
   await expect.element(row("a.ts")).toHaveTextContent("Mmodifieda.ts+2−1")
   await expect.element(row("b.ts")).toHaveTextContent("Ddeletedb.tssrc−4")
   await expect.element(heading("Uncommitted")).toHaveTextContent("Uncommitted 2")
+})
+
+const discardKeys = (one: string, all: string): ReadonlyArray<DefaultKeybinding> => [
+  { key: one, command: "changes.discard", when: "changes", pluginId: "changes" },
+  { key: all, command: "changes.discardAll", when: "changes", pluginId: "changes" },
+]
+
+test("a focused row and heading tell screen readers their Discard key, and each Discard tooltip shows it", async () => {
+  const mac = isMac()
+  await mount(
+    { groups: groups({ onDiscard: () => {}, onDiscardAll: () => {} }) },
+    discardKeys("backspace", "mod+backspace"),
+  )
+  await expect.element(row("a.ts")).toHaveAttribute("aria-keyshortcuts", "Backspace")
+  await expect
+    .element(heading("Uncommitted"))
+    .toHaveAttribute("aria-keyshortcuts", mac ? "Meta+Backspace" : "Control+Backspace")
+  expect(row("b.ts").element().hasAttribute("aria-keyshortcuts")).toBe(false)
+  expect(heading("Committed").element().hasAttribute("aria-keyshortcuts")).toBe(false)
+
+  await row("a.ts").hover()
+  await page.getByRole("button", { name: "Discard the changes to a.ts" }).hover()
+  const tooltip = page.getByText("Discard changes…")
+  await expect.element(tooltip).toBeVisible()
+  expect(document.querySelector(".iv-tooltip kbd")?.textContent).toBe(mac ? "⌫" : "Backspace")
+
+  await page.getByRole("button", { name: "Discard all uncommitted changes" }).hover()
+  await expect
+    .poll(() => [...document.querySelectorAll(".iv-tooltip kbd")].map((kbd) => kbd.textContent))
+    .toContain(mac ? "⌘⌫" : "Ctrl+Backspace")
+})
+
+test("the Discard keys shown follow the keybindings", async () => {
+  await mount({ groups: groups({ onDiscard: () => {} }) }, discardKeys("delete", "mod+delete"))
+  await expect.element(row("a.ts")).toHaveAttribute("aria-keyshortcuts", "Delete")
 })

@@ -160,7 +160,7 @@ test("with no session on screen, Files says so", async () => {
   await sidebarTab("Files").click()
   for (const title of ["Fix the cart", "Checkout flow"]) {
     await sessionTab(title).hover()
-    await page.getByRole("button", { name: `Close ${title}` }).click()
+    await page.getByRole("button", { name: `Close ${title}`, includeHidden: true }).click()
   }
   await expect.element(page.getByText("No session on screen.", { exact: false })).toBeVisible()
 })

@@ -3,6 +3,7 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
   MessageChannelMain,
   net,
   protocol,
@@ -15,6 +16,7 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { delimiter, dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
+import { appMenuTemplate } from "./app-menu.ts"
 import {
   CHECK_FOR_UPDATES,
   GET_SERVER_STATE,
@@ -271,6 +273,7 @@ ipcMain.handle(OPEN_SETTINGS_FILE, async () => {
 void app.whenReady().then(() => {
   if (!isFirstInstance) return
   if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
+  Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(process.platform)))
   const imageFolder = join(app.getPath("userData"), "images")
   protocol.handle(IMAGE_SCHEME, async (request) => {
     const file = imageFile(imageFolder, request.url)

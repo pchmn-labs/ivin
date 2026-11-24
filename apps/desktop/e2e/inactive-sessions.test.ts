@@ -12,7 +12,7 @@ test("a session whose tab is closed is listed under Inactive sessions, and click
     await expect(tab.getByText("Idle")).toBeAttached()
 
     await tab.hover()
-    await window.getByRole("button", { name: "Close Fix the login" }).click()
+    await window.getByRole("button", { name: "Close Fix the login", includeHidden: true }).click()
     await expect(
       window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
     ).toHaveCount(0)
