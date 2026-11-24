@@ -531,8 +531,9 @@ const sendMessage = async (server: ReturnType<typeof makeFakeServer>) => {
   const screen = await render(switchableView(server, true))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
   server.pushItem(userMessage(40))
+  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
   await screen.rerender(switchableView(server, true, true))
-  await vi.waitFor(() => expect(topInView("question 40")).toBeLessThan(30))
+  await expect.poll(() => topInView("question 40")).toBeLessThan(30)
   return screen
 }
 
