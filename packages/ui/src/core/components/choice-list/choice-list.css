@@ -1,15 +1,15 @@
 .iv-choice-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--iv-space-1);
 }
 
 .iv-choice-list__option {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 10px;
   min-height: 36px;
-  padding: 6px var(--iv-space-2);
+  padding: var(--iv-space-2);
   border-radius: var(--iv-radius-md);
   color: var(--iv-text);
   cursor: default;
@@ -35,6 +35,9 @@
 .iv-choice-list__mark {
   display: grid;
   flex: none;
+  /* Centred on the label's 20px first line. */
+  align-self: flex-start;
+  margin-top: var(--iv-space-half);
   place-items: center;
   width: 16px;
   height: 16px;
@@ -62,12 +65,12 @@
 }
 
 .iv-choice-list__description {
+  flex: 1;
   min-width: 0;
-  overflow: hidden;
   color: var(--iv-text-muted);
   font-size: var(--iv-text-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: var(--iv-text-sm-lh);
+  overflow-wrap: anywhere;
 }
 
 .iv-choice-list__description[data-empty] {

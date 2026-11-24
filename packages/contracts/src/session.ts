@@ -24,6 +24,10 @@ export const BackgroundTask = Schema.Struct({
   taskId: Schema.String,
   kind: TaskKind,
   description: Schema.String,
+  itemId: Schema.String,
+  toolCallId: Schema.String,
+  // Epoch milliseconds of its start.
+  at: Schema.Number,
 })
 export type BackgroundTask = typeof BackgroundTask.Type
 

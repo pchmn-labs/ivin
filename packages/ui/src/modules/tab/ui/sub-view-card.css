@@ -30,6 +30,8 @@
   height: var(--iv-space-9);
   padding: 0 var(--iv-space-2) 0 var(--iv-space-1);
   border-bottom: 1px solid var(--iv-border);
+  /* The card clips at its border's outer edge, so a square row would paint over the rounded border. */
+  border-radius: calc(var(--iv-radius-card) - 1px) calc(var(--iv-radius-card) - 1px) 0 0;
 }
 
 .iv-sub-view-card[data-on-session] {

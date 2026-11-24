@@ -60,6 +60,12 @@ const mount = async (server: FakeServer) => {
 
 const item = (name: string) => page.getByRole("treeitem", { name, exact: true })
 const filter = () => page.getByRole("textbox", { name: "Filter files by name" })
+const filterButton = () => page.getByRole("button", { name: "Filter files", exact: true })
+const openFilter = async () => {
+  await filterButton().click()
+  await expect.element(filter()).toHaveFocus()
+  return filter()
+}
 const goToFile = () => page.getByRole("combobox", { name: "Go to file" })
 const openFiles = () => page.getByRole("region", { name: "Open files" })
 
@@ -161,7 +167,7 @@ test("the eye button shows what git ignores, marked as ignored, and hides it aga
 
 test("the filter keeps the files whose name holds the text, in every folder, opened", async () => {
   await mount(makeServer())
-  await filter().fill("CART")
+  await (await openFilter()).fill("CART")
   await expect.element(item("cart.ts")).toBeVisible()
   await expect.element(item("lib")).toHaveAttribute("aria-expanded", "true")
   await expect.element(item("main.ts")).not.toBeInTheDocument()
@@ -171,11 +177,15 @@ test("the filter keeps the files whose name holds the text, in every folder, ope
   await expect.element(filter()).toHaveValue("")
   await expect.element(item("README.md")).toBeVisible()
   await expect.element(item("cart.ts")).not.toBeInTheDocument()
+
+  await userEvent.keyboard("{Escape}")
+  await expect.element(filter()).not.toBeInTheDocument()
+  await expect.element(filterButton()).toBeVisible()
 })
 
 test("the filter follows the disk, and says so when nothing matches", async () => {
   const server = await mount(makeServer())
-  await filter().fill("total")
+  await (await openFilter()).fill("total")
   await expect.element(page.getByText("No file matches “total”.")).toBeVisible()
 
   server.folders.set(`${project}/src`, folder("lib/", "main.ts", "total.ts"))

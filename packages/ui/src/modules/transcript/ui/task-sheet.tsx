@@ -3,7 +3,9 @@ import { useEffect, useRef } from "react"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { ResizeHandle } from "../../../core/components/resize-handle/resize-handle.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
+import type { BackgroundTask } from "@ivin/contracts/session"
 import { openTaskOf, tasksOf } from "../atoms/background-tasks.ts"
+import { knownTasks } from "../rules/background-tasks.ts"
 import { TaskMeta, taskIcon } from "./background-fold.tsx"
 import { AgentRun, CommandOutput } from "./task-run.tsx"
 import "./task-sheet.css"
@@ -13,9 +15,15 @@ import "../../tab/ui/sub-view-card.css"
 const KEEPS_OPEN = ".iv-task__pill"
 
 // A raised panel docked on the composer: the detail of one background task, with a tab for each task.
-export function TaskSheet({ sessionId }: { sessionId: string }) {
+export function TaskSheet({
+  sessionId,
+  background,
+}: {
+  sessionId: string
+  background: ReadonlyArray<BackgroundTask>
+}) {
   const [openId, setOpenId] = useAtom(openTaskOf(sessionId))
-  const tasks = useAtomValue(tasksOf(sessionId))
+  const tasks = knownTasks(sessionId, background, useAtomValue(tasksOf(sessionId)))
   const sheet = useRef<HTMLDivElement>(null)
   const task = tasks.find((candidate) => candidate.taskId === openId)
   const close = () => setOpenId(null)

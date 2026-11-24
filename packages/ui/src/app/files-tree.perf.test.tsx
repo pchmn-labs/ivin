@@ -51,6 +51,7 @@ test("scrolling a 5,000-file tree keeps the frame rate while the disk and git st
     </RegistryProvider>,
   )
   await userEvent.keyboard(`{${mod}>}2{/${mod}}`)
+  await page.getByRole("button", { name: "Filter files", exact: true }).click()
   // The filter opens every folder that holds a match: 50 folders and their 5,000 files.
   await page.getByRole("textbox", { name: "Filter files by name" }).fill("component")
   await expect.element(page.getByRole("treeitem", { name: "component-0-0.tsx" })).toBeVisible()

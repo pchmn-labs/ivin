@@ -10,6 +10,7 @@ export function Stack({
   justify,
   wrap = false,
   grow = false,
+  inset,
   as: Tag = "div",
   className,
   children,
@@ -23,6 +24,7 @@ export function Stack({
     justify && `iv-stack--justify-${justify}`,
     wrap && "iv-stack--wrap",
     grow && "iv-stack--grow",
+    inset && `iv-stack--inset-${inset}`,
     className,
   ]
     .filter(Boolean)

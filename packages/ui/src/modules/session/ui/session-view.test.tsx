@@ -320,6 +320,7 @@ test("Escape in the rename input cancels the rename and does not interrupt", asy
       </PluginsProvider>
     </RegistryProvider>,
   )
+  await page.getByTestId("session-item").hover()
   await page.getByRole("button", { name: "Session actions" }).click()
   await page.getByRole("menuitem", { name: "Rename" }).click()
   await userEvent.keyboard("{Escape}")
@@ -454,6 +455,7 @@ test("Escape closes an open menu without interrupting the session", async () => 
       </PluginsProvider>
     </RegistryProvider>,
   )
+  await page.getByTestId("session-item").hover()
   await page.getByRole("button", { name: "Session actions" }).click()
   await expect.element(page.getByRole("menuitem", { name: "Rename" })).toBeVisible()
   await userEvent.keyboard("{Escape}")

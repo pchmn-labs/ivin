@@ -22,6 +22,7 @@ import { useCommandHandlers } from "../../../modules/command/hooks/use-command-h
 import { isMac } from "../../../modules/keybinding/adapters/platform.ts"
 import { fileIconsAtom } from "../../../modules/plugin/atoms/contributions.ts"
 import { fileIconOf } from "../../../modules/plugin/rules/file-icon.ts"
+import { settingsAtom } from "../../../modules/setting/atoms/settings.ts"
 import { Icon } from "../icon/icon.tsx"
 import "./tree.css"
 
@@ -110,6 +111,7 @@ export function Tree({
 }: TreeProps) {
   const domId = useId()
   const fileIcons = useAtomValue(fileIconsAtom)
+  const folderIcons = useAtomValue(settingsAtom).files.folderIcons
   const scroller = useRef<HTMLDivElement>(null)
   const list = useRef<HTMLDivElement>(null)
   const typed = useRef({ text: "", at: 0 })
@@ -296,7 +298,12 @@ export function Tree({
   }
 
   return (
-    <div className="iv-tree" data-keybinding-area="tree" data-testid={testId}>
+    <div
+      className="iv-tree"
+      data-keybinding-area="tree"
+      data-folder-icons={folderIcons || undefined}
+      data-testid={testId}
+    >
       <div className="iv-tree__list" ref={scroller}>
         <div
           {...tree.getContainerProps(label)}
@@ -318,6 +325,7 @@ export function Tree({
             const row = item?.getItemData()
             if (item === undefined || row == null) return null
             const { tabIndex: _, onClick: __, ...props } = item.getProps()
+            const folder = row.expanded !== null
             return (
               <div
                 key={item.getKey()}
@@ -337,13 +345,15 @@ export function Tree({
                     <Icon name="chevron-right" size={12} />
                   </span>
                 )}
-                <span className="iv-tree__icon" aria-hidden>
-                  {fileIconOf(fileIcons, {
-                    name: row.name,
-                    folder: row.expanded !== null,
-                    open: row.expanded === true,
-                  }) ?? <Icon name={row.expanded === null ? "file" : "folder"} size={14} />}
-                </span>
+                {folder && !folderIcons ? null : (
+                  <span className="iv-tree__icon" aria-hidden>
+                    {fileIconOf(fileIcons, {
+                      name: row.name,
+                      folder,
+                      open: row.expanded === true,
+                    }) ?? <Icon name={folder ? "folder" : "file"} size={14} />}
+                  </span>
+                )}
                 <Name row={row} />
                 <StatusMark row={row} />
               </div>

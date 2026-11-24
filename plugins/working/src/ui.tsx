@@ -56,7 +56,7 @@ function Detail({
   return (
     <Stack as="span" direction="row" gap={1} align="center">
       <ProjectMark name={project} size={12} />
-      <Text size="xs" tone="faint">
+      <Text size="xs" tone="faint" truncate>
         {project}
       </Text>
       {command === undefined ? null : (

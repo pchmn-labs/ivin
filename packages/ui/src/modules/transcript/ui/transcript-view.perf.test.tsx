@@ -246,13 +246,13 @@ test(
 
     // A few frames at most: a backlog drawn after the measure would hide a slow stream.
     await vi.waitFor(
-      () => {
-        expect(page.getByText("The end of the streamed answer.").query()).not.toBeNull()
-        const list = scroller()
-        expect(list.scrollHeight - list.scrollTop - list.clientHeight).toBeLessThan(2)
-      },
+      () => expect(page.getByText("The end of the streamed answer.").query()).not.toBeNull(),
       { timeout: 100, interval: 16 },
     )
+    // The view glides to the end over a few frames.
+    await expect
+      .poll(() => scroller().scrollHeight - scroller().scrollTop - scroller().clientHeight)
+      .toBeLessThan(2)
     await expect.element(page.getByText("The end of the streamed answer.")).toBeInViewport()
     await expectFps(annotate, "streaming", fps)
   },

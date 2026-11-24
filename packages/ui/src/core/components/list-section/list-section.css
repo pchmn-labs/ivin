@@ -25,7 +25,7 @@
 .iv-list-section__rows {
   display: flex;
   flex-direction: column;
-  gap: var(--iv-space-half);
+  gap: var(--iv-space-1);
   margin: 0;
   padding: 0;
   list-style: none;
