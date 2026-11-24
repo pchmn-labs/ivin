@@ -21,7 +21,6 @@ const project = "/dev/shop"
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
 
 test("typing 8 keys in Go to file over 50,000 paths while changes arrive keeps every frame under budget and lists the files a bounded number of times", async () => {
-  (globalThis as any).__t = []
   const server = makeFakeServer({
     project: { path: project, name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
@@ -56,10 +55,6 @@ test("typing 8 keys in Go to file over 50,000 paths while changes arrive keeps e
   await expect.element(field).toHaveFocus()
   await expect.element(page.getByText("50,000 files")).toBeVisible()
   const listedBefore = server.fileListings()
-  ;(globalThis as any).__t.length = 0
-  const longs: Array<number> = []
-  new PerformanceObserver((l) => l.getEntries().forEach((e) => longs.push(Math.round(e.duration)))).observe({ type: 'longtask' })
-  if (import.meta.env.VITE_THROTTLE) await (await import('vitest/browser')).cdp().send('Emulation.setCPUThrottlingRate', { rate: Number(import.meta.env.VITE_THROTTLE) })
 
   // Every gap between two frames from the first key to the last row drawn, a stalled one included.
   let worst = 0
@@ -69,7 +64,6 @@ test("typing 8 keys in Go to file over 50,000 paths while changes arrive keeps e
     while (recording) {
       const now = await nextFrame()
       worst = Math.max(worst, now - last)
-      if (now - last > 17) (globalThis as any).__t.push(['gap', now - last])
       last = now
     }
   })()
@@ -82,6 +76,6 @@ test("typing 8 keys in Go to file over 50,000 paths while changes arrive keeps e
   recording = false
   await recorder
 
-  console.log('DIAG261 ' + JSON.stringify({ ua: navigator.userAgent, cores: navigator.hardwareConcurrency, worst, longs, t: (globalThis as any).__t.map(([k, d]: [string, number]) => k + '=' + d.toFixed(1)) }))
+  expect(worst).toBeLessThan(FRAME_BUDGET_MS)
   expect(server.fileListings() - listedBefore).toBeLessThanOrEqual(QUERY.length)
 })

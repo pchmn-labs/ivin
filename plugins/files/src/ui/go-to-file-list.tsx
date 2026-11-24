@@ -41,11 +41,11 @@ export function GoToFileList({
   const placeholder = `Go to a file in ${useFolderLabel(session)}`
   const deferred = useDeferredValue(query)
   const index = useMemo(
-    () => { const t = performance.now(); const r = listing?.kind === "listed" ? indexFiles(listing.paths) : null; (globalThis as any).__t?.push(['index', performance.now() - t]); return r },
+    () => (listing?.kind === "listed" ? indexFiles(listing.paths) : null),
     [listing],
   )
   const ranked = useMemo(
-    () => { const t = performance.now(); const r = index === null ? [] : rankFiles(index, deferred, GO_TO_FILE_LIMIT); (globalThis as any).__t?.push(['rank:' + deferred, performance.now() - t]); return r },
+    () => (index === null ? [] : rankFiles(index, deferred, GO_TO_FILE_LIMIT)),
     [index, deferred],
   )
   const onPick = async (path: string) => {
