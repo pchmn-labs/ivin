@@ -227,6 +227,41 @@ test("a session waiting on questions shows a question mark and the first questio
   expect(page.getByRole("button", { name: /^Allow/ }).query()).toBeNull()
 })
 
+test("a long question truncates before the project name does", async () => {
+  await page.viewport(280, 600)
+  const question: TranscriptItem = {
+    id: "waits-question",
+    sessionId: "waits",
+    position: 1,
+    at: 0,
+    type: "question",
+    requestId: "waits-question",
+    toolCallId: null,
+    questions: [
+      {
+        question: "Where should the Archive all and Delete all buttons go in the sidebar?".repeat(
+          3,
+        ),
+        header: "Place",
+        options: [],
+        multiSelect: false,
+      },
+    ],
+    status: "open",
+    answers: [],
+  }
+  await mountPanel(
+    [{ ...session("waits", "Write the post", "/blog", "waiting"), waitingFor: "question" }],
+    null,
+    { transcripts: { waits: [question] } },
+  )
+
+  const project = page.getByText("blog", { exact: true }).element() as HTMLElement
+  const shown = page.getByTestId("working-question").element() as HTMLElement
+  expect(project.scrollWidth).toBeLessThanOrEqual(project.clientWidth)
+  expect(shown.scrollWidth).toBeGreaterThan(shown.clientWidth)
+})
+
 test("a session in background runs under Running with its first task and how many others", async () => {
   await mountPanel(
     [
