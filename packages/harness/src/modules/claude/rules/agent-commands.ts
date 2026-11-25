@@ -52,18 +52,37 @@ export const commandEntriesFromInitialize = (
   })
 }
 
+// Claude ends the description of a user's or a project's skill with where it comes from, and starts a plugin's with the plugin's name.
+const SOURCE_SUFFIX = /\s*\((project|user|claude\.ai sync)\)$/
+const PLUGIN_PREFIX = /^\([^)]+\)\s*/
+
+const sourceOf = (entry: CommandEntry, kind: AgentCommand["kind"]): AgentCommand["source"] => {
+  if (kind === "command") return null
+  const suffix = SOURCE_SUFFIX.exec(entry.description)?.[1]
+  if (suffix === "project") return "project"
+  if (suffix !== undefined) return "user"
+  if (entry.name.includes(":") || PLUGIN_PREFIX.test(entry.description)) return "plugin"
+  return entry.builtin === true ? "built-in" : "user"
+}
+
+const toAgentCommand = (entry: CommandEntry, facts: CommandFacts): AgentCommand => {
+  const kind = entry.builtin !== true || facts.skills.has(entry.name) ? "skill" : "command"
+  return {
+    name: entry.name,
+    description: entry.description.replace(SOURCE_SUFFIX, "").replace(PLUGIN_PREFIX, ""),
+    argumentHint: entry.argumentHint || null,
+    kind,
+    source: sourceOf(entry, kind),
+  }
+}
+
 export const agentCommands = (
   entries: readonly CommandEntry[],
   facts: CommandFacts,
 ): AgentCommand[] =>
   entries
     .filter((entry) => isOffered(entry.name, facts))
-    .map((entry) => ({
-      name: entry.name,
-      description: entry.description,
-      argumentHint: entry.argumentHint || null,
-      kind: entry.builtin !== true || facts.skills.has(entry.name) ? "skill" : "command",
-    }))
+    .map((entry) => toAgentCommand(entry, facts))
 
 // Undefined: the line is not a run's first line.
 export const commandsOfRun = (

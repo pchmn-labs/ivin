@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react"
 import type {
+  AgentCommand,
   Annotation,
   ApprovalItem,
   Change,
@@ -28,6 +29,13 @@ export interface ActionFailure {
 
 // What a failed action shows in place: its message, with Retry when running it again can help.
 export type ActionError = Pick<ErrorMessageProps, "message" | "onRetry">
+
+// `none`: the session's harness takes no agent commands.
+export type AgentCommandListing =
+  | { readonly kind: "none" }
+  | { readonly kind: "loading" }
+  | { readonly kind: "listed"; readonly commands: ReadonlyArray<AgentCommand> }
+  | { readonly kind: "failed"; readonly failure: ActionFailure }
 
 // `deleted`: the session's working folder no longer exists.
 export type FolderListing =
@@ -199,6 +207,12 @@ export interface UiHost {
     sessionId: string,
     path: string,
   ) => Promise<ActionFailure | undefined>
+  // The skills and commands the session's harness runs from a message starting with `/name`.
+  // `refresh` asks the server again and keeps the list shown meanwhile.
+  readonly useAgentCommands: (sessionId: string) => {
+    readonly listing: AgentCommandListing
+    readonly refresh: () => void
+  }
   // Every file of the session's working folder that git does not ignore; `paths` as above.
   readonly useListFiles: () => (sessionId: string) => Promise<FileListing>
   // Runs `onChange` with the paths changed on disk while mounted; none when only git's state changed.

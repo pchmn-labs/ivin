@@ -43,18 +43,39 @@ test("Claude's commands come with their description and argument hint", () => {
     description: expect.any(String),
     argumentHint: "<model>",
     kind: "command",
+    source: null,
   })
   expect(commands.find((command) => command.name === "init")?.argumentHint).toBeNull()
 })
 
-test("a project's skill is a skill, with its argument hint", () => {
+test("a project's skill is a skill from the project, with its argument hint", () => {
   const entries = commandEntriesFromInitialize(withEntry(projectSkill), "init")!
   expect(agentCommands(entries, initialFacts)).toContainEqual({
     name: "probe-skill",
-    description: "A probe skill. (project)",
+    description: "A probe skill.",
     argumentHint: "[thing]",
     kind: "skill",
+    source: "project",
   })
+})
+
+test.each([
+  [{ name: "retro", description: "Run a retro. (user)" }, "user", "Run a retro."],
+  [{ name: "pdf", description: "Read PDFs. (claude.ai sync)" }, "user", "Read PDFs."],
+  [
+    { name: "skill-creator:skill-creator", description: "(skill-creator) Create skills." },
+    "plugin",
+    "Create skills.",
+  ],
+])("a skill whose description says where it comes from: %o", (entry, source, description) => {
+  const [command] = agentCommands([{ ...entry, argumentHint: "" }], initialFacts)
+  expect(command).toMatchObject({ kind: "skill", source, description })
+})
+
+test("a built-in skill comes from Claude", () => {
+  const run = commandsOfRun(runInit)!
+  const commands = agentCommands(commandEntriesFromInitialize(response, "init")!, run.facts)
+  expect(commands.find((command) => command.name === "dataviz")?.source).toBe("built-in")
 })
 
 test("terminal-only and internal commands are left out", () => {

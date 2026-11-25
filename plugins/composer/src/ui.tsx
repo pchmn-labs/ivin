@@ -34,6 +34,7 @@ import {
   type RunOptionsMenuState,
   type Session,
 } from "@ivin/plugin-api/ui"
+import { useCommandCompletion } from "./hooks/use-command-completion.tsx"
 import { pendingText, withRelaunchMessage } from "./rules/draft.ts"
 import { changedRunOption, goBackLabel, relaunchFailureText } from "./rules/relaunch-failure.ts"
 
@@ -95,6 +96,7 @@ function Composer({ sessionId }: { sessionId: string }) {
   const preparing = session?.status === "preparing_worktree"
   const setRunOptions = useSetRunOptions(sessionId)
   const offered = useOfferedRunOptions(sessionId)
+  const completion = useCommandCompletion(sessionId)
   const [optionsFailure, setOptionsFailure] = useState<
     (ActionFailure & { options: Partial<RunOptions> }) | null
   >(null)
@@ -225,6 +227,7 @@ function Composer({ sessionId }: { sessionId: string }) {
         draft={draft}
         onDraftChange={setDraft}
         onRefusal={setRefusal}
+        {...(completion && { completion })}
         footer={
           <Stack direction="row" align="end" justify="between" gap={2}>
             <Stack direction="row" align="center" gap={3}>

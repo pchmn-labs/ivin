@@ -18,9 +18,11 @@ import {
   type ReactNode,
 } from "react"
 import type { GitStatusEntry } from "@ivin/contracts/file"
+import type { AgentCommand, Harness } from "@ivin/contracts/session"
 import {
   UiHostProvider,
   type ActionFailure,
+  type AgentCommandListing,
   type ChangeListing,
   type CommittedChangeListing,
   type Draft,
@@ -54,6 +56,9 @@ import {
   setRunOptionsFailure,
 } from "../modules/session/rules/failure-message.ts"
 import { getHarnessAtom } from "../modules/server/atoms/get-harness.ts"
+import { agentCommandsOf } from "../modules/session/atoms/list-agent-commands.ts"
+import { agentCommandsFailure } from "../modules/session/rules/agent-commands.ts"
+import { HARNESSES } from "../modules/session/rules/harnesses.ts"
 import { useCommandHandler } from "../modules/command/hooks/use-command-handler.ts"
 import { useKeyHint } from "../modules/keybinding/hooks/use-key-hint.ts"
 import { tabsOf } from "../modules/tab/atoms/list-tabs.ts"
@@ -141,6 +146,17 @@ const useSubViewOnScreen = (sessionId: string) => {
   const workingFolder = useWorkingFolderOf(sessionId)
   const { selected, sessionTabSelected } = useAtomValue(subViewsOf(sessionId, workingFolder).value)
   return sessionTabSelected ? null : selected
+}
+
+const agentCommandListing = (
+  result: AsyncResult.AsyncResult<ReadonlyArray<AgentCommand> | null, unknown>,
+  harness: Harness | undefined,
+): AgentCommandListing => {
+  if (AsyncResult.isSuccess(result))
+    return result.value === null ? { kind: "none" } : { kind: "listed", commands: result.value }
+  if (AsyncResult.isFailure(result) && !result.waiting)
+    return { kind: "failed", failure: agentCommandsFailure(HARNESSES[harness ?? "claude"].name) }
+  return { kind: "loading" }
 }
 
 const useOpenSession = (sessionId: string) =>
@@ -336,6 +352,13 @@ const host: UiHost = {
         }),
       [registry, sessionId, workingFolder],
     )
+  },
+  useAgentCommands: (sessionId) => {
+    const session = useOpenSession(sessionId)
+    const atom = agentCommandsOf(sessionId)
+    const result = useAtomValue(atom)
+    const refresh = useAtomRefresh(atom)
+    return { listing: agentCommandListing(result, session?.harness), refresh }
   },
   useGitStatus: (sessionId) => {
     const atom = gitStatusOf(sessionId, useWorkingFolderOf(sessionId))

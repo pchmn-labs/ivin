@@ -1,12 +1,25 @@
 import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { DraftImage, MessageFieldProps } from "@ivin/plugin-api/ui"
-import { useImperativeHandle, useRef, useState } from "react"
+import {
+  type KeyboardEvent,
+  useEffect,
+  useEffectEvent,
+  useId,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from "react"
+import {
+  CompletionSheet,
+  completionOptionId,
+} from "../../../core/components/completion-sheet/completion-sheet.tsx"
 import { hoveredImageAtom, imageViewerAtom } from "../../transcript/atoms/image-viewer.ts"
 import { imageMarker } from "../../transcript/rules/message-parts.ts"
 import { imageDataUrl } from "../../transcript/rules/image-url.ts"
 import { ImagePreview } from "../../transcript/ui/image-preview.tsx"
 import { readImageFile } from "../adapters/read-image-file.ts"
 import { openSessionsAtom } from "../atoms/open-sessions.ts"
+import { completionWord, pickedText } from "../rules/completion-word.ts"
 import { draftImages, nextImageNumber } from "../rules/draft.ts"
 import { HARNESSES } from "../rules/harnesses.ts"
 import { type ImageRefusal, imageRefusal, refusalMessage } from "../rules/image-refusal.ts"
@@ -31,6 +44,7 @@ export function MessageField({
   label,
   placeholder,
   footer,
+  completion,
 }: MessageFieldProps) {
   const surface = useRef<HTMLDivElement>(null)
   const editor = useRef<MessageEditorHandle>(null)
@@ -41,6 +55,59 @@ export function MessageField({
   const session = useAtomValue(openSessionsAtom).find((s) => s.id === sessionId)
   const harness = session && HARNESSES[session.harness]
   const maxImageBytes = harness?.maxImageBytes ?? 0
+
+  const listId = useId()
+  const [caret, setCaret] = useState<number | null>(null)
+  // The word Escape closed the sheet on, until the word changes.
+  const [dismissed, setDismissed] = useState<string | null>(null)
+  const [active, setActive] = useState(0)
+  const word = completion
+    ? completionWord(draft.text, caret, completion.trigger, completion.atStart ?? false)
+    : null
+  const wordKey = word && `${word.start}:${draft.text.slice(word.start, word.end)}`
+  const open = completion !== undefined && word !== null && wordKey !== dismissed
+  const items = open ? completion.items(word.query) : []
+  const message =
+    items.length > 0 ? null : (completion?.message ?? completion?.empty(word?.query ?? ""))
+  const [shownQuery, setShownQuery] = useState<string | null>(null)
+  const query = open ? word.query : null
+  if (query !== shownQuery) {
+    setShownQuery(query)
+    setActive(0)
+  }
+  const highlighted = Math.min(active, items.length - 1)
+
+  const opened = useEffectEvent(() => completion?.onOpen?.())
+  useEffect(() => {
+    if (open) opened()
+  }, [open])
+
+  const pick = (label: string) => {
+    if (!completion || !word || caret === null) return
+    const text = pickedText(word, completion.trigger, label, draft.text)
+    setDismissed(`${word.start}:${completion.trigger}${label}`)
+    editor.current?.replaceAroundCaret(caret - word.start, word.end - caret, text)
+  }
+
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!open || event.nativeEvent.isComposing) return
+    const plain = !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey
+    if (event.key === "Escape") {
+      event.preventDefault()
+      setDismissed(wordKey)
+      return
+    }
+    const current = items[highlighted]
+    if (!plain || current === undefined) return
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault()
+      const step = event.key === "ArrowDown" ? 1 : -1
+      setActive(Math.max(0, Math.min(items.length - 1, highlighted + step)))
+    } else if (event.key === "Enter" || event.key === "Tab") {
+      event.preventDefault()
+      pick(current.label)
+    }
+  }
 
   useImperativeHandle(ref, () => ({
     focus: () => editor.current?.focus(),
@@ -97,6 +164,7 @@ export function MessageField({
       ref={surface}
       className="iv-message-field"
       data-dragging={dragging > 0 || undefined}
+      data-completion={open || undefined}
       onDragEnter={(event) => {
         if (carriesFiles(event.dataTransfer)) setDragging((n) => n + 1)
       }}
@@ -113,6 +181,19 @@ export function MessageField({
         void addImageFiles([...event.dataTransfer.files], null)
       }}
     >
+      {completion && (
+        <CompletionSheet
+          open={open}
+          listId={listId}
+          trigger={completion.trigger}
+          title={completion.title}
+          items={items}
+          active={highlighted}
+          message={message}
+          onHover={setActive}
+          onPick={(item) => pick(item.label)}
+        />
+      )}
       <DraftImages
         images={draftImages(draft)}
         onOpen={openDraftImage}
@@ -131,6 +212,16 @@ export function MessageField({
         onChange={(next) => onDraftChange((current) => ({ ...current, text: next }))}
         onImageFiles={(files, at) => void addImageFiles(files, at)}
         onOpenImage={openDraftImage}
+        onCaret={setCaret}
+        onKeyDown={onKeyDown}
+        combobox={
+          open
+            ? {
+                listId,
+                activeId: items.length > 0 ? completionOptionId(listId, highlighted) : null,
+              }
+            : null
+        }
         onHoverImage={(imageId, anchor) => {
           setHoveredImage(imageId)
           const image = draft.images.find((candidate) => candidate.id === imageId)

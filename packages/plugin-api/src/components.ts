@@ -514,6 +514,36 @@ export interface QuickPickProps {
   readonly footer?: string
 }
 
+export interface CompletionItem {
+  readonly id: string
+  // What picking it puts after the trigger, followed by a space.
+  readonly label: string
+  // Positions of the label's characters to highlight.
+  readonly match?: ReadonlyArray<number>
+  // Faint mono text after the label, such as an argument hint.
+  readonly detail?: string
+  readonly tag?: string
+  readonly description?: string
+}
+
+// A sheet docked on the message field that lists completions of the word at the caret, while
+// that word starts with `trigger`. The field's keys drive it: ↑ ↓ move, Enter or Tab picks,
+// Escape closes it until the word changes; Enter sends the message when nothing is listed.
+export interface MessageFieldCompletion {
+  readonly trigger: string
+  // Only a word at the start of the draft opens it.
+  readonly atStart?: boolean
+  readonly title: string
+  // The letters typed after the trigger give the items, in the order they show.
+  readonly items: (query: string) => ReadonlyArray<CompletionItem>
+  // Shown in place of the items, such as while they load or after they failed.
+  readonly message?: ReactNode
+  // Shown when no item matches the letters typed.
+  readonly empty: (query: string) => ReactNode
+  // Runs each time the sheet opens.
+  readonly onOpen?: () => void
+}
+
 export interface TextFieldProps {
   readonly label: string
   readonly value: string
@@ -583,6 +613,7 @@ export interface MessageFieldProps {
   readonly label: string
   readonly placeholder: string
   readonly footer?: ReactNode
+  readonly completion?: MessageFieldCompletion
 }
 
 // The file of the session's working folder, in an editor; `line` shows that line first.

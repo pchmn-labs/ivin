@@ -77,6 +77,10 @@ Typed, namespaced metadata attached to a session or a project, written by plugin
 **Skill**:
 A folder of instructions an agent reads when its task calls for it, in the harness's user skills folder. ivin ships its own, `ivin-customize`, and installs it there; a skill of the same name that ivin did not write is left as it is.
 
+**Agent command**:
+A skill or a command of the harness itself that the user runs by starting a message with `/name`, such as `/compact`; the harness runs it, ivin only lists them in the composer. Each says whether it is a skill and where it comes from: the project, the user, a plugin or the harness.
+_Avoid_: slash command, command (which is ivin's own)
+
 **Tab**:
 Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Beside its session, a tab shows its sub-views; in **full width** they cover the main area, and a Session tab in their row shows the session's chat. A session with no tab is **inactive**, listed under "Inactive sessions" in the sidebar.
 

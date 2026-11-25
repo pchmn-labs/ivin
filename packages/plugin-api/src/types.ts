@@ -80,6 +80,15 @@ export interface OfferedModel extends OfferedValue {
   readonly older: boolean
 }
 
+export interface AgentCommand {
+  readonly name: string
+  readonly description: string
+  readonly argumentHint: string | null
+  readonly kind: "skill" | "command"
+  // Where a skill comes from; null for the harness's own commands.
+  readonly source: "project" | "user" | "plugin" | "built-in" | null
+}
+
 export interface HarnessRunOptions {
   readonly model: { readonly values: ReadonlyArray<OfferedModel>; readonly default: string }
   readonly effort: { readonly values: ReadonlyArray<OfferedValue>; readonly default: string }

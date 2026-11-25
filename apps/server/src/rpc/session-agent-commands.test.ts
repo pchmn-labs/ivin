@@ -25,6 +25,7 @@ const review: AgentCommand = {
   description: "Reviews the branch",
   argumentHint: "[branch]",
   kind: "skill",
+  source: "project",
 }
 
 const withServer = <A, E>(

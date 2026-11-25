@@ -40,6 +40,8 @@ export const AgentCommand = Schema.Struct({
   description: Schema.String,
   argumentHint: Schema.NullOr(Schema.String),
   kind: Schema.Literals(["skill", "command"]),
+  // Where a skill comes from; null for the harness's own commands.
+  source: Schema.NullOr(Schema.Literals(["project", "user", "plugin", "built-in"])),
 })
 export type AgentCommand = typeof AgentCommand.Type
 
