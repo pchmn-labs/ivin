@@ -101,10 +101,10 @@
     },
     "setup-matt-pocock-skills": {
       "source": "pchmn/skills",
-      "commit": "5cea9d25d6fef0cb8098851f54013cd7fa9a9da3",
+      "commit": "4149880e74e7847ab96f2023d820a4331a900daa",
       "sourceType": "github",
       "skillPath": "skills/engineering/setup-matt-pocock-skills/SKILL.md",
-      "computedHash": "11e0aa6bc76a47cc4e5163b9dea0f19b304b7b52a2a6e3ada5dc7d968c3fc33b"
+      "computedHash": "2cef867aac04a5c127234f59b3a040097cea91b003f14ba26189806d33c33b9c"
     },
     "tdd": {
       "source": "pchmn/skills",
