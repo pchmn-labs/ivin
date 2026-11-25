@@ -522,13 +522,34 @@ export const makeFakeServer = (
             }),
           )
         : Effect.sync(() => {
+            const plugin = userSettings.pluginSettings?.find(
+              (setting) => `${setting.pluginId}.${setting.key}` === path,
+            )
+            if (plugin !== undefined) {
+              userSettings = {
+                ...userSettings,
+                pluginSettings:
+                  userSettings.pluginSettings?.map((setting) =>
+                    setting === plugin
+                      ? { ...setting, value: value as never, ignored: false }
+                      : setting,
+                  ) ?? [],
+                problem: null,
+              }
+              Effect.runSync(PubSub.publish(settingChanges, userSettings))
+              return
+            }
             const [section, key] = path.split(".") as [string, string]
             const settings = structuredClone(userSettings.settings) as Record<
               string,
               Record<string, unknown>
             >
             settings[section]![key] = value
-            userSettings = { settings: settings as UserSettings["settings"], problem: null }
+            userSettings = {
+              ...userSettings,
+              settings: settings as UserSettings["settings"],
+              problem: null,
+            }
             Effect.runSync(PubSub.publish(settingChanges, userSettings))
           }),
     "project.list": () => Effect.sync(openProjects),

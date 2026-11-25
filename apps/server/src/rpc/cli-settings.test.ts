@@ -21,9 +21,18 @@ const text = `{
 `
 
 // Runs `ivin settings …` while the app watches a settings.json holding `initial`.
-const settings = (args: readonly string[], initial: string | null = text, readOnlyHome = false) => {
+const settings = (
+  args: readonly string[],
+  initial: string | null = text,
+  readOnlyHome = false,
+  pluginManifest?: string,
+) => {
   const home = join(mkdtempSync(join(tmpdir(), "ivin-home-")), ".ivin")
   mkdirSync(home)
+  if (pluginManifest !== undefined) {
+    mkdirSync(join(home, "plugins", "prs"), { recursive: true })
+    writeFileSync(join(home, "plugins", "prs", "package.json"), pluginManifest)
+  }
   const path = join(home, "settings.json")
   if (initial !== null) writeFileSync(path, initial)
   if (readOnlyHome) chmodSync(home, 0o500)
@@ -49,7 +58,7 @@ const settings = (args: readonly string[], initial: string | null = text, readOn
       await firstSettings((settings) => isDeepStrictEqual(settings, loaded.settings))
       const result = await runCli(["settings", ...args], { IVIN_SOCKET: socketPath })
       const applied =
-        args[0] === "set" && result.code === 0
+        args[0] === "set" && result.code === 0 && pluginManifest === undefined
           ? await firstSettings((settings) => !isDeepStrictEqual(settings, loaded.settings))
           : undefined
       return {
@@ -172,3 +181,24 @@ test("ivin settings set tells when the file cannot be written", async () => {
   expect(run.code).toBe(1)
   expect(run.stderr).toContain("ivin could not write")
 })
+
+const prsManifest = JSON.stringify({
+  name: "prs",
+  ivin: {
+    id: "prs",
+    ui: "src/ui.tsx",
+    settings: {
+      foldThreshold: { type: "number", default: 2, title: "Fold after", description: "Rows." },
+    },
+  },
+})
+
+test("ivin settings reads and writes a setting a plugin declares", async () => {
+  const get = await settings(["get", "prs.foldThreshold"], text, false, prsManifest)
+  const set = await settings(["set", "prs.foldThreshold", "4"], text, false, prsManifest)
+
+  expect(get.code).toBe(0)
+  expect(get.stdout).toBe("2\n")
+  expect(set.code).toBe(0)
+  expect(set.file).toMatch(/"prs": \{\s*"foldThreshold": 4\s*\}/)
+}, 20_000)

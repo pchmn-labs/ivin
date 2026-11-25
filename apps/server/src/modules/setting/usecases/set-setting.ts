@@ -5,15 +5,25 @@ import {
 } from "@ivin/contracts/setting"
 import { Effect, type Schema } from "effect"
 import { editSettingsText } from "../rules/edit-settings-text.ts"
+import { checkPluginSetting, pluginSettingPaths } from "../rules/plugin-settings.ts"
 import { checkSetting, settingPaths } from "../rules/setting-path.ts"
+import { PluginSettingDeclarations } from "./plugin-setting-declarations.ts"
 import { SettingsFile } from "./settings-file.ts"
 
 export const setSetting = (path: string, value: Schema.Json) =>
   Effect.gen(function* () {
-    const check = checkSetting(path, value)
+    const declarations = yield* yield* PluginSettingDeclarations
+    const core = checkSetting(path, value)
+    const check =
+      core.ok || core.reason === "invalidValue"
+        ? core
+        : (checkPluginSetting(declarations, path, value) ?? core)
     if (!check.ok) {
       return yield* check.reason === "unknownPath"
-        ? new SettingPathUnknown({ path, knownPaths: settingPaths })
+        ? new SettingPathUnknown({
+            path,
+            knownPaths: [...settingPaths, ...pluginSettingPaths(declarations)],
+          })
         : new SettingValueInvalid({
             path,
             expected: check.expected,

@@ -7,16 +7,12 @@ import { ListRow } from "../../../core/components/list-row/list-row.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { connectionAtom } from "../../server/atoms/connection.ts"
-import { settingsSectionAtom } from "../atoms/settings-page.ts"
+import { settingsPageSectionsAtom, settingsSectionAtom } from "../atoms/settings-page.ts"
 import { useOpenSettingsFile } from "../hooks/use-open-settings-file.ts"
 import { SETTINGS_FILE } from "../rules/setting-message.ts"
-import {
-  settingsPageSections,
-  type SettingsPageSectionKey,
-} from "../rules/settings-page-sections.ts"
 import "./settings-nav.css"
 
-const sectionIcons: Record<SettingsPageSectionKey, IconName> = {
+const sectionIcons: Record<string, IconName> = {
   tabs: "app-window",
   worktrees: "worktree",
   files: "folder",
@@ -32,6 +28,7 @@ const rowButtons = (list: HTMLElement) => [
 
 export function SettingsNav({ onClose }: { onClose: () => void }) {
   const [selected, select] = useAtom(settingsSectionAtom)
+  const sections = useAtomValue(settingsPageSectionsAtom)
   const list = useRef<HTMLUListElement>(null)
   const file = useOpenSettingsFile()
   const backHint = useKeyHint("Back to sessions", "settings.close")
@@ -48,7 +45,7 @@ export function SettingsNav({ onClose }: { onClose: () => void }) {
     if (index < 0) return
     event.preventDefault()
     const next = (index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length
-    select(settingsPageSections[next]!.key)
+    select(sections[next]!.key)
     buttons[next]!.focus()
   }
 
@@ -65,10 +62,10 @@ export function SettingsNav({ onClose }: { onClose: () => void }) {
         <h1 className="iv-settings-nav__title">Settings</h1>
       </div>
       <ul className="iv-settings-nav__list" ref={list} onKeyDown={onKeyDown}>
-        {settingsPageSections.map((section) => (
+        {sections.map((section) => (
           <li key={section.key}>
             <ListRow
-              leading={<Icon name={sectionIcons[section.key]} size={14} />}
+              leading={<Icon name={sectionIcons[section.key] ?? "stack"} size={14} />}
               title={section.title}
               selected={section.key === selected}
               onSelect={() => select(section.key)}

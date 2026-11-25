@@ -38,7 +38,7 @@ Reasons: [ADR-0012](../adr/0012-server-modules-import-each-other-in-one-order.md
 8. tab
 9. file, server
 
-Modules on the same line import none of each other. A module that needs one above it declares a port in its `usecases/`, and the module above provides its Layer, as `tab` does for `SessionTabs` and `ProjectTabs`.
+Modules on the same line import none of each other; a port between two of them has its Layer built in `rpc/`, as `rpc/plugin-setting-declarations.ts` does for the plugin manifests `setting` reads. A module that needs one above it declares a port in its `usecases/`, and the module above provides its Layer, as `tab` does for `SessionTabs` and `ProjectTabs`.
 
 ## Tests
 

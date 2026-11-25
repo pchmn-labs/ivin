@@ -68,6 +68,7 @@ import { layerSessionRuns } from "../modules/session/usecases/session-runs.ts"
 import { taskOutput } from "../modules/session/usecases/task-output.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
 import { layerWorktreeCleanup } from "../modules/session/usecases/worktree-cleanup.ts"
+import { layerPluginSettingDeclarations } from "./plugin-setting-declarations.ts"
 import { layerCurrentSettings } from "../modules/setting/usecases/current-settings.ts"
 import { getSetting } from "../modules/setting/usecases/get-setting.ts"
 import { setSetting } from "../modules/setting/usecases/set-setting.ts"
@@ -107,6 +108,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     Layer.provideMerge(layerSessionTabs),
     Layer.provideMerge(sessionRuns),
     Layer.provideMerge(layerCurrentSettings),
+    Layer.provideMerge(layerPluginSettingDeclarations),
     Layer.provideMerge(layerSessionFeed),
     Layer.provideMerge(layerOriginFetch),
     Layer.provideMerge(Layer.mergeAll(layerChangeFeed, layerCommittedListings)),

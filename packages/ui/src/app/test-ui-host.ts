@@ -40,7 +40,7 @@ export const testUiHost: UiHost = {
   useChanges: () => ({ listing: { kind: "loading" }, retry: () => {} }),
   useOpenDiff: () => async () => undefined,
   useDiffOnScreen: () => null,
-  useSettings: () => defaultSettings,
+  useSettings: () => ({ ...defaultSettings, plugins: {} }),
   useDiscardChanges: () => async () => undefined,
   components: hostComponents,
 }

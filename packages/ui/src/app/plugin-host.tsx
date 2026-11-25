@@ -83,7 +83,7 @@ import {
   pendingQuestionOf,
 } from "../modules/transcript/atoms/get-pending-items.ts"
 import { usageOf } from "../modules/transcript/atoms/get-usage.ts"
-import { settingsAtom } from "../modules/setting/atoms/settings.ts"
+import { settingsWithPluginsAtom } from "../modules/setting/atoms/settings.ts"
 import { contractSession } from "../modules/session/rules/plugin-session.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
@@ -378,7 +378,7 @@ const host: UiHost = {
         ? { path: selected.path, kind: "committed" }
         : null
   },
-  useSettings: () => useAtomValue(settingsAtom),
+  useSettings: () => useAtomValue(settingsWithPluginsAtom),
   useDiscardChanges: () => {
     const discard = useAtomSet(discardChangesAtom, { mode: "promiseExit" })
     return async (sessionId, paths) => {
