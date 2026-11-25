@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 import { IconButton } from "../core/components/button/button.tsx"
 import { useKeyHint } from "../modules/keybinding/hooks/use-key-hint.ts"
 import { useSessionHistory } from "../modules/session/hooks/use-session-history.ts"
+import { isDevBuild } from "../shared/adapters/dev-build.ts"
 import "./shell-controls.css"
 
 export interface ShellControlsProps {
@@ -22,14 +23,21 @@ export function ShellControls({
   return (
     <div className="iv-shell-controls" data-sidebar={sidebarOpen ? "open" : "closed"}>
       <span className="iv-shell-controls__lights" aria-hidden="true" />
-      <IconButton
-        icon="panel-left"
-        label="Toggle sidebar"
-        tooltip={toggleHint}
-        size="sm"
-        aria-expanded={sidebarOpen}
-        onClick={onToggleSidebar}
-      />
+      <span className="iv-shell-controls__start">
+        <IconButton
+          icon="panel-left"
+          label="Toggle sidebar"
+          tooltip={toggleHint}
+          size="sm"
+          aria-expanded={sidebarOpen}
+          onClick={onToggleSidebar}
+        />
+        {isDevBuild() && (
+          <span className="iv-shell-controls__dev" data-testid="dev-build">
+            Dev build
+          </span>
+        )}
+      </span>
       {extra}
       <IconButton
         icon="arrow-left"

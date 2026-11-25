@@ -10,3 +10,5 @@ export const GET_UPDATE_STATE = "ivin:update:get-state"
 export const CHECK_FOR_UPDATES = "ivin:update:check"
 export const RESTART_TO_UPDATE = "ivin:update:restart"
 export const SHOW_IN_FOLDER = "ivin:show-in-folder"
+
+export const DEV_BUILD_ARGUMENT = "--ivin-dev-build"

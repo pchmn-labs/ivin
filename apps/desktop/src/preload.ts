@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron"
 import {
   CHECK_FOR_UPDATES,
+  DEV_BUILD_ARGUMENT,
   GET_SERVER_STATE,
   GET_UPDATE_STATE,
   OPEN_SETTINGS_FILE,
@@ -30,6 +31,7 @@ contextBridge.exposeInMainWorld("ivin", {
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke(PICK_FOLDER),
   openSettingsFile: (): Promise<string | null> => ipcRenderer.invoke(OPEN_SETTINGS_FILE),
   platform: process.platform,
+  devBuild: process.argv.includes(DEV_BUILD_ARGUMENT),
   showInFolder: (path: string): Promise<void> => ipcRenderer.invoke(SHOW_IN_FOLDER, path),
   getServerState: (): Promise<unknown> => ipcRenderer.invoke(GET_SERVER_STATE),
   restartServer: (): Promise<void> => ipcRenderer.invoke(RESTART_SERVER),
