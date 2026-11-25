@@ -26,7 +26,7 @@ export const layerFsImageStore = Layer.effect(ImageStore)(
         sessionFolder(row.session_id),
         imageFileName(row.id, row.compressed_media_type ?? row.media_type),
       )
-    const kept = (sentBefore: number | null) =>
+    const notDeletedSentBefore = (sentBefore: number | null) =>
       db
         .prepare(
           `SELECT id, session_id, media_type, compressed_media_type FROM images
@@ -105,12 +105,12 @@ export const layerFsImageStore = Layer.effect(ImageStore)(
           markCompressed.run("image/webp", imageId)
           rmSync(original, { force: true })
         }),
-      space: (sentBefore) => Effect.sync(() => spaceOf(kept(sentBefore))),
+      space: (sentBefore) => Effect.sync(() => spaceOf(notDeletedSentBefore(sentBefore))),
       remove: (sentBefore) =>
         Effect.gen(function* () {
           const now = yield* Clock.currentTimeMillis
           return yield* Effect.sync(() => {
-            const rows = kept(sentBefore)
+            const rows = notDeletedSentBefore(sentBefore)
             const freed = spaceOf(rows)
             const markDeleted = db.prepare("UPDATE images SET deleted_at = ? WHERE id = ?")
             for (const row of rows) {

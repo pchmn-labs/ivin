@@ -17,5 +17,7 @@ test("the space and the delete confirmations count images and days in plain word
     "Delete 1 image sent more than 30 days ago?",
   )
   expect(deleteImagesTitle(null, { images: 2, bytes: 0 })).toBe("Delete all 2 images?")
+  expect(deleteImagesTitle(null, { images: 1, bytes: 0 })).toBe("Delete the stored image?")
+  expect(deleteImagesDescription({ images: 1, bytes: 0 })).toContain("Its message keeps its text")
   expect(deleteImagesDescription({ images: 2, bytes: 3.7 * MB })).toMatch(/^This frees 3\.7 MB\./)
 })

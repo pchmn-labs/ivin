@@ -376,3 +376,24 @@ test("deleting all images removes every file, and a session's next image takes t
   expect(existsSync(join(folder, result.sessionId, "i1.png"))).toBe(false)
   expect(result.session?.lastImageNumber).toBe(1)
 })
+
+test("deleting a session whose images were deleted removes their rows and its folder", async () => {
+  const db = newDatabase()
+  const folder = newFolder()
+  const sessionId = await withServer(
+    db,
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const sessionId = yield* sendIn(client, "/p", screenshot)
+        yield* client["transcript.deleteImages"]({})
+        yield* client["session.delete"]({ sessionId })
+        return sessionId
+      }),
+    { cycle: true },
+    folder,
+  )
+
+  expect(existsSync(join(folder, sessionId))).toBe(false)
+  expect(db.prepare("SELECT COUNT(*) AS count FROM images").get()).toEqual({ count: 0 })
+})

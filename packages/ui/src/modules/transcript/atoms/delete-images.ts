@@ -1,15 +1,14 @@
 import { Effect } from "effect"
 import { Atom } from "effect/reactivity"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
+import type { DeleteScope } from "../rules/image-space.ts"
 import { imagesDeletedAtom } from "./get-image-space.ts"
 
-// The transcripts already loaded hold image references from before the delete.
 export const deletedImageIdsAtom = Atom.make<ReadonlyMap<string, true>>(new Map()).pipe(
   Atom.keepAlive,
 )
 
-// `null`: every image.
-export const deleteImagesAtom = serverRuntime.fn<number | null>()(
+export const deleteImagesAtom = serverRuntime.fn<DeleteScope>()(
   Effect.fnUntraced(function* (olderThanDays, get) {
     const client = yield* ServerClient
     const deleted = yield* client["transcript.deleteImages"](

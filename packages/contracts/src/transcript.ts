@@ -488,7 +488,7 @@ export const TranscriptRpcs = RpcGroup.make(
     payload: { olderThanDays: OlderThanDays },
     success: ImageSpace,
   }),
-  // Deletes those images' files, keeps their rows marked deleted, and returns what it freed.
+  // Returns what it freed.
   Rpc.make("transcript.deleteImages", {
     payload: { olderThanDays: OlderThanDays },
     success: DeletedImages,

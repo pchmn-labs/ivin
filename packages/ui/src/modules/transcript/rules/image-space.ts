@@ -18,11 +18,17 @@ export const olderImagesSummary = (space: ImageSpace, days: number) =>
 
 export const deleteImagesTitle = (scope: DeleteScope, space: ImageSpace) =>
   scope === null
-    ? `Delete all ${imageCount(space.images)}?`
+    ? space.images === 1
+      ? "Delete the stored image?"
+      : `Delete all ${imageCount(space.images)}?`
     : `Delete ${imageCount(space.images)} sent more than ${count(scope, "day")} ago?`
 
 export const deleteImagesDescription = (space: ImageSpace) =>
-  `This frees ${byteSize(space.bytes)}. Their messages keep their text and show each image as deleted. This cannot be undone.`
+  `This frees ${byteSize(space.bytes)}. ${
+    space.images === 1
+      ? "Its message keeps its text and shows the image as deleted."
+      : "Their messages keep their text and show each image as deleted."
+  } This cannot be undone.`
 
 export const DAYS_INVALID = "Enter a whole number of days, 1 or more."
 export const SPACE_NOT_READ = "The space the images take could not be read. Try again."

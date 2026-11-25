@@ -91,7 +91,7 @@
   line-height: var(--iv-text-xs-lh);
 }
 
-/* Lifts the icon and word above the number label in the bottom corner. */
+/* Keeps the icon and its word clear of the #N label. */
 .iv-image-thumbnail[data-size="lg"] .iv-image-thumbnail__deleted {
   padding-bottom: 10px;
   box-sizing: border-box;
