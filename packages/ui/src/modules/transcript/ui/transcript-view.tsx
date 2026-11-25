@@ -35,7 +35,9 @@ export function TranscriptView({
   // The tasks the agent rests on; the fold under the last turn lists them.
   background?: ReadonlyArray<BackgroundTask>
 }) {
-  const { loaded, failed, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
+  const { loaded, failed, hasBefore, prepended, rows, oldestId } = useAtomValue(
+    transcriptOf(sessionId).view,
+  )
   const retry = useAtomRefresh(transcriptOf(sessionId).list.status)
   const loadItemsBefore = useAtomSet(loadItemsBeforeAtom)
   const shown = useMemo(() => shownRows(rows, live), [rows, live])
@@ -51,7 +53,7 @@ export function TranscriptView({
     list: save.list,
   })
   const { rangeChanged, startReached } = useLoadBefore({
-    rows,
+    oldestId,
     firstIndex,
     hasBefore,
     load: () => loadItemsBefore(sessionId),
