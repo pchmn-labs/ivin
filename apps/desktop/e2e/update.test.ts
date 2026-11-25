@@ -22,11 +22,13 @@ interface FakeRelease {
   readonly close: () => void
 }
 
-// The app's own bundle plus a marker file, zipped as the release workflow zips it.
-const releaseServer = async (bundle: string): Promise<FakeRelease> => {
+// A stub bundle: the swap only moves it and runs its executable.
+const releaseServer = async (): Promise<FakeRelease> => {
   const staging = makeTempDir("release")
   const next = join(staging, "ivin.app")
-  execFileSync("ditto", [bundle, next])
+  mkdirSync(join(next, "Contents/MacOS"), { recursive: true })
+  mkdirSync(join(next, "Contents/Resources"))
+  writeFileSync(join(next, "Contents/MacOS/ivin"), "#!/bin/sh\nsleep 10\n", { mode: 0o755 })
   writeFileSync(join(next, "Contents/Resources/update-marker"), NEW_VERSION)
   const zipFile = join(staging, ZIP)
   execFileSync("ditto", ["-c", "-k", "--keepParent", next, zipFile])
@@ -86,7 +88,7 @@ const launchCopy = (bundle: string, userDataDir: string, releaseUrl: string) => 
 
 test("a newer release is downloaded in the background, and a click replaces the app and relaunches it", async () => {
   const bundle = installedCopy()
-  const release = await releaseServer(bundle)
+  const release = await releaseServer()
   const app = await launchCopy(bundle, makeTempDir("user-data"), release.url)
   try {
     const window = await startSession(app)
@@ -122,7 +124,7 @@ test("a newer release is downloaded in the background, and a click replaces the 
 
 test("with the automatic check off, no request leaves the app until Check for updates is run", async () => {
   const bundle = installedCopy()
-  const release = await releaseServer(bundle)
+  const release = await releaseServer()
   const userDataDir = makeTempDir("user-data")
   mkdirSync(join(userDataDir, ".ivin"))
   writeFileSync(
