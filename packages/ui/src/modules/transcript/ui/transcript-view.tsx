@@ -22,8 +22,6 @@ import "./transcript-view.css"
 const FIRST_ITEM_INDEX = 1_000_000
 // One 24px transcript line and the item's 8px padding above and below; keep in step with transcript-view.css.
 const ROW_HEIGHT = 40
-// When a turn ends, its answer is drawn and measured before the view moves to the turn's message.
-const DRAWN_BELOW_VIEW = 2000
 // `live`: the session's agent is working, so its last turn is under way.
 export function TranscriptView({
   sessionId,
@@ -48,7 +46,6 @@ export function TranscriptView({
   const save = useSavePlace({ sessionId, firstIndex, following })
   const { scrollerRef, totalListHeightChanged } = useFollowTranscript({
     rows,
-    shown,
     live,
     following,
     list: save.list,
@@ -74,7 +71,6 @@ export function TranscriptView({
         className="iv-transcript__list"
         data={shown}
         defaultItemHeight={ROW_HEIGHT}
-        increaseViewportBy={{ top: 0, bottom: DRAWN_BELOW_VIEW }}
         firstItemIndex={firstIndex}
         {...(restored
           ? { restoreStateFrom: restored.list }
