@@ -242,6 +242,32 @@ export const migrations: readonly Migration[] = [
       ) i
     )`,
   },
+  {
+    version: 25,
+    sql: `
+    CREATE TABLE sub_views_next (
+      session_id TEXT NOT NULL,
+      position INTEGER NOT NULL,
+      view TEXT NOT NULL,
+      params TEXT NOT NULL,
+      working_folder TEXT NOT NULL,
+      selected INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (session_id, view, params)
+    );
+    INSERT INTO sub_views_next (session_id, position, view, params, working_folder, selected)
+      SELECT session_id, position,
+        CASE kind WHEN 'file' THEN 'files/file' ELSE 'changes/diff' END,
+        CASE kind
+          WHEN 'file' THEN json_object('path', path)
+          WHEN 'diff' THEN json_object('kind', 'working', 'path', path)
+          ELSE json_object('kind', 'committed', 'path', path)
+        END,
+        working_folder, selected
+      FROM sub_views;
+    DROP TABLE sub_views;
+    ALTER TABLE sub_views_next RENAME TO sub_views;
+    CREATE INDEX sub_views_by_session ON sub_views (session_id, position)`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

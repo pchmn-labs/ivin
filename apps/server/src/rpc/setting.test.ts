@@ -77,10 +77,11 @@ test("setting.set writes the value, and setting.watch and setting.get then give 
   expect(result.all).toEqual({
     tabs: { stopAgentOnClose: false, newTabPosition: "end" },
     worktrees: { removeOnTabClose: true },
-    files: { folderIcons: true },
+    files: { folderIcons: true, file: { placement: "subView" } },
     sidebar: { layout: "rail" },
     agents: { stopWhenIdleMinutes: 10 },
     updates: { automaticCheck: true, beta: false },
+    changes: { diff: { placement: "subView" } },
   })
 })
 
@@ -128,6 +129,8 @@ test("an unknown path or a value of the wrong type is refused, and the file is u
     "agents.stopWhenIdleMinutes",
     "updates.automaticCheck",
     "updates.beta",
+    "changes.diff.placement",
+    "files.file.placement",
   ]
   expect(result.unknown).toMatchObject({
     _tag: "SettingPathUnknown",

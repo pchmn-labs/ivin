@@ -10,6 +10,19 @@ export type Json =
   | ReadonlyArray<Json>
   | { readonly [key: string]: Json }
 
+export type ViewPlacement = "subView" | "sheet" | "dialog"
+
+// A view's parameters: a JSON object, which with the view's name says which view it is.
+export type ViewParams = { readonly [key: string]: Json }
+
+export interface ViewProps<P extends ViewParams = ViewParams> {
+  readonly sessionId: string
+  readonly params: P
+  // Where the app opened this view, not always where the plugin asked.
+  readonly placement: ViewPlacement
+  readonly close: () => void
+}
+
 export interface Project {
   readonly path: string
   readonly name: string

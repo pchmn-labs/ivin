@@ -1,7 +1,7 @@
 import { useAtom, useAtomValue } from "@effect/atom-react"
 import { useEffect, useRef } from "react"
 import { Icon } from "../../../core/components/icon/icon.tsx"
-import { ResizeHandle } from "../../../core/components/resize-handle/resize-handle.tsx"
+import { SheetFrame } from "../../../core/components/sheet-frame/sheet-frame.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import type { BackgroundTask } from "@ivin/contracts/session"
 import { openTaskOf, tasksOf } from "../atoms/background-tasks.ts"
@@ -9,7 +9,6 @@ import { knownTasks } from "../rules/background-tasks.ts"
 import { TaskMeta, taskIcon } from "./background-fold.tsx"
 import { AgentRun, CommandOutput } from "./task-run.tsx"
 import "./task-sheet.css"
-import "../../tab/ui/sub-view-card.css"
 
 // The sheet floats over the transcript, so a click on the pill of another task switches it instead.
 const KEEPS_OPEN = ".iv-task__pill"
@@ -45,22 +44,17 @@ export function TaskSheet({
   // A task that ended keeps its tab while it is the one shown.
   const shown = tasks.filter((other) => other.status === "running" || other.taskId === task.taskId)
   return (
-    <div
-      className="iv-task-sheet"
+    <SheetFrame
       ref={sheet}
-      data-testid="task-sheet"
-      role="region"
-      aria-label={`Task: ${task.description}`}
-    >
-      <ResizeHandle
-        label="Resize the task sheet"
-        edge="top"
-        property="--iv-task-sheet-height"
-        name="task-sheet"
-        min={160}
-        max={(element) => (element.parentElement?.getBoundingClientRect().top ?? 400) - 48}
-      />
-      <div className="iv-sub-view-card__row iv-task-sheet__row">
+      className="iv-task-sheet"
+      testId="task-sheet"
+      label={`Task: ${task.description}`}
+      resizeLabel="Resize the task sheet"
+      resizeName="task-sheet"
+      closeLabel="Close the task"
+      onClose={close}
+      aside={<TaskMeta sessionId={sessionId} task={task} />}
+      tabs={
         <div className="iv-sub-view-card__tabs" role="tablist" aria-label="Tasks in background">
           {shown.map((other) => (
             <div
@@ -72,7 +66,7 @@ export function TaskSheet({
                 type="button"
                 role="tab"
                 aria-selected={other.taskId === task.taskId}
-                className="iv-sub-view-card__tab iv-task-sheet__tab"
+                className="iv-sub-view-card__tab iv-sheet__tab"
                 onClick={() => setOpenId(other.taskId)}
               >
                 <span className="iv-sub-view-card__icon" aria-hidden>
@@ -83,23 +77,13 @@ export function TaskSheet({
             </div>
           ))}
         </div>
-        <TaskMeta sessionId={sessionId} task={task} />
-        <button
-          type="button"
-          className="iv-sub-view-card__close iv-task-sheet__close"
-          aria-label="Close the task"
-          onClick={close}
-        >
-          <Icon name="x" size={12} />
-        </button>
-      </div>
-      <div className="iv-task-sheet__body">
-        {task.kind === "agent" ? (
-          <AgentRun key={task.taskId} sessionId={sessionId} task={task} lastOnly={false} />
-        ) : (
-          <CommandOutput key={task.taskId} sessionId={sessionId} task={task} />
-        )}
-      </div>
-    </div>
+      }
+    >
+      {task.kind === "agent" ? (
+        <AgentRun key={task.taskId} sessionId={sessionId} task={task} lastOnly={false} />
+      ) : (
+        <CommandOutput key={task.taskId} sessionId={sessionId} task={task} />
+      )}
+    </SheetFrame>
   )
 }

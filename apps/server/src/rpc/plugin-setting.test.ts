@@ -69,8 +69,15 @@ const homeWithPlugin = () => {
 const watchedPluginSettings = (client: Client) =>
   client["setting.watch"]().pipe(
     Stream.runHead,
-    Effect.map((head) => (head._tag === "Some" ? head.value.pluginSettings : undefined)),
+    Effect.map((head) =>
+      head._tag === "Some"
+        ? head.value.pluginSettings?.filter(({ pluginId }) => !builtinIds.has(pluginId))
+        : undefined,
+    ),
   )
+
+// The built-in files and changes plugins declare placement settings of their own.
+const builtinIds = new Set(["files", "changes"])
 
 test("a user plugin's manifest settings are read, with their defaults over the file's values", async () => {
   const settings = await withPlugins(homeWithPlugin(), '{ "prs": { "fold": 5 } }', (client) =>

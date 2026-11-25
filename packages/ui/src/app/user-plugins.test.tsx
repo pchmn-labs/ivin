@@ -67,7 +67,13 @@ const renderWith = async (
 
 test("a user plugin's bundle renders with the app's React, and its command returns its value", async () => {
   const { registry } = await renderWith([], importFromSource({ "a.js": counterBundle }), (server) =>
-    server.userPlugins.push({ _tag: "compiled", id: "counter", name: "Counter", bundle: "a.js" }),
+    server.userPlugins.push({
+      _tag: "compiled",
+      id: "counter",
+      name: "Counter",
+      bundle: "a.js",
+      views: [],
+    }),
   )
 
   await expect.element(page.getByText("count 42")).toBeVisible()
@@ -81,7 +87,13 @@ test("a user plugin replaces the built-in plugin with its id", async () => {
     [textPlugin("notes", "built in"), textPlugin("other", "other built in")],
     importFromSource({ "n.js": textBundle("from the user") }),
     (server) =>
-      server.userPlugins.push({ _tag: "compiled", id: "notes", name: "Notes", bundle: "n.js" }),
+      server.userPlugins.push({
+        _tag: "compiled",
+        id: "notes",
+        name: "Notes",
+        bundle: "n.js",
+        views: [],
+      }),
   )
 
   await expect.element(page.getByText("from the user")).toBeVisible()
@@ -99,10 +111,10 @@ test("a bundle that fails to import, exports no activate, or throws in activate 
     }),
     (server) =>
       server.userPlugins.push(
-        { _tag: "compiled", id: "ok", name: "Ok", bundle: "ok.js" },
-        { _tag: "compiled", id: "missing", name: "Missing", bundle: "missing.js" },
-        { _tag: "compiled", id: "none", name: "None", bundle: "none.js" },
-        { _tag: "compiled", id: "thrower", name: "Thrower", bundle: "throws.js" },
+        { _tag: "compiled", id: "ok", name: "Ok", bundle: "ok.js", views: [] },
+        { _tag: "compiled", id: "missing", name: "Missing", bundle: "missing.js", views: [] },
+        { _tag: "compiled", id: "none", name: "None", bundle: "none.js", views: [] },
+        { _tag: "compiled", id: "thrower", name: "Thrower", bundle: "throws.js", views: [] },
         { _tag: "failed", id: "broken", reason: "Could not compile src/ui.tsx" },
       ),
   )
@@ -127,11 +139,23 @@ test("a plugin listed later, once its dependencies install, loads beside those a
     [],
     importFromSource({ "a.js": textBundle("first plugin"), "b.js": textBundle("second plugin") }),
     (server) =>
-      server.userPlugins.push({ _tag: "compiled", id: "first", name: "First", bundle: "a.js" }),
+      server.userPlugins.push({
+        _tag: "compiled",
+        id: "first",
+        name: "First",
+        bundle: "a.js",
+        views: [],
+      }),
   )
   await expect.element(page.getByText("first plugin")).toBeVisible()
 
-  server.addUserPlugin({ _tag: "compiled", id: "second", name: "Second", bundle: "b.js" })
+  server.addUserPlugin({
+    _tag: "compiled",
+    id: "second",
+    name: "Second",
+    bundle: "b.js",
+    views: [],
+  })
 
   await expect.element(page.getByText("second plugin")).toBeVisible()
   await expect.element(page.getByText("first plugin")).toBeVisible()
@@ -163,14 +187,15 @@ test("a user plugin whose activate throws leaves the built-in in place, logged o
         id: "changes",
         name: "Changes",
         bundle: "bad.js",
+        views: [],
       }),
   )
   await expect.element(page.getByText("built-in changes")).toBeVisible()
   observer.observe(document.body, { childList: true, subtree: true, characterData: true })
 
-  server.addUserPlugin({ _tag: "compiled", id: "a", name: "A", bundle: "a.js" })
+  server.addUserPlugin({ _tag: "compiled", id: "a", name: "A", bundle: "a.js", views: [] })
   await expect.element(page.getByText("plugin a")).toBeVisible()
-  server.addUserPlugin({ _tag: "compiled", id: "b", name: "B", bundle: "b.js" })
+  server.addUserPlugin({ _tag: "compiled", id: "b", name: "B", bundle: "b.js", views: [] })
   await expect.element(page.getByText("plugin b")).toBeVisible()
   observer.disconnect()
 

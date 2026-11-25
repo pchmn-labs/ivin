@@ -576,6 +576,22 @@ export interface MessageFieldProps {
   readonly footer?: ReactNode
 }
 
+// The file of the session's working folder, in an editor; `line` shows that line first.
+export interface FileViewProps {
+  readonly sessionId: string
+  readonly path: string
+  readonly line?: number
+}
+
+// The diff of a file of the session's working folder: its uncommitted changes, or what the
+// commits of the session's branch changed in it. `onOpenFile` opens the file itself.
+export interface DiffViewProps {
+  readonly sessionId: string
+  readonly path: string
+  readonly kind: "working" | "committed"
+  readonly onOpenFile: () => void
+}
+
 // The composer's column: an alert, the sheets above the field, the field, then the status line.
 export interface ComposerFrameProps {
   // The keybinding area of the whole frame, such as "composer".
@@ -633,6 +649,8 @@ export interface HostComponents {
   readonly RunOptionsMenu: ComponentType<RunOptionsMenuProps>
   readonly MessageField: ComponentType<MessageFieldProps>
   readonly ComposerFrame: ComponentType<ComposerFrameProps>
+  readonly FileView: ComponentType<FileViewProps>
+  readonly DiffView: ComponentType<DiffViewProps>
 }
 
 const hostComponent =
@@ -679,3 +697,5 @@ export const PickWorkingFolder = hostComponent((c) => c.PickWorkingFolder)
 export const RunOptionsMenu = hostComponent((c) => c.RunOptionsMenu)
 export const MessageField = hostComponent((c) => c.MessageField)
 export const ComposerFrame = hostComponent((c) => c.ComposerFrame)
+export const FileView = hostComponent((c) => c.FileView)
+export const DiffView = hostComponent((c) => c.DiffView)

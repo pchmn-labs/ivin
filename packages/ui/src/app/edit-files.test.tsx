@@ -55,10 +55,10 @@ const makeServer = () => {
   server.subViews.set("s1", {
     sessionId: "s1",
     subViews: [
-      { kind: "file", path: "README.md" },
-      { kind: "file", path: "main.ts" },
+      { view: "files/file", params: { path: "README.md" } },
+      { view: "files/file", params: { path: "main.ts" } },
     ],
-    selected: { kind: "file", path: "README.md" },
+    selected: { view: "files/file", params: { path: "README.md" } },
     fullWidth: false,
     sessionTabSelected: false,
   })

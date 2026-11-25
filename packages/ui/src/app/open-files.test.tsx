@@ -102,7 +102,9 @@ test("a file opened from the tree shows beside the chat, in a tab of its own", a
 
   await expect.element(fileTab("README.md")).toHaveAttribute("aria-selected", "true")
   await expect.element(code("README.md")).toHaveTextContent("# Shop")
-  expect(server.subViews.get("s1")?.subViews).toEqual([{ kind: "file", path: "README.md" }])
+  expect(server.subViews.get("s1")?.subViews).toEqual([
+    { view: "files/file", params: { path: "README.md" } },
+  ])
 })
 
 test("several files stay open; the last opened is selected, and a tab selects its file", async () => {
@@ -205,10 +207,10 @@ test("the open files are back at launch, from the server", async () => {
   server.subViews.set("s1", {
     sessionId: "s1",
     subViews: [
-      { kind: "file", path: "README.md" },
-      { kind: "file", path: "src/main.ts" },
+      { view: "files/file", params: { path: "README.md" } },
+      { view: "files/file", params: { path: "src/main.ts" } },
     ],
-    selected: { kind: "file", path: "src/main.ts" },
+    selected: { view: "files/file", params: { path: "src/main.ts" } },
     fullWidth: false,
     sessionTabSelected: false,
   })
@@ -300,8 +302,8 @@ test("a file linked in an agent's answer opens beside the chat", async () => {
   await transcriptLink("main").click()
   await expect.element(fileTab("main.ts")).toHaveAttribute("aria-selected", "true")
   expect(server.subViews.get("s1")?.subViews).toEqual([
-    { kind: "file", path: "README.md" },
-    { kind: "file", path: "src/main.ts" },
+    { view: "files/file", params: { path: "README.md" } },
+    { view: "files/file", params: { path: "src/main.ts" } },
   ])
 })
 
@@ -349,7 +351,9 @@ test("a link outside the working folder opens the file read-only, under a bar th
   ;(code(".zshrc").element() as HTMLElement).focus()
   await userEvent.keyboard("xyz")
   await expect.element(code(".zshrc")).toHaveTextContent('export EDITOR="vim"')
-  expect(server.subViews.get("s1")?.subViews).toEqual([{ kind: "file", path: "/Users/me/.zshrc" }])
+  expect(server.subViews.get("s1")?.subViews).toEqual([
+    { view: "files/file", params: { path: "/Users/me/.zshrc" } },
+  ])
 })
 
 test("the bar of a file outside the working folder shows it in the platform's file manager", async () => {

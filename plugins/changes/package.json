@@ -8,6 +8,18 @@
   "ivin": {
     "id": "changes",
     "name": "Changes",
-    "ui": "src/ui.tsx"
+    "ui": "src/ui.tsx",
+    "views": {
+      "diff": {
+        "title": "Diff",
+        "icon": "diff",
+        "placements": [
+          "subView",
+          "sheet",
+          "dialog"
+        ],
+        "defaultPlacement": "subView"
+      }
+    }
   }
 }

@@ -1,11 +1,14 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { useCallback, useEffect, useRef, useState } from "react"
+import type { ViewDeclaration } from "@ivin/contracts/plugin"
 import type { UiPlugin } from "@ivin/plugin-api/ui"
 import type { ImportBundle } from "../adapters/plugin-bundle.ts"
 import type { UiPluginEntry } from "../atoms/activate-plugin.ts"
 import { listPluginsAtom } from "../atoms/list-plugins.ts"
 import { reportPluginFailureAtom } from "../atoms/report-plugin-failure.ts"
+
+type ViewDeclarations = ReadonlyArray<ViewDeclaration>
 
 const NONE: ReadonlyArray<UiPluginEntry> = []
 
@@ -26,12 +29,16 @@ export function useUserPlugins(importBundle: ImportBundle) {
   useEffect(() => {
     if (listed === null) return
     let stopped = false
-    const load = async (id: string, bundle: string): Promise<UiPluginEntry | null> => {
+    const load = async (
+      id: string,
+      bundle: string,
+      views: ViewDeclarations,
+    ): Promise<UiPluginEntry | null> => {
       let reason: string
       try {
         const { activate } = await importBundle(bundle)
         if (typeof activate === "function")
-          return { manifest: { id }, activate: activate as UiPlugin }
+          return { manifest: { id, views }, activate: activate as UiPlugin }
         reason = "Its UI half exports no activate function."
       } catch (error) {
         reason = `Could not load its UI half: ${messageOf(error)}`
@@ -42,7 +49,7 @@ export function useUserPlugins(importBundle: ImportBundle) {
     const entries = listed.flatMap((plugin) => {
       if (plugin._tag !== "compiled") return []
       const key = `${plugin.id}\0${plugin.bundle}`
-      const started = loads.current.get(key) ?? load(plugin.id, plugin.bundle)
+      const started = loads.current.get(key) ?? load(plugin.id, plugin.bundle, plugin.views)
       loads.current.set(key, started)
       return [
         started.then((entry) => {

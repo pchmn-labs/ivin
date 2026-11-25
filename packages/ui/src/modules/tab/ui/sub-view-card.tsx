@@ -1,5 +1,6 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import { Suspense, lazy, useRef } from "react"
+import type { SubView } from "@ivin/contracts/tab"
+import { useRef } from "react"
 import { Button, IconButton } from "../../../core/components/button/button.tsx"
 import { Dialog } from "../../../core/components/dialog/dialog.tsx"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
@@ -12,18 +13,11 @@ import { useKeyHint } from "../../keybinding/hooks/use-key-hint.ts"
 import { subViewsOf } from "../atoms/list-sub-views.ts"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
 import { useSubViewActions } from "../hooks/use-sub-view-actions.ts"
-import { adjacentRowTab, subViewKey } from "../rules/sub-views.ts"
+import { adjacentRowTab, editedFileOf, pathOf, subViewKey } from "../rules/sub-views.ts"
 import { SubViewTabs } from "./sub-view-tabs.tsx"
-import { LoadingRows } from "../../../core/components/loading-rows/loading-rows.tsx"
+import { ViewBody } from "../../view/ui/view-body.tsx"
+import { useViewLook } from "../../view/hooks/use-view-look.tsx"
 import "./sub-view-card.css"
-
-// CodeMirror comes with these two views, so the window does not load it before one opens.
-const DiffView = lazy(() =>
-  import("../../file/ui/diff-view.tsx").then((m) => ({ default: m.DiffView })),
-)
-const FileView = lazy(() =>
-  import("../../file/ui/file-view.tsx").then((m) => ({ default: m.FileView })),
-)
 
 const CARD_MIN = 280
 
@@ -34,6 +28,23 @@ const cardMax = (card: HTMLElement) => {
   const chatMin = parseFloat(getComputedStyle(chat).minWidth)
   const margin = parseFloat(getComputedStyle(card).marginRight)
   return split.clientWidth - chatMin - margin
+}
+
+function SubViewBody({
+  sessionId,
+  selected,
+  close,
+}: {
+  sessionId: string
+  selected: SubView
+  close: () => void
+}) {
+  const { title } = useViewLook(selected)
+  return (
+    <div className="iv-sub-view-card__body" role="tabpanel" aria-label={title}>
+      <ViewBody sessionId={sessionId} view={selected} placement="subView" close={close} />
+    </div>
+  )
 }
 
 export function SubViewCard({
@@ -132,7 +143,7 @@ export function SubViewCard({
       <Dialog
         open={confirming}
         onOpenChange={setConfirming}
-        title={`Close ${fileName(closing?.path ?? "")} without saving?`}
+        title={`Close ${fileName((closing && (editedFileOf(closing) ?? pathOf(closing))) ?? "")} without saving?`}
         description="Your edits to it are lost unless you save them."
         actions={
           closing && (
@@ -162,37 +173,12 @@ export function SubViewCard({
         </div>
       )}
       {!onSession && (
-        <div
-          className="iv-sub-view-card__body"
-          role="tabpanel"
-          aria-label={
-            selected.kind !== "file"
-              ? `Diff of ${fileName(selected.path)}`
-              : fileName(selected.path)
-          }
-        >
-          <Suspense fallback={<LoadingRows label="Loading" />}>
-            {selected.kind !== "file" ? (
-              <DiffView
-                key={subViewKey(selected)}
-                kind={selected.kind}
-                sessionId={sessionId}
-                workingFolder={workingFolder}
-                path={selected.path}
-                onOpenFile={() =>
-                  open({ sessionId, workingFolder, subView: { kind: "file", path: selected.path } })
-                }
-              />
-            ) : (
-              <FileView
-                key={subViewKey(selected)}
-                sessionId={sessionId}
-                workingFolder={workingFolder}
-                path={selected.path}
-              />
-            )}
-          </Suspense>
-        </div>
+        <SubViewBody
+          key={subViewKey(selected)}
+          sessionId={sessionId}
+          selected={selected}
+          close={() => void closeFile(selected)}
+        />
       )}
     </section>
   )

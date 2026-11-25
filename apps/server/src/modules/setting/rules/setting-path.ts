@@ -71,7 +71,7 @@ export const checkSetting = (
 }
 
 // Undefined when no setting or section has that path.
-export const valueAt = (settings: Settings, path: string | null): unknown =>
+export const valueAt = (settings: unknown, path: string | null): unknown =>
   path === null
     ? settings
     : path

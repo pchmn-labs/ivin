@@ -80,8 +80,15 @@ A folder of instructions an agent reads when its task calls for it, in the harne
 **Tab**:
 Belongs to one project and shows exactly one session, with its transcript and composer. A session has at most one tab. A tab has a position in its project's tab bar, and the project remembers its selected tab. Beside its session, a tab shows its sub-views; in **full width** they cover the main area, and a Session tab in their row shows the session's chat. A session with no tab is **inactive**, listed under "Inactive sessions" in the sidebar.
 
+**View**:
+Something a plugin shows for a session, opened with parameters: a file, a diff of a file. A view is identified by its plugin, its name and its parameters; opening an equal view selects the one that is open. The app's own views belong to the `files` and `changes` plugins. A session's views close when it moves to another working folder.
+_Avoid_: panel, widget
+
+**Placement**:
+Where a view opens: as a sub-view of the session's tab, as a tab of the sheet docked on the composer, or in a dialog. The plugin declares the placements a view can open in and its default; the user's setting for the view, then the caller, then the default pick one of them.
+
 **Sub-view**:
-A file of the session's working folder, or a file outside it opened read-only, that file's uncommitted diff, or what the commits of the session's branch changed in it since it left origin's default branch, that a tab shows beside its chat, or across the main area in full width. A tab keeps its sub-views in the order they were opened, with one selected; they close when the session moves to another working folder.
+A view opened in a tab's own row, beside its chat or across the main area in full width. A tab keeps its sub-views in the order they were opened, with one selected, and shows them again after a relaunch unless the view declares it does not restore.
 _Avoid_: editor, pane
 
 **Plugin**:

@@ -6,7 +6,7 @@ import { contributionsAtom, type Contribution } from "../modules/plugin/atoms/co
 import { reportPluginFailureAtom } from "../modules/plugin/atoms/report-plugin-failure.ts"
 import { visibleContributions } from "../modules/plugin/rules/visible-contributions.ts"
 
-class ContributionBoundary extends Component<
+export class ContributionBoundary extends Component<
   { pluginId: string; children: ReactNode; quiet?: boolean; onError: (error: unknown) => void },
   { failed: boolean }
 > {
@@ -24,21 +24,24 @@ class ContributionBoundary extends Component<
   override render() {
     if (!this.state.failed) return this.props.children
     if (this.props.quiet) return null
-    const { pluginId } = this.props
-    return (
-      <p role="alert">
-        plugin <code>{pluginId}</code> failed — see <code>ivin plugin logs {pluginId}</code>
-      </p>
-    )
+    return <PluginFailureMessage pluginId={this.props.pluginId} />
   }
 }
 
-function useReportPluginError(pluginId: string) {
+export function PluginFailureMessage({ pluginId }: { pluginId: string }) {
+  return (
+    <p role="alert">
+      plugin <code>{pluginId}</code> failed — see <code>ivin plugin logs {pluginId}</code>
+    </p>
+  )
+}
+
+export function useReportPluginError(pluginId: string, what = "slot") {
   const registry = useContext(RegistryContext)
   return (error: unknown) =>
     registry.set(reportPluginFailureAtom, {
       id: pluginId,
-      reason: `Its slot failed while rendering: ${error instanceof Error ? error.message : String(error)}`,
+      reason: `Its ${what} failed while rendering: ${error instanceof Error ? error.message : String(error)}`,
     })
 }
 

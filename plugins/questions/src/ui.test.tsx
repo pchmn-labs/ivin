@@ -33,6 +33,7 @@ const mount = async (
     editorExtensions: { add: () => undefined },
     fileIcons: { add: () => undefined },
     fileUrl: (path) => path,
+    views: { register: () => undefined, open: async () => undefined },
     notify: () => undefined,
     sidebar: { showPanel: () => undefined },
   }

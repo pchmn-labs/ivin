@@ -265,8 +265,8 @@ test("an open diff is back at launch, from the server", async () => {
   const server = makeServer()
   server.subViews.set("s1", {
     sessionId: "s1",
-    subViews: [{ kind: "diff", path: "README.md" }],
-    selected: { kind: "diff", path: "README.md" },
+    subViews: [{ view: "changes/diff", params: { kind: "working", path: "README.md" } }],
+    selected: { view: "changes/diff", params: { kind: "working", path: "README.md" } },
     fullWidth: false,
     sessionTabSelected: false,
   })

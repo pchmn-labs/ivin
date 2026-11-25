@@ -2,6 +2,7 @@ import { lazy } from "react"
 import { defineUi } from "@ivin/plugin-api/ui"
 import { AREA } from "./rules/groups.ts"
 import type { OnScreen } from "./rules/on-screen.ts"
+import { DiffViewOf } from "./ui/diff-view.tsx"
 import { ChangesBadge } from "./ui/changes-badge.tsx"
 
 const ChangesPanel = lazy(() =>
@@ -10,6 +11,13 @@ const ChangesPanel = lazy(() =>
 
 export const activate = defineUi((ctx) => {
   const onScreen: OnScreen = { current: null }
+  ctx.views.register("diff", {
+    component: DiffViewOf,
+    title: ({ path, kind }) =>
+      typeof path === "string"
+        ? `${path.slice(path.lastIndexOf("/") + 1)} ${kind === "committed" ? "committed" : "diff"}`
+        : "Diff",
+  })
   ctx.slots.add("sidebar.panel", () => <ChangesPanel onScreen={onScreen} />, {
     name: "panel",
     title: "Changes",

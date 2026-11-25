@@ -14,6 +14,10 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { statusLabel } from "@ivin/plugin-api/ui"
 import { ImageViewer } from "../../transcript/ui/image-viewer.tsx"
 import { TaskSheet } from "../../transcript/ui/task-sheet.tsx"
+import { useCloseViewsOnMove } from "../../view/hooks/use-close-views-on-move.ts"
+import { ViewDialog } from "../../view/ui/view-dialog.tsx"
+import { ViewSheet } from "../../view/ui/view-sheet.tsx"
+import { sheetViewsOf } from "../../view/atoms/overlay-views.ts"
 import { openTaskOf } from "../../transcript/atoms/background-tasks.ts"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import "./session-view.css"
@@ -37,7 +41,10 @@ function OpenSession({
   const projectName = useAtomValue(projectsAtom.value).projects.find(
     (project) => project.path === projectPath,
   )?.name
-  const taskOpen = useAtomValue(openTaskOf(sessionId)) !== null
+  const workingFolder = session?.workingFolder
+  useCloseViewsOnMove(sessionId, workingFolder)
+  const sheetViews = useAtomValue(sheetViewsOf(sessionId, workingFolder ?? ""))
+  const taskOpen = useAtomValue(openTaskOf(sessionId)) !== null || sheetViews.selected !== null
   const interrupt = useAtomSet(interruptSessionAtom)
   const archiveFromKey = useArchiveFromKey(session)
   useCommandHandler("session.archive", archiveFromKey, session !== undefined)
@@ -86,9 +93,15 @@ function OpenSession({
       )}
       <div className="iv-session-view__dock" data-task-sheet={taskOpen ? "" : undefined}>
         <TaskSheet sessionId={sessionId} background={session?.backgroundTasks ?? []} />
+        {workingFolder !== undefined && (
+          <ViewSheet sessionId={sessionId} workingFolder={workingFolder} />
+        )}
         <Slot key={sessionId} slot="session.composer" props={{ sessionId }} />
       </div>
       <ImageViewer sessionId={sessionId} />
+      {workingFolder !== undefined && (
+        <ViewDialog sessionId={sessionId} workingFolder={workingFolder} />
+      )}
     </div>
   )
 }

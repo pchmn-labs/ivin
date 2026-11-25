@@ -41,6 +41,9 @@ import type {
   ToolCallItem,
   TranscriptItem,
   UtcDateTime,
+  ViewParams,
+  ViewPlacement,
+  ViewProps,
   WorkingFolderItem,
 } from "./types.ts"
 import { HostContext, useHost } from "./host-context.ts"
@@ -101,6 +104,9 @@ export type {
   ToolCallItem,
   TranscriptItem,
   UtcDateTime,
+  ViewParams,
+  ViewPlacement,
+  ViewProps,
   WorkingFolderItem,
   EditorExtension,
 }
@@ -183,6 +189,19 @@ export interface FileIconRow {
 // Null leaves the row to the next `fileIcons` contribution, then to the `Tree`'s own icon.
 export type FileIcon = (row: FileIconRow) => ReactNode | null
 
+export interface ViewOptions {
+  readonly component: ComponentType<ViewProps>
+  // The view's tab; the manifest's title when absent.
+  readonly title?: (params: ViewParams) => string
+  // The view's tab icon; the manifest's icon when absent.
+  readonly icon?: (params: ViewParams) => ReactNode
+}
+
+export interface OpenViewOptions {
+  // Where to open when the user's setting for the view does not decide; one of the view's placements.
+  readonly placement?: ViewPlacement
+}
+
 export interface UiContext {
   readonly pluginId: string
   readonly slots: {
@@ -208,6 +227,17 @@ export interface UiContext {
   // The icon of each row of the Files tab's tree; an `<img>` is drawn at `--iv-tree-icon-size`.
   readonly fileIcons: {
     add: (icon: FileIcon) => void
+  }
+  readonly views: {
+    // The component of a view the manifest declares under `ivin.views`; refused for any other name.
+    register: (name: string, view: ViewOptions) => void
+    // Opens a view of any plugin for the session, `view` as `"<plugin>/<view>"`.
+    open: (
+      sessionId: string,
+      view: string,
+      params: ViewParams,
+      options?: OpenViewOptions,
+    ) => Promise<ActionFailure | undefined>
   }
   // The URL of a file of the plugin's folder, for an `<img>`; `path` is relative to that folder.
   readonly fileUrl: (path: string) => string
@@ -280,6 +310,7 @@ export const useCommandHandler = (commandId: string, run: () => void, enabled?: 
 export const useKeyHint = (title: string, commandId: string) =>
   useHost().useKeyHint(title, commandId)
 export const useListFolder = () => useHost().useListFolder()
+export const useOpenView = () => useHost().useOpenView()
 export const useOpenFile = () => useHost().useOpenFile()
 export const useListFiles = () => useHost().useListFiles()
 export const useFolderChanges = (

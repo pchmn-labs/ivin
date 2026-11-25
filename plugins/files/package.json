@@ -8,6 +8,18 @@
   "ivin": {
     "id": "files",
     "name": "Files",
-    "ui": "src/ui.tsx"
+    "ui": "src/ui.tsx",
+    "views": {
+      "file": {
+        "title": "File",
+        "icon": "file",
+        "placements": [
+          "subView",
+          "sheet",
+          "dialog"
+        ],
+        "defaultPlacement": "subView"
+      }
+    }
   }
 }

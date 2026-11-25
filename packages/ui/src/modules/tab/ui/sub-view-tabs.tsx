@@ -1,15 +1,11 @@
-import { useAtomSet, useAtomValue } from "@effect/atom-react"
+import { useAtomSet } from "@effect/atom-react"
 import type { SubView } from "@ivin/contracts/tab"
 import { useId, type KeyboardEvent } from "react"
 import { HarnessMark, type MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
-import { fileName } from "../../file/rules/file-name.ts"
-import { fileIconsAtom } from "../../plugin/atoms/contributions.ts"
-import { fileIconOf } from "../../plugin/rules/file-icon.ts"
+import { useViewLook } from "../../view/hooks/use-view-look.tsx"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
-import { sameSubView, subViewKey } from "../rules/sub-views.ts"
-
-const DIFF_LABELS = { diff: "diff", committed_diff: "committed" } as const
+import { pathOf, sameSubView, subViewKey } from "../rules/sub-views.ts"
 
 const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
   if (event.altKey || event.metaKey || event.ctrlKey) return
@@ -27,6 +23,69 @@ const moveFocus = (event: KeyboardEvent<HTMLDivElement>) => {
 
 const stopMiddleClickScroll = (event: { button: number; preventDefault: () => void }) => {
   if (event.button === 1) event.preventDefault()
+}
+
+function SubViewTab({
+  subView,
+  selected,
+  unsaved,
+  onOpen,
+  onClose,
+}: {
+  subView: SubView
+  selected: boolean
+  unsaved: boolean
+  onOpen: () => void
+  onClose: () => Promise<void>
+}) {
+  const unsavedId = `${useId()}-unsaved`
+  const { title, icon } = useViewLook(subView)
+  return (
+    <div
+      className="iv-sub-view-card__item"
+      role="presentation"
+      data-selected={selected || undefined}
+      data-unsaved={unsaved || undefined}
+      onMouseDown={stopMiddleClickScroll}
+      onAuxClick={(event) => {
+        if (event.button !== 1) return
+        event.preventDefault()
+        void onClose()
+      }}
+    >
+      <button
+        type="button"
+        role="tab"
+        className="iv-sub-view-card__tab"
+        aria-selected={selected}
+        tabIndex={selected ? 0 : -1}
+        title={pathOf(subView) ?? title}
+        aria-describedby={unsaved ? unsavedId : undefined}
+        onClick={onOpen}
+      >
+        <span className="iv-sub-view-card__icon" aria-hidden>
+          {icon}
+        </span>
+        <span className="iv-sub-view-card__name">{title}</span>
+      </button>
+      {unsaved && (
+        <span id={unsavedId} className="iv-visually-hidden">
+          Unsaved edits
+        </span>
+      )}
+      <button
+        type="button"
+        className="iv-sub-view-card__close"
+        tabIndex={-1}
+        aria-hidden
+        aria-label={`Close ${title}`}
+        onClick={() => void onClose()}
+      >
+        <span className="iv-sub-view-card__unsaved" aria-hidden />
+        <Icon name="x" size={12} />
+      </button>
+    </div>
+  )
 }
 
 export function SubViewTabs({
@@ -53,8 +112,6 @@ export function SubViewTabs({
   showSession: () => Promise<void>
 }) {
   const open = useAtomSet(openSubViewAtom)
-  const cardId = useId()
-  const fileIcons = useAtomValue(fileIconsAtom)
   return (
     <div
       className="iv-sub-view-card__tabs"
@@ -86,69 +143,16 @@ export function SubViewTabs({
           <span className="iv-sub-view-card__separator" aria-hidden />
         </>
       )}
-      {subViews.map((subView) => {
-        const isSelected = !onSession && sameSubView(subView, selected)
-        const unsavedEdits = isUnsaved(subView)
-        const name = fileName(subView.path)
-        const isDiff = subView.kind !== "file"
-        const unsavedId = `${cardId}-${subViewKey(subView)}-unsaved`
-        const closeThis = () => closeFile(subView)
-        return (
-          <div
-            key={subViewKey(subView)}
-            className="iv-sub-view-card__item"
-            role="presentation"
-            data-selected={isSelected || undefined}
-            data-unsaved={unsavedEdits || undefined}
-            onMouseDown={stopMiddleClickScroll}
-            onAuxClick={(event) => {
-              if (event.button !== 1) return
-              event.preventDefault()
-              void closeThis()
-            }}
-          >
-            <button
-              type="button"
-              role="tab"
-              className="iv-sub-view-card__tab"
-              aria-selected={isSelected}
-              tabIndex={isSelected ? 0 : -1}
-              title={subView.path}
-              aria-describedby={unsavedEdits ? unsavedId : undefined}
-              onClick={() => open({ sessionId, workingFolder, subView })}
-            >
-              <span className="iv-sub-view-card__icon" aria-hidden>
-                {fileIconOf(fileIcons, { name, folder: false, open: false }) ?? (
-                  <Icon name={isDiff ? "diff" : "file"} size={14} />
-                )}
-              </span>
-              <span className="iv-sub-view-card__name">{name}</span>
-              {isDiff && (
-                <>
-                  {" "}
-                  <span className="iv-sub-view-card__kind">{DIFF_LABELS[subView.kind]}</span>
-                </>
-              )}
-            </button>
-            {unsavedEdits && (
-              <span id={unsavedId} className="iv-visually-hidden">
-                Unsaved edits
-              </span>
-            )}
-            <button
-              type="button"
-              className="iv-sub-view-card__close"
-              tabIndex={-1}
-              aria-hidden
-              aria-label={`Close ${isDiff ? `the ${subView.kind === "diff" ? "" : "committed "}diff of ${name}` : name}`}
-              onClick={() => void closeThis()}
-            >
-              <span className="iv-sub-view-card__unsaved" aria-hidden />
-              <Icon name="x" size={12} />
-            </button>
-          </div>
-        )
-      })}
+      {subViews.map((subView) => (
+        <SubViewTab
+          key={subViewKey(subView)}
+          subView={subView}
+          selected={!onSession && sameSubView(subView, selected)}
+          unsaved={isUnsaved(subView)}
+          onOpen={() => open({ sessionId, workingFolder, subView })}
+          onClose={() => closeFile(subView)}
+        />
+      ))}
     </div>
   )
 }

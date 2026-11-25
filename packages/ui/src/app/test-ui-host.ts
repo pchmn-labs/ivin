@@ -32,6 +32,7 @@ export const testUiHost: UiHost = {
   useCommandHandler: () => {},
   useKeyHint: (title) => title,
   useListFolder: () => async () => ({ kind: "listed", entries: [] }),
+  useOpenView: () => async () => undefined,
   useOpenFile: () => async () => undefined,
   useListFiles: () => async () => ({ kind: "listed", paths: [], truncated: false }),
   useFolderChanges: () => {},

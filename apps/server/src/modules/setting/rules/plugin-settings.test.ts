@@ -110,3 +110,14 @@ test("the file's object is kept from the last valid text", () => {
   expect(fileObjectOf("{", previous)).toBe(previous)
   expect(fileObjectOf("[]", previous)).toBe(previous)
 })
+
+test("a dotted key is read through nested objects and keeps its flat name in the values", () => {
+  const nested = [declaration("file.placement", "string", "subView", ["subView", "sheet"])]
+  const settings = resolvePluginSettings({ prs: { file: { placement: "sheet" } } }, nested)
+  expect(settings.map(({ value, ignored }) => [value, ignored])).toEqual([["sheet", false]])
+  expect(pluginSettingValues(settings)).toEqual({ prs: { file: { placement: "sheet" } } })
+  expect(resolvePluginSettings({ prs: { file: 3 } }, nested)[0]).toMatchObject({
+    value: "subView",
+    ignored: false,
+  })
+})

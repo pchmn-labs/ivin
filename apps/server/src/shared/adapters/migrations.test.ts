@@ -276,3 +276,46 @@ test("a stored background task gets its item's id, tool call and start", () => {
     ],
   ])
 })
+
+test("stored file, diff and committed diff sub-views become views with parameters", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 24)))
+  db.exec(
+    `INSERT INTO sub_views (session_id, position, kind, path, working_folder, selected) VALUES
+       ('s', 0, 'file', 'a.txt', '/w', 0),
+       ('s', 1, 'diff', 'a.txt', '/w', 1),
+       ('s', 2, 'committed_diff', 'b.txt', '/w', 0)`,
+  )
+
+  Effect.runSync(runMigrations(db))
+
+  expect(
+    db
+      .prepare(
+        "SELECT position, view, params, working_folder, selected FROM sub_views ORDER BY position",
+      )
+      .all(),
+  ).toEqual([
+    {
+      position: 0,
+      view: "files/file",
+      params: '{"path":"a.txt"}',
+      working_folder: "/w",
+      selected: 0,
+    },
+    {
+      position: 1,
+      view: "changes/diff",
+      params: '{"kind":"working","path":"a.txt"}',
+      working_folder: "/w",
+      selected: 1,
+    },
+    {
+      position: 2,
+      view: "changes/diff",
+      params: '{"kind":"committed","path":"b.txt"}',
+      working_folder: "/w",
+      selected: 0,
+    },
+  ])
+})

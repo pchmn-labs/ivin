@@ -27,17 +27,29 @@ export const resolvePluginSettings = (
   declarations: ReadonlyArray<PluginSettingDeclaration>,
 ): ReadonlyArray<PluginSetting> =>
   declarations.map((declaration) => {
-    const section = file[declaration.pluginId]
-    const value = isObject(section) ? section[declaration.key] : undefined
+    const value = declaration.key
+      .split(".")
+      .reduce<unknown>(
+        (section, key) => (isObject(section) ? section[key] : undefined),
+        file[declaration.pluginId],
+      )
     if (value === undefined) return { ...declaration, value: declaration.default, ignored: false }
     return accepts(declaration, value)
       ? { ...declaration, value: value as PluginSetting["value"], ignored: false }
       : { ...declaration, value: declaration.default, ignored: true }
   })
 
+// Nested like the file, so `files.file.placement` is found under the app's own `files` section.
 export const pluginSettingValues = (settings: ReadonlyArray<PluginSetting>) => {
-  const values: Record<string, Record<string, PluginSetting["value"]>> = {}
-  for (const { pluginId, key, value } of settings) (values[pluginId] ??= {})[key] = value
+  const values: Record<string, Record<string, unknown>> = {}
+  for (const { pluginId, key, value } of settings) {
+    const path = key.split(".")
+    let section: Record<string, unknown> = (values[pluginId] ??= {})
+    for (const part of path.slice(0, -1)) {
+      section = (section[part] ??= {}) as Record<string, unknown>
+    }
+    section[path[path.length - 1]!] = value
+  }
   return values
 }
 

@@ -1,4 +1,4 @@
-import type { SubView, Tab } from "@ivin/contracts/tab"
+import { canonicalJson, type Tab } from "@ivin/contracts/tab"
 import { Effect, Layer } from "effect"
 import { Database } from "../../../shared/adapters/database.ts"
 import { type StoredSubView, TabStore } from "../usecases/tab-store.ts"
@@ -11,14 +11,14 @@ interface TabRow {
 const toTab = (row: TabRow): Tab => ({ sessionId: row.session_id, projectPath: row.project_path })
 
 interface SubViewRow {
-  kind: SubView["kind"]
-  path: string
+  view: string
+  params: string
   working_folder: string
   selected: number
 }
 
 const toStoredSubView = (row: SubViewRow): StoredSubView => ({
-  subView: { kind: row.kind, path: row.path },
+  subView: { view: row.view, params: JSON.parse(row.params) },
   workingFolder: row.working_folder,
   selected: row.selected === 1,
 })
@@ -89,7 +89,7 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
           (
             db
               .prepare(
-                "SELECT kind, path, working_folder, selected FROM sub_views WHERE session_id = ? ORDER BY position",
+                "SELECT view, params, working_folder, selected FROM sub_views WHERE session_id = ? ORDER BY position",
               )
               .all(sessionId) as unknown as SubViewRow[]
           ).map(toStoredSubView),
@@ -97,23 +97,27 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
       appendSubView: (sessionId, subView, workingFolder) =>
         Effect.sync(() => {
           db.prepare(
-            `INSERT INTO sub_views (session_id, position, kind, path, working_folder)
+            `INSERT INTO sub_views (session_id, position, view, params, working_folder)
              VALUES (?, (SELECT COALESCE(MAX(position) + 1, 0) FROM sub_views WHERE session_id = ?), ?, ?, ?)`,
-          ).run(sessionId, sessionId, subView.kind, subView.path, workingFolder)
+          ).run(sessionId, sessionId, subView.view, canonicalJson(subView.params), workingFolder)
         }),
       removeSubView: (sessionId, subView) =>
         Effect.sync(() => {
-          db.prepare("DELETE FROM sub_views WHERE session_id = ? AND kind = ? AND path = ?").run(
+          db.prepare("DELETE FROM sub_views WHERE session_id = ? AND view = ? AND params = ?").run(
             sessionId,
-            subView.kind,
-            subView.path,
+            subView.view,
+            canonicalJson(subView.params),
           )
         }),
       selectSubView: (sessionId, subView) =>
         Effect.sync(() => {
           db.prepare(
-            "UPDATE sub_views SET selected = (kind = ? AND path = ?) WHERE session_id = ?",
-          ).run(subView?.kind ?? "", subView?.path ?? "", sessionId)
+            "UPDATE sub_views SET selected = (view = ? AND params = ?) WHERE session_id = ?",
+          ).run(
+            subView?.view ?? "",
+            subView === null ? "" : canonicalJson(subView.params),
+            sessionId,
+          )
         }),
       layoutOf: (sessionId) =>
         Effect.sync(() => {
@@ -130,6 +134,17 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
           db.prepare(
             "UPDATE tabs SET full_width = ?, session_tab_selected = ? WHERE session_id = ?",
           ).run(Number(layout.fullWidth), Number(layout.sessionTabSelected), sessionId)
+        }),
+      removeSubViewsOfViews: (views) =>
+        Effect.sync(() => {
+          const remove = db.prepare("DELETE FROM sub_views WHERE view = ?")
+          views.forEach((view) => remove.run(view))
+          // A tab with sub-views always has one selected.
+          db.exec(
+            `UPDATE sub_views SET selected = 1 WHERE (session_id, position) IN (
+               SELECT session_id, MAX(position) FROM sub_views GROUP BY session_id HAVING SUM(selected) = 0
+             )`,
+          )
         }),
       removeSubViewsOutside: (sessionId, workingFolder) =>
         Effect.sync(() => {
