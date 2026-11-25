@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react"
 import { Icon } from "../../src/core/components/icon/icon.tsx"
-import { COMMANDS, SOURCE_LABEL, type AgentCommand } from "./data.ts"
+import { SOURCE_LABEL, type AgentCommand } from "./data.ts"
 import { Matched, type MenuProps } from "./scene.tsx"
+import type { Ranked } from "./data.ts"
 
 const HINTS = "↑↓ to move · ↩ or tab to pick · esc to close"
 
@@ -56,140 +57,89 @@ function Status({ state, query, onRetry }: Pick<MenuProps, "state" | "query" | "
 
 const listProps = { id: "proto-slash-list", role: "listbox", "aria-label": "Skills and commands" }
 
-export function OneLine({ state, query, items, active, onHover, onPick, onRetry }: MenuProps) {
-  const list = useActiveInView(active)
-  const highlighted = items[active]?.command
+export type SourceStyle = "label" | "tag" | "groups"
+
+const groupOf = (command: AgentCommand) => command.source ?? "command"
+const GROUP_LABEL = {
+  project: "Project skills",
+  user: "User skills",
+  plugin: "Plugin skills",
+  "built-in": "Built-in skills",
+  command: "Claude's commands",
+} as const
+
+// Rows grouped by where they come from, each group where its best match ranks.
+export const bySource = (items: ReadonlyArray<Ranked>): ReadonlyArray<Ranked> => {
+  const groups = new Map<string, Ranked[]>()
+  for (const item of items) {
+    const key = groupOf(item.command)
+    groups.set(key, [...(groups.get(key) ?? []), item])
+  }
+  return [...groups.values()].flat()
+}
+
+function SheetTag({ command, style }: { command: AgentCommand; style: SourceStyle }) {
+  if (style === "groups") return null
+  if (style === "label")
+    return (
+      <>
+        <Source command={command} />
+        <Tag kind={command.kind} />
+      </>
+    )
   return (
-    <div className="proto-v1">
-      {items.length === 0 ? (
-        <Status state={state} query={query} onRetry={onRetry} />
-      ) : (
-        <>
-          <div className="proto-v1-list" ref={list} {...listProps}>
-            {items.map(({ command, matched }, i) => (
-              <div
-                key={command.name}
-                className="proto-v1-row"
-                role="option"
-                aria-selected={i === active}
-                data-index={i}
-                data-active={i === active ? "" : undefined}
-                onMouseMove={() => onHover(i)}
-                onClick={() => onPick(command.name)}
-              >
-                <span className="proto-name">
-                  <span className="proto-slash">/</span>
-                  <Matched name={command.name} at={matched} />
-                </span>
-                {command.argumentHint && <span className="proto-hint">{command.argumentHint}</span>}
-                <Tag kind={command.kind} />
-              </div>
-            ))}
-          </div>
-          <div className="proto-v1-footer">
-            <p className="proto-v1-description">{highlighted?.description}</p>
-            <span className="proto-keys">{HINTS}</span>
-          </div>
-        </>
-      )}
-    </div>
+    <span className="proto-tag">
+      {command.source === null ? "Command" : `${SOURCE_LABEL[command.source]} skill`}
+    </span>
   )
 }
 
-export function Sheet({ state, query, items, active, onHover, onPick, onRetry }: MenuProps) {
-  const list = useActiveInView(active)
-  return (
-    <div className="proto-v2">
-      <div className="proto-v2-head">
-        <span>Skills and commands</span>
-        <span className="proto-keys">{HINTS}</span>
-      </div>
-      {items.length === 0 ? (
-        <Status state={state} query={query} onRetry={onRetry} />
-      ) : (
-        <div className="proto-v2-list" ref={list} {...listProps}>
-          {items.map(({ command, matched }, i) => (
-            <div
-              key={command.name}
-              className="proto-v2-row"
-              role="option"
-              aria-selected={i === active}
-              data-index={i}
-              data-active={i === active ? "" : undefined}
-              onMouseMove={() => onHover(i)}
-              onClick={() => onPick(command.name)}
-            >
-              <div className="proto-v2-line">
-                <span className="proto-name">
-                  <span className="proto-slash">/</span>
-                  <Matched name={command.name} at={matched} />
-                </span>
-                {command.argumentHint && <span className="proto-hint">{command.argumentHint}</span>}
-                <Source command={command} />
-                <Tag kind={command.kind} />
-              </div>
-              <p className="proto-v2-description">{command.description}</p>
-            </div>
-          ))}
+export const sheet = (style: SourceStyle) =>
+  function Sheet({ state, query, items, active, onHover, onPick, onRetry }: MenuProps) {
+    const list = useActiveInView(active)
+    return (
+      <div className="proto-v2">
+        <div className="proto-v2-head">
+          <span>Skills and commands</span>
+          <span className="proto-keys">{HINTS}</span>
         </div>
-      )}
-    </div>
-  )
-}
-
-export function Preview({ state, query, items, active, onHover, onPick, onRetry }: MenuProps) {
-  const list = useActiveInView(active)
-  const highlighted = items[active]?.command
-  return (
-    <div className="proto-v3">
-      {items.length === 0 || !highlighted ? (
-        <Status state={state} query={query} onRetry={onRetry} />
-      ) : (
-        <>
-          <div className="proto-v3-body">
-            <div className="proto-v3-list" ref={list} {...listProps}>
-              {items.map(({ command, matched }, i) => (
-                <div
-                  key={command.name}
-                  className="proto-v3-row"
-                  role="option"
-                  aria-selected={i === active}
-                  data-index={i}
-                  data-active={i === active ? "" : undefined}
-                  onMouseMove={() => onHover(i)}
-                  onClick={() => onPick(command.name)}
-                >
-                  <span className="proto-v3-kind" data-kind={command.kind}>
-                    <Icon name={command.kind === "skill" ? "sparkles" : "terminal"} size={14} />
-                  </span>
-                  <span className="proto-name">
-                    <span className="proto-slash">/</span>
-                    <Matched name={command.name} at={matched} />
-                  </span>
+        {items.length === 0 ? (
+          <Status state={state} query={query} onRetry={onRetry} />
+        ) : (
+          <div className="proto-v2-list" ref={list} {...listProps}>
+            {items.map(({ command, matched }, i) => {
+              const group = groupOf(command)
+              const heading =
+                style === "groups" && (i === 0 || groupOf(items[i - 1].command) !== group)
+              return (
+                <div key={command.name} role="presentation">
+                  {heading && <div className="proto-v2-group">{GROUP_LABEL[group]}</div>}
+                  <div
+                    className="proto-v2-row"
+                    role="option"
+                    aria-selected={i === active}
+                    data-index={i}
+                    data-active={i === active ? "" : undefined}
+                    onMouseMove={() => onHover(i)}
+                    onClick={() => onPick(command.name)}
+                  >
+                    <div className="proto-v2-line">
+                      <span className="proto-name">
+                        <span className="proto-slash">/</span>
+                        <Matched name={command.name} at={matched} />
+                      </span>
+                      {command.argumentHint && (
+                        <span className="proto-hint">{command.argumentHint}</span>
+                      )}
+                      <SheetTag command={command} style={style} />
+                    </div>
+                    <p className="proto-v2-description">{command.description}</p>
+                  </div>
                 </div>
-              ))}
-            </div>
-            <div className="proto-v3-detail">
-              <div className="proto-v3-title">
-                <span className="proto-name">/{highlighted.name}</span>
-                <Tag kind={highlighted.kind} />
-              </div>
-              {highlighted.argumentHint && (
-                <code className="proto-v3-usage">
-                  /{highlighted.name} {highlighted.argumentHint}
-                </code>
-              )}
-              <p className="proto-v3-description">{highlighted.description}</p>
-            </div>
+              )
+            })}
           </div>
-          <div className="proto-v3-footer">
-            <span className="proto-keys">{HINTS}</span>
-            <span>
-              {items.length} of {COMMANDS.length}
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
+        )}
+      </div>
+    )
+  }

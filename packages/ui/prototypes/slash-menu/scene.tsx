@@ -18,6 +18,8 @@ export interface Variant {
   // `popup` floats above the field's left edge; `docked` joins the field's top edge, full width.
   readonly placement: "popup" | "docked"
   readonly Menu: ComponentType<MenuProps>
+  // The order the rows show in, which the arrow keys follow.
+  readonly order?: (items: ReadonlyArray<Ranked>) => ReadonlyArray<Ranked>
 }
 
 export function Matched({ name, at }: { name: string; at: ReadonlyArray<number> }) {
@@ -64,7 +66,8 @@ export function Scene({ variant }: { variant: Variant }) {
 
   const query = slashQuery(text, caret)
   const open = query !== null && dismissed !== text
-  const items = open && state === "loaded" ? rank(COMMANDS, query) : []
+  const ranked = open && state === "loaded" ? rank(COMMANDS, query) : []
+  const items = variant.order ? variant.order(ranked) : ranked
 
   useEffect(() => setActive(0), [query])
   useEffect(() => field.current?.focus(), [])
