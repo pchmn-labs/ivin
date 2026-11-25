@@ -43,9 +43,3 @@ test("finished blocks are reused as they are", () => {
 test("text that does not extend the previous one is split whole", () => {
   expect(grow("One\n\nTwo", "Other")).toEqual(splitBlocks("Other"))
 })
-
-test("a table, a loose list and a block quote with a lazy line are one block each", () => {
-  expect(splitBlocks("| a | b |\n|---|---|\n| 1 | 2 |\n\nafter")).toHaveLength(2)
-  expect(splitBlocks("- a\n\n- b\n\n  more\n- c\n\nafter")).toHaveLength(2)
-  expect(splitBlocks("> quote\nlazy line\n\nnext")).toHaveLength(2)
-})

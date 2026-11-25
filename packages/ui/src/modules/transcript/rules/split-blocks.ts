@@ -1,13 +1,11 @@
-import remarkGfm from "remark-gfm"
-import remarkParse from "remark-parse"
-import { unified } from "unified"
+import { Lexer } from "marked"
 
-const parser = unified().use(remarkParse).use(remarkGfm)
-
+// Not remark-parse: it takes ~18x longer on a long streamed block and fails the markdown perf test.
 export const splitBlocks = (text: string): ReadonlyArray<string> =>
-  parser
-    .parse(text)
-    .children.map((node) => text.slice(node.position?.start.offset, node.position?.end.offset))
+  new Lexer()
+    .lex(text)
+    .filter((token) => token.type !== "space")
+    .map((token) => token.raw)
 
 // Streamed text only grows: finished blocks are kept and only the last one is lexed again.
 export const extendBlocks = (
