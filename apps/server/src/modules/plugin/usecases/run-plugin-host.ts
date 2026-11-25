@@ -26,7 +26,6 @@ type Ending = { readonly kind: "blocked" } | { readonly kind: "exited"; readonly
 
 const seconds = (input: Duration.Input) => Duration.toSeconds(Duration.fromInputUnsafe(input))
 
-// Compiles each valid server half once; the others are marked failed and logged once.
 const compileHalves = Effect.gen(function* () {
   const plugins = yield* UserPlugins
   const halves = yield* ServerHalves
@@ -63,7 +62,6 @@ const heartbeat = (host: RunningPluginHost, timings: PluginHostTimings) =>
     }
   })
 
-// One host process: activates the halves in order and ends when it blocks or exits.
 const runOnce = (
   halves: ReadonlyArray<ServerHalf>,
   timings: PluginHostTimings,
@@ -110,16 +108,15 @@ export const runPluginHost = (timings: PluginHostTimings = defaultPluginHostTimi
     const disabled = new Set<string>()
     const activating = yield* Ref.make<string | null>(null)
     while (true) {
-      const ending = yield* Effect.scoped(
-        runOnce(
-          halves.filter((half) => !disabled.has(half.id)),
-          timings,
-          activating,
-        ),
-      ).pipe(
+      // A half that failed to activate stays failed until the server restarts.
+      const toRun = yield* Effect.filter(
+        halves.filter((half) => !disabled.has(half.id)),
+        (half) => Effect.map(states.get(half.id), (state) => state !== "failed"),
+      )
+      const ending = yield* Effect.scoped(runOnce(toRun, timings, activating)).pipe(
         Effect.catchTag("PluginHostNotStarted", ({ reason }) =>
           Effect.logError(`the plugin host did not start: ${reason}`).pipe(
-            Effect.as({ kind: "exited", reason } as Ending),
+            Effect.as({ kind: "exited", reason } satisfies Ending),
           ),
         ),
       )

@@ -146,3 +146,9 @@ test("a half that makes the host exit is disabled, and the others come back acti
     true,
   )
 })
+
+test("a half that failed to activate is not activated again when the host restarts", async () => {
+  const fixture = setup({ bad: "throws", loops: "blocks" })
+  await run(fixture, () => until(() => fixture.launches.length >= 2))
+  expect(fixture.logs.filter((line) => line.startsWith("bad:"))).toHaveLength(1)
+})

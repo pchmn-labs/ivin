@@ -9,7 +9,7 @@ export const makePluginContext = () => {
     register: (disposer: () => void) => {
       disposers.push(disposer)
     },
-    // Returns what the disposers threw, so the caller can log it against the plugin.
+    // The caller logs what the disposers threw against the plugin.
     dispose: (): unknown[] => {
       controller.abort()
       const failures: unknown[] = []
