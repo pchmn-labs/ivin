@@ -2,52 +2,63 @@ import { useAtom } from "@effect/atom-react"
 import { sameSubView, subViewKey, type SubView } from "@ivin/contracts/tab"
 import { SheetFrame } from "../../../core/components/sheet-frame/sheet-frame.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
+import { ContextMenu } from "../../../core/components/menu/menu.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { sheetViewsOf } from "../atoms/overlay-views.ts"
 import { withSheetViewClosed, withSheetViewOpen } from "../rules/overlay-views.ts"
+import { tabMenu, useMoveTo } from "../hooks/use-move-to.ts"
 import { useViewLook } from "../hooks/use-view-look.tsx"
 import { ViewBody } from "./view-body.tsx"
 
 function SheetTab({
+  sessionId,
+  workingFolder,
   view,
   selected,
   onSelect,
   onClose,
 }: {
+  sessionId: string
+  workingFolder: string
   view: SubView
   selected: boolean
   onSelect: () => void
   onClose: () => void
 }) {
   const { title, icon } = useViewLook(view)
+  const moveTo = useMoveTo(sessionId, workingFolder, view, "sheet")
   return (
-    <div
-      className="iv-sub-view-card__item"
-      role="presentation"
-      data-selected={selected || undefined}
-    >
-      <button
-        type="button"
-        role="tab"
-        className="iv-sub-view-card__tab"
-        aria-selected={selected}
-        onClick={onSelect}
+    <ContextMenu items={tabMenu(moveTo, onClose)}>
+      <div
+        className="iv-sub-view-card__item"
+        role="presentation"
+        data-selected={selected || undefined}
       >
-        <span className="iv-sub-view-card__icon" aria-hidden>
-          {icon}
-        </span>
-        <span className="iv-sub-view-card__name">{title}</span>
-      </button>
-      <button
-        type="button"
-        className="iv-sub-view-card__close"
-        tabIndex={-1}
-        aria-label={`Close ${title}`}
-        onClick={onClose}
-      >
-        <Icon name="x" size={12} />
-      </button>
-    </div>
+        <button
+          type="button"
+          role="tab"
+          className="iv-sub-view-card__tab"
+          aria-selected={selected}
+          data-view-tab={subViewKey(view)}
+          data-movable={moveTo.length > 0 || undefined}
+          onClick={onSelect}
+        >
+          <span className="iv-sub-view-card__icon" aria-hidden>
+            {icon}
+          </span>
+          <span className="iv-sub-view-card__name">{title}</span>
+        </button>
+        <button
+          type="button"
+          className="iv-sub-view-card__close"
+          tabIndex={-1}
+          aria-label={`Close ${title}`}
+          onClick={onClose}
+        >
+          <Icon name="x" size={12} />
+        </button>
+      </div>
+    </ContextMenu>
   )
 }
 
@@ -78,6 +89,8 @@ export function ViewSheet({
           {views.map((view) => (
             <SheetTab
               key={subViewKey(view)}
+              sessionId={sessionId}
+              workingFolder={workingFolder}
               view={view}
               selected={sameSubView(view, selected)}
               onSelect={() => setState((current) => withSheetViewOpen(current, view))}

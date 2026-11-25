@@ -51,6 +51,7 @@ test("the plugin API's types match the contracts' they are converted from", () =
   expectTypeOf<Item<"interruption">>().toEqualTypeOf<Api.InterruptionItem>()
   expectTypeOf<Item<"working_folder">>().toEqualTypeOf<Api.WorkingFolderItem>()
   expectTypeOf<Item<"run_option">>().toEqualTypeOf<Api.RunOptionItem>()
+  expectTypeOf<Item<"task">>().toEqualTypeOf<Api.TaskItem>()
 })
 
 type SessionDates = "statusChangedAt" | "createdAt" | "lastActivityAt" | "archivedAt"

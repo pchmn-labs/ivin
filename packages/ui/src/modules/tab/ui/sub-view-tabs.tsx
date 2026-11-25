@@ -3,6 +3,8 @@ import type { SubView } from "@ivin/contracts/tab"
 import { useId, type KeyboardEvent } from "react"
 import { HarnessMark, type MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
+import { ContextMenu } from "../../../core/components/menu/menu.tsx"
+import { tabMenu, useMoveTo } from "../../view/hooks/use-move-to.ts"
 import { useViewLook } from "../../view/hooks/use-view-look.tsx"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
 import { pathOf, sameSubView, subViewKey } from "../rules/sub-views.ts"
@@ -26,12 +28,16 @@ const stopMiddleClickScroll = (event: { button: number; preventDefault: () => vo
 }
 
 function SubViewTab({
+  sessionId,
+  workingFolder,
   subView,
   selected,
   unsaved,
   onOpen,
   onClose,
 }: {
+  sessionId: string
+  workingFolder: string
   subView: SubView
   selected: boolean
   unsaved: boolean
@@ -40,51 +46,56 @@ function SubViewTab({
 }) {
   const unsavedId = `${useId()}-unsaved`
   const { title, icon } = useViewLook(subView)
+  const moveTo = useMoveTo(sessionId, workingFolder, subView, "subView")
   return (
-    <div
-      className="iv-sub-view-card__item"
-      role="presentation"
-      data-selected={selected || undefined}
-      data-unsaved={unsaved || undefined}
-      onMouseDown={stopMiddleClickScroll}
-      onAuxClick={(event) => {
-        if (event.button !== 1) return
-        event.preventDefault()
-        void onClose()
-      }}
-    >
-      <button
-        type="button"
-        role="tab"
-        className="iv-sub-view-card__tab"
-        aria-selected={selected}
-        tabIndex={selected ? 0 : -1}
-        title={pathOf(subView) ?? title}
-        aria-describedby={unsaved ? unsavedId : undefined}
-        onClick={onOpen}
+    <ContextMenu items={tabMenu(moveTo, () => void onClose())}>
+      <div
+        className="iv-sub-view-card__item"
+        role="presentation"
+        data-selected={selected || undefined}
+        data-unsaved={unsaved || undefined}
+        onMouseDown={stopMiddleClickScroll}
+        onAuxClick={(event) => {
+          if (event.button !== 1) return
+          event.preventDefault()
+          void onClose()
+        }}
       >
-        <span className="iv-sub-view-card__icon" aria-hidden>
-          {icon}
-        </span>
-        <span className="iv-sub-view-card__name">{title}</span>
-      </button>
-      {unsaved && (
-        <span id={unsavedId} className="iv-visually-hidden">
-          Unsaved edits
-        </span>
-      )}
-      <button
-        type="button"
-        className="iv-sub-view-card__close"
-        tabIndex={-1}
-        aria-hidden
-        aria-label={`Close ${title}`}
-        onClick={() => void onClose()}
-      >
-        <span className="iv-sub-view-card__unsaved" aria-hidden />
-        <Icon name="x" size={12} />
-      </button>
-    </div>
+        <button
+          type="button"
+          role="tab"
+          className="iv-sub-view-card__tab"
+          aria-selected={selected}
+          tabIndex={selected ? 0 : -1}
+          title={pathOf(subView) ?? title}
+          aria-describedby={unsaved ? unsavedId : undefined}
+          data-view-tab={subViewKey(subView)}
+          data-movable={moveTo.length > 0 || undefined}
+          onClick={onOpen}
+        >
+          <span className="iv-sub-view-card__icon" aria-hidden>
+            {icon}
+          </span>
+          <span className="iv-sub-view-card__name">{title}</span>
+        </button>
+        {unsaved && (
+          <span id={unsavedId} className="iv-visually-hidden">
+            Unsaved edits
+          </span>
+        )}
+        <button
+          type="button"
+          className="iv-sub-view-card__close"
+          tabIndex={-1}
+          aria-hidden
+          aria-label={`Close ${title}`}
+          onClick={() => void onClose()}
+        >
+          <span className="iv-sub-view-card__unsaved" aria-hidden />
+          <Icon name="x" size={12} />
+        </button>
+      </div>
+    </ContextMenu>
   )
 }
 
@@ -146,6 +157,8 @@ export function SubViewTabs({
       {subViews.map((subView) => (
         <SubViewTab
           key={subViewKey(subView)}
+          sessionId={sessionId}
+          workingFolder={workingFolder}
           subView={subView}
           selected={!onSession && sameSubView(subView, selected)}
           unsaved={isUnsaved(subView)}

@@ -15,6 +15,7 @@ import type {
   SessionUsage,
   Settings,
   Tab,
+  TaskItem,
   ViewParams,
   ViewPlacement,
 } from "./types.ts"
@@ -231,6 +232,10 @@ export interface UiHost {
   ) => Promise<ActionFailure | undefined>
   // The diff the session's tab has selected beside its chat as a sub-view, or null.
   readonly useDiffOnScreen: (sessionId: string) => DiffOnScreen | null
+  // A background task of the session, running or ended; undefined once the session no longer knows it.
+  readonly useTask: (sessionId: string, taskId: string) => TaskItem | undefined
+  // A command task's output so far, read again every second while it runs.
+  readonly useTaskOutput: (sessionId: string, taskId: string) => string
   // The user's ~/.ivin/settings.json over the defaults, kept up to date with the file.
   readonly useSettings: () => Settings
   // Restores each file to its last commit, or deletes it when git does not track it or it is new.

@@ -11,6 +11,7 @@ export function Stack({
   wrap = false,
   grow = false,
   inset,
+  padding,
   as: Tag = "div",
   className,
   children,
@@ -25,6 +26,7 @@ export function Stack({
     wrap && "iv-stack--wrap",
     grow && "iv-stack--grow",
     inset && `iv-stack--inset-${inset}`,
+    padding && `iv-stack--padding-${padding}`,
     className,
   ]
     .filter(Boolean)

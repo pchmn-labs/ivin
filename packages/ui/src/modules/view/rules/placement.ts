@@ -14,3 +14,22 @@ export const resolvePlacement = (
 }
 
 export const placementSettingKey = (view: string) => `${view}.placement`
+
+// Where an open view can move: its placements but the one it is in, in the manifest's order.
+export const moveTargets = (
+  declaration: Pick<ViewDeclaration, "placements"> | undefined,
+  from: ViewPlacement,
+): ReadonlyArray<ViewPlacement> =>
+  declaration?.placements.filter((placement) => placement !== from) ?? []
+
+export const placementNames: Record<ViewPlacement, string> = {
+  subView: "Beside chat",
+  sheet: "Sheet",
+  dialog: "Dialog",
+}
+
+export const placementIcons = {
+  subView: "split",
+  sheet: "panel-bottom",
+  dialog: "app-window",
+} as const satisfies Record<ViewPlacement, string>

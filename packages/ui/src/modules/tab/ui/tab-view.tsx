@@ -10,6 +10,7 @@ import { HARNESSES } from "../../session/rules/harnesses.ts"
 import { SessionView } from "../../session/ui/session-view.tsx"
 import { subViewsOf } from "../atoms/list-sub-views.ts"
 import { tabsOf } from "../atoms/list-tabs.ts"
+import { useMoveToCommand } from "../../view/hooks/use-move-to-command.ts"
 import { SubViewCard } from "./sub-view-card.tsx"
 import "./tab-view.css"
 
@@ -24,6 +25,7 @@ function SessionTab({ projectPath, sessionId }: { projectPath: string; sessionId
   const fullWidth = subViews !== null && subViews.selected !== null && subViews.fullWidth
   const onSession = fullWidth && subViews.sessionTabSelected
   const chatHidden = fullWidth && !onSession
+  useMoveToCommand()
   return (
     <>
       <div

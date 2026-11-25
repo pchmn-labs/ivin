@@ -18,11 +18,15 @@ const firstLines = (text: string) => {
   }
 }
 
-export function CodeBlock({ text, "data-testid": testId }: CodeBlockProps) {
+export function CodeBlock({ text, unbounded = false, "data-testid": testId }: CodeBlockProps) {
   const cut = firstLines(text)
   return (
     <div className="iv-code-block">
-      <pre className="iv-code-block__text" data-testid={testId}>
+      <pre
+        className="iv-code-block__text"
+        data-unbounded={unbounded || undefined}
+        data-testid={testId}
+      >
         {cut === null ? text : cut.shown}
       </pre>
       {cut !== null && cut.total > maxLines && (

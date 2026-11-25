@@ -57,6 +57,7 @@ export type IconName =
   | "robot"
   | "arrows-out"
   | "split"
+  | "panel-bottom"
   | "gear"
   | "brackets-curly"
   | "app-window"
@@ -178,6 +179,8 @@ export interface StackProps {
   readonly grow?: boolean
   // Horizontal padding, in grid steps: lines a row up with the rows of a Tree or a ListRow.
   readonly inset?: 1
+  // Padding on every side, in grid steps.
+  readonly padding?: 3
   readonly as?: "div" | "span" | "ul" | "li" | "section" | "nav"
   readonly "aria-label"?: string
   readonly "data-testid"?: string
@@ -207,6 +210,8 @@ export interface DisclosureProps {
 
 export interface CodeBlockProps {
   readonly text: string
+  // Grows with its text instead of scrolling past a few lines.
+  readonly unbounded?: boolean
   readonly "data-testid"?: string
 }
 
@@ -596,6 +601,12 @@ export interface DiffViewProps {
   readonly onOpenFile: () => void
 }
 
+// A subagent task's whole run, drawn as the agent's turn and followed live.
+export interface TaskRunProps {
+  readonly sessionId: string
+  readonly taskId: string
+}
+
 // The composer's column: an alert, the sheets above the field, the field, then the status line.
 export interface ComposerFrameProps {
   // The keybinding area of the whole frame, such as "composer".
@@ -655,6 +666,7 @@ export interface HostComponents {
   readonly ComposerFrame: ComponentType<ComposerFrameProps>
   readonly FileView: ComponentType<FileViewProps>
   readonly DiffView: ComponentType<DiffViewProps>
+  readonly TaskRun: ComponentType<TaskRunProps>
 }
 
 const hostComponent =
@@ -703,3 +715,4 @@ export const MessageField = hostComponent((c) => c.MessageField)
 export const ComposerFrame = hostComponent((c) => c.ComposerFrame)
 export const FileView = hostComponent((c) => c.FileView)
 export const DiffView = hostComponent((c) => c.DiffView)
+export const TaskRun = hostComponent((c) => c.TaskRun)

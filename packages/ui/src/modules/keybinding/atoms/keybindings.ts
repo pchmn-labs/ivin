@@ -28,6 +28,7 @@ export const coreKeybindings: ReadonlyArray<DefaultKeybinding> = [
   { key: "mod+shift+enter", command: "tab.toggleFullWidth", when: null, pluginId: null },
   { key: "mod+alt+arrowright", command: "tab.nextCardTab", when: null, pluginId: null },
   { key: "mod+alt+arrowleft", command: "tab.previousCardTab", when: null, pluginId: null },
+  { key: "mod+shift+o", command: "view.moveTo", when: null, pluginId: null },
   { key: "mod+shift+m", command: "composer.chooseModel", when: "composer", pluginId: null },
   { key: "mod+shift+e", command: "composer.chooseEffort", when: "composer", pluginId: null },
   {

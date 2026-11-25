@@ -8,6 +8,18 @@
   "ivin": {
     "id": "tool-calls",
     "name": "Tool calls",
-    "ui": "src/ui.tsx"
+    "ui": "src/ui.tsx",
+    "views": {
+      "task": {
+        "title": "Task",
+        "icon": "robot",
+        "placements": [
+          "sheet",
+          "subView"
+        ],
+        "defaultPlacement": "sheet",
+        "restore": false
+      }
+    }
   }
 }

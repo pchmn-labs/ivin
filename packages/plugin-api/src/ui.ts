@@ -31,6 +31,7 @@ import type {
   QuestionItem,
   RunOption,
   RunOptionItem,
+  TaskItem,
   TaskStopItem,
   RunOptions,
   Session,
@@ -95,6 +96,7 @@ export type {
   QuestionItem,
   RunOption,
   RunOptionItem,
+  TaskItem,
   TaskStopItem,
   RunOptions,
   Session,
@@ -326,6 +328,9 @@ export const useChanges = <K extends ChangeKind>(sessionId: string, kind: K) =>
   useHost().useChanges(sessionId, kind)
 export const useOpenDiff = () => useHost().useOpenDiff()
 export const useDiffOnScreen = (sessionId: string) => useHost().useDiffOnScreen(sessionId)
+export const useTask = (sessionId: string, taskId: string) => useHost().useTask(sessionId, taskId)
+export const useTaskOutput = (sessionId: string, taskId: string) =>
+  useHost().useTaskOutput(sessionId, taskId)
 export const useSettings = () => useHost().useSettings()
 export const useDiscardChanges = () => useHost().useDiscardChanges()
 export { formatToolInput } from "./format-tool-input.ts"

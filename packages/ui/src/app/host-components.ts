@@ -39,6 +39,7 @@ import { HostTextField } from "./host-text-field.tsx"
 import { HostSlot } from "./slot-renderer.tsx"
 import { MessageImages } from "../modules/transcript/ui/message-images.tsx"
 import { MessageText } from "../modules/transcript/ui/message-text.tsx"
+import { HostTaskRun } from "../modules/transcript/ui/task-run.tsx"
 
 export const hostComponents = {
   Button,
@@ -83,4 +84,5 @@ export const hostComponents = {
   ComposerFrame,
   FileView: HostFileView,
   DiffView: HostDiffView,
+  TaskRun: HostTaskRun,
 } satisfies HostComponents

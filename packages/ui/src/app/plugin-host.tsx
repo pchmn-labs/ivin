@@ -93,6 +93,8 @@ import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/acti
 import { importPluginBundle, type ImportBundle } from "../modules/plugin/adapters/plugin-bundle.ts"
 import { useUserPlugins } from "../modules/plugin/hooks/use-user-plugins.ts"
 import { useKeyboardHandler } from "../modules/keybinding/hooks/use-keyboard-handler.ts"
+import { taskOf } from "../modules/transcript/atoms/background-tasks.ts"
+import { useTaskOutput } from "../modules/transcript/hooks/use-task-output.ts"
 
 const NO_PROJECT = ""
 const NO_CHANGES: ReadonlyArray<GitStatusEntry> = []
@@ -387,6 +389,8 @@ const host: UiHost = {
       ? { path, kind }
       : null
   },
+  useTask: (sessionId, taskId) => useAtomValue(taskOf(sessionId)(taskId)),
+  useTaskOutput,
   useSettings: () => useAtomValue(settingsWithPluginsAtom),
   useDiscardChanges: () => {
     const discard = useAtomSet(discardChangesAtom, { mode: "promiseExit" })

@@ -3,7 +3,8 @@ import { useMemo } from "react"
 import { CodeBlock } from "../../../core/components/code-block/code-block.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
-import { taskStepsOf } from "../atoms/background-tasks.ts"
+import type { TaskRunProps } from "@ivin/plugin-api/ui"
+import { taskOf, taskStepsOf } from "../atoms/background-tasks.ts"
 import type { TaskItem } from "../rules/background-tasks.ts"
 import { foldsOf } from "../atoms/folds.ts"
 import { useTaskOutput } from "../hooks/use-task-output.ts"
@@ -67,6 +68,12 @@ export function AgentRun({
   )
 }
 
+export function HostTaskRun({ sessionId, taskId }: TaskRunProps) {
+  const task = useAtomValue(taskOf(sessionId)(taskId))
+  if (task === undefined || task.kind !== "agent") return null
+  return <AgentRun sessionId={sessionId} task={task} lastOnly={false} />
+}
+
 function RunLine({ task, work }: { task: TaskItem; work: Work }) {
   const running = task.status === "running"
   const failed = task.status === "failed"
@@ -107,7 +114,7 @@ export function CommandOutput({
   task: TaskItem
   tail?: number
 }) {
-  const output = useTaskOutput(sessionId, task)
+  const output = useTaskOutput(sessionId, task.taskId)
   const lines = output.replace(/\n$/, "").split("\n")
   const text = (tail === undefined ? lines : lines.slice(-tail)).join("\n")
   return (

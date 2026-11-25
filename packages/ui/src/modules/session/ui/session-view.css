@@ -59,9 +59,9 @@
   margin: 0 auto;
 }
 
-/* The task sheet and the sheets under it read as one surface, squared where they meet. */
-.iv-session-view__dock[data-task-sheet] .iv-action-sheet,
-.iv-session-view__dock[data-task-sheet] .iv-message-field {
+/* The view sheet and the sheets under it read as one surface, squared where they meet. */
+.iv-session-view__dock[data-sheet-open] .iv-action-sheet,
+.iv-session-view__dock[data-sheet-open] .iv-message-field {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }

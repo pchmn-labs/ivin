@@ -97,3 +97,7 @@ ul.iv-stack {
   padding: 0;
   list-style: none;
 }
+
+.iv-stack--padding-3 {
+  padding: var(--iv-space-3);
+}
