@@ -1,166 +1,172 @@
 import { Suspense, lazy, type ComponentType } from "react"
-import type { Icon as PhosphorIcon, IconProps as PhosphorProps } from "@phosphor-icons/react"
-import { ArchiveIcon as Archive } from "@phosphor-icons/react/dist/csr/Archive"
-import { ArrowCounterClockwiseIcon as ArrowCounterClockwise } from "@phosphor-icons/react/dist/csr/ArrowCounterClockwise"
-import { ArrowDownIcon as ArrowDown } from "@phosphor-icons/react/dist/csr/ArrowDown"
-import { ArrowUpIcon as ArrowUp } from "@phosphor-icons/react/dist/csr/ArrowUp"
-import { CaretDownIcon as CaretDown } from "@phosphor-icons/react/dist/csr/CaretDown"
-import { CaretRightIcon as CaretRight } from "@phosphor-icons/react/dist/csr/CaretRight"
-import { CheckIcon as Check } from "@phosphor-icons/react/dist/csr/Check"
-import { CheckCircleIcon as CheckCircle } from "@phosphor-icons/react/dist/csr/CheckCircle"
-import { CircleNotchIcon as CircleNotch } from "@phosphor-icons/react/dist/csr/CircleNotch"
-import { CopyIcon as Copy } from "@phosphor-icons/react/dist/csr/Copy"
-import { DotsThreeIcon as DotsThree } from "@phosphor-icons/react/dist/csr/DotsThree"
-import { FileIcon as File } from "@phosphor-icons/react/dist/csr/File"
-import { FolderIcon as Folder } from "@phosphor-icons/react/dist/csr/Folder"
-import { FolderOpenIcon as FolderOpen } from "@phosphor-icons/react/dist/csr/FolderOpen"
-import { GearIcon as Gear } from "@phosphor-icons/react/dist/csr/Gear"
-import { GitBranchIcon as GitBranch } from "@phosphor-icons/react/dist/csr/GitBranch"
-import { GitForkIcon as GitFork } from "@phosphor-icons/react/dist/csr/GitFork"
-import { InfoIcon as Info } from "@phosphor-icons/react/dist/csr/Info"
-import { MagnifyingGlassIcon as MagnifyingGlass } from "@phosphor-icons/react/dist/csr/MagnifyingGlass"
-import { NotePencilIcon as NotePencil } from "@phosphor-icons/react/dist/csr/NotePencil"
-import { PencilSimpleIcon as PencilSimple } from "@phosphor-icons/react/dist/csr/PencilSimple"
-import { PlusIcon as Plus } from "@phosphor-icons/react/dist/csr/Plus"
-import { SidebarSimpleIcon as SidebarSimple } from "@phosphor-icons/react/dist/csr/SidebarSimple"
-import { StopIcon as Stop } from "@phosphor-icons/react/dist/csr/Stop"
-import { TrashIcon as Trash } from "@phosphor-icons/react/dist/csr/Trash"
-import { UserIcon as User } from "@phosphor-icons/react/dist/csr/User"
-import { WarningIcon as Warning } from "@phosphor-icons/react/dist/csr/Warning"
-import { WarningCircleIcon as WarningCircle } from "@phosphor-icons/react/dist/csr/WarningCircle"
-import { XIcon as X } from "@phosphor-icons/react/dist/csr/X"
-import { ArrowLeftIcon as ArrowLeft } from "@phosphor-icons/react/dist/csr/ArrowLeft"
-import { ArrowsOutIcon as ArrowsOut } from "@phosphor-icons/react/dist/csr/ArrowsOut"
-import { BrainIcon as Brain } from "@phosphor-icons/react/dist/csr/Brain"
-import { ClockIcon as Clock } from "@phosphor-icons/react/dist/csr/Clock"
-import { GitDiffIcon as GitDiff } from "@phosphor-icons/react/dist/csr/GitDiff"
-import { QuestionIcon as Question } from "@phosphor-icons/react/dist/csr/Question"
-import { RobotIcon as Robot } from "@phosphor-icons/react/dist/csr/Robot"
-import { SparkleIcon as Sparkle } from "@phosphor-icons/react/dist/csr/Sparkle"
-import { StackIcon as Stack } from "@phosphor-icons/react/dist/csr/Stack"
-import { TerminalIcon as Terminal } from "@phosphor-icons/react/dist/csr/Terminal"
-import { WrenchIcon as Wrench } from "@phosphor-icons/react/dist/csr/Wrench"
-import { ArrowClockwiseIcon as ArrowClockwise } from "@phosphor-icons/react/dist/csr/ArrowClockwise"
-import { ArrowRightIcon as ArrowRight } from "@phosphor-icons/react/dist/csr/ArrowRight"
-import { ArrowSquareOutIcon as ArrowSquareOut } from "@phosphor-icons/react/dist/csr/ArrowSquareOut"
-import { SquareSplitHorizontalIcon as SquareSplitHorizontal } from "@phosphor-icons/react/dist/csr/SquareSplitHorizontal"
+import archive from "@phosphor-icons/core/assets/regular/archive.svg?raw"
+import trash from "@phosphor-icons/core/assets/regular/trash.svg?raw"
+import arrowCounterClockwise from "@phosphor-icons/core/assets/regular/arrow-counter-clockwise.svg?raw"
+import plus from "@phosphor-icons/core/assets/regular/plus.svg?raw"
+import folderOpen from "@phosphor-icons/core/assets/regular/folder-open.svg?raw"
+import arrowUp from "@phosphor-icons/core/assets/regular/arrow-up.svg?raw"
+import stop from "@phosphor-icons/core/assets/regular/stop.svg?raw"
+import stopFill from "@phosphor-icons/core/assets/fill/stop-fill.svg?raw"
+import check from "@phosphor-icons/core/assets/regular/check.svg?raw"
+import x from "@phosphor-icons/core/assets/regular/x.svg?raw"
+import caretDown from "@phosphor-icons/core/assets/regular/caret-down.svg?raw"
+import caretRight from "@phosphor-icons/core/assets/regular/caret-right.svg?raw"
+import dotsThree from "@phosphor-icons/core/assets/regular/dots-three.svg?raw"
+import file from "@phosphor-icons/core/assets/regular/file.svg?raw"
+import pencilSimple from "@phosphor-icons/core/assets/regular/pencil-simple.svg?raw"
+import warningCircle from "@phosphor-icons/core/assets/regular/warning-circle.svg?raw"
+import warningCircleFill from "@phosphor-icons/core/assets/fill/warning-circle-fill.svg?raw"
+import warning from "@phosphor-icons/core/assets/regular/warning.svg?raw"
+import info from "@phosphor-icons/core/assets/regular/info.svg?raw"
+import checkCircle from "@phosphor-icons/core/assets/regular/check-circle.svg?raw"
+import circleNotch from "@phosphor-icons/core/assets/regular/circle-notch.svg?raw"
+import copy from "@phosphor-icons/core/assets/regular/copy.svg?raw"
+import gitBranch from "@phosphor-icons/core/assets/regular/git-branch.svg?raw"
+import folder from "@phosphor-icons/core/assets/regular/folder.svg?raw"
+import gitFork from "@phosphor-icons/core/assets/regular/git-fork.svg?raw"
+import user from "@phosphor-icons/core/assets/regular/user.svg?raw"
+import arrowDown from "@phosphor-icons/core/assets/regular/arrow-down.svg?raw"
+import sidebarSimple from "@phosphor-icons/core/assets/regular/sidebar-simple.svg?raw"
+import notePencil from "@phosphor-icons/core/assets/regular/note-pencil.svg?raw"
+import magnifyingGlass from "@phosphor-icons/core/assets/regular/magnifying-glass.svg?raw"
+import gear from "@phosphor-icons/core/assets/regular/gear.svg?raw"
+import terminal from "@phosphor-icons/core/assets/regular/terminal.svg?raw"
+import brain from "@phosphor-icons/core/assets/regular/brain.svg?raw"
+import wrench from "@phosphor-icons/core/assets/regular/wrench.svg?raw"
+import sparkle from "@phosphor-icons/core/assets/regular/sparkle.svg?raw"
+import arrowLeft from "@phosphor-icons/core/assets/regular/arrow-left.svg?raw"
+import stack from "@phosphor-icons/core/assets/regular/stack.svg?raw"
+import robot from "@phosphor-icons/core/assets/regular/robot.svg?raw"
+import arrowsOut from "@phosphor-icons/core/assets/regular/arrows-out.svg?raw"
+import clock from "@phosphor-icons/core/assets/regular/clock.svg?raw"
+import gitDiff from "@phosphor-icons/core/assets/regular/git-diff.svg?raw"
+import questionFill from "@phosphor-icons/core/assets/fill/question-fill.svg?raw"
+import arrowRight from "@phosphor-icons/core/assets/regular/arrow-right.svg?raw"
+import squareSplitHorizontal from "@phosphor-icons/core/assets/regular/square-split-horizontal.svg?raw"
+import arrowClockwise from "@phosphor-icons/core/assets/regular/arrow-clockwise.svg?raw"
+import arrowSquareOut from "@phosphor-icons/core/assets/regular/arrow-square-out.svg?raw"
 import type { IconProps as PluginIconProps } from "@ivin/plugin-api/ui"
 import "./icon.css"
 
 export type IconName = PluginIconProps["name"]
 export type IconProps = PluginIconProps
 
+interface SvgProps {
+  readonly className: string
+  readonly size: number
+  readonly "aria-hidden": true | undefined
+  readonly "aria-label": string | undefined
+  readonly role: "img" | undefined
+}
+
+// The files are `<svg …>…</svg>` on one line; only the inside is kept, the wrapper is drawn below.
+const innerOf = (svg: string) => svg.slice(svg.indexOf(">") + 1, svg.lastIndexOf("</svg>"))
+
+function Svg({ inner, size, ...rest }: SvgProps & { inner: string }) {
+  return (
+    <svg
+      {...rest}
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 256 256"
+      fill="currentColor"
+      width={size}
+      height={size}
+      dangerouslySetInnerHTML={{ __html: inner }}
+    />
+  )
+}
+
+function lazyGlyph(load: () => Promise<{ default: string }>) {
+  return lazy(async () => {
+    const inner = innerOf((await load()).default)
+    return { default: (props: SvgProps) => <Svg inner={inner} {...props} /> }
+  })
+}
+
 // Drawn by the first screen, so in the main chunk.
 const eagerIcons = {
-  archive: Archive,
-  trash: Trash,
-  restore: ArrowCounterClockwise,
-  plus: Plus,
-  "folder-open": FolderOpen,
-  send: ArrowUp,
-  square: Stop,
-  stop: Stop,
-  check: Check,
-  x: X,
-  "chevron-down": CaretDown,
-  "chevron-right": CaretRight,
-  ellipsis: DotsThree,
-  file: File,
-  pencil: PencilSimple,
-  "circle-alert": WarningCircle,
-  exclamation: WarningCircle,
-  "triangle-alert": Warning,
-  "circle-info": Info,
-  "circle-check": CheckCircle,
-  loader: CircleNotch,
-  copy: Copy,
-  "git-branch": GitBranch,
-  folder: Folder,
-  worktree: GitFork,
-  user: User,
-  "arrow-down": ArrowDown,
-  "panel-left": SidebarSimple,
-  "new-session": NotePencil,
-  search: MagnifyingGlass,
-  gear: Gear,
-  terminal: Terminal,
-  brain: Brain,
-  wrench: Wrench,
-  sparkles: Sparkle,
-  "arrow-left": ArrowLeft,
-  stack: Stack,
-  robot: Robot,
-  "arrows-out": ArrowsOut,
-  clock: Clock,
-  diff: GitDiff,
-  question: Question,
-  "arrow-right": ArrowRight,
-  split: SquareSplitHorizontal,
-  restart: ArrowClockwise,
-  "external-link": ArrowSquareOut,
-} satisfies Partial<Record<IconName, PhosphorIcon>>
+  archive: archive,
+  trash: trash,
+  restore: arrowCounterClockwise,
+  plus: plus,
+  "folder-open": folderOpen,
+  send: arrowUp,
+  square: stop,
+  stop: stopFill,
+  check: check,
+  x: x,
+  "chevron-down": caretDown,
+  "chevron-right": caretRight,
+  ellipsis: dotsThree,
+  file: file,
+  pencil: pencilSimple,
+  "circle-alert": warningCircle,
+  exclamation: warningCircleFill,
+  "triangle-alert": warning,
+  "circle-info": info,
+  "circle-check": checkCircle,
+  loader: circleNotch,
+  copy: copy,
+  "git-branch": gitBranch,
+  folder: folder,
+  worktree: gitFork,
+  user: user,
+  "arrow-down": arrowDown,
+  "panel-left": sidebarSimple,
+  "new-session": notePencil,
+  search: magnifyingGlass,
+  gear: gear,
+  terminal: terminal,
+  brain: brain,
+  wrench: wrench,
+  sparkles: sparkle,
+  "arrow-left": arrowLeft,
+  stack: stack,
+  robot: robot,
+  "arrows-out": arrowsOut,
+  clock: clock,
+  diff: gitDiff,
+  question: questionFill,
+  "arrow-right": arrowRight,
+  split: squareSplitHorizontal,
+  restart: arrowClockwise,
+  "external-link": arrowSquareOut,
+} satisfies Partial<Record<IconName, string>>
 
 // Drawn only by settings and the Files and Changes panels; each loads the first time it is drawn.
 const lazyIcons = {
-  "brackets-curly": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/BracketsCurly").then((m) => ({
-      default: m.BracketsCurlyIcon,
-    })),
+  "brackets-curly": lazyGlyph(
+    () => import("@phosphor-icons/core/assets/regular/brackets-curly.svg?raw"),
   ),
-  "app-window": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/AppWindow").then((m) => ({ default: m.AppWindowIcon })),
+  "app-window": lazyGlyph(() => import("@phosphor-icons/core/assets/regular/app-window.svg?raw")),
+  download: lazyGlyph(() => import("@phosphor-icons/core/assets/regular/download-simple.svg?raw")),
+  "collapse-all": lazyGlyph(
+    () => import("@phosphor-icons/core/assets/regular/arrows-in-line-vertical.svg?raw"),
   ),
-  download: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/DownloadSimple").then((m) => ({
-      default: m.DownloadSimpleIcon,
-    })),
+  lock: lazyGlyph(() => import("@phosphor-icons/core/assets/regular/lock.svg?raw")),
+  eye: lazyGlyph(() => import("@phosphor-icons/core/assets/regular/eye.svg?raw")),
+  "eye-slash": lazyGlyph(() => import("@phosphor-icons/core/assets/regular/eye-slash.svg?raw")),
+  undo: lazyGlyph(() => import("@phosphor-icons/core/assets/regular/arrow-u-up-left.svg?raw")),
+  "arrows-left-right": lazyGlyph(
+    () => import("@phosphor-icons/core/assets/regular/arrows-left-right.svg?raw"),
   ),
-  "collapse-all": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowsInLineVertical").then((m) => ({
-      default: m.ArrowsInLineVerticalIcon,
-    })),
-  ),
-  lock: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Lock").then((m) => ({ default: m.LockIcon })),
-  ),
-  eye: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/Eye").then((m) => ({ default: m.EyeIcon })),
-  ),
-  "eye-slash": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/EyeSlash").then((m) => ({ default: m.EyeSlashIcon })),
-  ),
-  undo: lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowUUpLeft").then((m) => ({
-      default: m.ArrowUUpLeftIcon,
-    })),
-  ),
-  "arrows-left-right": lazy(() =>
-    import("@phosphor-icons/react/dist/csr/ArrowsLeftRight").then((m) => ({
-      default: m.ArrowsLeftRightIcon,
-    })),
-  ),
-} satisfies Partial<Record<IconName, ComponentType<PhosphorProps>>>
+} satisfies Partial<Record<IconName, ComponentType<SvgProps>>>
 
 // Fails to compile when a name is in neither map.
 type Missing = Exclude<IconName, keyof typeof eagerIcons | keyof typeof lazyIcons>
 const everyNameHasAGlyph: [Missing] extends [never] ? true : never = true
 void everyNameHasAGlyph
 
-// Drawn filled, as the session mark's status overlay is.
-const FILLED: ReadonlySet<IconName> = new Set(["question", "exclamation", "stop"])
-
 export function Icon({ name, size = 16, label }: IconProps) {
-  const props = {
+  const props: SvgProps = {
     className: name === "loader" ? "iv-icon iv-icon--spin" : "iv-icon",
     size,
-    weight: FILLED.has(name) ? ("fill" as const) : ("regular" as const),
     "aria-hidden": label === undefined ? true : undefined,
     "aria-label": label,
     role: label === undefined ? undefined : "img",
   }
   if (name in eagerIcons) {
-    const Glyph = eagerIcons[name as keyof typeof eagerIcons]
-    return <Glyph {...props} />
+    return <Svg inner={innerOf(eagerIcons[name as keyof typeof eagerIcons])} {...props} />
   }
   const Glyph = lazyIcons[name as keyof typeof lazyIcons]
   return (

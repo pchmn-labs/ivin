@@ -1,5 +1,6 @@
 import { Lexer } from "marked"
 
+// Not remark-parse: it takes ~18x longer on a long streamed block and fails the markdown perf test.
 export const splitBlocks = (text: string): ReadonlyArray<string> =>
   new Lexer()
     .lex(text)
