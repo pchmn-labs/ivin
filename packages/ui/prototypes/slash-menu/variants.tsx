@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react"
 import { Icon } from "../../src/core/components/icon/icon.tsx"
-import { COMMANDS } from "./data.ts"
+import { COMMANDS, SOURCE_LABEL, type AgentCommand } from "./data.ts"
 import { Matched, type MenuProps } from "./scene.tsx"
 
 const HINTS = "↑↓ to move · ↩ or tab to pick · esc to close"
@@ -17,6 +17,11 @@ function useActiveInView(active: number) {
 
 function Tag({ kind }: { kind: "skill" | "command" }) {
   return <span className="proto-tag">{kind === "skill" ? "Skill" : "Command"}</span>
+}
+
+function Source({ command }: { command: AgentCommand }) {
+  if (command.source === null) return null
+  return <span className="proto-source">{SOURCE_LABEL[command.source]}</span>
 }
 
 // The loading, no match and failed states every variant shows in place of its list.
@@ -120,6 +125,7 @@ export function Sheet({ state, query, items, active, onHover, onPick, onRetry }:
                   <Matched name={command.name} at={matched} />
                 </span>
                 {command.argumentHint && <span className="proto-hint">{command.argumentHint}</span>}
+                <Source command={command} />
                 <Tag kind={command.kind} />
               </div>
               <p className="proto-v2-description">{command.description}</p>

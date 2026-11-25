@@ -3,12 +3,38 @@ export interface AgentCommand {
   readonly description: string
   readonly argumentHint: string | null
   readonly kind: "skill" | "command"
+  // Where a skill comes from; null for Claude's own commands.
+  readonly source: "project" | "user" | "plugin" | "built-in" | null
 }
 
+export const SOURCE_LABEL = {
+  project: "Project",
+  user: "User",
+  plugin: "Plugin",
+  "built-in": "Built-in",
+} as const
+
+// Claude appends where a skill comes from to its description: `(project)`, `(user)`, `(claude.ai sync)`,
+// or puts a plugin's name first.
+const sourceOf = (name: string, description: string): AgentCommand["source"] => {
+  if (description.endsWith("(project)")) return "project"
+  if (description.endsWith("(user)") || description.endsWith("(claude.ai sync)")) return "user"
+  if (name.includes(":") || description.startsWith("(")) return "plugin"
+  return "built-in"
+}
+const withoutSource = (description: string) =>
+  description.replace(/\s*\((project|user|claude\.ai sync)\)$/, "").replace(/^\([^)]+\)\s*/, "")
+
 const skill = (name: string, description: string, argumentHint: string | null = null) =>
-  ({ name, description, argumentHint, kind: "skill" }) as const
+  ({
+    name,
+    description: withoutSource(description),
+    argumentHint,
+    kind: "skill",
+    source: sourceOf(name, description),
+  }) as const
 const command = (name: string, description: string, argumentHint: string | null = null) =>
-  ({ name, description, argumentHint, kind: "command" }) as const
+  ({ name, description, argumentHint, kind: "command", source: null }) as const
 
 export const COMMANDS: ReadonlyArray<AgentCommand> = [
   skill(
