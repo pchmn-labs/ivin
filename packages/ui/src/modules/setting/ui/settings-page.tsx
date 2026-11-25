@@ -1,42 +1,51 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
-import type { SettingSection } from "@ivin/contracts/setting"
 import { useId, useState } from "react"
 import { ErrorMessage } from "../../../core/components/error-message/error-message.tsx"
 import { Select } from "../../../core/components/select/select.tsx"
 import { Switch } from "../../../core/components/switch/switch.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
+import { contributionsAtom } from "../../plugin/atoms/contributions.ts"
+import { SlotContribution } from "../../../app/slot-renderer.tsx"
 import { setSettingOf, shownSettingOf } from "../atoms/set-setting.ts"
-import { settingsSectionAtom } from "../atoms/settings-page.ts"
+import { settingsPageSectionsAtom, settingsSectionAtom } from "../atoms/settings-page.ts"
 import { countOf } from "../rules/count-of.ts"
 import { settingsProblemAtom } from "../atoms/settings.ts"
-import { settingsPageSections } from "../rules/settings-page-sections.ts"
+import { ignoredPluginSettingMessage } from "../rules/setting-message.ts"
+import type { PageSetting } from "../rules/settings-page-sections.ts"
 import { CommandLineSection } from "./command-line-section.tsx"
 import { SettingsFileProblem } from "./settings-file-problem.tsx"
 import "./settings-page.css"
 
-function CountField({
-  setting,
-  count,
+function DraftField<Value extends number | string>({
+  label,
   value,
+  parse,
+  invalidMessage,
+  suffix,
+  numeric,
   disabled,
   describedBy,
   save,
 }: {
-  setting: SettingSection["settings"][number]
-  count: { readonly min: number; readonly unit: string }
-  value: number
+  label: string
+  value: Value
+  // Null when the typed text is not acceptable.
+  parse: (draft: string) => Value | null
+  invalidMessage: string
+  suffix?: string
+  numeric?: boolean
   disabled: boolean
   describedBy: string
-  save: (value: number) => void
+  save: (value: Value) => void
 }) {
   const [draft, setDraft] = useState<string | null>(null)
   const typed = draft ?? String(value)
-  const invalid = draft !== null && countOf(draft, count.min) === null
+  const invalid = draft !== null && parse(draft) === null
   const invalidId = useId()
   const commit = () => {
     if (draft === null) return
-    const next = countOf(draft, count.min)
+    const next = parse(draft)
     if (next === null) return
     setDraft(null)
     if (next !== value) save(next)
@@ -45,9 +54,9 @@ function CountField({
     <div className="iv-settings-page__count">
       <div className="iv-settings-page__count-field">
         <TextField
-          label={setting.label}
+          label={label}
           value={typed}
-          inputMode="numeric"
+          {...(numeric === true && { inputMode: "numeric" as const })}
           disabled={disabled}
           aria-invalid={invalid}
           aria-describedby={invalid ? `${describedBy} ${invalidId}` : describedBy}
@@ -61,27 +70,37 @@ function CountField({
             }
           }}
         />
-        <Text tone="muted">{count.unit}</Text>
+        {suffix !== undefined && <Text tone="muted">{suffix}</Text>}
       </div>
       {invalid && (
         <div id={invalidId}>
-          <ErrorMessage message={`Enter a whole number of ${count.unit}, ${count.min} or more.`} />
+          <ErrorMessage message={invalidMessage} />
         </div>
       )}
     </div>
   )
 }
 
-function SettingRow({
-  setting,
-  disabled,
-}: {
-  setting: SettingSection["settings"][number]
-  disabled: boolean
-}) {
+const numberOf = (draft: string): number | null => {
+  const trimmed = draft.trim()
+  return trimmed !== "" && Number.isFinite(Number(trimmed)) ? Number(trimmed) : null
+}
+
+function SettingRow({ setting, disabled }: { setting: PageSetting; disabled: boolean }) {
   const shown = useAtomValue(shownSettingOf(setting.path))
   const save = useAtomSet(setSettingOf(setting.path))
   const descriptionId = useId()
+  const type = setting.plugin?.type
+  const control =
+    setting.count !== undefined
+      ? "count"
+      : setting.choices !== undefined
+        ? "choice"
+        : type === "number"
+          ? "number"
+          : type === "string"
+            ? "text"
+            : "switch"
   return (
     <li className="iv-settings-page__setting">
       <div className="iv-settings-page__setting-text">
@@ -96,14 +115,19 @@ function SettingRow({
             {setting.path}
           </Text>
         </div>
+        {setting.plugin?.ignored === true && (
+          <Text size="sm" tone="muted">
+            {ignoredPluginSettingMessage(setting.plugin)}
+          </Text>
+        )}
         {shown.failure !== null && (
           <ErrorMessage
             message={shown.failure}
             onRetry={() =>
               save(
-                setting.count !== undefined
+                control === "count" || control === "number"
                   ? Number(shown.value)
-                  : setting.choices === undefined
+                  : control === "switch"
                     ? shown.value === true
                     : String(shown.value),
               )
@@ -111,16 +135,39 @@ function SettingRow({
           />
         )}
       </div>
-      {setting.count !== undefined ? (
-        <CountField
-          setting={setting}
-          count={setting.count}
+      {control === "count" && setting.count !== undefined ? (
+        <DraftField
+          label={setting.label}
           value={Number(shown.value)}
+          parse={(draft) => countOf(draft, setting.count!.min)}
+          invalidMessage={`Enter a whole number of ${setting.count.unit}, ${setting.count.min} or more.`}
+          suffix={setting.count.unit}
+          numeric
           disabled={disabled}
           describedBy={descriptionId}
           save={save}
         />
-      ) : setting.choices === undefined ? (
+      ) : control === "number" ? (
+        <DraftField
+          label={setting.label}
+          value={Number(shown.value)}
+          parse={numberOf}
+          invalidMessage="Enter a number."
+          disabled={disabled}
+          describedBy={descriptionId}
+          save={save}
+        />
+      ) : control === "text" ? (
+        <DraftField
+          label={setting.label}
+          value={String(shown.value)}
+          parse={(draft) => draft}
+          invalidMessage=""
+          disabled={disabled}
+          describedBy={descriptionId}
+          save={save}
+        />
+      ) : control === "switch" ? (
         <Switch
           label={setting.label}
           checked={shown.value === true}
@@ -132,7 +179,7 @@ function SettingRow({
         <Select
           label={setting.label}
           value={String(shown.value)}
-          options={setting.choices}
+          options={setting.choices ?? []}
           disabled={disabled}
           onChange={save}
           aria-describedby={descriptionId}
@@ -145,7 +192,12 @@ function SettingRow({
 export function SettingsPage() {
   const selected = useAtomValue(settingsSectionAtom)
   const problem = useAtomValue(settingsProblemAtom)
-  const section = settingsPageSections.find((s) => s.key === selected) ?? settingsPageSections[0]
+  const sections = useAtomValue(settingsPageSectionsAtom)
+  const contributions = useAtomValue(contributionsAtom)
+  const section = sections.find((s) => s.key === selected) ?? sections[0]!
+  const own = contributions.filter(
+    (c) => c.slot === "settings.section" && c.pluginId === section.pluginId,
+  )
   return (
     <div className="iv-settings-page">
       <section className="iv-settings-page__column" aria-labelledby="iv-settings-page-title">
@@ -154,15 +206,21 @@ export function SettingsPage() {
           {section.title}
         </h2>
         <Text tone="muted">{section.description}</Text>
-        <ul className="iv-settings-page__list">
-          {section.key === "commandLine" ? (
-            <CommandLineSection />
-          ) : (
-            section.settings.map((setting) => (
-              <SettingRow key={setting.path} setting={setting} disabled={problem !== null} />
-            ))
-          )}
-        </ul>
+        {own.length > 0 ? (
+          own.map((contribution) => (
+            <SlotContribution key={contribution.id} contribution={contribution} props={{}} />
+          ))
+        ) : (
+          <ul className="iv-settings-page__list">
+            {section.key === "commandLine" ? (
+              <CommandLineSection />
+            ) : (
+              section.settings.map((setting) => (
+                <SettingRow key={setting.path} setting={setting} disabled={problem !== null} />
+              ))
+            )}
+          </ul>
+        )}
       </section>
     </div>
   )

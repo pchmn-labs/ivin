@@ -1,18 +1,17 @@
-import type { SettingPath } from "@ivin/contracts/setting"
 import { Cause, Effect } from "effect"
 import { Atom, AsyncResult } from "effect/reactivity"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 import { shownSetting, type SettingChoice } from "../rules/setting-choice.ts"
 import { saveFailureMessage } from "../rules/setting-message.ts"
 import { settingValue } from "../rules/setting-value.ts"
-import { settingsAtom, watchedSettingsAtom } from "./settings.ts"
+import { pluginSettingsAtom, settingsAtom, watchedSettingsAtom } from "./settings.ts"
 
-const choiceOf = Atom.family((_path: SettingPath) =>
+const choiceOf = Atom.family((_path: string) =>
   Atom.make<SettingChoice | null>(null).pipe(Atom.keepAlive),
 )
 
 // One per setting, so a change to one does not interrupt the save of another.
-export const setSettingOf = Atom.family((path: SettingPath) =>
+export const setSettingOf = Atom.family((path: string) =>
   serverRuntime.fn<boolean | number | string>()((value) =>
     Effect.gen(function* () {
       const client = yield* ServerClient
@@ -34,12 +33,17 @@ export const setSettingOf = Atom.family((path: SettingPath) =>
   ),
 )
 
-export const shownSettingOf = Atom.family((path: SettingPath) =>
+export const shownSettingOf = Atom.family((path: string) =>
   Atom.readable((get) => {
     const watched = get(watchedSettingsAtom)
     const version = AsyncResult.isSuccess(watched) ? watched.value.version : 0
     return shownSetting(
-      { value: settingValue(get(settingsAtom), path), version },
+      {
+        value:
+          get(pluginSettingsAtom).find((setting) => `${setting.pluginId}.${setting.key}` === path)
+            ?.value ?? settingValue(get(settingsAtom), path),
+        version,
+      },
       get(choiceOf(path)),
     )
   }),

@@ -11,6 +11,7 @@ test("a manifest with an id and a UI entry is valid, and its name defaults to it
       name: "hello-world",
       ui: "src/ui.tsx",
       permissions: { harness: [], exec: [], fetch: [] },
+      settings: [],
     },
   })
 })
@@ -37,4 +38,16 @@ test("a manifest carries its declared permissions", () => {
   const permissions = { harness: ["beforeSpawn"], exec: ["gh"], fetch: ["*.github.com"] }
   const reading = readManifest(manifest({ id: "x", ui: "src/ui.tsx", permissions }))
   expect(reading.kind === "valid" && reading.manifest.permissions).toEqual(permissions)
+})
+
+test("a manifest carries its declared settings, and a malformed one is invalid", () => {
+  const setting = { type: "number", default: 2, title: "Fold after", description: "Rows." }
+  const valid = readManifest(manifest({ id: "x", ui: "src/ui.tsx", settings: { fold: setting } }))
+  expect(valid.kind === "valid" && valid.manifest.settings).toEqual([
+    { pluginId: "x", pluginName: "x", key: "fold", ...setting },
+  ])
+  const bad = readManifest(
+    manifest({ id: "x", ui: "src/ui.tsx", settings: { fold: { ...setting, type: "date" } } }),
+  )
+  expect(bad.kind === "invalid" && bad.reason).toContain("ivin.settings.fold.type")
 })

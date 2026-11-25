@@ -4,6 +4,7 @@ import {
   settingSections,
   type SettingsFileInvalid,
   type SettingsFileUnavailable,
+  type PluginSetting,
   type SettingsFileProblem,
 } from "@ivin/contracts/setting"
 import { settingValue } from "./setting-value.ts"
@@ -53,4 +54,16 @@ export const saveFailureMessage = (error: unknown): string => {
     return `Not saved: ivin could not ${error.action} ${SETTINGS_FILE}. Check that it and its folder are accessible to you, then try again.`
   }
   return "The setting was not saved."
+}
+
+export const ignoredPluginSettingMessage = (setting: PluginSetting): string => {
+  const takes =
+    setting.values !== undefined
+      ? choicesText(setting.values)
+      : setting.type === "boolean"
+        ? "true or false"
+        : setting.type === "number"
+          ? "a number"
+          : "a string"
+  return `${setting.pluginId}.${setting.key} in ${SETTINGS_FILE} takes ${takes}. Its default is used until you fix it.`
 }

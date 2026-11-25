@@ -157,9 +157,36 @@ export const SettingsFileProblem = Schema.Struct({
 })
 export type SettingsFileProblem = typeof SettingsFileProblem.Type
 
+export const PluginSettingValue = Schema.Union([Schema.Boolean, Schema.Number, Schema.String])
+export type PluginSettingValue = typeof PluginSettingValue.Type
+
+// A setting a plugin's manifest declares, stored in settings.json as `<pluginId>.<key>`.
+export const PluginSettingDeclaration = Schema.Struct({
+  pluginId: Schema.String,
+  pluginName: Schema.String,
+  key: Schema.String,
+  type: Schema.Literals(["boolean", "number", "string"]),
+  default: PluginSettingValue,
+  title: Schema.String,
+  description: Schema.String,
+  // The allowed values of a string setting.
+  values: Schema.optional(Schema.Array(Schema.String)),
+})
+export type PluginSettingDeclaration = typeof PluginSettingDeclaration.Type
+
+export const PluginSetting = Schema.Struct({
+  ...PluginSettingDeclaration.fields,
+  value: PluginSettingValue,
+  // The file holds a value of the wrong type for this setting, so `value` is the default.
+  ignored: Schema.Boolean,
+})
+export type PluginSetting = typeof PluginSetting.Type
+
 // While the file is invalid, `settings` stays its last valid content.
 export const UserSettings = Schema.Struct({
   settings: Settings,
+  // Left out by a server without plugin settings.
+  pluginSettings: Schema.optionalKey(Schema.Array(PluginSetting)),
   problem: Schema.NullOr(SettingsFileProblem),
 })
 export type UserSettings = typeof UserSettings.Type

@@ -34,7 +34,7 @@ test("the plugin API's types match the contracts' they are converted from", () =
   expectTypeOf<FolderEntry>().toEqualTypeOf<Api.FolderEntry>()
   expectTypeOf<RunOptions>().toEqualTypeOf<Api.RunOptions>()
   expectTypeOf<HarnessRunOptions>().toEqualTypeOf<Api.HarnessRunOptions>()
-  expectTypeOf<ContractSettings>().toEqualTypeOf<Api.Settings>()
+  expectTypeOf<ContractSettings>().toEqualTypeOf<Omit<Api.Settings, "plugins">>()
   expectTypeOf<ContractTab>().toEqualTypeOf<Api.Tab>()
   expectTypeOf<ImageRef>().toEqualTypeOf<Api.ImageRef>()
   expectTypeOf<ImageData>().toEqualTypeOf<Api.ImageData>()

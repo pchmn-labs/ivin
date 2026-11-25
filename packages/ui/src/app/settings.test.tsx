@@ -1,10 +1,13 @@
-import { RegistryProvider } from "@effect/atom-react"
+import { RegistryContext, RegistryProvider } from "@effect/atom-react"
+import { useContext, useEffect } from "react"
+import type { AtomRegistry } from "effect/reactivity"
 import { ShellCommandNotOurs, ShellFoldersRefused } from "@ivin/contracts/cli"
-import { defaultSettings } from "@ivin/contracts/setting"
+import { defaultSettings, type PluginSetting } from "@ivin/contracts/setting"
 import { DateTime } from "effect"
 import { afterEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
+import { contributionsAtom } from "../modules/plugin/atoms/contributions.ts"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { App } from "./app.tsx"
@@ -16,6 +19,15 @@ const removeWorktree = () =>
 const idleLimit = () => page.getByRole("textbox", { name: "Stop an idle agent after" })
 const sections = () => page.getByRole("navigation", { name: "Settings sections" })
 
+let registryOfApp: AtomRegistry.AtomRegistry
+function CaptureRegistry() {
+  const registry = useContext(RegistryContext)
+  useEffect(() => {
+    registryOfApp = registry
+  }, [registry])
+  return null
+}
+
 const mountApp = async () => {
   const server = makeFakeServer({
     project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: DateTime.makeUnsafe(0) },
@@ -23,6 +35,7 @@ const mountApp = async () => {
   await page.viewport(1280, 800)
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+      <CaptureRegistry />
       <App />
     </RegistryProvider>,
   )
@@ -358,4 +371,117 @@ test("the cli.installInShell command opens the Command line section and installs
   await expect.element(page.getByRole("heading", { name: "Command line" })).toBeVisible()
   await expect.element(page.getByText("/usr/local/bin/ivin")).toBeVisible()
   await expect.element(sections().getByRole("button", { name: "Command line" })).toHaveFocus()
+})
+
+const prsSettings: PluginSetting[] = [
+  {
+    pluginId: "prs",
+    pluginName: "Session PRs",
+    key: "foldThreshold",
+    type: "number",
+    default: 2,
+    title: "Fold after",
+    description: "Pull requests listed before the rest fold.",
+    value: 2,
+    ignored: false,
+  },
+  {
+    pluginId: "prs",
+    pluginName: "Session PRs",
+    key: "compact",
+    type: "boolean",
+    default: false,
+    title: "Compact rows",
+    description: "Tighter rows.",
+    value: true,
+    ignored: false,
+  },
+  {
+    pluginId: "prs",
+    pluginName: "Session PRs",
+    key: "label",
+    type: "string",
+    default: "PR",
+    title: "Label",
+    description: "The word before a number.",
+    value: "PR",
+    ignored: true,
+  },
+  {
+    pluginId: "prs",
+    pluginName: "Session PRs",
+    key: "layout",
+    type: "string",
+    default: "rail",
+    values: ["rail", "strip"],
+    title: "Layout",
+    description: "How rows sit.",
+    value: "rail",
+    ignored: false,
+  },
+]
+
+test("a plugin's settings show in a section built from its manifest, and a change is written", async () => {
+  const server = await mountApp()
+  server.setUserSettings({ settings: defaultSettings, problem: null, pluginSettings: prsSettings })
+  await page.getByRole("button", { name: "Settings" }).click()
+  await sections().getByRole("button", { name: "Session PRs" }).click()
+
+  await expect.element(page.getByRole("heading", { name: "Session PRs" })).toBeVisible()
+  await expect.element(page.getByText("Pull requests listed before the rest fold.")).toBeVisible()
+  await expect.element(page.getByRole("textbox", { name: "Fold after" })).toHaveValue("2")
+  await expect.element(page.getByRole("switch", { name: "Compact rows" })).toBeChecked()
+  await expect.element(page.getByText("prs.foldThreshold")).toBeVisible()
+
+  await userEvent.click(page.getByRole("switch", { name: "Compact rows" }))
+  await expect.element(page.getByRole("switch", { name: "Compact rows" })).not.toBeChecked()
+
+  const fold = page.getByRole("textbox", { name: "Fold after" })
+  await userEvent.clear(fold)
+  await userEvent.type(fold, "5{Enter}")
+  await expect.element(fold).toHaveValue("5")
+  await userEvent.clear(fold)
+  await userEvent.type(fold, "many")
+  await expect.element(page.getByText("Enter a number.")).toBeVisible()
+})
+
+test("a plugin setting whose value in the file is the wrong type says its default is used", async () => {
+  const server = await mountApp()
+  server.setUserSettings({ settings: defaultSettings, problem: null, pluginSettings: prsSettings })
+  await page.getByRole("button", { name: "Settings" }).click()
+  await sections().getByRole("button", { name: "Session PRs" }).click()
+
+  await expect
+    .element(
+      page.getByText(
+        "prs.label in ~/.ivin/settings.json takes a string. Its default is used until you fix it.",
+      ),
+    )
+    .toBeVisible()
+  await expect.element(page.getByText(/prs.layout in ~\/.ivin/)).not.toBeInTheDocument()
+})
+
+test("a plugin's own settings.section replaces the generated one", async () => {
+  const server = await mountApp()
+  const registry = registryOfApp
+  server.setUserSettings({ settings: defaultSettings, problem: null, pluginSettings: prsSettings })
+  registry.set(contributionsAtom, [
+    ...registry.get(contributionsAtom),
+    {
+      id: "prs/settings",
+      pluginId: "prs",
+      slot: "settings.section",
+      component: () => <p>Custom PR settings</p>,
+      order: 0,
+      replaces: undefined,
+      tool: undefined,
+      title: undefined,
+      badge: undefined,
+    },
+  ])
+  await page.getByRole("button", { name: "Settings" }).click()
+  await sections().getByRole("button", { name: "Session PRs" }).click()
+
+  await expect.element(page.getByText("Custom PR settings")).toBeVisible()
+  await expect.element(page.getByRole("textbox", { name: "Fold after" })).not.toBeInTheDocument()
 })

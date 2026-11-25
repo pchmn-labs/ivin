@@ -33,6 +33,8 @@ export interface Settings {
   readonly sidebar: { readonly layout: "rail" | "strip" }
   readonly agents: { readonly stopWhenIdleMinutes: number }
   readonly updates: { readonly automaticCheck: boolean; readonly beta: boolean }
+  // Each plugin's own settings by plugin id, as its manifest declares them.
+  readonly plugins: Readonly<Record<string, Readonly<Record<string, boolean | number | string>>>>
 }
 
 export type SessionStatus =

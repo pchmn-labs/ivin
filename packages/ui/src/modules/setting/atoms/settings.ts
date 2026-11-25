@@ -1,4 +1,4 @@
-import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
+import { defaultSettings, type PluginSetting, type UserSettings } from "@ivin/contracts/setting"
 import { Effect, Stream } from "effect"
 import { Atom, AsyncResult } from "effect/reactivity"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
@@ -31,4 +31,20 @@ export const settingsAtom = Atom.readable((get) => {
 export const settingsProblemAtom = Atom.readable((get) => {
   const result = get(watchedSettingsAtom)
   return AsyncResult.isSuccess(result) ? result.value.problem : null
+})
+
+const noPluginSettings: ReadonlyArray<PluginSetting> = []
+
+export const pluginSettingsAtom = Atom.readable((get) => {
+  const result = get(watchedSettingsAtom)
+  return AsyncResult.isSuccess(result)
+    ? (result.value.pluginSettings ?? noPluginSettings)
+    : noPluginSettings
+})
+
+export const settingsWithPluginsAtom = Atom.readable((get) => {
+  const plugins: Record<string, Record<string, PluginSetting["value"]>> = {}
+  for (const { pluginId, key, value } of get(pluginSettingsAtom))
+    (plugins[pluginId] ??= {})[key] = value
+  return { ...get(settingsAtom), plugins }
 })
