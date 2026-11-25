@@ -95,7 +95,10 @@ function RowContent({ sessionId, row, live }: { sessionId: string; row: RowData;
     <>
       {(live || row.itemIds.length > 0) && (
         <div className="iv-transcript__column">
-          <div className="iv-transcript__item" data-testid="transcript-work">
+          <div
+            className="iv-transcript__item iv-transcript__item--turn"
+            data-testid="transcript-work"
+          >
             <TurnWork sessionId={sessionId} rowId={row.id} live={live} />
           </div>
         </div>
