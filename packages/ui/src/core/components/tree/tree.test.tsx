@@ -104,7 +104,7 @@ test("a file's icon starts where the icons of the folders beside it do", async (
     .toBe(0)
 })
 
-test("with folder icons off, a file's icon starts where the glyph of the folders' chevrons and its folder's name do", async () => {
+test("with folder icons off, a file's icon takes the place of the folders' chevrons, and file and folder names start together", async () => {
   const server = makeFakeServer()
   server.setUserSettings({
     settings: { ...defaultSettings, files: { folderIcons: false } },
@@ -113,10 +113,11 @@ test("with folder icons off, a file's icon starts where the glyph of the folders
   await render(<Harness server={server} />)
   await expect.poll(() => item("src").element().querySelector(".iv-tree__icon")).toBeNull()
   await expect
-    .poll(() => left("README.md", ".iv-tree__icon") - left("src", ".iv-tree__chevron path"))
-    .toBeCloseTo(0, 0)
-  await item("src").click()
-  await expect.poll(() => left("main.ts", ".iv-tree__icon") - left("src", ".iv-tree__name")).toBe(0)
+    .poll(() => left("README.md", ".iv-tree__name") - left("src", ".iv-tree__name"))
+    .toBe(0)
+  await expect
+    .poll(() => left("README.md", ".iv-tree__icon") - left("src", ".iv-tree__chevron"))
+    .toBe(0)
 })
 
 test("the arrows move, open and close, and the active row stays visible", async () => {

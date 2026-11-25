@@ -65,15 +65,16 @@
   transform: rotate(90deg);
 }
 
-/* The caret's glyph starts 4px into its svg; this puts it at the box's left edge. */
-.iv-tree:not([data-folder-icons]) .iv-tree__chevron svg {
-  translate: -4px;
+/* A file's icon takes the chevron's place, so file and folder names start together. */
+.iv-tree:not([data-folder-icons]) .iv-tree__chevron {
+  width: var(--iv-tree-icon-size);
 }
 
 .iv-tree__icon {
   display: inline-grid;
   flex: none;
   place-items: center;
+  width: var(--iv-tree-icon-size);
   color: var(--iv-text-faint);
 }
 
