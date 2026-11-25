@@ -17,6 +17,7 @@ export class TabStore extends Context.Service<
   {
     readonly find: (sessionId: string) => Effect.Effect<Tab | null>
     readonly listByProject: (projectPath: string) => Effect.Effect<readonly Tab[]>
+    readonly sessionIds: Effect.Effect<readonly string[]>
     readonly selectedOf: (projectPath: string) => Effect.Effect<string | null>
     readonly append: (tab: Tab) => Effect.Effect<void>
     readonly remove: (sessionId: string) => Effect.Effect<void>

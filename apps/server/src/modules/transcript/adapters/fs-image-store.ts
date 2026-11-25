@@ -5,7 +5,7 @@ import { Database } from "../../../shared/adapters/database.ts"
 import type { ImageMediaType } from "@ivin/contracts/transcript"
 import { imageFileName } from "../rules/image-file-name.ts"
 import { ImageFolder } from "../usecases/image-folder.ts"
-import { ImageStore } from "../usecases/image-store.ts"
+import { ImageStore, type StoredImageSelection } from "../usecases/image-store.ts"
 import { isDecodable, toWebpOffThread } from "./webp-encoder.ts"
 
 type StoredRow = {
@@ -26,13 +26,16 @@ export const layerFsImageStore = Layer.effect(ImageStore)(
         sessionFolder(row.session_id),
         imageFileName(row.id, row.compressed_media_type ?? row.media_type),
       )
-    const notDeletedSentBefore = (sentBefore: number | null) =>
-      db
+    const selected = ({ sentBefore, exceptSessions }: StoredImageSelection) => {
+      const except = exceptSessions === null ? null : JSON.stringify(exceptSessions)
+      return db
         .prepare(
           `SELECT id, session_id, media_type, compressed_media_type FROM images
-           WHERE deleted_at IS NULL AND (? IS NULL OR sent_at < ?)`,
+           WHERE deleted_at IS NULL AND (? IS NULL OR sent_at < ?)
+             AND (? IS NULL OR session_id NOT IN (SELECT value FROM json_each(?)))`,
         )
-        .all(sentBefore, sentBefore) as StoredRow[]
+        .all(sentBefore, sentBefore, except, except) as StoredRow[]
+    }
     const spaceOf = (rows: readonly StoredRow[]) => ({
       images: rows.length,
       bytes: rows.reduce(
@@ -105,12 +108,12 @@ export const layerFsImageStore = Layer.effect(ImageStore)(
           markCompressed.run("image/webp", imageId)
           rmSync(original, { force: true })
         }),
-      space: (sentBefore) => Effect.sync(() => spaceOf(notDeletedSentBefore(sentBefore))),
-      remove: (sentBefore) =>
+      space: (selection) => Effect.sync(() => spaceOf(selected(selection))),
+      remove: (selection) =>
         Effect.gen(function* () {
           const now = yield* Clock.currentTimeMillis
           return yield* Effect.sync(() => {
-            const rows = notDeletedSentBefore(sentBefore)
+            const rows = selected(selection)
             const freed = spaceOf(rows)
             const markDeleted = db.prepare("UPDATE images SET deleted_at = ? WHERE id = ?")
             for (const row of rows) {

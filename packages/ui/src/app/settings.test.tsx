@@ -492,8 +492,13 @@ const daysField = () => page.getByRole("textbox", { name: "Delete images older t
 const openImages = async () => {
   const server = await mountApp()
   server.seedStoredImages([
-    { id: "old", bytes: 2.5 * 1024 * 1024, sentAt: Date.now() - 40 * DAY },
-    { id: "new", bytes: Math.round(1.2 * 1024 * 1024), sentAt: Date.now() - 2 * DAY },
+    { id: "old", sessionId: "s-old", bytes: 2.5 * 1024 * 1024, sentAt: Date.now() - 40 * DAY },
+    {
+      id: "new",
+      sessionId: "s-new",
+      bytes: Math.round(1.2 * 1024 * 1024),
+      sentAt: Date.now() - 2 * DAY,
+    },
   ])
   await page.getByRole("button", { name: "Settings" }).click()
   await sections().getByRole("button", { name: "Images" }).click()
@@ -529,7 +534,8 @@ test("a smaller number of days takes more images, and Cancel deletes nothing", a
   await openImages()
 
   await daysField().fill("1")
-  await expect.element(page.getByText("2 images · 3.7 MB")).toBeVisible()
+  // The inactive sessions' row below shows the same two images.
+  await expect.element(page.getByText("2 images · 3.7 MB").first()).toBeVisible()
   await page.getByRole("button", { name: "Delete…", exact: true }).click()
   await expect
     .element(page.getByRole("dialog").getByRole("heading"))
@@ -571,5 +577,21 @@ test("a delete that fails says so under its row, and Retry deletes", async () =>
 
   await expect.element(page.getByText("The images could not be deleted. Try again.")).toBeVisible()
   await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByText("No image is stored.")).toBeVisible()
+})
+
+test("deleting the images of inactive sessions asks first with the space it frees, then shows the new size", async () => {
+  await openImages()
+  await expect.element(page.getByText("2 images · 3.7 MB")).toBeVisible()
+
+  await page.getByRole("button", { name: "Delete the images of inactive sessions…" }).click()
+  const dialog = page.getByRole("dialog")
+  await expect
+    .element(dialog.getByRole("heading"))
+    .toHaveTextContent("Delete 2 images of inactive sessions?")
+  await expect.element(dialog.getByText(/This frees 3\.7 MB\./)).toBeVisible()
+  await dialog.getByRole("button", { name: "Delete images" }).click()
+
+  await expect.element(page.getByText("No inactive session has an image.")).toBeVisible()
   await expect.element(page.getByText("No image is stored.")).toBeVisible()
 })

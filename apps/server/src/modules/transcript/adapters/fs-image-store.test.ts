@@ -41,7 +41,7 @@ test("a deleted image is left out of the images to compress", async () => {
     )
     const store = yield* ImageStore
     yield* store.save("s1", 10, [{ id: "i1", number: 1, mediaType: "image/png", base64: "AA==" }])
-    yield* store.remove(null)
+    yield* store.remove({ sentBefore: null, exceptSessions: null })
     return yield* store.uncompressed("s1")
   }).pipe(
     Effect.provide(

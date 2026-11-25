@@ -1,5 +1,6 @@
 import { expect, test } from "vitest"
 import {
+  inactiveImagesSummary,
   deleteImagesDescription,
   deleteImagesTitle,
   olderImagesSummary,
@@ -16,8 +17,12 @@ test("the space and the delete confirmations count images and days in plain word
   expect(deleteImagesTitle(30, { images: 1, bytes: 0 })).toBe(
     "Delete 1 image sent more than 30 days ago?",
   )
-  expect(deleteImagesTitle(null, { images: 2, bytes: 0 })).toBe("Delete all 2 images?")
-  expect(deleteImagesTitle(null, { images: 1, bytes: 0 })).toBe("Delete the stored image?")
+  expect(deleteImagesTitle("all", { images: 2, bytes: 0 })).toBe("Delete all 2 images?")
+  expect(deleteImagesTitle("all", { images: 1, bytes: 0 })).toBe("Delete the stored image?")
+  expect(deleteImagesTitle("inactive", { images: 3, bytes: 0 })).toBe(
+    "Delete 3 images of inactive sessions?",
+  )
+  expect(inactiveImagesSummary({ images: 0, bytes: 0 })).toBe("No inactive session has an image.")
   expect(deleteImagesDescription({ images: 1, bytes: 0 })).toContain("Its message keeps its text")
   expect(deleteImagesDescription({ images: 2, bytes: 3.7 * MB })).toMatch(/^This frees 3\.7 MB\./)
 })

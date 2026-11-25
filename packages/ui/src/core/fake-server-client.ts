@@ -99,7 +99,7 @@ export interface FakeServer {
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
   // Stored images, as `transcript.getImageSpace` and `transcript.deleteImages` see them.
   readonly seedStoredImages: (
-    images: ReadonlyArray<{ id: string; bytes: number; sentAt: number }>,
+    images: ReadonlyArray<{ id: string; sessionId: string; bytes: number; sentAt: number }>,
   ) => void
   // What `session.taskOutput` returns for a running command, by `<sessionId>/<taskId>`.
   readonly taskOutputs: Map<string, string>
@@ -324,13 +324,18 @@ export const makeFakeServer = (
     )
   const storedImages = new Map<
     string,
-    { id: string; bytes: number; sentAt: number; deleted: boolean }
+    { id: string; sessionId: string; bytes: number; sentAt: number; deleted: boolean }
   >()
-  const keptImages = (olderThanDays: number | undefined) =>
+  interface ImageSelection {
+    readonly olderThanDays?: number | undefined
+    readonly inactiveSessions?: boolean | undefined
+  }
+  const selectedImages = ({ olderThanDays, inactiveSessions }: ImageSelection) =>
     [...storedImages.values()].filter(
       (image) =>
         !image.deleted &&
-        (olderThanDays === undefined || image.sentAt < Date.now() - olderThanDays * 86_400_000),
+        (olderThanDays === undefined || image.sentAt < Date.now() - olderThanDays * 86_400_000) &&
+        (inactiveSessions !== true || !tabs.some((tab) => tab.sessionId === image.sessionId)),
     )
   const spaceOf = (images: ReadonlyArray<{ bytes: number }>) => ({
     images: images.length,
@@ -843,6 +848,7 @@ export const makeFakeServer = (
           for (const image of sent) {
             storedImages.set(image.id, {
               id: image.id,
+              sessionId: input.sessionId,
               bytes: Math.floor((image.base64.length * 3) / 4),
               sentAt: Date.now(),
               deleted: false,
@@ -1287,11 +1293,11 @@ export const makeFakeServer = (
             : [],
         ),
       ),
-    "transcript.getImageSpace": ({ olderThanDays }: { olderThanDays?: number | undefined }) =>
-      Effect.sync(() => spaceOf(keptImages(olderThanDays))),
-    "transcript.deleteImages": ({ olderThanDays }: { olderThanDays?: number | undefined }) =>
+    "transcript.getImageSpace": (selection: ImageSelection) =>
+      Effect.sync(() => spaceOf(selectedImages(selection))),
+    "transcript.deleteImages": (selection: ImageSelection) =>
       Effect.sync(() => {
-        const kept = keptImages(olderThanDays)
+        const kept = selectedImages(selection)
         for (const image of kept) image.deleted = true
         return { ...spaceOf(kept), imageIds: kept.map((image) => image.id) }
       }),

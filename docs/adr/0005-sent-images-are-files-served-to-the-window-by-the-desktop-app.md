@@ -4,7 +4,7 @@ The images a user sends are files in an `images` folder beside the database: one
 
 When a session's last tab closes, the server re-encodes its PNG and JPEG images as WebP at their own size, and keeps the WebP when it is smaller. The row records the type of the stored file, and the server gives that type to every image reference it sends, so the window builds the file's URL from it; the events keep the type the image was sent with. The encoding runs in a worker thread with WebAssembly codecs, because a large screenshot takes most of a second to encode and the server answers every RPC on one thread.
 
-Images are deleted only when the user asks, from the settings page: all of them, or those sent more than N days ago, by the time recorded on their row. The files go and the rows stay, marked deleted, so the message keeps the image's marker and number and the session's numbers stay unique; the server marks a deleted image in every reference it sends. The space reported reads the files, since compression changes their size after the row is written.
+Images are deleted only when the user asks, from the settings page: all of them, those sent more than N days ago, by the time recorded on their row, or those of the sessions with no tab. The files go and the rows stay, marked deleted, so the message keeps the image's marker and number and the session's numbers stay unique; the server marks a deleted image in every reference it sends. The space reported reads the files, since compression changes their size after the row is written.
 
 ## Considered options
 

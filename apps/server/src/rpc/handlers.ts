@@ -77,6 +77,7 @@ import { layerSqliteTabStore } from "../modules/tab/adapters/sqlite-tab-store.ts
 import { layerImageCompression } from "../modules/tab/usecases/image-compression.ts"
 import { layerProjectTabs } from "../modules/tab/usecases/project-tabs.ts"
 import { layerSessionTabs } from "../modules/tab/usecases/session-tabs.ts"
+import { layerSessionsWithTab } from "../modules/tab/usecases/sessions-with-tab.ts"
 import { closeSubView } from "../modules/tab/usecases/close-sub-view.ts"
 import { closeTab } from "../modules/tab/usecases/close-tab.ts"
 import { listSubViews } from "../modules/tab/usecases/list-sub-views.ts"
@@ -108,7 +109,7 @@ import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.
 export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
   Layer.mergeAll(layerProjectTabs, layerFirstMessageReading, layerUnrestoredSubViewsDropped).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
-    Layer.provideMerge(layerSessionTabs),
+    Layer.provideMerge(Layer.mergeAll(layerSessionTabs, layerSessionsWithTab)),
     Layer.provideMerge(sessionRuns),
     Layer.provideMerge(layerCurrentSettings),
     Layer.provideMerge(layerPluginSettingDeclarations),
@@ -248,8 +249,8 @@ export const handlers = Rpcs.toLayer(
       "transcript.watchUsage": ({ sessionId }) => watchUsage(sessionId),
       "transcript.getTaskItems": ({ sessionId, toolCallId }) => getTaskItems(sessionId, toolCallId),
       "transcript.listImages": ({ sessionId }) => listImages(sessionId),
-      "transcript.getImageSpace": ({ olderThanDays }) => getImageSpace(olderThanDays),
-      "transcript.deleteImages": ({ olderThanDays }) => deleteImages(olderThanDays),
+      "transcript.getImageSpace": (selection) => getImageSpace(selection),
+      "transcript.deleteImages": (selection) => deleteImages(selection),
     }),
   ),
 )

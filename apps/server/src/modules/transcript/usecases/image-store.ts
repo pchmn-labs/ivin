@@ -1,6 +1,12 @@
 import type { DeletedImages, ImageData, ImageSpace } from "@ivin/contracts/transcript"
 import { type Cause, Context, type Effect } from "effect"
 
+// A null field takes every image; deleted images are never taken.
+export interface StoredImageSelection {
+  readonly sentBefore: number | null
+  readonly exceptSessions: readonly string[] | null
+}
+
 export class ImageStore extends Context.Service<
   ImageStore,
   {
@@ -15,9 +21,8 @@ export class ImageStore extends Context.Service<
       sessionId: string,
       imageId: string,
     ) => Effect.Effect<void, Cause.UnknownError>
-    // `sentBefore` null: every image not deleted.
-    readonly space: (sentBefore: number | null) => Effect.Effect<ImageSpace>
-    readonly remove: (sentBefore: number | null) => Effect.Effect<DeletedImages>
+    readonly space: (selection: StoredImageSelection) => Effect.Effect<ImageSpace>
+    readonly remove: (selection: StoredImageSelection) => Effect.Effect<DeletedImages>
     readonly removeSession: (sessionId: string) => Effect.Effect<void>
   }
 >()("ivin/server/ImageStore") {}

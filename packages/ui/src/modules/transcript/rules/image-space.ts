@@ -1,8 +1,15 @@
 import type { ImageSpace } from "@ivin/contracts/transcript"
 import { byteSize } from "../../../shared/rules/byte-size.ts"
 
-// `null`: every image.
-export type DeleteScope = number | null
+// A number: the images sent more than that many days ago.
+export type DeleteScope = number | "all" | "inactive"
+
+export const imageSelectionOf = (scope: DeleteScope) =>
+  scope === "all"
+    ? {}
+    : scope === "inactive"
+      ? { inactiveSessions: true }
+      : { olderThanDays: scope }
 
 const count = (n: number, one: string) => `${n.toLocaleString("en")} ${one}${n === 1 ? "" : "s"}`
 
@@ -16,12 +23,19 @@ export const olderImagesSummary = (space: ImageSpace, days: number) =>
     ? `No image is older than ${count(days, "day")}.`
     : `${imageCount(space.images)} · ${byteSize(space.bytes)}`
 
+export const inactiveImagesSummary = (space: ImageSpace) =>
+  space.images === 0
+    ? "No inactive session has an image."
+    : `${imageCount(space.images)} · ${byteSize(space.bytes)}`
+
 export const deleteImagesTitle = (scope: DeleteScope, space: ImageSpace) =>
-  scope === null
+  scope === "all"
     ? space.images === 1
       ? "Delete the stored image?"
       : `Delete all ${imageCount(space.images)}?`
-    : `Delete ${imageCount(space.images)} sent more than ${count(scope, "day")} ago?`
+    : scope === "inactive"
+      ? `Delete ${imageCount(space.images)} of inactive sessions?`
+      : `Delete ${imageCount(space.images)} sent more than ${count(scope, "day")} ago?`
 
 export const deleteImagesDescription = (space: ImageSpace) =>
   `This frees ${byteSize(space.bytes)}. ${

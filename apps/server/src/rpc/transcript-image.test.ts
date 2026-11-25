@@ -397,3 +397,31 @@ test("deleting a session whose images were deleted removes their rows and its fo
   expect(existsSync(join(folder, sessionId))).toBe(false)
   expect(db.prepare("SELECT COUNT(*) AS count FROM images").get()).toEqual({ count: 0 })
 })
+
+test("deleting the images of inactive sessions keeps those of the sessions with a tab", async () => {
+  const db = newDatabase()
+  const folder = newFolder()
+  const result = await withServer(
+    db,
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        yield* client["project.open"]({ path: "/p" })
+        const open = yield* sendIn(client, "/p", screenshot)
+        const inactive = yield* sendIn(client, "/p", photo)
+        yield* client["tab.open"]({ sessionId: open })
+        yield* client["tab.close"]({ sessionId: inactive }).pipe(Effect.ignore)
+        const before = yield* client["transcript.getImageSpace"]({ inactiveSessions: true })
+        const freed = yield* client["transcript.deleteImages"]({ inactiveSessions: true })
+        return { open, inactive, before, freed }
+      }),
+    { cycle: true },
+    folder,
+  )
+
+  const photoBytes = Buffer.from(photo.base64, "base64").byteLength
+  expect(result.before).toEqual({ images: 1, bytes: photoBytes })
+  expect(result.freed).toEqual({ images: 1, bytes: photoBytes, imageIds: ["i2"] })
+  expect(existsSync(join(folder, result.open, "i1.png"))).toBe(true)
+  expect(existsSync(join(folder, result.inactive, "i2.jpg"))).toBe(false)
+})

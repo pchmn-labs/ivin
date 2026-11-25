@@ -1,8 +1,8 @@
 import { Effect } from "effect"
+import { imageSelection } from "./image-selection.ts"
 import { ImageStore } from "./image-store.ts"
-import { sentBefore } from "./sent-before.ts"
 
-export const deleteImages = (olderThanDays: number | undefined) =>
+export const deleteImages = (selection: Parameters<typeof imageSelection>[0]) =>
   Effect.gen(function* () {
-    return yield* (yield* ImageStore).remove(yield* sentBefore(olderThanDays))
+    return yield* (yield* ImageStore).remove(yield* imageSelection(selection))
   })

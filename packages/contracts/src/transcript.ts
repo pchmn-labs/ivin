@@ -32,8 +32,12 @@ export const DeletedImages = Schema.Struct({
 })
 export type DeletedImages = typeof DeletedImages.Type
 
-// Absent: every image.
-const OlderThanDays = Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)))
+// Each field narrows the images taken; none: every image.
+const ImageSelection = {
+  olderThanDays: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
+  // Sessions with no tab, archived or not.
+  inactiveSessions: Schema.optional(Schema.Boolean),
+}
 
 export const ImageData = Schema.Struct({
   ...ImageRef.fields,
@@ -483,14 +487,14 @@ export const TranscriptRpcs = RpcGroup.make(
     payload: { sessionId: Schema.String },
     success: Schema.Array(SessionImage),
   }),
-  // The images not deleted and sent more than `olderThanDays` days ago, and the size of their files.
+  // The images not deleted that the selection takes, and the size of their files.
   Rpc.make("transcript.getImageSpace", {
-    payload: { olderThanDays: OlderThanDays },
+    payload: ImageSelection,
     success: ImageSpace,
   }),
   // Returns what it freed.
   Rpc.make("transcript.deleteImages", {
-    payload: { olderThanDays: OlderThanDays },
+    payload: ImageSelection,
     success: DeletedImages,
   }),
 )

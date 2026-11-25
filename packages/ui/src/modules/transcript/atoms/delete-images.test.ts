@@ -7,13 +7,13 @@ import { imageSpaceOf } from "./get-image-space.ts"
 test("deleting images refreshes the space and remembers which images went, for the transcripts already loaded", async () => {
   const { registry, server } = makeTestRegistry()
   server.seedStoredImages([
-    { id: "old", bytes: 2_000, sentAt: Date.now() - 40 * 86_400_000 },
-    { id: "new", bytes: 1_000, sentAt: Date.now() },
+    { id: "old", sessionId: "s", bytes: 2_000, sentAt: Date.now() - 40 * 86_400_000 },
+    { id: "new", sessionId: "s", bytes: 1_000, sentAt: Date.now() },
   ])
-  registry.mount(imageSpaceOf(null))
+  registry.mount(imageSpaceOf("all"))
   registry.mount(deleteImagesAtom)
   await vi.waitFor(() =>
-    expect(AsyncResult.getOrElse(registry.get(imageSpaceOf(null)), () => null)).toEqual({
+    expect(AsyncResult.getOrElse(registry.get(imageSpaceOf("all")), () => null)).toEqual({
       images: 2,
       bytes: 3_000,
     }),
@@ -22,7 +22,7 @@ test("deleting images refreshes the space and remembers which images went, for t
   registry.set(deleteImagesAtom, 30)
 
   await vi.waitFor(() =>
-    expect(AsyncResult.getOrElse(registry.get(imageSpaceOf(null)), () => null)).toEqual({
+    expect(AsyncResult.getOrElse(registry.get(imageSpaceOf("all")), () => null)).toEqual({
       images: 1,
       bytes: 1_000,
     }),
