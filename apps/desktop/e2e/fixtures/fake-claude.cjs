@@ -4,6 +4,9 @@
 const { execSync } = require("node:child_process")
 const { createInterface } = require("node:readline")
 
+// A one-shot run (a title) gets no answer: leaving at once saves its 30 s timeout.
+if (!process.argv.includes("--input-format")) process.exit(1)
+
 const sessionId = "00000000-0000-4000-8000-000000000001"
 const emit = (line) =>
   process.stdout.write(`${JSON.stringify({ session_id: sessionId, ...line })}\n`)
@@ -79,6 +82,12 @@ createInterface({ input: process.stdin }).on("line", (text) => {
         ? execSync(`${text.slice(5)} 2>&1`, { encoding: "utf8", shell: "/bin/sh" })
         : text,
     )
+  } else if (line.type === "control_request" && line.request?.subtype === "initialize") {
+    // An empty list is what ivin falls back on after waiting 10 s for no answer.
+    emit({
+      type: "control_response",
+      response: { subtype: "success", request_id: line.request_id, response: { models: [] } },
+    })
   } else if (line.type === "control_request" && line.request?.subtype === "interrupt") {
     interrupt(line.request_id)
   }
