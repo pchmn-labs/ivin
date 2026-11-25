@@ -1,7 +1,6 @@
-import { RegistryContext, RegistryProvider } from "@effect/atom-react"
-import { DateTime } from "effect"
-import type { AtomRegistry } from "effect/reactivity"
-import { useContext, useEffect } from "react"
+import { RegistryContext } from "@effect/atom-react"
+import { DateTime, Layer } from "effect"
+import { AtomRegistry } from "effect/reactivity"
 import { expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
@@ -14,16 +13,7 @@ const PIXEL =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
 const LOG_PATH = `/Users/someone-with-a-long-name/Library/Logs/ivin/${"nested-folder/".repeat(12)}server.log`
 
-let registry: AtomRegistry.AtomRegistry
-function CaptureRegistry() {
-  const current = useContext(RegistryContext)
-  useEffect(() => {
-    registry = current
-  }, [current])
-  return null
-}
-
-const mountApp = async () => {
+const mountApp = async ({ failVersion = false } = {}) => {
   const at = DateTime.makeUnsafe(0)
   const server = makeFakeServer({ project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: at } })
   server.sessions.set("s1", {
@@ -52,15 +42,21 @@ const mountApp = async () => {
     waitingFor: null,
   })
   server.openTab("s1")
+  if (failVersion) server.failNextCall("server.getVersion")
   await page.viewport(1280, 800)
+  const registry = AtomRegistry.make({ initialValues: [[serverClientLayerAtom, server.layer]] })
   await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <CaptureRegistry />
+    <RegistryContext.Provider value={registry}>
       <App />
-    </RegistryProvider>,
+    </RegistryContext.Provider>,
   )
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
-  return server
+  // The desktop bridge gives the restarted server a new client, which rebuilds every atom that calls it.
+  const serverBack = () => {
+    registry.set(serverStateAtom, { kind: "running" })
+    registry.set(serverClientLayerAtom, Layer.fresh(server.layer))
+  }
+  return { server, registry, serverBack }
 }
 
 const field = () => page.getByRole("textbox", { name: "Message" })
@@ -75,30 +71,37 @@ test("the status at the settings navigation's foot shows the version once the se
 })
 
 test("while the server restarts, an alert says so, and it goes when the server is back", async () => {
-  await mountApp()
+  const { registry, serverBack } = await mountApp()
   await expect.element(alert()).not.toBeInTheDocument()
 
   registry.set(serverStateAtom, { kind: "restarting" })
   await expect.element(alert()).toHaveTextContent("ivin's server stopped. Restarting it…")
 
-  registry.set(serverStateAtom, { kind: "running" })
+  serverBack()
   await expect.element(alert()).not.toBeInTheDocument()
 })
 
-test("when the server gave up, the alert names a log path too long for a line and keeps the Restart button in view", async () => {
-  await mountApp()
+test("when the server does not answer, the alert says to reopen ivin and offers no Restart", async () => {
+  await mountApp({ failVersion: true })
+  await expect
+    .element(alert())
+    .toHaveTextContent("ivin's server is not answering. Quit and reopen ivin.")
+  await expect.element(page.getByRole("button", { name: "Restart" })).not.toBeInTheDocument()
+})
+
+test("when the server gave up, a log path too long for a line stays inside the alert, with Restart in view", async () => {
+  const { registry } = await mountApp()
   registry.set(serverStateAtom, { kind: "gave-up", logPath: LOG_PATH })
 
   const restart = page.getByRole("button", { name: "Restart" })
   await expect.poll(() => alert().element().textContent).toContain(`Its log is at ${LOG_PATH}.`)
   await expect.element(restart).toBeVisible()
-  const box = restart.element().getBoundingClientRect()
-  expect(box.right).toBeLessThanOrEqual(window.innerWidth)
-  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth)
+  expect(alert().element().scrollWidth).toBeLessThanOrEqual(alert().element().clientWidth)
+  expect(restart.element().getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
 })
 
 test("a draft's text and images survive the server being lost and coming back", async () => {
-  await mountApp()
+  const { registry, serverBack } = await mountApp()
   await field().click()
   await userEvent.keyboard("look ")
   const data = new DataTransfer()
@@ -120,11 +123,10 @@ test("a draft's text and images survive the server being lost and coming back", 
   registry.set(serverStateAtom, { kind: "restarting" })
   await expect.element(alert()).toBeVisible()
   expect(field().element()).toBe(composer)
-  registry.set(serverStateAtom, { kind: "running" })
+  serverBack()
   await expect.element(alert()).not.toBeInTheDocument()
 
-  expect(field().element()).toBe(composer)
-  expect(field().element().textContent).toContain("look")
-  expect(field().element().textContent).toContain("please")
+  await expect.element(field()).toHaveTextContent("look #1 please")
   await expect.element(thumbnail).toHaveAccessibleName("View image #1")
+  expect(field().element()).toBe(composer)
 })
