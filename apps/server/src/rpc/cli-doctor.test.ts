@@ -103,7 +103,7 @@ test("an agent whose app serves no socket is told so instead of reaching another
   expect(run.stderr).toContain("The ivin that started this agent serves no socket")
 })
 
-test("ivin --help and ivin doctor --help print their usage", async () => {
+test("ivin --help, ivin doctor --help and its -h print their usage", async () => {
   const main = await runCli(["--help"])
   const doctor = await runCli(["doctor", "--help"])
 
@@ -111,9 +111,10 @@ test("ivin --help and ivin doctor --help print their usage", async () => {
   expect(main.stdout).toContain("Usage: ivin <command> [options]")
   expect(doctor.code).toBe(0)
   expect(doctor.stdout).toContain("Usage: ivin doctor [--json]")
+  expect((await runCli(["doctor", "-h"])).stdout).toBe(doctor.stdout)
 })
 
-test.each([[["frob"]], [["doctor", "--frob"]]])(
+test.each([[["frob"]], [["doctor", "--frob"]], [["doctor", "extra"]], [[]]])(
   "invalid usage %j exits 2 with a message",
   async (args) => {
     const run = await runCli(args)

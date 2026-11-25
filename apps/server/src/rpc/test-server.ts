@@ -26,7 +26,7 @@ export const newDatabase = ({ trusted = true }: { trusted?: boolean } = {}) => {
   return db
 }
 
-export interface ServerOptions {
+interface ServerOptions {
   readonly db?: DatabaseSync
   readonly turns?: readonly (readonly ScriptedElement[])[]
   readonly scripted?: Parameters<typeof layerScripted>[1]
@@ -56,7 +56,7 @@ export const serverLayer = ({
     Layer.provide(layerScripted(turns, scripted)),
   )
 
-export type ServerServices = Layer.Success<ReturnType<typeof serverLayer>>
+type ServerServices = Layer.Success<ReturnType<typeof serverLayer>>
 
 export const withServer = <A, E>(
   use: (client: Client) => Effect.Effect<A, E, ServerServices | Scope.Scope>,

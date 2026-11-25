@@ -14,7 +14,6 @@ export const commitAll = (repo: string) => {
   git(repo, "commit", "--quiet", "-m", "commit")
 }
 
-// Runs `call` in a new session of `projectPath`, and the error's tag when it fails.
 export const callIn = <A>(
   projectPath: string,
   call: (client: Client, sessionId: string) => Effect.Effect<A, { readonly _tag: string }>,
@@ -28,3 +27,9 @@ export const callIn = <A>(
 
 export const changesIn = (projectPath: string) =>
   callIn(projectPath, (client, sessionId) => client["file.listChanges"]({ sessionId }))
+
+export const committedChangesIn = (projectPath: string) =>
+  callIn(projectPath, (client, sessionId) => client["file.listCommittedChanges"]({ sessionId }))
+
+export const committedDiffIn = (projectPath: string, path: string) =>
+  callIn(projectPath, (client, sessionId) => client["file.readCommittedDiff"]({ sessionId, path }))

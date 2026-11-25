@@ -206,7 +206,6 @@ const currentSettings = (client: Client) =>
     Effect.map((head) => (head._tag === "Some" ? head.value : null)),
   )
 
-// Closes the tab of a session whose agent is working, once the settings file has been read.
 const closeWorkingTab = (settings: ReadonlyArray<string | null>, stopAgentOnClose: boolean) => {
   const closed: string[] = []
   return withServer(

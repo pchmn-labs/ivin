@@ -3,7 +3,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { expect, test, vi } from "vitest"
 import { git, useClonedProject } from "./git-fixture.ts"
-import { callIn, changesIn, write } from "./test-file-repo.ts"
+import { callIn, changesIn, committedChangesIn, committedDiffIn, write } from "./test-file-repo.ts"
 import { withServer } from "./test-server.ts"
 
 vi.setConfig({ testTimeout: 10_000 })
@@ -20,12 +20,6 @@ const repo = useClonedProject(({ upstream, project }) => {
   git(project, "pull", "--quiet")
   git(project, "switch", "--quiet", "-c", "feature")
 })
-
-const committedChangesIn = (projectPath: string) =>
-  callIn(projectPath, (client, sessionId) => client["file.listCommittedChanges"]({ sessionId }))
-
-const committedDiffIn = (projectPath: string, path: string) =>
-  callIn(projectPath, (client, sessionId) => client["file.readCommittedDiff"]({ sessionId, path }))
 
 const discardIn = (projectPath: string, ...paths: string[]) =>
   callIn(projectPath, (client, sessionId) => client["file.discardChanges"]({ sessionId, paths }))

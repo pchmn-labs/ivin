@@ -13,7 +13,14 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { git } from "./git-fixture.ts"
-import { callIn, changesIn, commitAll, write } from "./test-file-repo.ts"
+import {
+  callIn,
+  changesIn,
+  commitAll,
+  committedChangesIn,
+  committedDiffIn,
+  write,
+} from "./test-file-repo.ts"
 import { withServer } from "./test-server.ts"
 
 // Real git: several commands per call, slower when the suite runs other git tests beside it.
@@ -33,12 +40,6 @@ afterEach(() => rmSync(root, { recursive: true, force: true }))
 
 const diffIn = (projectPath: string, path: string) =>
   callIn(projectPath, (client, sessionId) => client["file.readDiff"]({ sessionId, path }))
-
-const committedChangesIn = (projectPath: string) =>
-  callIn(projectPath, (client, sessionId) => client["file.listCommittedChanges"]({ sessionId }))
-
-const committedDiffIn = (projectPath: string, path: string) =>
-  callIn(projectPath, (client, sessionId) => client["file.readCommittedDiff"]({ sessionId, path }))
 
 // Each line as git shows it: its sign, then its text.
 const linesOf = (diff: FileDiff | string) =>

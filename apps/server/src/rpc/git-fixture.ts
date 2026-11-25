@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterAll, afterEach, beforeAll, beforeEach } from "vitest"
 
-export const gitEnv = {
+const gitEnv = {
   ...process.env,
   GIT_AUTHOR_NAME: "ivin",
   GIT_AUTHOR_EMAIL: "ivin@example.com",
@@ -22,7 +22,7 @@ export const commit = (repo: string, file: string, text = file) => {
   git(repo, "commit", "--quiet", "-m", file)
 }
 
-export interface ClonedProject {
+interface ClonedProject {
   root: string
   origin: string
   upstream: string
