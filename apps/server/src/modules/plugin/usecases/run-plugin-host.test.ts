@@ -152,3 +152,9 @@ test("a half that failed to activate is not activated again when the host restar
   await run(fixture, () => until(() => fixture.launches.length >= 2))
   expect(fixture.logs.filter((line) => line.startsWith("bad:"))).toHaveLength(1)
 })
+
+test("no host starts when no plugin has a server half", async () => {
+  const fixture = setup({})
+  await run(fixture, () => Effect.sleep(Duration.millis(50)))
+  expect(fixture.launches).toHaveLength(0)
+})

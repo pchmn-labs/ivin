@@ -105,6 +105,8 @@ export const runPluginHost = (timings: PluginHostTimings = defaultPluginHostTimi
     if ((yield* PluginHost) === null) return
     const states = yield* ServerHalves
     const halves = yield* compileHalves
+    // No process for nothing to run.
+    if (halves.length === 0) return
     const disabled = new Set<string>()
     const activating = yield* Ref.make<string | null>(null)
     while (true) {
