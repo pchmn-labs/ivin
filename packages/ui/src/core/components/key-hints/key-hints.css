@@ -22,3 +22,8 @@
   font-family: var(--iv-font-sans);
   font-weight: var(--iv-weight-medium);
 }
+
+/* Phosphor draws the down arrow first. */
+.iv-key-hints kbd[data-key="↑↓"] svg {
+  transform: scaleX(-1);
+}

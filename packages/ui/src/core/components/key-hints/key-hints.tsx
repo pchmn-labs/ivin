@@ -6,10 +6,6 @@ export type { KeyHintsProps }
 
 const keyIcons: Readonly<Record<string, { readonly icon: IconName; readonly label: string }>> = {
   "↵": { icon: "enter", label: "Enter" },
-  "↑": { icon: "arrow-up", label: "Up arrow" },
-  "↓": { icon: "arrow-down", label: "Down arrow" },
-  "←": { icon: "arrow-left", label: "Left arrow" },
-  "→": { icon: "arrow-right", label: "Right arrow" },
   "↑↓": { icon: "arrows-down-up", label: "Up and down arrows" },
   "←→": { icon: "arrows-left-right", label: "Left and right arrows" },
 }
@@ -17,7 +13,7 @@ const keyIcons: Readonly<Record<string, { readonly icon: IconName; readonly labe
 function Key({ name }: { readonly name: string }) {
   const known = keyIcons[name]
   return (
-    <kbd>
+    <kbd data-key={name}>
       {known === undefined ? name : <Icon name={known.icon} size={12} label={known.label} />}
     </kbd>
   )
