@@ -19,6 +19,7 @@ import { pathToFileURL } from "node:url"
 import { appMenuTemplate } from "./app-menu.ts"
 import {
   CHECK_FOR_UPDATES,
+  DEV_BUILD_ARGUMENT,
   GET_SERVER_STATE,
   GET_UPDATE_STATE,
   OPEN_SETTINGS_FILE,
@@ -41,9 +42,11 @@ import { automaticCheckFrom, betaFrom } from "./update-settings.ts"
 import { createUpdater, startSwap } from "./updater.ts"
 
 // A dev build keeps its own data, so it never shares a database with the installed app.
-if (!app.isPackaged && !app.commandLine.hasSwitch("user-data-dir")) {
+const devBuild = !app.isPackaged
+if (devBuild && !app.commandLine.hasSwitch("user-data-dir")) {
   app.setPath("userData", join(app.getPath("appData"), "ivin-dev"))
 }
+if (devBuild) app.setName("ivin Dev")
 // The lock is per userData folder, so it comes after the folder is set.
 const isFirstInstance = app.requestSingleInstanceLock()
 if (!isFirstInstance) app.quit()
@@ -122,6 +125,7 @@ const createWindow = async () => {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      additionalArguments: devBuild ? [DEV_BUILD_ARGUMENT] : [],
       // A window never shown must still render for e2e and `shot`.
       backgroundThrottling: !openInBackground,
     },
@@ -278,7 +282,10 @@ ipcMain.handle(SHOW_IN_FOLDER, (_event, path: unknown) => {
 
 void app.whenReady().then(() => {
   if (!isFirstInstance) return
-  if (!app.isPackaged) app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
+  if (devBuild) {
+    app.dock?.setIcon(join(import.meta.dirname, "../build/icon.png"))
+    app.dock?.setBadge("DEV")
+  }
   Menu.setApplicationMenu(Menu.buildFromTemplate(appMenuTemplate(process.platform)))
   const imageFolder = join(app.getPath("userData"), "images")
   protocol.handle(IMAGE_SCHEME, async (request) => {

@@ -22,3 +22,19 @@
 .iv-shell-controls[data-sidebar="open"] > .iv-shell-controls__lights + * {
   margin-right: auto;
 }
+
+.iv-shell-controls__start {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+}
+
+.iv-shell-controls__dev {
+  padding: 1px var(--iv-space-2);
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-pill);
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+  white-space: nowrap;
+}

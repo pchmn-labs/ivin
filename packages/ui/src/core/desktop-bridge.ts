@@ -14,6 +14,8 @@ declare global {
       readonly openSettingsFile: () => Promise<string | null>
       // Node's `process.platform`.
       readonly platform: string
+      // True in a build that is not packaged.
+      readonly devBuild: boolean
       // Opens the system's file manager on the folder of `path`, with `path` selected.
       readonly showInFolder: (path: string) => Promise<void>
       readonly getServerState: () => Promise<ServerState>
