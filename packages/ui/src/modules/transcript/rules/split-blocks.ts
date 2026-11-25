@@ -1,10 +1,13 @@
-import { Lexer } from "marked"
+import remarkGfm from "remark-gfm"
+import remarkParse from "remark-parse"
+import { unified } from "unified"
+
+const parser = unified().use(remarkParse).use(remarkGfm)
 
 export const splitBlocks = (text: string): ReadonlyArray<string> =>
-  new Lexer()
-    .lex(text)
-    .filter((token) => token.type !== "space")
-    .map((token) => token.raw)
+  parser
+    .parse(text)
+    .children.map((node) => text.slice(node.position?.start.offset, node.position?.end.offset))
 
 // Streamed text only grows: finished blocks are kept and only the last one is lexed again.
 export const extendBlocks = (
