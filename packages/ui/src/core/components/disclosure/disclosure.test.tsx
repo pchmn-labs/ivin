@@ -52,3 +52,13 @@ test("a section's actions sit in its heading, folded or open, and using them doe
   expect(clicks).toBe(2)
   await expect.element(page.getByText("rows")).toBeVisible()
 })
+
+test("a summary given as a function gets whether the disclosure is open", async () => {
+  await render(
+    <Disclosure summary={(open) => (open ? "Hide output" : "Show output")}>
+      file contents
+    </Disclosure>,
+  )
+  await page.getByText("Show output").click()
+  await expect.element(page.getByText("Hide output")).toBeVisible()
+})

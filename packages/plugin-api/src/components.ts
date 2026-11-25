@@ -191,7 +191,7 @@ export interface BlockProps {
 }
 
 export interface DisclosureProps {
-  readonly summary: ReactNode
+  readonly summary: ReactNode | ((open: boolean) => ReactNode)
   readonly defaultOpen?: boolean
   // "section" heads a group of rows in a list, such as a sidebar section; "panel" heads a
   // sidebar panel, and its summary stays in view while the rows scroll.

@@ -213,17 +213,17 @@ function Panel({
       data-testid="working-panel"
       variant="panel"
       defaultOpen
-      summary={
+      summary={(open) => (
         <span>
           Working · <span>{needsYou.length + running.length}</span>
-          {needsYou.length > 0 && (
+          {!open && needsYou.length > 0 && (
             <Text size="xs" tone="attention">
               {" "}
               · {needsYou.length} need{needsYou.length === 1 ? "s" : ""} you
             </Text>
           )}
         </span>
-      }
+      )}
     >
       {needsYou.length > 0 && (
         <ListSection label="Needs you" count={needsYou.length} attention hideLabel>
@@ -233,7 +233,7 @@ function Panel({
         </ListSection>
       )}
       {running.length > 0 && (
-        <ListSection label="Running" count={running.length}>
+        <ListSection label="Running" count={running.length} hideLabel>
           {running.map((session) => (
             <RunningRow key={session.id} session={session} project={project(session)} now={now} />
           ))}
