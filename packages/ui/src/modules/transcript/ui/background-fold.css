@@ -11,7 +11,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin: var(--iv-space-1) 0 var(--iv-space-2);
+  /* Only the fold's line hangs in the column's padding; its tasks stay at the edge. */
+  margin: var(--iv-space-1) 0 var(--iv-space-2) var(--iv-turn-indent);
 }
 
 .iv-task {
