@@ -50,7 +50,7 @@
 
 ## Screenshots
 
-<!-- Captures of the change on screen, uploaded as the launch-ivin skill says. When nothing on screen changes, write "No visible change." here: the screenshots check reads it. -->
+<!-- Captures of the change on screen, uploaded as the launch-ivin skill says. Delete the section when nothing on screen changes. -->
 
 ## Test plan
 

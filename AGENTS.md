@@ -59,7 +59,10 @@ Start every branch in its own git worktree under `.worktrees/`, named after the 
 
 One PR per ticket or ticketless change, opened against `main`. Its title is a conventional commit, `<type>(<scope>): <subject>`, because a squash merge takes the title. Its body follows `.github/pull_request_template.md` when the repo has one.
 
-Give the PR the `e2e:macos` label when the change can behave differently on macOS: code that checks the platform, the desktop app's main process or preload, packaging, a native dependency, keyboard handling. Without it, the packaged app is tested on macOS only after the merge, on `main`.
+The end-to-end tests of the packaged app run on a pull request only when it has a label; without one, they run after the merge, on `main`. Give the PR:
+
+- `e2e:linux` when the change can break what only the packaged app shows: the desktop app's main process or preload, the server's startup or its processes, the harness's processes, packaging, a native dependency, the CLI, or a test in `apps/desktop/e2e/`.
+- `e2e:macos` when the change can behave differently on macOS: code that checks the platform, the desktop app's main process or preload, packaging, a native dependency, keyboard handling.
 
 Before opening the PR, run the `code-review` skill on the branch since its merge-base with `main`, and fix what it finds or say in the PR why you left it.
 
