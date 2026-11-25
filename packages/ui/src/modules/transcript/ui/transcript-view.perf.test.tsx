@@ -8,6 +8,7 @@ import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { foldsOf } from "../atoms/folds.ts"
+import { PAGE_SIZE } from "../atoms/get-items.ts"
 import { rememberSentImages } from "../atoms/sent-images.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
@@ -255,5 +256,280 @@ test(
       .toBeLessThan(2)
     await expect.element(page.getByText("The end of the streamed answer.")).toBeInViewport()
     await expectFps(annotate, "streaming", fps)
+  },
+)
+
+const message = (position: number, text = `message ${position}`): TranscriptItem => ({
+  id: `m${position}`,
+  sessionId: "s1",
+  position,
+  at: 0,
+  type: "message",
+  role: "assistant",
+  text,
+  images: [],
+  steer: false,
+})
+
+const userMessage = (position: number): TranscriptItem => ({
+  id: `m${position}`,
+  sessionId: "s1",
+  position,
+  at: 0,
+  type: "message",
+  role: "user",
+  text: `question ${position}`,
+  images: [],
+  steer: false,
+})
+
+const toolCall = (position: number): TranscriptItem => ({
+  id: `m${position}`,
+  sessionId: "s1",
+  position,
+  at: 0,
+  type: "tool_call",
+  toolCallId: `t${position}`,
+  name: "Bash",
+  kind: "command",
+  input: { command: `command ${position}` },
+  status: "done",
+  output: `output ${position}`,
+})
+
+// The browser sends the scroll event once the view has moved, after Virtuoso has seen it.
+const scrollEvent = () =>
+  new Promise<void>((resolve) =>
+    scroller().addEventListener("scroll", () => resolve(), { once: true }),
+  )
+const topInView = (text: string) =>
+  page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
+  scroller().getBoundingClientRect().top
+const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
+const inView = (text: string) => {
+  const top = topInView(text)
+  return top >= 0 && top < scroller().clientHeight
+}
+
+// The seeded history is a turn that has ended; the session runs from the message the test sends.
+const sessionView = (server: ReturnType<typeof makeFakeServer>, height: number, live: boolean) => (
+  <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+    <div style={{ position: "relative", height }}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <TranscriptView sessionId="s1" live={live} />
+      </PluginsProvider>
+    </div>
+  </RegistryProvider>
+)
+
+const longAnswer = (position: number, lines = 30) =>
+  message(position, Array.from({ length: lines }, (_, i) => `line ${i}`).join("\n\n"))
+
+const sendQuestion = async (server: ReturnType<typeof makeFakeServer>) => {
+  server.seedItems("s1", [userMessage(0), ...Array.from({ length: 39 }, (_, i) => message(i + 1))])
+  const screen = await render(sessionView(server, 300, false))
+  await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
+  server.pushItem(userMessage(40))
+  await expect.element(page.getByText("question 40", { exact: true })).toBeVisible()
+  await screen.rerender(sessionView(server, 300, true))
+  return screen
+}
+
+test("while the agent works, the transcript follows the end of its turn, however long", async () => {
+  const server = makeFakeServer()
+  await sendQuestion(server)
+
+  server.pushItem(toolCall(41))
+  server.pushItem(longAnswer(42))
+  await expect.element(page.getByText("line 29", { exact: true })).toBeInTheDocument()
+  await expect.poll(fromEnd).toBeLessThan(2)
+  expect(
+    page.getByText("question 40", { exact: true }).query() !== null && inView("question 40"),
+  ).toBe(false)
+
+  server.pushItem(toolCall(43))
+  await expect.element(page.getByText("command 43")).toBeInTheDocument()
+  await expect.poll(fromEnd).toBeLessThan(2)
+})
+
+const everyFrame = <T,>(read: (frame: number) => T, done: (seen: T[]) => boolean) =>
+  new Promise<T[]>((resolve) => {
+    const seen: T[] = []
+    const step = () => {
+      seen.push(read(seen.length))
+      if (done(seen)) resolve(seen)
+      else requestAnimationFrame(step)
+    }
+    requestAnimationFrame(step)
+  })
+
+const streamLine = (index: number) =>
+  ({
+    type: "delta",
+    sessionId: "s1",
+    itemId: "m42",
+    position: 42,
+    kind: "message",
+    text: `line ${index}\n\n`,
+  }) as const
+
+test("while the answer streams in fast, its last line stays in view", async () => {
+  const server = makeFakeServer()
+  await sendQuestion(server)
+  server.pushItem(toolCall(41))
+  await expect.poll(fromEnd).toBeLessThan(2)
+
+  const lags = await everyFrame(
+    (frame) => {
+      server.pushChange(streamLine(frame))
+      return fromEnd()
+    },
+    (seen) => seen.length === 40,
+  )
+
+  expect(Math.max(...lags)).toBeLessThan(80)
+})
+
+test("while the answer streams in, the view moves at a steady pace", async () => {
+  const server = makeFakeServer()
+  await sendQuestion(server)
+  server.pushItem(toolCall(41))
+  await expect.poll(fromEnd).toBeLessThan(2)
+
+  const seen = await everyFrame(
+    (frame) => {
+      if (frame % 8 === 0) server.pushChange(streamLine(frame / 8))
+      return { at: performance.now(), top: scroller().scrollTop }
+    },
+    (frames) => frames.length === 160,
+  )
+
+  // Frames do not all last as long, so the pace is read in pixels per millisecond.
+  const paces = seen
+    .slice(41)
+    .map(({ at, top }, index) => (top - seen[40 + index]!.top) / (at - seen[40 + index]!.at))
+  const median = paces.toSorted((a, b) => a - b)[paces.length >> 1]!
+  const steady = paces.filter((pace) => pace > median / 1.5 && pace < median * 1.5)
+  expect(steady.length).toBeGreaterThan(0.8 * paces.length)
+})
+
+const messageRowTop = () => {
+  const row = document.querySelector('[data-row-id="m40"]')
+  return row && Math.round(row.getBoundingClientRect().top - scroller().getBoundingClientRect().top)
+}
+
+test("a turn that ends with a long answer moves its message to the top of the view in one step", async () => {
+  const server = makeFakeServer()
+  const screen = await sendQuestion(server)
+  for (let position = 41; position < 47; position++) server.pushItem(toolCall(position))
+  server.pushItem(longAnswer(47))
+  await expect.poll(fromEnd).toBeLessThan(2)
+
+  void screen.rerender(sessionView(server, 300, false))
+  const frames = await everyFrame(
+    // Read cheaply, or the frames between Virtuoso's corrections are not seen.
+    () => ({ top: messageRowTop(), answer: document.querySelector('[data-row-id="m47"]') }),
+    (seen) => Math.abs(seen.at(-1)!.top ?? Number.POSITIVE_INFINITY) < 2,
+  )
+
+  // Before the turn ends, its message is above the view and not drawn.
+  const ended = frames.filter((frame) => frame.top !== null)
+  expect(ended).toHaveLength(1)
+  expect(ended[0]!.answer).not.toBeNull()
+  expect(fromEnd()).toBeGreaterThan(100)
+})
+
+test("a turn that ends with a short answer stays at the end, its message in view", async () => {
+  const server = makeFakeServer()
+  const screen = await sendQuestion(server)
+  server.pushItem(toolCall(41))
+  server.pushItem(message(42))
+  await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
+
+  void screen.rerender(sessionView(server, 300, false))
+  const lags = await everyFrame(fromEnd, () => messageRowTop() !== null)
+
+  expect(Math.max(...lags)).toBeLessThan(2)
+  expect(inView("question 40")).toBe(true)
+})
+
+test("scrolled up while the agent works, the transcript stays put", async () => {
+  const server = makeFakeServer()
+  await sendQuestion(server)
+  server.pushItem(longAnswer(41))
+  await expect.poll(fromEnd).toBeLessThan(2)
+
+  const scrolled = scrollEvent()
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -200 }))
+  scroller().scrollTop -= 200
+  await scrolled
+  const scrolledUpTo = scroller().scrollTop
+  const heightBefore = scroller().scrollHeight
+  server.pushItem(longAnswer(42))
+  await expect.poll(() => scroller().scrollHeight).toBeGreaterThan(heightBefore)
+  expect(scroller().scrollTop).toBe(scrolledUpTo)
+})
+
+test("scrolled back to the end, the transcript follows its end again", async () => {
+  const server = makeFakeServer()
+  await sendQuestion(server)
+  server.pushItem(longAnswer(41))
+  await expect.poll(fromEnd).toBeLessThan(2)
+  const scrolled = scrollEvent()
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -200 }))
+  scroller().scrollTop -= 200
+  await scrolled
+
+  await vi.waitFor(() => {
+    scroller().scrollTop = scroller().scrollHeight
+    scroller().dispatchEvent(new Event("scroll"))
+    expect(fromEnd()).toBeLessThan(2)
+  })
+  server.pushItem(message(42))
+  await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
+  await expect.poll(fromEnd).toBeLessThan(2)
+})
+
+const thinking = (position: number): TranscriptItem => ({
+  id: `m${position}`,
+  sessionId: "s1",
+  position,
+  at: 0,
+  type: "thinking",
+  text: "thinking",
+})
+
+// Its steps fold into fewer rows than fill the view.
+const longTurn = (): TranscriptItem[] => [
+  userMessage(0),
+  message(1),
+  userMessage(2),
+  ...Array.from({ length: 3 * PAGE_SIZE + 30 }, (_, i) =>
+    [message, thinking, toolCall, toolCall, toolCall][i % 5]!(i + 3),
+  ),
+]
+
+test.each([true, false])(
+  "scrolling up a turn of several pages reaches its message and the turn before (live: %s)",
+  async (live) => {
+    const server = makeFakeServer()
+    server.seedItems("s1", longTurn())
+
+    await render(
+      <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
+        <div style={{ position: "relative", height: 900 }}>
+          <PluginsProvider plugins={builtinPlugins}>
+            <TranscriptView sessionId="s1" live={live} />
+          </PluginsProvider>
+        </div>
+      </RegistryProvider>,
+    )
+    await expect.element(page.getByTestId("transcript-work")).toBeInTheDocument()
+
+    await vi.waitFor(() => {
+      scroller().scrollTop = 0
+      expect(page.getByText("question 2", { exact: true }).query()).not.toBeNull()
+      expect(page.getByText("question 0", { exact: true }).query()).not.toBeNull()
+    })
   },
 )
