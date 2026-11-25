@@ -1,0 +1,315 @@
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+body {
+  overflow: hidden;
+  background: var(--iv-bg);
+  color: var(--iv-text);
+  font-family: var(--iv-font-sans);
+  font-size: var(--iv-text-md);
+}
+
+.proto-app {
+  display: flex;
+  height: 100%;
+  padding-top: 28px;
+  box-sizing: border-box;
+}
+.proto-card {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  width: 248px;
+  margin: var(--iv-space-2) 0 var(--iv-space-2) var(--iv-space-2);
+  overflow: hidden;
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-card);
+  background: var(--iv-bg-card);
+}
+.proto-card-top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 40px;
+  padding: 0 var(--iv-space-2) 0 15px;
+}
+.proto-lights {
+  display: flex;
+  gap: 8px;
+}
+.proto-lights i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--iv-bg-active);
+}
+.proto-sessions {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--iv-space-2);
+}
+.proto-session {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  height: 30px;
+  padding: 0 var(--iv-space-2);
+  border-radius: var(--iv-radius-md);
+  color: var(--iv-text-muted);
+}
+.proto-session[data-selected] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+.proto-session-dot,
+.proto-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--iv-accent);
+}
+.proto-hint {
+  padding: var(--iv-space-3);
+  border-top: 1px solid var(--iv-border);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}
+.proto-hint kbd {
+  padding: 1px 4px;
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-sm);
+  font-family: inherit;
+}
+
+.proto-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.proto-tabbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--iv-space-1);
+  height: 40px;
+  padding: 0 var(--iv-space-2);
+}
+.proto-tab {
+  padding: 4px 12px;
+  border-radius: var(--iv-radius-md);
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+}
+.proto-tab[data-selected] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+
+.proto-transcript {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.proto-column {
+  max-width: var(--iv-content-width);
+  margin: 0 auto;
+  padding: var(--iv-space-6);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.proto-user {
+  margin-left: auto;
+  width: fit-content;
+  padding: var(--iv-space-2) var(--iv-space-3);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+}
+.proto-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.proto-tasks-line {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  margin-bottom: var(--iv-space-1);
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+}
+.proto-task {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  height: 28px;
+  padding: 0 var(--iv-space-2);
+  border-radius: 6px;
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+}
+.proto-task[data-active] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+.proto-task-name {
+  color: var(--iv-text);
+}
+.proto-task-meta {
+  margin-left: auto;
+  color: var(--iv-text-faint);
+  font-variant-numeric: tabular-nums;
+}
+.proto-pill {
+  padding: 0 8px;
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-pill);
+  background: transparent;
+  color: var(--iv-text-muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  cursor: pointer;
+}
+.proto-pill:hover {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+
+.proto-dock {
+  position: relative;
+  flex: none;
+  width: 100%;
+  max-width: var(--iv-content-width);
+  margin: 0 auto;
+  margin-bottom: var(--iv-space-4);
+  padding: 0 var(--iv-space-6);
+  box-sizing: border-box;
+}
+.proto-composer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 84px;
+  padding: var(--iv-space-3);
+  box-sizing: border-box;
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+  color: var(--iv-text-faint);
+}
+.proto-dock[data-sheet] .proto-composer {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.proto-send {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--iv-accent);
+  color: var(--iv-bg);
+}
+.proto-meta {
+  flex: none;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}
+.proto-card-body {
+  overflow: auto;
+  padding: var(--iv-space-3);
+}
+
+.proto-run {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-2);
+  font-size: var(--iv-text-sm);
+}
+.proto-run-line {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  color: var(--iv-text-muted);
+}
+.proto-step {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+  color: var(--iv-text-muted);
+}
+.proto-step strong {
+  color: var(--iv-text);
+  font-weight: var(--iv-weight-medium);
+}
+.proto-step code,
+.proto-step-text code {
+  font-family: var(--iv-font-mono);
+  font-size: 12px;
+}
+.proto-step-text {
+  margin: 0;
+  line-height: 1.6;
+}
+.proto-code {
+  margin: 0;
+  padding: var(--iv-space-3);
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-bg-subtle);
+  font-family: var(--iv-font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+.proto-add {
+  color: var(--iv-git-added);
+}
+.proto-del {
+  color: var(--iv-git-deleted);
+}
+
+.proto-dialog-head {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+}
+.proto-grow {
+  flex: 1;
+}
+.proto-tab-menu {
+  display: flex;
+}
+.proto-title-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  margin: 0 0 0 calc(-1 * var(--iv-space-2));
+  padding: 2px var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.proto-title-button:hover,
+.proto-title-button[aria-expanded="true"] {
+  background: var(--iv-bg-hover);
+}
+.proto-title-button:focus-visible {
+  outline: 2px solid var(--iv-focus-ring);
+}
+.proto-title-button .iv-icon {
+  color: var(--iv-text-faint);
+}
+.proto-direct {
+  display: inline-flex;
+  flex: none;
+  gap: 2px;
+}
