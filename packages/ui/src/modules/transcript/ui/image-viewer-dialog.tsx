@@ -4,11 +4,14 @@ import { Option } from "effect"
 import { AsyncResult } from "effect/reactivity"
 import { Fragment, useEffect, useRef } from "react"
 import { IconButton } from "../../../core/components/button/button.tsx"
+import { Icon } from "../../../core/components/icon/icon.tsx"
 import { draftOf } from "../../session/atoms/draft.ts"
 import { draftImages } from "../../session/rules/draft.ts"
+import { deletedImageIdsAtom } from "../atoms/delete-images.ts"
 import { type ImageViewerState, imageViewerAtom } from "../atoms/image-viewer.ts"
 import { sessionImagesOf } from "../atoms/list-images.ts"
 import { imageSrc } from "../atoms/sent-images.ts"
+import { isImageDeleted } from "../rules/image-deleted.ts"
 import { imageDataUrl } from "../rules/image-url.ts"
 import { withoutImageMarkers } from "../rules/message-parts.ts"
 import { ImageThumbnail } from "./image-thumbnail.tsx"
@@ -21,6 +24,7 @@ interface Entry {
   readonly group: string
   readonly caption: string
   readonly src: string
+  readonly deleted: boolean
 }
 
 const quote = (text: string) =>
@@ -29,6 +33,7 @@ const quote = (text: string) =>
 function useEntries({ sessionId, images }: ImageViewerState): ReadonlyArray<Entry> {
   const draft = useAtomValue(draftOf(sessionId))
   const sent = useAtomValue(sessionImagesOf(sessionId))
+  const deletedIds = useAtomValue(deletedImageIdsAtom)
   if (images === "draft") {
     return draftImages(draft).map((image) => ({
       id: image.id,
@@ -36,6 +41,7 @@ function useEntries({ sessionId, images }: ImageViewerState): ReadonlyArray<Entr
       group: "draft",
       caption: `${image.name} · Not sent yet`,
       src: imageDataUrl(image),
+      deleted: false,
     }))
   }
   return Option.getOrElse(AsyncResult.value(sent), () => []).map((image) => ({
@@ -44,6 +50,7 @@ function useEntries({ sessionId, images }: ImageViewerState): ReadonlyArray<Entr
     group: image.messageId,
     caption: quote(image.messageText),
     src: imageSrc(sessionId, image),
+    deleted: isImageDeleted(image, deletedIds),
   }))
 }
 
@@ -86,8 +93,20 @@ function Viewer({ state, onStep }: { state: ImageViewerState; onStep: (id: strin
         <BaseDialog.Close render={<IconButton icon="x" label="Close" variant="ghost" />} />
       </div>
       <div className="iv-image-viewer__stage">
-        {current && (
-          <img key={current.id} className="iv-image-viewer__image" src={current.src} alt="" />
+        {current?.deleted ? (
+          <div className="iv-image-viewer__deleted">
+            <Icon name="image-broken" size={20} />
+            <span className="iv-image-viewer__deleted-title">
+              Image #{current.number} was deleted
+            </span>
+            <span className="iv-image-viewer__deleted-text">
+              It was deleted from Settings to free space. The message keeps its text.
+            </span>
+          </div>
+        ) : (
+          current && (
+            <img key={current.id} className="iv-image-viewer__image" src={current.src} alt="" />
+          )
         )}
         <span className="iv-image-viewer__step" data-side="previous">
           <IconButton
@@ -119,6 +138,7 @@ function Viewer({ state, onStep }: { state: ImageViewerState; onStep: (id: strin
               number={entry.number}
               size="sm"
               current={entry.id === state.imageId}
+              deleted={entry.deleted}
               lazy
               src={entry.src}
               onOpen={() => onStep(entry.id)}

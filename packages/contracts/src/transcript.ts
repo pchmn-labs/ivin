@@ -26,6 +26,12 @@ export const ImageSpace = Schema.Struct({
 })
 export type ImageSpace = typeof ImageSpace.Type
 
+export const DeletedImages = Schema.Struct({
+  ...ImageSpace.fields,
+  imageIds: Schema.Array(Schema.String),
+})
+export type DeletedImages = typeof DeletedImages.Type
+
 // Absent: every image.
 const OlderThanDays = Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)))
 
@@ -485,6 +491,6 @@ export const TranscriptRpcs = RpcGroup.make(
   // Deletes those images' files, keeps their rows marked deleted, and returns what it freed.
   Rpc.make("transcript.deleteImages", {
     payload: { olderThanDays: OlderThanDays },
-    success: ImageSpace,
+    success: DeletedImages,
   }),
 )

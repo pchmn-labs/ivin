@@ -305,3 +305,42 @@ test("hovering a marker in a sent message shows its image in a preview card", as
   await page.getByText("a test fails", { exact: false }).hover()
   await expect.element(page.getByText("Image #3", { exact: true })).not.toBeInTheDocument()
 })
+
+test("a deleted image keeps its place in the message and says it was deleted in the full-screen view", async () => {
+  const server = makeFakeServer()
+  server.openProject("/p")
+  addSession(server, "s1", 2)
+  server.seedItems("s1", [
+    {
+      id: "m1",
+      sessionId: "s1",
+      position: 0,
+      at: 0,
+      type: "message",
+      role: "user",
+      text: "the card overflows [Image #1] and [Image #2]",
+      images: [
+        { id: "img-1", number: 1, mediaType: "image/png", deleted: true },
+        { id: "img-2", number: 2, mediaType: "image/png" },
+      ],
+      steer: false,
+    },
+  ])
+  await render(view(server, "s1"))
+
+  const thumbnail = page.getByRole("button", { name: "Image #1, deleted" }).first()
+  await expect.element(thumbnail.getByText("Deleted", { exact: true })).toBeVisible()
+  await expect.element(page.getByRole("button", { name: "Image #1, deleted" }).last()).toBeVisible()
+  expect(thumbnail.element().querySelector("img")).toBeNull()
+  expect(document.querySelector(".iv-message-text")?.textContent).toBe(
+    "the card overflows #1 and #2",
+  )
+
+  await thumbnail.click()
+  const viewer = page.getByRole("dialog")
+  await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #1 · 1 of 2")
+  await expect.element(viewer.getByText("Image #1 was deleted")).toBeVisible()
+  await userEvent.keyboard("{ArrowRight}")
+  await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #2 · 2 of 2")
+  await expect.element(viewer.getByText("Image #1 was deleted")).not.toBeInTheDocument()
+})

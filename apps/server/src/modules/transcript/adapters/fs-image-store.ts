@@ -117,7 +117,7 @@ export const layerFsImageStore = Layer.effect(ImageStore)(
               markDeleted.run(now, row.id)
               rmSync(storedFile(row), { force: true })
             }
-            return freed
+            return { ...freed, imageIds: rows.map((row) => row.id) }
           })
         }),
       removeSession: (sessionId) =>

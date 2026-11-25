@@ -1,4 +1,4 @@
-import type { ImageData, ImageSpace } from "@ivin/contracts/transcript"
+import type { DeletedImages, ImageData, ImageSpace } from "@ivin/contracts/transcript"
 import { type Cause, Context, type Effect } from "effect"
 
 export class ImageStore extends Context.Service<
@@ -17,7 +17,7 @@ export class ImageStore extends Context.Service<
     ) => Effect.Effect<void, Cause.UnknownError>
     // `sentBefore` null: every image not deleted.
     readonly space: (sentBefore: number | null) => Effect.Effect<ImageSpace>
-    readonly remove: (sentBefore: number | null) => Effect.Effect<ImageSpace>
+    readonly remove: (sentBefore: number | null) => Effect.Effect<DeletedImages>
     readonly removeSession: (sessionId: string) => Effect.Effect<void>
   }
 >()("ivin/server/ImageStore") {}

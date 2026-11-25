@@ -97,6 +97,10 @@ export interface FakeServer {
   // Marks the first turn after a change of run options as failed, as the server would.
   readonly failRelaunch: (sessionId: string, failure: RelaunchFailure) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
+  // Stored images, as `transcript.getImageSpace` and `transcript.deleteImages` see them.
+  readonly seedStoredImages: (
+    images: ReadonlyArray<{ id: string; bytes: number; sentAt: number }>,
+  ) => void
   // What `session.taskOutput` returns for a running command, by `<sessionId>/<taskId>`.
   readonly taskOutputs: Map<string, string>
   // Changes the tasks a session lists, as the server does when a task starts or ends.
@@ -318,7 +322,10 @@ export const makeFakeServer = (
         ? Effect.succeed(run())
         : Effect.fail(new SessionNotFound({ sessionId })),
     )
-  const storedImages = new Map<string, { bytes: number; sentAt: number; deleted: boolean }>()
+  const storedImages = new Map<
+    string,
+    { id: string; bytes: number; sentAt: number; deleted: boolean }
+  >()
   const keptImages = (olderThanDays: number | undefined) =>
     [...storedImages.values()].filter(
       (image) =>
@@ -835,6 +842,7 @@ export const makeFakeServer = (
           const sent = input.images ?? []
           for (const image of sent) {
             storedImages.set(image.id, {
+              id: image.id,
               bytes: Math.floor((image.base64.length * 3) / 4),
               sentAt: Date.now(),
               deleted: false,
@@ -1285,7 +1293,7 @@ export const makeFakeServer = (
       Effect.sync(() => {
         const kept = keptImages(olderThanDays)
         for (const image of kept) image.deleted = true
-        return spaceOf(kept)
+        return { ...spaceOf(kept), imageIds: kept.map((image) => image.id) }
       }),
     "annotation.add": ({
       target,
@@ -1458,6 +1466,9 @@ export const makeFakeServer = (
     failRelaunch: (sessionId, failure) =>
       void saveSession({ ...sessions.get(sessionId)!, relaunchFailure: failure }),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
+    seedStoredImages: (images) => {
+      for (const image of images) storedImages.set(image.id, { ...image, deleted: false })
+    },
     taskOutputs,
     setBackgroundTasks: (sessionId, backgroundTasks) =>
       void saveSession({ ...sessions.get(sessionId)!, backgroundTasks }),

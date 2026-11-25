@@ -15,13 +15,6 @@ const message = (text: string, retryable = false): FileReading => ({
 
 const megabytes = (bytes: number) => `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, "")} MB`
 
-export const byteSize = (bytes: number): string =>
-  bytes < 1024
-    ? `${bytes} B`
-    : bytes < 1024 * 1024
-      ? `${Math.round(bytes / 1024)} KB`
-      : megabytes(bytes)
-
 const base64Bytes = (data: string) =>
   (data.length * 3) / 4 - (data.endsWith("==") ? 2 : data.endsWith("=") ? 1 : 0)
 

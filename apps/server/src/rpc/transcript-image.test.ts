@@ -334,7 +334,7 @@ test("deleting the images older than N days removes exactly those files, and the
   const screenshotBytes = Buffer.from(screenshot.base64, "base64").byteLength
   const photoBytes = Buffer.from(photo.base64, "base64").byteLength
   expect(result.before).toEqual({ images: 1, bytes: screenshotBytes })
-  expect(result.freed).toEqual({ images: 1, bytes: screenshotBytes })
+  expect(result.freed).toEqual({ images: 1, bytes: screenshotBytes, imageIds: ["i1"] })
   expect(result.after).toEqual({ images: 1, bytes: photoBytes })
   expect(existsSync(join(folder, result.oldSession, "i1.png"))).toBe(false)
   expect(existsSync(join(folder, result.newSession, "i2.jpg"))).toBe(true)

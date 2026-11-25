@@ -484,4 +484,90 @@ test("a plugin's own settings.section replaces the generated one", async () => {
 
   await expect.element(page.getByText("Custom PR settings")).toBeVisible()
   await expect.element(page.getByRole("textbox", { name: "Fold after" })).not.toBeInTheDocument()
+const DAY = 86_400_000
+const daysField = () => page.getByRole("textbox", { name: "Delete images older than" })
+
+const openImages = async () => {
+  const server = await mountApp()
+  server.seedStoredImages([
+    { id: "old", bytes: 2.5 * 1024 * 1024, sentAt: Date.now() - 40 * DAY },
+    { id: "new", bytes: Math.round(1.2 * 1024 * 1024), sentAt: Date.now() - 2 * DAY },
+  ])
+  await page.getByRole("button", { name: "Settings" }).click()
+  await sections().getByRole("button", { name: "Images" }).click()
+  await expect.element(page.getByRole("heading", { name: "Images" })).toBeVisible()
+  return server
+}
+
+test("the Images section shows the space the sent images take", async () => {
+  await openImages()
+
+  await expect.element(page.getByText("3.7 MB")).toBeVisible()
+  await expect.element(page.getByText("2 images")).toBeVisible()
+  await expect.element(page.getByText("1 image · 2.5 MB")).toBeVisible()
+})
+
+test("deleting the images older than N days asks first with the space it frees, then shows the new size", async () => {
+  await openImages()
+
+  await page.getByRole("button", { name: "Delete…", exact: true }).click()
+  const dialog = page.getByRole("dialog")
+  await expect
+    .element(dialog.getByRole("heading"))
+    .toHaveTextContent("Delete 1 image sent more than 30 days ago?")
+  await expect.element(dialog.getByText(/This frees 2\.5 MB\./)).toBeVisible()
+  await dialog.getByRole("button", { name: "Delete images" }).click()
+
+  await expect.element(page.getByText("1.2 MB")).toBeVisible()
+  await expect.element(page.getByText("No image is older than 30 days.")).toBeVisible()
+  await expect.element(page.getByRole("button", { name: "Delete…", exact: true })).toBeDisabled()
+})
+
+test("a smaller number of days takes more images, and Cancel deletes nothing", async () => {
+  await openImages()
+
+  await daysField().fill("1")
+  await expect.element(page.getByText("2 images · 3.7 MB")).toBeVisible()
+  await page.getByRole("button", { name: "Delete…", exact: true }).click()
+  await expect
+    .element(page.getByRole("dialog").getByRole("heading"))
+    .toHaveTextContent("Delete 2 images sent more than 1 day ago?")
+  await page.getByRole("button", { name: "Cancel" }).click()
+
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
+  await expect.element(page.getByText("3.7 MB", { exact: true })).toBeVisible()
+})
+
+test("Delete all asks first with the space it frees, then says no image is stored", async () => {
+  await openImages()
+
+  await page.getByRole("button", { name: "Delete all…" }).click()
+  const dialog = page.getByRole("dialog")
+  await expect.element(dialog.getByRole("heading")).toHaveTextContent("Delete all 2 images?")
+  await expect.element(dialog.getByText(/This frees 3\.7 MB\./)).toBeVisible()
+  await dialog.getByRole("button", { name: "Delete all images" }).click()
+
+  await expect.element(page.getByText("No image is stored.")).toBeVisible()
+  await expect.element(page.getByRole("button", { name: "Delete all…" })).toBeDisabled()
+})
+
+test("a number of days that is not a whole number of 1 or more is refused next to the field", async () => {
+  await openImages()
+
+  await daysField().fill("0")
+
+  await expect.element(page.getByText("Enter a whole number of days, 1 or more.")).toBeVisible()
+  await expect.element(page.getByRole("button", { name: "Delete…", exact: true })).toBeDisabled()
+})
+
+test("a delete that fails says so under its row, and Retry deletes", async () => {
+  const server = await openImages()
+  server.failNextCall("transcript.deleteImages")
+
+  await page.getByRole("button", { name: "Delete all…" }).click()
+  await page.getByRole("dialog").getByRole("button", { name: "Delete all images" }).click()
+
+  await expect.element(page.getByText("The images could not be deleted. Try again.")).toBeVisible()
+  await page.getByRole("button", { name: "Retry" }).click()
+  await expect.element(page.getByText("No image is stored.")).toBeVisible()
 })
