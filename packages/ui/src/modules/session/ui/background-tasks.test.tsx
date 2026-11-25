@@ -6,6 +6,7 @@ import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
+import { NotificationProvider } from "../../../core/components/notification/notification.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { makeTestSession } from "../../../core/test-session.ts"
@@ -107,9 +108,11 @@ const mountSession = async (overrides: Partial<Session> = {}) => {
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
-        <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-          <SessionView projectPath="/p" sessionId="s1" />
-        </div>
+        <NotificationProvider>
+          <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+            <SessionView projectPath="/p" sessionId="s1" />
+          </div>
+        </NotificationProvider>
       </PluginsProvider>
     </RegistryProvider>,
   )
@@ -172,6 +175,20 @@ test("a task started before the loaded page of the transcript still shows in the
   await expect.element(page.getByText("End-to-end tests")).toBeVisible()
   await page.getByTestId("task-details").click()
   await expect.element(page.getByTestId("task-sheet")).toBeVisible()
+})
+
+test("a task's Stop button asks the server to stop that task and does not unfold the row", async () => {
+  const server = await mountSession()
+  await line().click()
+
+  await page.getByTestId("task-stop").first().click()
+
+  await expect.poll(() => server.stoppedTasks).toEqual([expect.stringMatching(/^s1\//)])
+  await expect.element(page.getByTestId("task-stopping")).toBeVisible()
+  expect(page.getByTestId("task-sheet").query()).toBeNull()
+  await expect
+    .element(page.getByTestId("background-task").first().getByRole("button").first())
+    .toHaveAttribute("aria-expanded", "false")
 })
 
 test("the fold stays while the agent works again with tasks running, and goes with the last task", async () => {

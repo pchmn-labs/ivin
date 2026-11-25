@@ -54,6 +54,8 @@ export interface HarnessRun {
   readonly send: (message: UserMessage) => Effect.Effect<void, HarnessError>
   readonly respond: (answer: RequestAnswer) => Effect.Effect<void, HarnessError>
   readonly interrupt: Effect.Effect<void>
+  // Stops one background task and keeps the turn and the other tasks.
+  readonly stopTask: (taskId: string) => Effect.Effect<void>
 }
 
 export class HarnessProvider extends Context.Service<

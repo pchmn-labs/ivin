@@ -313,6 +313,12 @@ export const SessionRpcs = RpcGroup.make(
     success: Session,
     error: SessionNotFound,
   }),
+  // Stops one background task; the agent reports its end, which removes it from the session's list.
+  Rpc.make("session.stopTask", {
+    payload: { sessionId: Schema.String, taskId: Schema.String },
+    success: Schema.Void,
+    error: SessionNotFound,
+  }),
   // What a running background command has written so far, its end if it is long; null when the
   // agent no longer runs it, then its item holds the output it ended with.
   Rpc.make("session.taskOutput", {

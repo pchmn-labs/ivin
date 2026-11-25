@@ -132,7 +132,7 @@ Tests sit beside the file they test, at three levels:
 
 The terms are defined in [`GLOSSARY.md`](../../GLOSSARY.md). What the design adds to them:
 
-- Transcript events are `user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `approval_decision`, `question_request`, `question_answer`, `request_unanswered`, `usage`, `status`, `error`, `interruption`, `working_folder`, `run_option`… Each is written to SQLite as it streams, never re-read from the provider's files.
+- Transcript events are `user_message`, `assistant_text`, `thinking`, `tool_call`, `tool_result`, `approval_request`, `approval_decision`, `question_request`, `question_answer`, `request_unanswered`, `usage`, `status`, `error`, `interruption`, `working_folder`, `run_option`, `task_stop`… Each is written to SQLite as it streams, never re-read from the provider's files.
 - Token deltas are not events: they go to the renderer and are never stored, and the finished block is stored once, under the id its streamed copy had.
 - A harness reads the provider's own line (`raw`) while it normalises it; the stored event leaves it out.
 

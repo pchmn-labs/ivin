@@ -80,6 +80,17 @@ test("an interruption is shown as a short note", async () => {
   await expect.element(page.getByText("Interrupted")).toBeVisible()
 })
 
+test("a stopped task is shown as a note naming it", async () => {
+  await mount({
+    ...base,
+    type: "task_stop",
+    taskId: "k1",
+    description: "Wait 900 seconds in the background",
+  })
+  await expect.element(page.getByText("Stopped")).toBeVisible()
+  await expect.element(page.getByText("Wait 900 seconds in the background")).toBeVisible()
+})
+
 const worktree = {
   ...base,
   type: "working_folder" as const,

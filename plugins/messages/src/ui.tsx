@@ -76,6 +76,18 @@ function Message({ item, sessionId }: SlotProps["transcript.message"]) {
       </Stack>
     )
   }
+  if (item.type === "task_stop") {
+    return (
+      <Stack direction="row" gap={1} align="center">
+        <Text size="sm" tone="faint">
+          Stopped
+        </Text>
+        <Text size="sm" tone="muted" truncate>
+          {item.description}
+        </Text>
+      </Stack>
+    )
+  }
   if (item.type === "error") {
     return (
       <Block tone="danger" role="alert">

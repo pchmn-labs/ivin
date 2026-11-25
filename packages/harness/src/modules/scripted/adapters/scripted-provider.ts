@@ -70,6 +70,8 @@ const EVENT_BUFFER = 64
 export interface ScriptedOptions {
   readonly sent?: ScriptedSend[]
   readonly interrupted?: string[]
+  // Receives `<sessionId>/<taskId>` for each task stopped.
+  readonly stoppedTasks?: string[]
   // Receives the sessionId when a run's scope closes, which is when its agent process would stop.
   readonly closed?: string[]
   readonly cycle?: boolean
@@ -121,6 +123,7 @@ export const layerScripted = (
   {
     sent = [],
     interrupted = [],
+    stoppedTasks = [],
     closed = [],
     starts = [],
     responded = [],
@@ -240,6 +243,8 @@ export const layerScripted = (
                 responded.push(answer)
                 return play(paused)
               }),
+            stopTask: (taskId) =>
+              Effect.sync(() => void stoppedTasks.push(`${sessionId}/${taskId}`)),
             interrupt: Effect.suspend(() => {
               interrupted.push(sessionId)
               if (ignoreInterrupt) return Effect.void

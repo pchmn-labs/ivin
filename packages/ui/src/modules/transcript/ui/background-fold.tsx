@@ -1,8 +1,11 @@
-import { useAtom, useAtomValue } from "@effect/atom-react"
+import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { BackgroundTask } from "@ivin/contracts/session"
-import { useRef } from "react"
+import { Exit } from "effect"
+import { useRef, useState } from "react"
+import { notify } from "../../../core/components/notification/notification-manager.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { foldsOf } from "../atoms/folds.ts"
+import { stopTaskAtom } from "../../session/atoms/stop-task.ts"
 import { openTaskOf, tasksOf, taskStepsOf } from "../atoms/background-tasks.ts"
 import { runningTasks, type TaskItem } from "../rules/background-tasks.ts"
 import { AgentRun, CommandOutput } from "./task-run.tsx"
@@ -40,12 +43,58 @@ export function TaskMeta({ sessionId, task }: { sessionId: string; task: TaskIte
   )
 }
 
+// A button inside the row's own button: it keeps the row from unfolding.
+function RowPill({
+  testId,
+  label,
+  danger = false,
+  onActivate,
+  children,
+}: {
+  testId: string
+  label?: string
+  danger?: boolean
+  onActivate: () => void
+  children: string
+}) {
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      className={danger ? "iv-task__pill iv-task__pill--danger" : "iv-task__pill"}
+      data-testid={testId}
+      aria-label={label}
+      onClick={(event) => {
+        event.stopPropagation()
+        onActivate()
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "Enter" && event.key !== " ") return
+        event.preventDefault()
+        event.stopPropagation()
+        onActivate()
+      }}
+    >
+      {children}
+    </span>
+  )
+}
+
 function TaskRow({ sessionId, task }: { sessionId: string; task: TaskItem }) {
   const [folds, setFolds] = useAtom(foldsOf(sessionId))
   const key = `task:${task.taskId}`
   const open = folds.get(key) ?? false
   const [openTask, setOpenTask] = useAtom(openTaskOf(sessionId))
   const active = openTask === task.taskId
+  const stopTask = useAtomSet(stopTaskAtom, { mode: "promiseExit" })
+  const [stopping, setStopping] = useState(false)
+  const stop = async () => {
+    setStopping(true)
+    const exit = await stopTask({ sessionId, taskId: task.taskId })
+    if (Exit.isSuccess(exit)) return
+    setStopping(false)
+    notify({ message: `Could not stop “${task.description}”.` })
+  }
   return (
     <div className="iv-task" data-active={active || undefined} data-testid="background-task">
       <button
@@ -56,24 +105,23 @@ function TaskRow({ sessionId, task }: { sessionId: string; task: TaskItem }) {
       >
         <Icon name={taskIcon(task.kind)} size={14} />
         <span className="iv-task__name">{task.description}</span>
-        <span
-          role="button"
-          tabIndex={0}
-          className="iv-task__pill"
-          data-testid="task-details"
-          onClick={(event) => {
-            event.stopPropagation()
-            setOpenTask(task.taskId)
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter" && event.key !== " ") return
-            event.preventDefault()
-            event.stopPropagation()
-            setOpenTask(task.taskId)
-          }}
-        >
+        <RowPill testId="task-details" onActivate={() => setOpenTask(task.taskId)}>
           {task.kind === "agent" ? "Details" : "Output"}
-        </span>
+        </RowPill>
+        {stopping ? (
+          <span className="iv-task__stopping" data-testid="task-stopping">
+            Stopping…
+          </span>
+        ) : (
+          <RowPill
+            testId="task-stop"
+            danger
+            label={`Stop ${task.description}`}
+            onActivate={() => void stop()}
+          >
+            Stop
+          </RowPill>
+        )}
         <span className="iv-task__spacer" />
         <TaskMeta sessionId={sessionId} task={task} />
         <span className="iv-task__chevron" data-open={open || undefined}>
