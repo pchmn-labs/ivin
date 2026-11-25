@@ -43,12 +43,14 @@ import {
   settingsSectionAtom,
 } from "../modules/setting/atoms/settings-page.ts"
 import { useUpdateCommands } from "../modules/update/hooks/use-update-commands.ts"
-import { UpdateButton } from "../modules/update/ui/update-button.tsx"
 import { SettingsButton } from "../modules/setting/ui/settings-button.tsx"
 import { SettingsNav } from "../modules/setting/ui/settings-nav.tsx"
 import { settingsAtom } from "../modules/setting/atoms/settings.ts"
 import "./app.css"
 
+const UpdateButton = lazy(() =>
+  import("../modules/update/ui/update-button.tsx").then((m) => ({ default: m.UpdateButton })),
+)
 const SettingsPage = lazy(() =>
   import("../modules/setting/ui/settings-page.tsx").then((m) => ({ default: m.SettingsPage })),
 )
@@ -151,7 +153,9 @@ export function App() {
                     onToggleSidebar={toggleSidebar}
                     extra={
                       <>
-                        <UpdateButton />
+                        <Suspense fallback={null}>
+                          <UpdateButton />
+                        </Suspense>
                         <SettingsButton />
                       </>
                     }

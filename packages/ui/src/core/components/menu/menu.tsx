@@ -1,100 +1,39 @@
-import { ContextMenu as BaseContextMenu } from "@base-ui/react/context-menu"
-import { Menu as BaseMenu } from "@base-ui/react/menu"
 import type { MenuItem, MenuProps } from "@ivin/plugin-api/ui"
-import type { ReactElement, ReactNode } from "react"
-import { Icon } from "../icon/icon.tsx"
-import "./menu.css"
+import {
+  Suspense,
+  cloneElement,
+  lazy,
+  useState,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from "react"
+import { LazyPopup } from "../lazy-popup/lazy-popup.tsx"
 
 export type { MenuProps }
 
-type Action = Exclude<MenuItem, "separator" | { readonly heading: string }> & {
+export type CoreMenuAction = Exclude<MenuItem, "separator" | { readonly heading: string }> & {
   // In place of the icon.
   readonly leading?: ReactNode
   readonly trailing?: ReactNode
   readonly "aria-label"?: string
 }
 
-export type CoreMenuItem = Action | "separator" | { readonly heading: string }
+export type CoreMenuItem = CoreMenuAction | "separator" | { readonly heading: string }
 
 export interface CoreMenuProps extends Omit<MenuProps, "items"> {
   readonly items: ReadonlyArray<CoreMenuItem>
 }
 
-function ItemContent({ item }: { item: Action }) {
-  return (
-    <>
-      {item.leading ?? (item.icon === undefined ? null : <Icon name={item.icon} size={14} />)}
-      <span className="iv-menu__label">{item.label}</span>
-      {item.trailing}
-      {item.hint === undefined ? null : <span className="iv-menu__hint">{item.hint}</span>}
-      {item.checked === undefined ? null : (
-        <span className="iv-menu__check">
-          {item.checked ? <Icon name="check" size={14} /> : null}
-        </span>
-      )}
-    </>
-  )
-}
+const loadMenuPopup = () => import("./menu-popup.tsx")
+const MenuPopup = lazy(() => loadMenuPopup().then((m) => ({ default: m.MenuPopup })))
+const ContextMenuPopup = lazy(() => loadMenuPopup().then((m) => ({ default: m.ContextMenuPopup })))
 
-function Items({ items }: { items: ReadonlyArray<CoreMenuItem> }) {
-  const chosen = items.findIndex(
-    (item) => typeof item === "object" && "checked" in item && item.checked,
-  )
+export function Menu(props: CoreMenuProps) {
   return (
-    <BaseMenu.RadioGroup value={chosen}>
-      {items.map((item, index) => {
-        if (item === "separator") {
-          return <BaseMenu.Separator key={index} className="iv-menu__separator" />
-        }
-        if ("heading" in item) {
-          return (
-            <div key={index} className="iv-menu__heading" role="presentation">
-              {item.heading}
-            </div>
-          )
-        }
-        const className =
-          item.danger === true ? "iv-menu__item iv-menu__item--danger" : "iv-menu__item"
-        return item.checked === undefined ? (
-          <BaseMenu.Item
-            key={index}
-            className={className}
-            disabled={item.disabled}
-            aria-label={item["aria-label"]}
-            onClick={item.onSelect}
-          >
-            <ItemContent item={item} />
-          </BaseMenu.Item>
-        ) : (
-          <BaseMenu.RadioItem
-            key={index}
-            value={index}
-            className={className}
-            disabled={item.disabled}
-            aria-label={item["aria-label"]}
-            closeOnClick
-            onClick={item.onSelect}
-          >
-            <ItemContent item={item} />
-          </BaseMenu.RadioItem>
-        )
-      })}
-    </BaseMenu.RadioGroup>
-  )
-}
-
-export function Menu({ trigger, items, align = "start", onOpenChange }: CoreMenuProps) {
-  return (
-    <BaseMenu.Root {...(onOpenChange && { onOpenChange })}>
-      <BaseMenu.Trigger render={trigger} />
-      <BaseMenu.Portal>
-        <BaseMenu.Positioner align={align} sideOffset={4}>
-          <BaseMenu.Popup className="iv-menu">
-            <Items items={items} />
-          </BaseMenu.Popup>
-        </BaseMenu.Positioner>
-      </BaseMenu.Portal>
-    </BaseMenu.Root>
+    <LazyPopup trigger={props.trigger} onOpenChange={props.onOpenChange} preload={loadMenuPopup}>
+      {(openedBy) => <MenuPopup {...props} openedBy={openedBy} />}
+    </LazyPopup>
   )
 }
 
@@ -106,16 +45,31 @@ export function ContextMenu({
   items: ReadonlyArray<CoreMenuItem>
   children: ReactElement
 }) {
-  return (
-    <BaseContextMenu.Root>
-      <BaseContextMenu.Trigger render={children} />
-      <BaseContextMenu.Portal>
-        <BaseContextMenu.Positioner>
-          <BaseContextMenu.Popup className="iv-menu">
-            <Items items={items} />
-          </BaseContextMenu.Popup>
-        </BaseContextMenu.Positioner>
-      </BaseContextMenu.Portal>
-    </BaseContextMenu.Root>
+  const [asked, setAsked] = useState<{ readonly x: number; readonly y: number } | undefined>()
+  const [mounted, setMounted] = useState(false)
+  const own = children.props as {
+    onContextMenu?: (event: MouseEvent) => void
+    onPointerEnter?: (event: unknown) => void
+  }
+  const pending = cloneElement(children as ReactElement<Record<string, unknown>>, {
+    onPointerEnter: (event: unknown) => {
+      own.onPointerEnter?.(event)
+      void loadMenuPopup()
+    },
+    onContextMenu: (event: MouseEvent) => {
+      own.onContextMenu?.(event)
+      event.preventDefault()
+      setAsked({ x: event.clientX, y: event.clientY })
+      setMounted(true)
+    },
+  })
+  return mounted ? (
+    <Suspense fallback={pending}>
+      <ContextMenuPopup items={items} openAt={asked}>
+        {children}
+      </ContextMenuPopup>
+    </Suspense>
+  ) : (
+    pending
   )
 }

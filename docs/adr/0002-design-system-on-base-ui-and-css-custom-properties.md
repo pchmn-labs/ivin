@@ -13,7 +13,7 @@ Plugins import only `@ivin/plugin-api` and `react`. The plugin API declares each
 
 ## Consequences
 
-- Icons come from Phosphor (`@phosphor-icons/react`, regular weight, the maintainer's choice; the `pick-ui-library` skill was not available) behind an `Icon` component that takes a name from a fixed list, so a plugin names an icon without importing the library. The list grows when a feature needs a new icon.
+- Icons come from Phosphor (`@phosphor-icons/core`, one SVG file per icon at regular weight, the maintainer's choice; the `pick-ui-library` skill was not available) behind an `Icon` component that takes a name from a fixed list, so a plugin names an icon without importing the library. The list grows when a feature needs a new icon.
 - Two colours stay outside the tokens. A harness's mark keeps its brand colour: the Claude mark keeps its orange (`#D97757`), because a recoloured mark would not be recognised. An icon from a file icon theme keeps the theme's colours, because users know a kind of file by its icon's colour, as in VS Code.
 - A component a plugin needs is added to the plugin API's `HostComponents` and supplied in `app/host-components.ts`; until then it stays internal to the UI.
 - Screens and plugins carry no inline styles: layout goes through `Stack`, `Block` and the other components, or a CSS file beside the screen.
