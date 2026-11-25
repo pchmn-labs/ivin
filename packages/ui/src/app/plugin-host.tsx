@@ -18,11 +18,9 @@ import {
   type ReactNode,
 } from "react"
 import type { GitStatusEntry } from "@ivin/contracts/file"
-import type { SubView } from "@ivin/contracts/tab"
 import {
   UiHostProvider,
   type ActionFailure,
-  type ChangeKind,
   type ChangeListing,
   type CommittedChangeListing,
   type Draft,
@@ -76,8 +74,12 @@ import {
   gitStatusFailure,
 } from "../modules/file/rules/folder-listing.ts"
 import { subViewsOf } from "../modules/tab/atoms/list-sub-views.ts"
-import { openSubViewAtom } from "../modules/tab/atoms/open-sub-view.ts"
-import { openDiffFailure, openFileFailure } from "../modules/tab/rules/sub-view-failure.ts"
+import { runOpenView } from "../modules/view/atoms/open-view.ts"
+import {
+  openDiffFailure,
+  openFileFailure,
+  openViewFailure,
+} from "../modules/tab/rules/sub-view-failure.ts"
 import {
   pendingApprovalOf,
   pendingQuestionOf,
@@ -96,11 +98,6 @@ const NO_PROJECT = ""
 const NO_CHANGES: ReadonlyArray<GitStatusEntry> = []
 
 const LOADING = { kind: "loading" } as const satisfies ChangeListing
-
-const diffSubViewOf = { working: "diff", committed: "committed_diff" } as const satisfies Record<
-  ChangeKind,
-  SubView["kind"]
->
 
 const useProjectPath = () => useAtomValue(selectedProjectAtom)?.path ?? NO_PROJECT
 
@@ -127,20 +124,15 @@ const useSessionListStatus = (): ReturnType<UiHost["useSessionListStatus"]> => {
   }
 }
 
-const useOpenSubView = () => {
-  const sessions = useAtomValue(openSessionsAtom)
-  const open = useAtomSet(openSubViewAtom, { mode: "promiseExit" })
-  return async (sessionId: string, path: string, kind: SubView["kind"]) => {
-    const failure = kind === "file" ? openFileFailure : openDiffFailure
-    const session = sessions.find((s) => s.id === sessionId)
-    if (session === undefined) return failure({ _tag: "SessionNotFound" }, path)
-    const exit = await open({
-      sessionId,
-      workingFolder: session.workingFolder,
-      subView: { kind, path },
-    })
-    return Exit.isFailure(exit) ? failure(Cause.squash(exit.cause), path) : undefined
-  }
+const useOpenView = (): ReturnType<UiHost["useOpenView"]> => {
+  const registry = useContext(RegistryContext)
+  return useCallback(
+    (sessionId, view, params, options) =>
+      runOpenView(registry, { sessionId, view, params, placement: options?.placement }, (error) =>
+        openViewFailure(error, view),
+      ),
+    [registry],
+  )
 }
 
 const useSubViewOnScreen = (sessionId: string) => {
@@ -304,9 +296,16 @@ const host: UiHost = {
       [registry],
     )
   },
+  useOpenView,
   useOpenFile: () => {
-    const open = useOpenSubView()
-    return (sessionId, path) => open(sessionId, path, "file")
+    const registry = useContext(RegistryContext)
+    return useCallback(
+      (sessionId, path) =>
+        runOpenView(registry, { sessionId, view: "files/file", params: { path } }, (error) =>
+          openFileFailure(error, path),
+        ),
+      [registry],
+    )
   },
   useListFiles: () => {
     const registry = useContext(RegistryContext)
@@ -348,7 +347,8 @@ const host: UiHost = {
   },
   useFileOnScreen: (sessionId) => {
     const selected = useSubViewOnScreen(sessionId)
-    return selected?.kind === "file" ? selected.path : null
+    const path = selected?.params["path"]
+    return selected?.view === "files/file" && typeof path === "string" ? path : null
   },
   useChanges: (sessionId, kind) => {
     const workingFolder = useWorkingFolderOf(sessionId)
@@ -367,16 +367,25 @@ const host: UiHost = {
     return { listing, retry } as never
   },
   useOpenDiff: () => {
-    const open = useOpenSubView()
-    return (sessionId, path, kind) => open(sessionId, path, diffSubViewOf[kind])
+    const registry = useContext(RegistryContext)
+    return useCallback(
+      (sessionId, path, kind) =>
+        runOpenView(
+          registry,
+          { sessionId, view: "changes/diff", params: { path, kind } },
+          (error) => openDiffFailure(error, path),
+        ),
+      [registry],
+    )
   },
   useDiffOnScreen: (sessionId) => {
     const selected = useSubViewOnScreen(sessionId)
-    return selected?.kind === "diff"
-      ? { path: selected.path, kind: "working" }
-      : selected?.kind === "committed_diff"
-        ? { path: selected.path, kind: "committed" }
-        : null
+    const { path, kind } = selected?.params ?? {}
+    return selected?.view === "changes/diff" &&
+      typeof path === "string" &&
+      (kind === "working" || kind === "committed")
+      ? { path, kind }
+      : null
   },
   useSettings: () => useAtomValue(settingsWithPluginsAtom),
   useDiscardChanges: () => {

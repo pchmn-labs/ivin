@@ -146,7 +146,17 @@ test("ivin settings get prints every setting, or the one at a path", async () =>
 
   expect(all.code).toBe(0)
   expect(all.stdout).toBe(
-    'tabs.stopAgentOnClose = true\ntabs.newTabPosition = "end"\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\nsidebar.layout = "rail"\nagents.stopWhenIdleMinutes = 10\nupdates.automaticCheck = true\nupdates.beta = false\n',
+    'tabs.stopAgentOnClose = true
+tabs.newTabPosition = "end"
+worktrees.removeOnTabClose = true
+files.folderIcons = true
+files.file.placement = "subView"
+sidebar.layout = "rail"
+agents.stopWhenIdleMinutes = 10
+updates.automaticCheck = true
+updates.beta = false
+changes.diff.placement = "subView"
+',
   )
   expect(one.stdout).toBe("true\n")
   expect(section.stdout).toBe('tabs.stopAgentOnClose = true\ntabs.newTabPosition = "end"\n')
@@ -165,10 +175,11 @@ test("--json prints the values as JSON", async () => {
     value: {
       tabs: { stopAgentOnClose: false, newTabPosition: "end" },
       worktrees: { removeOnTabClose: true },
-      files: { folderIcons: true },
+      files: { folderIcons: true, file: { placement: "subView" } },
       sidebar: { layout: "rail" },
       agents: { stopWhenIdleMinutes: 10 },
       updates: { automaticCheck: true, beta: false },
+      changes: { diff: { placement: "subView" } },
     },
   })
   expect(JSON.parse(one.stdout)).toEqual({ ok: true, path: "tabs.stopAgentOnClose", value: true })

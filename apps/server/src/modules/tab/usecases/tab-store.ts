@@ -33,6 +33,7 @@ export class TabStore extends Context.Service<
     readonly selectSubView: (sessionId: string, subView: SubView | null) => Effect.Effect<void>
     readonly layoutOf: (sessionId: string) => Effect.Effect<TabLayout>
     readonly setLayout: (sessionId: string, layout: TabLayout) => Effect.Effect<void>
+    readonly removeSubViewsOfViews: (views: readonly string[]) => Effect.Effect<void>
     readonly removeSubViewsOutside: (
       sessionId: string,
       workingFolder: string,

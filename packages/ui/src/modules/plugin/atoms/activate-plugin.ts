@@ -1,5 +1,9 @@
 import type { Atom, AtomRegistry } from "effect/reactivity"
+import type { ViewDeclaration } from "@ivin/contracts/plugin"
 import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
+import { declaredViewsAtom, registeredViewsAtom } from "../../view/atoms/registered-views.ts"
+import { runOpenView } from "../../view/atoms/open-view.ts"
+import { openViewFailure } from "../../tab/rules/sub-view-failure.ts"
 import { commandHandlersAtom, commandsAtom } from "../../command/atoms/commands.ts"
 import { notify } from "../../../core/components/notification/notification-manager.ts"
 import { addCommandHandler } from "../../command/atoms/run-command.ts"
@@ -13,7 +17,7 @@ import {
 import { reportPluginFailureAtom } from "./report-plugin-failure.ts"
 
 export interface UiPluginEntry {
-  readonly manifest: { readonly id: string }
+  readonly manifest: { readonly id: string; readonly views?: ReadonlyArray<ViewDeclaration> }
   readonly activate: UiPlugin
 }
 
@@ -47,7 +51,14 @@ export const activatePlugin = (
     removeFrom(defaultKeybindingsAtom)
     removeFrom(editorContributionsAtom)
     removeFrom(fileIconContributionsAtom)
+    removeFrom(declaredViewsAtom)
+    removeFrom(registeredViewsAtom)
   }
+  const declared = manifest.views ?? []
+  registry.set(declaredViewsAtom, [
+    ...registry.get(declaredViewsAtom),
+    ...declared.map((view) => ({ ...view, id: `${pluginId}/${view.name}`, pluginId })),
+  ])
 
   const ctx: UiContext = {
     pluginId,
@@ -126,6 +137,29 @@ export const activatePlugin = (
           { pluginId, icon: guarded },
         ])
       },
+    },
+    views: {
+      register: (name, { component, title, icon }) => {
+        if (!declared.some((view) => view.name === name)) {
+          console.error(`plugin ${pluginId} registered the undeclared view ${name}`)
+          registry.set(reportPluginFailureAtom, {
+            id: pluginId,
+            reason: `It registered the view ${name}, which its manifest does not declare under ivin.views.`,
+          })
+          return
+        }
+        const id = `${pluginId}/${name}`
+        const current = registry.get(registeredViewsAtom)
+        if (current.some((view) => view.id === id)) throw new Error(`View ${id} already exists`)
+        registry.set(registeredViewsAtom, [
+          ...current,
+          { id, pluginId, component, ...(title && { title }), ...(icon && { icon }) },
+        ])
+      },
+      open: (sessionId, view, params, options) =>
+        runOpenView(registry, { sessionId, view, params, placement: options?.placement }, (error) =>
+          openViewFailure(error, view),
+        ),
     },
     fileUrl: (path) => pluginFileUrl(pluginId, path),
     sidebar: {

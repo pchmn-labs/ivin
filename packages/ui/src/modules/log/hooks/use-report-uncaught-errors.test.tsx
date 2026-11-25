@@ -65,7 +65,9 @@ test("a rejected promise nobody handles is reported to the server", async () => 
 })
 
 test("an error or rejection from a user plugin's bundle goes to its log, not the app's", async () => {
-  const server = await mount([{ _tag: "compiled", id: "notes", name: "Notes", bundle: "n.js" }])
+  const server = await mount([
+    { _tag: "compiled", id: "notes", name: "Notes", bundle: "n.js", views: [] },
+  ])
   const url = "ivin-plugin-bundle://cache/n.js"
 
   window.dispatchEvent(

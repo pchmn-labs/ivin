@@ -9,9 +9,11 @@ export const getSetting = (path: string | null) =>
   Effect.gen(function* () {
     const current = yield* CurrentSettings
     const declarations = yield* yield* PluginSettingDeclarations
-    const settings = {
-      ...(yield* current.get),
-      ...pluginSettingValues(yield* current.pluginSettings),
+    const core: Record<string, unknown> = { ...(yield* current.get) }
+    const settings: Record<string, unknown> = { ...core }
+    for (const [id, values] of Object.entries(pluginSettingValues(yield* current.pluginSettings))) {
+      const own = core[id]
+      settings[id] = typeof own === "object" && own !== null ? { ...own, ...values } : values
     }
     const value = valueAt(settings, path)
     if (path === null || value !== undefined) return value as Schema.Json

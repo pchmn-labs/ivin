@@ -83,3 +83,12 @@ test("a setting added to an empty object, or one holding only a comment, gets it
     text: `{\n  "tabs": {\n    "stopAgentOnClose": false\n  }\n  // keep\n}\n`,
   })
 })
+
+test("a path of three segments nests two levels, in an empty file and under an existing section", () => {
+  const empty = editSettingsText(null, "files.file.placement", "sheet")
+  expect(empty.ok && JSON.parse(empty.text)).toEqual({ files: { file: { placement: "sheet" } } })
+  const existing = editSettingsText('{ "files": { "x": 1 } }', "files.file.placement", "sheet")
+  expect(existing.ok && JSON.parse(existing.text)).toEqual({
+    files: { x: 1, file: { placement: "sheet" } },
+  })
+})

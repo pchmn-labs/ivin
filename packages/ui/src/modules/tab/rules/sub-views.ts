@@ -1,4 +1,6 @@
-import type { SubView, TabSubViews } from "@ivin/contracts/tab"
+import { sameSubView, type SubView, type TabSubViews } from "@ivin/contracts/tab"
+
+export { sameSubView, subViewKey } from "@ivin/contracts/tab"
 
 export const noSubViews = (sessionId: string): TabSubViews => ({
   sessionId,
@@ -7,10 +9,6 @@ export const noSubViews = (sessionId: string): TabSubViews => ({
   fullWidth: false,
   sessionTabSelected: false,
 })
-
-export const sameSubView = (a: SubView, b: SubView) => a.kind === b.kind && a.path === b.path
-
-export const subViewKey = (subView: SubView) => `${subView.kind}:${subView.path}`
 
 export const withSubViewOpen = (state: TabSubViews, subView: SubView): TabSubViews => ({
   ...state,
@@ -54,4 +52,15 @@ export const withSubViewClosed = (state: TabSubViews, subView: SubView): TabSubV
     subViews,
     selected: wasSelected ? (subViews[index] ?? subViews[index - 1] ?? null) : state.selected,
   }
+}
+
+// The file a `files/file` view edits; the app holds its unsaved edits.
+export const editedFileOf = (subView: SubView): string | null => {
+  const path = subView.params["path"]
+  return subView.view === "files/file" && typeof path === "string" ? path : null
+}
+
+export const pathOf = (subView: SubView): string | null => {
+  const path = subView.params["path"]
+  return typeof path === "string" ? path : null
 }

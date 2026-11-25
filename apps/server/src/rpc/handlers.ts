@@ -97,13 +97,14 @@ import { watchUsage } from "../modules/transcript/usecases/watch-usage.ts"
 import { layerGitCli } from "../modules/worktree/adapters/git-cli.ts"
 import { layerFirstMessageReading } from "../modules/session/usecases/first-message-reading.ts"
 import { layerOriginFetch } from "../modules/worktree/usecases/origin-fetch.ts"
+import { layerUnrestoredSubViewsDropped } from "../modules/tab/usecases/drop-unrestored-sub-views.ts"
 import { checkoutStatus } from "../modules/worktree/usecases/checkout-status.ts"
 import { listBranches } from "../modules/worktree/usecases/list-branches.ts"
 import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
 export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
-  Layer.mergeAll(layerProjectTabs, layerFirstMessageReading).pipe(
+  Layer.mergeAll(layerProjectTabs, layerFirstMessageReading, layerUnrestoredSubViewsDropped).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
     Layer.provideMerge(layerSessionTabs),
     Layer.provideMerge(sessionRuns),

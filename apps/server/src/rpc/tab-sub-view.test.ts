@@ -4,11 +4,12 @@ import { layerScripted } from "@ivin/harness"
 import { Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
 import { execFileSync } from "node:child_process"
-import { mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
+import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
@@ -69,13 +70,28 @@ const withServer = <A, E>(db: DatabaseSync, use: (client: Client) => Effect.Effe
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf([])),
           Layer.provide(layerScripted([], { starts: [], closed: [] })),
+          Layer.provide(layerFsUserPlugins(join(root, "home"))),
         ),
       ),
       Effect.scoped,
     ),
   )
 
-const file = (path: string): SubView => ({ kind: "file", path })
+const file = (path: string): SubView => ({ view: "files/file", params: { path } })
+const diff = (path: string): SubView => ({
+  view: "changes/diff",
+  params: { kind: "working", path },
+})
+
+const writeViewsPlugin = (views: Record<string, unknown>) => {
+  const folder = join(root, "home", "plugins", "terminal")
+  mkdirSync(folder, { recursive: true })
+  writeFileSync(
+    join(folder, "package.json"),
+    JSON.stringify({ name: "terminal", ivin: { id: "terminal", ui: "ui.tsx", views } }),
+  )
+}
+const shell = (terminalId: string): SubView => ({ view: "terminal/shell", params: { terminalId } })
 
 const newTab = (client: Client) =>
   Effect.gen(function* () {
@@ -172,7 +188,6 @@ test("sub-views and the selected one are back after a restart on the same databa
 
 test("a diff sub-view is back after a restart beside the file of the same path", async () => {
   const db = newDatabase()
-  const diff = (path: string) => ({ kind: "diff" as const, path })
   const sessionId = await withServer(db, (client) =>
     Effect.gen(function* () {
       const sessionId = yield* newTab(client)
@@ -186,6 +201,74 @@ test("a diff sub-view is back after a restart beside the file of the same path",
 
   expect(listed.subViews).toEqual([file("a"), diff("a")])
   expect(listed.selected).toEqual(diff("a"))
+})
+
+test("opening a view equal to an open one, whatever the order of its parameters, selects it", async () => {
+  const listed = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* newTab(client)
+      yield* client["tab.openSubView"]({
+        sessionId,
+        subView: { view: "changes/diff", params: { path: "a", kind: "working" } },
+      })
+      yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
+      return yield* client["tab.openSubView"]({ sessionId, subView: diff("a") })
+    }),
+  )
+
+  expect(listed.subViews).toHaveLength(2)
+  expect(listed.selected).toEqual(diff("a"))
+})
+
+test("a view that declares restore: false is dropped when the server starts, the others stay", async () => {
+  writeViewsPlugin({
+    shell: {
+      title: "Terminal",
+      icon: "terminal",
+      placements: ["subView"],
+      defaultPlacement: "subView",
+      restore: false,
+    },
+  })
+  const db = newDatabase()
+  const sessionId = await withServer(db, (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* newTab(client)
+      yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
+      const opened = yield* client["tab.openSubView"]({ sessionId, subView: shell("t1") })
+      expect(opened.subViews).toEqual([file("a"), shell("t1")])
+      return sessionId
+    }),
+  )
+
+  const listed = await withServer(db, (client) => client["tab.listSubViews"]({ sessionId }))
+
+  expect(listed.subViews).toEqual([file("a")])
+  expect(listed.selected).toEqual(file("a"))
+})
+
+test("a view with a plugin's own parameters is back after a restart", async () => {
+  writeViewsPlugin({
+    shell: {
+      title: "Terminal",
+      icon: "terminal",
+      placements: ["subView"],
+      defaultPlacement: "subView",
+    },
+  })
+  const db = newDatabase()
+  const sessionId = await withServer(db, (client) =>
+    Effect.gen(function* () {
+      const sessionId = yield* newTab(client)
+      yield* client["tab.openSubView"]({ sessionId, subView: shell("t1") })
+      return sessionId
+    }),
+  )
+
+  const listed = await withServer(db, (client) => client["tab.listSubViews"]({ sessionId }))
+
+  expect(listed.subViews).toEqual([shell("t1")])
+  expect(listed.selected).toEqual(shell("t1"))
 })
 
 test("moving the session to another working folder closes its sub-views", async () => {

@@ -16,14 +16,14 @@ export const listPlugins = Stream.unwrap(
     const loads = folders.map((folder): Effect.Effect<UserPlugin> => {
       const reading = readManifest(folder.manifest)
       if (reading.kind === "invalid") return failed(folder.name, reading.reason)
-      const { id, name, ui } = reading.manifest
+      const { id, name, ui, views } = reading.manifest
       const holder = folderOfId.get(id)
       if (holder !== undefined) {
         return failed(id, `The folder ${holder} already holds a plugin with the id ${id}.`)
       }
       folderOfId.set(id, folder.name)
       return plugins.compile({ id, path: folder.path, entry: ui }).pipe(
-        Effect.map((bundle): UserPlugin => ({ _tag: "compiled", id, name, bundle })),
+        Effect.map((bundle): UserPlugin => ({ _tag: "compiled", id, name, bundle, views })),
         Effect.catchTag("PluginNotCompiled", ({ reason }) => failed(id, reason)),
       )
     })

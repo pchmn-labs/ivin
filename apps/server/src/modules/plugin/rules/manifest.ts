@@ -1,4 +1,6 @@
 import type { PluginSettingDeclaration } from "@ivin/contracts/setting"
+import type { ViewDeclaration } from "@ivin/contracts/plugin"
+import { placementSettings, readManifestViews } from "./manifest-views.ts"
 import { readManifestSettings } from "./manifest-settings.ts"
 import { readPermissions } from "./permissions.ts"
 import type { Permissions } from "./permissions.ts"
@@ -9,7 +11,9 @@ export interface UiManifest {
   // The UI half's entry, relative to the plugin's folder.
   readonly ui: string
   readonly permissions: Permissions
+  // The declared settings, then one placement setting per view with several placements.
   readonly settings: ReadonlyArray<PluginSettingDeclaration>
+  readonly views: ReadonlyArray<ViewDeclaration>
 }
 
 export type ManifestReading =
@@ -33,7 +37,7 @@ export const readManifest = (text: string | null): ManifestReading => {
   }
   const ivin = isRecord(json) ? json["ivin"] : undefined
   if (!isRecord(ivin)) return invalid("package.json has no ivin key, which holds the manifest.")
-  const { id, name, ui, permissions, settings } = ivin
+  const { id, name, ui, permissions, settings, views } = ivin
   if (typeof id !== "string" || !ID.test(id)) {
     return invalid("ivin.id in package.json must be lowercase letters, digits and dashes.")
   }
@@ -49,6 +53,8 @@ export const readManifest = (text: string | null): ManifestReading => {
   if (reading.kind === "invalid") return invalid(reading.reason)
   const declared = readManifestSettings(id, name ?? id, settings)
   if (declared.kind === "invalid") return invalid(declared.reason)
+  const declaredViews = readManifestViews(views)
+  if (declaredViews.kind === "invalid") return invalid(declaredViews.reason)
   return {
     kind: "valid",
     manifest: {
@@ -56,7 +62,8 @@ export const readManifest = (text: string | null): ManifestReading => {
       name: name ?? id,
       ui,
       permissions: reading.permissions,
-      settings: declared.settings,
+      settings: [...declared.settings, ...placementSettings(id, name ?? id, declaredViews.views)],
+      views: declaredViews.views,
     },
   }
 }

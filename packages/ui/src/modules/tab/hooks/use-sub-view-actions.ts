@@ -5,6 +5,7 @@ import { useContext, useState, type RefObject } from "react"
 import { fileEditOf, unsavedPathsOf } from "../../file/atoms/file-edit.ts"
 import { writeFileAtom } from "../../file/atoms/write-file.ts"
 import { noEdit } from "../../file/rules/file-edit.ts"
+import { editedFileOf } from "../rules/sub-views.ts"
 import { closeSubViewAtom } from "../atoms/close-sub-view.ts"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
 import { selectSessionTabAtom } from "../atoms/select-session-tab.ts"
@@ -43,17 +44,20 @@ export function useSubViewActions(
     const exit = await close({ sessionId, workingFolder, subView })
     if (Exit.isFailure(exit))
       return setFailure({
-        message: closeFileFailure(subView.path),
+        message: closeFileFailure(subView),
         retry: () => void closeNow(subView),
       })
-    if (subView.kind === "file")
-      registry.set(fileEditOf(sessionId, workingFolder, subView.path), noEdit)
+    const edited = editedFileOf(subView)
+    if (edited !== null) registry.set(fileEditOf(sessionId, workingFolder, edited), noEdit)
     // The focused close button is gone with its tab.
     if (hadFocus)
       card.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus()
   }
 
-  const isUnsaved = (subView: SubView) => subView.kind === "file" && unsaved.includes(subView.path)
+  const isUnsaved = (subView: SubView) => {
+    const edited = editedFileOf(subView)
+    return edited !== null && unsaved.includes(edited)
+  }
 
   const closeFile = async (subView: SubView) => {
     if (!isUnsaved(subView)) return closeNow(subView)
@@ -63,7 +67,8 @@ export function useSubViewActions(
 
   const saveAndClose = async (subView: SubView) => {
     setConfirming(false)
-    if (await write({ sessionId, workingFolder, path: subView.path })) await closeNow(subView)
+    const path = editedFileOf(subView)
+    if (path !== null && (await write({ sessionId, workingFolder, path }))) await closeNow(subView)
     // Its failure shows in its own view.
     else open({ sessionId, workingFolder, subView })
   }

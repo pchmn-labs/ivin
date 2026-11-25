@@ -17,13 +17,33 @@ export const ProjectTabs = Schema.Struct({
 })
 export type ProjectTabs = typeof ProjectTabs.Type
 
-// A file of the session's working folder, its uncommitted diff, or what the commits of the
-// session's branch changed in it; `path` relative to the working folder.
+export const ViewParams = Schema.Record(Schema.String, Schema.Json)
+export type ViewParams = typeof ViewParams.Type
+
+// A view opened as a sub-view: `view` is "<plugin id>/<view name>", `params` a JSON object.
 export const SubView = Schema.Struct({
-  kind: Schema.Literals(["file", "diff", "committed_diff"]),
-  path: Schema.String,
+  view: Schema.String,
+  params: ViewParams,
 })
 export type SubView = typeof SubView.Type
+
+// Keys sorted at every level, so equal params give equal text.
+export const canonicalJson = (value: unknown): string => {
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`
+  if (typeof value === "object" && value !== null) {
+    return `{${Object.keys(value)
+      .toSorted()
+      .map(
+        (key) => `${JSON.stringify(key)}:${canonicalJson((value as Record<string, unknown>)[key])}`,
+      )
+      .join(",")}}`
+  }
+  return JSON.stringify(value)
+}
+
+export const subViewKey = (subView: SubView) => `${subView.view}\n${canonicalJson(subView.params)}`
+
+export const sameSubView = (a: SubView, b: SubView) => subViewKey(a) === subViewKey(b)
 
 // In the order they were opened; `selected` is null only when there are none.
 // `sessionTabSelected` is only true in full width.

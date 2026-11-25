@@ -34,6 +34,7 @@ import { PickWorkingFolder } from "../modules/session/ui/pick-working-folder.tsx
 import { RunOptionsMenu } from "../modules/session/ui/run-options-menu.tsx"
 import { SessionLocation } from "../modules/session/ui/session-location.tsx"
 import { SessionLocationPicker } from "../modules/session/ui/session-location-picker.tsx"
+import { HostDiffView, HostFileView } from "./host-file-views.tsx"
 import { HostTextField } from "./host-text-field.tsx"
 import { HostSlot } from "./slot-renderer.tsx"
 import { MessageImages } from "../modules/transcript/ui/message-images.tsx"
@@ -80,4 +81,6 @@ export const hostComponents = {
   RunOptionsMenu,
   MessageField,
   ComposerFrame,
+  FileView: HostFileView,
+  DiffView: HostDiffView,
 } satisfies HostComponents

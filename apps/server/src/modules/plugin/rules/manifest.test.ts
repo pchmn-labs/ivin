@@ -12,6 +12,7 @@ test("a manifest with an id and a UI entry is valid, and its name defaults to it
       ui: "src/ui.tsx",
       permissions: { harness: [], exec: [], fetch: [] },
       settings: [],
+      views: [],
     },
   })
 })
@@ -50,4 +51,28 @@ test("a manifest carries its declared settings, and a malformed one is invalid",
     manifest({ id: "x", ui: "src/ui.tsx", settings: { fold: { ...setting, type: "date" } } }),
   )
   expect(bad.kind === "invalid" && bad.reason).toContain("ivin.settings.fold.type")
+})
+
+test("a manifest carries its views, and a view with several placements adds a placement setting", () => {
+  const view = {
+    title: "Terminal",
+    icon: "terminal",
+    placements: ["subView", "dialog"],
+    defaultPlacement: "subView",
+  }
+  const valid = readManifest(manifest({ id: "x", ui: "src/ui.tsx", views: { shell: view } }))
+  expect(valid.kind === "valid" && valid.manifest.views).toEqual([
+    { name: "shell", ...view, restore: true },
+  ])
+  expect(valid.kind === "valid" && valid.manifest.settings).toMatchObject([
+    { pluginId: "x", key: "shell.placement", default: "subView", values: ["subView", "dialog"] },
+  ])
+  const bad = readManifest(
+    manifest({
+      id: "x",
+      ui: "src/ui.tsx",
+      views: { shell: { ...view, defaultPlacement: "sheet" } },
+    }),
+  )
+  expect(bad.kind === "invalid" && bad.reason).toContain("ivin.views.shell.defaultPlacement")
 })

@@ -12,12 +12,28 @@ export const HOST_MODULES = [
 export type HostModule = (typeof HOST_MODULES)[number]
 export const HOST_MODULES_GLOBAL = "__ivinHostModules"
 
+export const ViewPlacement = Schema.Literals(["subView", "sheet", "dialog"])
+export type ViewPlacement = typeof ViewPlacement.Type
+
+// A view a plugin's manifest declares under `ivin.views`.
+export const ViewDeclaration = Schema.Struct({
+  name: Schema.String,
+  title: Schema.String,
+  icon: Schema.String,
+  placements: Schema.Array(ViewPlacement),
+  defaultPlacement: ViewPlacement,
+  // A sub-view that is not restored is dropped when the server starts.
+  restore: Schema.Boolean,
+})
+export type ViewDeclaration = typeof ViewDeclaration.Type
+
 export const UserPlugin = Schema.Union([
   // `bundle` is the file name of the compiled UI half in ivin's plugin cache.
   Schema.TaggedStruct("compiled", {
     id: Schema.String,
     name: Schema.String,
     bundle: Schema.String,
+    views: Schema.Array(ViewDeclaration),
   }),
   Schema.TaggedStruct("failed", { id: Schema.String, reason: Schema.String }),
 ])

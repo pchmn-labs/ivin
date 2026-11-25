@@ -22,13 +22,20 @@ import usagePackage from "../../../../plugins/usage/package.json"
 import * as usage from "../../../../plugins/usage/src/ui.tsx"
 import workingPackage from "../../../../plugins/working/package.json"
 import * as working from "../../../../plugins/working/src/ui.tsx"
+import { builtinViews } from "../modules/plugin/rules/builtin-views.ts"
 import type { UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
 
 export const builtinPlugins: ReadonlyArray<UiPluginEntry> = [
   { manifest: approvalsPackage.ivin, activate: approvals.activate },
   { manifest: fileIconsPackage.ivin, activate: fileIcons.activate },
-  { manifest: filesPackage.ivin, activate: files.activate },
-  { manifest: changesPackage.ivin, activate: changes.activate },
+  {
+    manifest: { ...filesPackage.ivin, views: builtinViews(filesPackage.ivin.views) },
+    activate: files.activate,
+  },
+  {
+    manifest: { ...changesPackage.ivin, views: builtinViews(changesPackage.ivin.views) },
+    activate: changes.activate,
+  },
   { manifest: composerPackage.ivin, activate: composer.activate },
   { manifest: inactiveSessionsPackage.ivin, activate: inactiveSessions.activate },
   { manifest: messagesPackage.ivin, activate: messages.activate },

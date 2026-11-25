@@ -1,0 +1,12 @@
+.iv-dialog.iv-view-dialog {
+  width: min(960px, calc(100vw - var(--iv-space-8)));
+  height: min(720px, calc(100vh - var(--iv-space-8)));
+}
+
+.iv-view-dialog__body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}

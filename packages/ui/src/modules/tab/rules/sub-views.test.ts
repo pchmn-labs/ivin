@@ -8,7 +8,7 @@ import {
   withSubViewOpen,
 } from "./sub-views.ts"
 
-const file = (path: string) => ({ kind: "file" as const, path })
+const file = (path: string) => ({ view: "files/file", params: { path } })
 const none: TabSubViews = {
   sessionId: "s",
   subViews: [],

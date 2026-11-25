@@ -15,6 +15,8 @@ import type {
   SessionUsage,
   Settings,
   Tab,
+  ViewParams,
+  ViewPlacement,
 } from "./types.ts"
 import type { ErrorMessageProps, HostComponents, MenuItem } from "./components.ts"
 
@@ -183,7 +185,15 @@ export interface UiHost {
   }
   // Lists one level of a folder of the session's working folder; `path` is relative to it, "" for itself.
   readonly useListFolder: () => (sessionId: string, path: string) => Promise<FolderListing>
-  // Opens a file of the session's working folder beside its chat, or selects it if open; `path` as above.
+  // Opens the plugin's view `"<plugin>/<view>"` for the session, or selects an equal one that is
+  // open. Where it opens is the user's setting, then `options.placement`, then the manifest's default.
+  readonly useOpenView: () => (
+    sessionId: string,
+    view: string,
+    params: ViewParams,
+    options?: { readonly placement?: ViewPlacement },
+  ) => Promise<ActionFailure | undefined>
+  // Opens a file of the session's working folder as the `files/file` view, or selects it if open; `path` as above.
   readonly useOpenFile: () => (
     sessionId: string,
     path: string,
@@ -202,7 +212,7 @@ export interface UiHost {
     readonly failure: ActionFailure | null
     readonly retry: () => void
   }
-  // The file the session's tab has selected beside its chat, or null.
+  // The file the session's tab has selected beside its chat as a sub-view, or null.
   readonly useFileOnScreen: (sessionId: string) => string | null
   // `working`: the uncommitted changes; `committed`: what the branch's commits changed since it
   // left origin's default branch. Kept up to date with the disk.
@@ -213,13 +223,13 @@ export interface UiHost {
     readonly listing: ChangeListingOf<K>
     readonly retry: () => void
   }
-  // Opens the diff of a file beside the session's chat, or selects it if open.
+  // Opens the diff of a file as the `changes/diff` view, or selects it if open.
   readonly useOpenDiff: () => (
     sessionId: string,
     path: string,
     kind: ChangeKind,
   ) => Promise<ActionFailure | undefined>
-  // The diff the session's tab has selected beside its chat, or null.
+  // The diff the session's tab has selected beside its chat as a sub-view, or null.
   readonly useDiffOnScreen: (sessionId: string) => DiffOnScreen | null
   // The user's ~/.ivin/settings.json over the defaults, kept up to date with the file.
   readonly useSettings: () => Settings

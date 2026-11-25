@@ -1,6 +1,8 @@
 import { lazy } from "react"
 import { defineUi } from "@ivin/plugin-api/ui"
 import type { PluginState } from "./rules/plugin-state.ts"
+import { nameOf } from "./rules/paths.ts"
+import { FileViewOf } from "./ui/file-view.tsx"
 import { GoToFileHost } from "./ui/go-to-file-host.tsx"
 
 const FilesPanel = lazy(() =>
@@ -15,6 +17,10 @@ export const activate = defineUi((ctx) => {
     toggleIgnored: new Set(),
     openGoToFile: new Set(),
   }
+  ctx.views.register("file", {
+    component: FileViewOf,
+    title: ({ path }) => (typeof path === "string" ? nameOf(path) : "File"),
+  })
   ctx.slots.add("sidebar.panel", () => <FilesPanel state={state} />, {
     name: "panel",
     title: "Files",

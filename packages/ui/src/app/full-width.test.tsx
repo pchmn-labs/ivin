@@ -234,8 +234,8 @@ test("full width and the selected Session tab are back at launch, from the serve
   const server = makeServer()
   server.subViews.set("s1", {
     sessionId: "s1",
-    subViews: [{ kind: "file", path: "README.md" }],
-    selected: { kind: "file", path: "README.md" },
+    subViews: [{ view: "files/file", params: { path: "README.md" } }],
+    selected: { view: "files/file", params: { path: "README.md" } },
     fullWidth: true,
     sessionTabSelected: true,
   })

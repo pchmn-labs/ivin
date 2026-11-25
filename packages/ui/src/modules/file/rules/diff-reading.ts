@@ -1,5 +1,4 @@
 import { DIFF_SIZE_LIMIT, type FileDiff, type GitFailed } from "@ivin/contracts/file"
-import type { SubView } from "@ivin/contracts/tab"
 import { errorTag } from "../../../shared/rules/error-tag.ts"
 import { fileName } from "./file-name.ts"
 
@@ -23,7 +22,7 @@ const message = (
   gitMessage,
 })
 
-export type DiffKind = Exclude<SubView["kind"], "file">
+export type DiffKind = "diff" | "committed_diff"
 
 const NO_ORIGIN = "This repository has no origin remote, so the branch's commits cannot be shown."
 const NO_DEFAULT_BRANCH =
