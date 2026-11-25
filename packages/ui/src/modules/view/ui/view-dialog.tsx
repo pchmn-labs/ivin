@@ -59,6 +59,7 @@ function OpenViewDialog({
                     type="button"
                     className="iv-view-dialog__title-button"
                     data-view-tab={subViewKey(view)}
+                    data-movable=""
                   >
                     {title}
                     <Icon name="chevron-down" size={14} />

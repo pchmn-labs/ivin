@@ -5,6 +5,7 @@ import { DateTime } from "effect"
 import { expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
+import { NotificationProvider } from "../core/components/notification/notification.tsx"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { makeTestSession } from "../core/test-session.ts"
@@ -61,9 +62,14 @@ const setup = async (
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={[plugin]}>
-        <div style={{ height: 700, display: "flex", flexDirection: "column" }}>
-          <TabView projectPath="/p" />
-        </div>
+        <NotificationProvider>
+          {/* Isolated like the app's #root, so menus portalled to <body> paint over the sheet. */}
+          <div
+            style={{ height: 700, display: "flex", flexDirection: "column", isolation: "isolate" }}
+          >
+            <TabView projectPath="/p" />
+          </div>
+        </NotificationProvider>
       </PluginsProvider>
     </RegistryProvider>,
   )
@@ -254,4 +260,26 @@ test("the Move view key opens the menu of the view in focus, and the focus lands
   await expect
     .poll(() => document.activeElement)
     .toBe(card().getByRole("tab", { name: "Note 1" }).element())
+})
+
+test("the Move view key does nothing on a view with one placement", async () => {
+  const { open } = await setup()
+  await open("demo/tight", { id: 1 })
+  ;(card().getByRole("tab", { name: "Tight" }).element() as HTMLElement).focus()
+
+  await userEvent.keyboard(`{${mod}>}{Shift>}o{/Shift}{/${mod}}`)
+  await expect.element(page.getByText("note 1 in subView")).toBeVisible()
+  expect(page.getByRole("menu").query()).toBeNull()
+})
+
+test("a move that cannot open the view beside the chat leaves it where it was", async () => {
+  const { server, open } = await setup()
+  await open("demo/note", { id: 1 }, "sheet")
+  server.failNextCall("tab.openSubView")
+
+  await page.getByRole("tab", { name: "Note 1" }).click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Beside chat" }).click()
+
+  await expect.element(page.getByText("Could not move the view.").first()).toBeVisible()
+  await expect.element(page.getByText("note 1 in sheet")).toBeVisible()
 })

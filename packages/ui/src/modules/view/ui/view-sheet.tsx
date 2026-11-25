@@ -6,7 +6,7 @@ import { ContextMenu } from "../../../core/components/menu/menu.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { sheetViewsOf } from "../atoms/overlay-views.ts"
 import { withSheetViewClosed, withSheetViewOpen } from "../rules/overlay-views.ts"
-import { useMoveTo } from "../hooks/use-move-to.ts"
+import { tabMenu, useMoveTo } from "../hooks/use-move-to.ts"
 import { useViewLook } from "../hooks/use-view-look.tsx"
 import { ViewBody } from "./view-body.tsx"
 
@@ -28,13 +28,7 @@ function SheetTab({
   const { title, icon } = useViewLook(view)
   const moveTo = useMoveTo(sessionId, workingFolder, view, "sheet")
   return (
-    <ContextMenu
-      items={[
-        ...moveTo,
-        ...(moveTo.length > 0 ? ["separator" as const] : []),
-        { label: "Close", icon: "x", onSelect: onClose },
-      ]}
-    >
+    <ContextMenu items={tabMenu(moveTo, onClose)}>
       <div
         className="iv-sub-view-card__item"
         role="presentation"
@@ -46,6 +40,7 @@ function SheetTab({
           className="iv-sub-view-card__tab"
           aria-selected={selected}
           data-view-tab={subViewKey(view)}
+          data-movable={moveTo.length > 0 || undefined}
           onClick={onSelect}
         >
           <span className="iv-sub-view-card__icon" aria-hidden>

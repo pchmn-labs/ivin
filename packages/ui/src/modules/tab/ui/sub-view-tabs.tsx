@@ -4,7 +4,7 @@ import { useId, type KeyboardEvent } from "react"
 import { HarnessMark, type MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { ContextMenu } from "../../../core/components/menu/menu.tsx"
-import { useMoveTo } from "../../view/hooks/use-move-to.ts"
+import { tabMenu, useMoveTo } from "../../view/hooks/use-move-to.ts"
 import { useViewLook } from "../../view/hooks/use-view-look.tsx"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
 import { pathOf, sameSubView, subViewKey } from "../rules/sub-views.ts"
@@ -48,13 +48,7 @@ function SubViewTab({
   const { title, icon } = useViewLook(subView)
   const moveTo = useMoveTo(sessionId, workingFolder, subView, "subView")
   return (
-    <ContextMenu
-      items={[
-        ...moveTo,
-        ...(moveTo.length > 0 ? ["separator" as const] : []),
-        { label: "Close", icon: "x", onSelect: () => void onClose() },
-      ]}
-    >
+    <ContextMenu items={tabMenu(moveTo, () => void onClose())}>
       <div
         className="iv-sub-view-card__item"
         role="presentation"
@@ -76,6 +70,7 @@ function SubViewTab({
           title={pathOf(subView) ?? title}
           aria-describedby={unsaved ? unsavedId : undefined}
           data-view-tab={subViewKey(subView)}
+          data-movable={moveTo.length > 0 || undefined}
           onClick={onOpen}
         >
           <span className="iv-sub-view-card__icon" aria-hidden>

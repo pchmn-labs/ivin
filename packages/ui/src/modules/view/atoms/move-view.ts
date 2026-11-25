@@ -15,19 +15,29 @@ export interface MoveView {
   readonly to: ViewPlacement
 }
 
-// Closes the view where it is, then opens it with the same params in `to`.
 export const moveViewAtom = serverRuntime.fn<MoveView>()(
   Effect.fnUntraced(function* ({ sessionId, workingFolder, view, from, to }, get) {
     const registry = get.registry
     const sheet = sheetViewsOf(sessionId, workingFolder)
     const dialog = dialogViewOf(sessionId, workingFolder)
+    const sheetBefore = registry.get(sheet)
+    const dialogBefore = registry.get(dialog)
     if (from === "subView") yield* closeSubView(sessionId, workingFolder, view)
-    else if (from === "sheet") registry.set(sheet, withSheetViewClosed(registry.get(sheet), view))
+    else if (from === "sheet") registry.set(sheet, withSheetViewClosed(sheetBefore, view))
     else registry.set(dialog, null)
 
-    if (to === "subView") yield* openSubView(sessionId, workingFolder, view)
-    else if (to === "sheet") registry.set(sheet, withSheetViewOpen(registry.get(sheet), view))
-    else registry.set(dialog, view)
+    if (to === "sheet") registry.set(sheet, withSheetViewOpen(registry.get(sheet), view))
+    else if (to === "dialog") registry.set(dialog, view)
+    // Only a sub-view can fail to open, and only after a sheet or dialog view closed: it goes back.
+    else
+      yield* openSubView(sessionId, workingFolder, view).pipe(
+        Effect.onError(() =>
+          Effect.sync(() => {
+            registry.set(sheet, sheetBefore)
+            registry.set(dialog, dialogBefore)
+          }),
+        ),
+      )
     return undefined
   }),
 )

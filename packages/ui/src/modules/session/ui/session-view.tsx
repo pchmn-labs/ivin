@@ -89,7 +89,7 @@ function OpenSession({
           <NotificationViewport />
         </div>
       )}
-      <div className="iv-session-view__dock" data-task-sheet={sheetOpen ? "" : undefined}>
+      <div className="iv-session-view__dock" data-sheet-open={sheetOpen ? "" : undefined}>
         {workingFolder !== undefined && (
           <ViewSheet sessionId={sessionId} workingFolder={workingFolder} />
         )}

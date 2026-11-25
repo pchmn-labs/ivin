@@ -8,15 +8,7 @@ import { moveViewAtom } from "../atoms/move-view.ts"
 import { declaredViewsAtom } from "../atoms/registered-views.ts"
 import { moveTargets, placementIcons, placementNames } from "../rules/placement.ts"
 import { declaredViewOf } from "../rules/view-title.ts"
-
-const focusTabOf = (view: SubView) => {
-  const key = subViewKey(view)
-  requestAnimationFrame(() =>
-    [...document.querySelectorAll<HTMLElement>("[data-view-tab]")]
-      .find((tab) => tab.dataset["viewTab"] === key)
-      ?.focus(),
-  )
-}
+import { focusViewTab } from "../adapters/view-tabs.ts"
 
 // The "Move to" section of a view's menu; empty for a view with one placement.
 export function useMoveTo(
@@ -33,7 +25,7 @@ export function useMoveTo(
     const exit = await move({ sessionId, workingFolder, view, from, to })
     if (Exit.isFailure(exit)) return notify({ message: "Could not move the view." })
     // A dialog takes the focus itself.
-    if (to !== "dialog") focusTabOf(view)
+    if (to !== "dialog") focusViewTab(subViewKey(view))
   }
   return [
     { heading: "Move to" },
@@ -44,3 +36,13 @@ export function useMoveTo(
     })),
   ]
 }
+
+// A tab's right-click menu: its "Move to" section, then Close.
+export const tabMenu = (
+  moveTo: ReadonlyArray<CoreMenuItem>,
+  close: () => void,
+): ReadonlyArray<CoreMenuItem> => [
+  ...moveTo,
+  ...(moveTo.length > 0 ? ["separator" as const] : []),
+  { label: "Close", icon: "x", onSelect: close },
+]

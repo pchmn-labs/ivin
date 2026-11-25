@@ -390,8 +390,7 @@ const host: UiHost = {
       : null
   },
   useTask: (sessionId, taskId) => useAtomValue(taskOf(sessionId)(taskId)),
-  useTaskOutput: (sessionId, taskId) =>
-    useTaskOutput(sessionId, taskId, useAtomValue(taskOf(sessionId)(taskId))),
+  useTaskOutput,
   useSettings: () => useAtomValue(settingsWithPluginsAtom),
   useDiscardChanges: () => {
     const discard = useAtomSet(discardChangesAtom, { mode: "promiseExit" })

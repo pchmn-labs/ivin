@@ -34,7 +34,6 @@ function TaskDetail({ sessionId, taskId }: { sessionId: string; taskId: string }
   )
 }
 
-// A background task's detail: a subagent's whole run, or a command's whole output.
 export function TaskView({ sessionId, params, placement }: ViewProps) {
   const taskId = typeof params["taskId"] === "string" ? params["taskId"] : ""
   const detail = <TaskDetail sessionId={sessionId} taskId={taskId} />

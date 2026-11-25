@@ -1,42 +1,5 @@
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
-
-// Without the focus in a view, the view on top: the dialog, then the sheet, then beside the chat.
-const FALLBACK = ["dialog", "sheet", "subView"]
-
-const frameInFocus = (): HTMLElement | undefined => {
-  const frames = [...document.querySelectorAll<HTMLElement>("[data-view-frame]")]
-  return (
-    frames.find((frame) => frame.contains(document.activeElement)) ??
-    FALLBACK.map((placement) =>
-      frames.find((frame) => frame.dataset["viewFrame"] === placement),
-    ).find((frame) => frame !== undefined)
-  )
-}
-
-const openMoveMenu = () => {
-  const frame = frameInFocus()
-  const opener =
-    frame?.querySelector<HTMLElement>('[data-view-tab][aria-selected="true"]') ??
-    frame?.querySelector<HTMLElement>("[data-view-tab]")
-  if (opener == null) return
-  opener.focus()
-  // The dialog's title is a menu button; a tab opens its menu on a right click.
-  if (opener.getAttribute("aria-haspopup") === "menu") {
-    opener.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
-    )
-    return
-  }
-  const box = opener.getBoundingClientRect()
-  opener.dispatchEvent(
-    new MouseEvent("contextmenu", {
-      bubbles: true,
-      cancelable: true,
-      clientX: box.left,
-      clientY: box.bottom,
-    }),
-  )
-}
+import { openMoveMenu } from "../adapters/view-tabs.ts"
 
 export function useMoveToCommand() {
   useCommandHandler("view.moveTo", openMoveMenu)

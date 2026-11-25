@@ -114,7 +114,7 @@ export function CommandOutput({
   task: TaskItem
   tail?: number
 }) {
-  const output = useTaskOutput(sessionId, task.taskId, task)
+  const output = useTaskOutput(sessionId, task.taskId)
   const lines = output.replace(/\n$/, "").split("\n")
   const text = (tail === undefined ? lines : lines.slice(-tail)).join("\n")
   return (
