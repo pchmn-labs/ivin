@@ -603,6 +603,18 @@ try {
   await window.waitForTimeout(300)
   await shoot("branch-picker-git-failure")
   await window.keyboard.press("Escape")
+  const mod = process.platform === "darwin" ? "Meta" : "Control"
+  await window.keyboard.press(`${mod}+T`)
+  await window
+    .getByRole("tab", { name: /New session/ })
+    .first()
+    .waitFor()
+  await window.getByRole("button", { name: "Settings" }).click()
+  await window.getByRole("button", { name: "Tabs" }).click()
+  await window.getByText("New tab opens").waitFor()
+  await window.waitForTimeout(300)
+  await shoot("settings-tabs")
+  await window.keyboard.press("Escape")
   const [server] = descendantsOf(app.process().pid!).filter((proc) =>
     proc.command.includes("node.mojom.NodeService"),
   )
