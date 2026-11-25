@@ -10,6 +10,7 @@ import { fileName } from "../../file/rules/file-name.ts"
 import { settingsAtom } from "../../setting/atoms/settings.ts"
 import { isAgentBusy } from "../../session/rules/is-running.ts"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
+import { useStartSession } from "../../session/hooks/use-start-session.ts"
 import { useSessionActions } from "../../session/hooks/use-session-actions.ts"
 import { NewSessionButton } from "../../session/ui/new-session-button.tsx"
 import { SessionMark } from "../../session/ui/session-mark.tsx"
@@ -237,7 +238,15 @@ export function TabBar({ projectPath }: { projectPath: string }) {
     )
     if (next !== null) reorder({ projectPath, sessionIds: next })
   }
-  useCommandHandlers({ "tab.moveLeft": () => step(-1), "tab.moveRight": () => step(1) })
+  const startSession = useStartSession()
+  const { tabs: tabSettings } = useAtomValue(settingsAtom)
+  const newTabAfter =
+    tabSettings.newTabPosition === "afterCurrent" ? (selectedSessionId ?? undefined) : undefined
+  useCommandHandlers({
+    "tab.moveLeft": () => step(-1),
+    "tab.moveRight": () => step(1),
+    "tab.new": () => void startSession(projectPath, newTabAfter),
+  })
 
   const focusableId = selectedSessionId ?? tabs[0]?.sessionId
 
@@ -268,7 +277,7 @@ export function TabBar({ projectPath }: { projectPath: string }) {
           />
         ))}
       </div>
-      <NewSessionButton projectPath={projectPath} icon="plus" size="sm" />
+      <NewSessionButton projectPath={projectPath} icon="plus" size="sm" after={newTabAfter} />
     </div>
   )
 }

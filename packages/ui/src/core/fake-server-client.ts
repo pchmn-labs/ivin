@@ -585,13 +585,16 @@ export const makeFakeServer = (
         await holdTabList
         return projectTabs(projectPath)
       }),
-    "tab.open": ({ sessionId }: { sessionId: string }) =>
+    "tab.open": ({ sessionId, after }: { sessionId: string; after?: string | undefined }) =>
       Effect.suspend((): Effect.Effect<ProjectTabs, SessionNotFound | ProjectNotOpen> => {
         const session = sessions.get(sessionId)
         if (!session) return Effect.fail(new SessionNotFound({ sessionId }))
         return projectOr(session.projectPath, () => {
           if (!tabs.some((tab) => tab.sessionId === sessionId)) {
-            tabs.push({ sessionId, projectPath: session.projectPath })
+            const at = tabs.findIndex((tab) => tab.sessionId === after)
+            const tab = { sessionId, projectPath: session.projectPath }
+            if (at < 0) tabs.push(tab)
+            else tabs.splice(at + 1, 0, tab)
           }
           selectedTab.set(session.projectPath, sessionId)
           return projectTabs(session.projectPath)

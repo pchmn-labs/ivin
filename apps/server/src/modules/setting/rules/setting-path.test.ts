@@ -5,6 +5,7 @@ import { checkSetting, settingPaths, valueAt } from "./setting-path.ts"
 test("the known paths are the dotted paths of the settings schema's leaves", () => {
   expect(settingPaths).toEqual([
     "tabs.stopAgentOnClose",
+    "tabs.newTabPosition",
     "worktrees.removeOnTabClose",
     "files.folderIcons",
     "sidebar.layout",
@@ -61,9 +62,12 @@ test("a count of minutes takes a whole number of 0 or more", () => {
 })
 
 test("a value is read at a leaf or a section, and the whole settings at no path", () => {
-  const settings = { ...defaultSettings, tabs: { stopAgentOnClose: false } }
+  const settings = {
+    ...defaultSettings,
+    tabs: { ...defaultSettings.tabs, stopAgentOnClose: false },
+  }
   expect(valueAt(settings, null)).toEqual(settings)
-  expect(valueAt(settings, "tabs")).toEqual({ stopAgentOnClose: false })
+  expect(valueAt(settings, "tabs")).toEqual(settings.tabs)
   expect(valueAt(settings, "tabs.stopAgentOnClose")).toBe(false)
   expect(valueAt(settings, "tabs.nope")).toBeUndefined()
   expect(valueAt(settings, "tabs.stopAgentOnClose.x")).toBeUndefined()

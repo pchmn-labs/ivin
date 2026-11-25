@@ -78,7 +78,7 @@ test("ivin settings set changes only that value in the file, and the app applies
   expect(run.stdout).toBe("tabs.stopAgentOnClose is now false.\n")
   expect(run.file).toBe(text.replace('"stopAgentOnClose": true', '"stopAgentOnClose": false'))
   expect(run.applied).toEqual({
-    tabs: { stopAgentOnClose: false },
+    tabs: { stopAgentOnClose: false, newTabPosition: "end" },
     worktrees: { removeOnTabClose: true },
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
@@ -93,7 +93,7 @@ test("an unknown setting exits 1 with the known ones, and the file is untouched"
   expect(run.code).toBe(1)
   expect(run.stderr).toContain('No setting is named "tabs.nope"')
   expect(run.stderr).toContain(
-    "tabs.stopAgentOnClose, worktrees.removeOnTabClose, files.folderIcons",
+    "tabs.stopAgentOnClose, tabs.newTabPosition, worktrees.removeOnTabClose, files.folderIcons",
   )
   expect(run.file).toBe(text)
 }, 10_000)
@@ -146,10 +146,10 @@ test("ivin settings get prints every setting, or the one at a path", async () =>
 
   expect(all.code).toBe(0)
   expect(all.stdout).toBe(
-    'tabs.stopAgentOnClose = true\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\nsidebar.layout = "rail"\nagents.stopWhenIdleMinutes = 10\nupdates.automaticCheck = true\nupdates.beta = false\n',
+    'tabs.stopAgentOnClose = true\ntabs.newTabPosition = "end"\nworktrees.removeOnTabClose = true\nfiles.folderIcons = true\nsidebar.layout = "rail"\nagents.stopWhenIdleMinutes = 10\nupdates.automaticCheck = true\nupdates.beta = false\n',
   )
   expect(one.stdout).toBe("true\n")
-  expect(section.stdout).toBe("tabs.stopAgentOnClose = true\n")
+  expect(section.stdout).toBe('tabs.stopAgentOnClose = true\ntabs.newTabPosition = "end"\n')
   expect(unknown.code).toBe(1)
   expect(unknown.stderr).toContain('No setting is named "nope"')
 }, 10_000)
@@ -163,7 +163,7 @@ test("--json prints the values as JSON", async () => {
     ok: true,
     path: null,
     value: {
-      tabs: { stopAgentOnClose: false },
+      tabs: { stopAgentOnClose: false, newTabPosition: "end" },
       worktrees: { removeOnTabClose: true },
       files: { folderIcons: true },
       sidebar: { layout: "rail" },

@@ -19,6 +19,7 @@ export const coreKeybindings: ReadonlyArray<DefaultKeybinding> = [
   { key: "mod+shift+backspace", command: "session.archive", when: null, pluginId: null },
   { key: "mod+shift+a", command: "session.showArchived", when: null, pluginId: null },
   { key: "mod+backspace", command: "session.delete", when: "archivedSessions", pluginId: null },
+  { key: "mod+t", command: "tab.new", when: null, pluginId: null },
   { key: "mod+w", command: "tab.close", when: null, pluginId: null },
   { key: "ctrl+shift+pageup", command: "tab.moveLeft", when: null, pluginId: null },
   { key: "ctrl+shift+pagedown", command: "tab.moveRight", when: null, pluginId: null },

@@ -20,14 +20,25 @@ function WithKeys({ children }: { children: ReactNode }) {
 
 const setup = async (
   status: SessionStatus,
-  options: { stopAgentOnClose?: boolean; harness?: Harness; others?: ReadonlyArray<string> } = {},
+  options: {
+    stopAgentOnClose?: boolean
+    newTabPosition?: "end" | "afterCurrent"
+    harness?: Harness
+    others?: ReadonlyArray<string>
+  } = {},
 ) => {
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
-  if (options.stopAgentOnClose === false) {
+  if (options.stopAgentOnClose === false || options.newTabPosition) {
     server.setUserSettings({
-      settings: { ...defaultSettings, tabs: { stopAgentOnClose: false } },
+      settings: {
+        ...defaultSettings,
+        tabs: {
+          stopAgentOnClose: options.stopAgentOnClose ?? defaultSettings.tabs.stopAgentOnClose,
+          newTabPosition: options.newTabPosition ?? defaultSettings.tabs.newTabPosition,
+        },
+      },
       problem: null,
     })
   }
@@ -162,4 +173,40 @@ test("the tab list holds only tabs: its close buttons are out of the Tab order a
     expect(close.closest("[aria-hidden=true]")).not.toBeNull()
   }
   expect(page.getByRole("button", { name: /^Close / }).query()).toBeNull()
+})
+
+test("mod+T starts a session whose tab goes at the end of the bar", async () => {
+  const server = await setup("idle", { others: ["a", "b"] })
+  await page.getByRole("tab", { name: /Idle a/ }).click()
+  await expect
+    .element(page.getByRole("tab", { name: /Idle a/ }))
+    .toHaveAttribute("aria-selected", "true")
+  await userEvent.keyboard(`{${mod}>}t{/${mod}}`)
+  await expect.poll(() => server.tabOrder("/p").length).toBe(4)
+  expect(server.tabOrder("/p").slice(0, 3)).toEqual(["a", "b", "s1"])
+})
+
+test("mod+T puts the new tab after the selected one when the setting says so", async () => {
+  const server = await setup("idle", { others: ["a", "b"], newTabPosition: "afterCurrent" })
+  await page.getByRole("tab", { name: /Idle a/ }).click()
+  await expect
+    .element(page.getByRole("tab", { name: /Idle a/ }))
+    .toHaveAttribute("aria-selected", "true")
+  await userEvent.keyboard(`{${mod}>}t{/${mod}}`)
+  await expect.poll(() => server.tabOrder("/p").length).toBe(4)
+  const order = server.tabOrder("/p")
+  expect(order[0]).toBe("a")
+  expect(order[1]).not.toBe("b")
+  expect(order.slice(2)).toEqual(["b", "s1"])
+})
+
+test("the new session button of the tab bar follows the same setting", async () => {
+  const server = await setup("idle", { others: ["a", "b"], newTabPosition: "afterCurrent" })
+  await page.getByRole("tab", { name: /Idle a/ }).click()
+  await expect
+    .element(page.getByRole("tab", { name: /Idle a/ }))
+    .toHaveAttribute("aria-selected", "true")
+  await page.getByRole("button", { name: "New session" }).click()
+  await expect.poll(() => server.tabOrder("/p").length).toBe(4)
+  expect(server.tabOrder("/p").slice(2)).toEqual(["b", "s1"])
 })

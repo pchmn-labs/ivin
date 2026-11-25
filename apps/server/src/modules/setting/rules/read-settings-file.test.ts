@@ -10,7 +10,7 @@ test("a missing or empty file holds the default settings: every switch on, the r
   expect(readWithDefaults(initial, null)).toEqual(initial)
   expect(readWithDefaults(initial, " \n")).toEqual(initial)
   expect(defaultSettings).toEqual({
-    tabs: { stopAgentOnClose: true },
+    tabs: { stopAgentOnClose: true, newTabPosition: "end" },
     worktrees: { removeOnTabClose: true },
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
@@ -22,7 +22,7 @@ test("a missing or empty file holds the default settings: every switch on, the r
 test("a setting in the file replaces its default, and one left out falls back to it", () => {
   const off = {
     settings: {
-      tabs: { stopAgentOnClose: false },
+      tabs: { stopAgentOnClose: false, newTabPosition: "afterCurrent" as const },
       worktrees: { removeOnTabClose: false },
       files: { folderIcons: false },
       sidebar: { layout: "strip" as const },
@@ -33,7 +33,7 @@ test("a setting in the file replaces its default, and one left out falls back to
   }
   const text = `{
     // keep agents running
-    "tabs": { "stopAgentOnClose": false, },
+    "tabs": { "stopAgentOnClose": false, "newTabPosition": "afterCurrent" },
     "files": { "folderIcons": false },
     "sidebar": { "layout": "strip" },
     "agents": { "stopWhenIdleMinutes": 0 },
@@ -41,7 +41,7 @@ test("a setting in the file replaces its default, and one left out falls back to
   }`
   expect(readWithDefaults(off, text)).toEqual({
     settings: {
-      tabs: { stopAgentOnClose: false },
+      tabs: { stopAgentOnClose: false, newTabPosition: "afterCurrent" as const },
       worktrees: { removeOnTabClose: true },
       files: { folderIcons: false },
       sidebar: { layout: "strip" },
@@ -54,7 +54,7 @@ test("a setting in the file replaces its default, and one left out falls back to
 
 test("an invalid file keeps the previous settings and names its problem", () => {
   const previous = {
-    settings: { ...defaultSettings, tabs: { stopAgentOnClose: false } },
+    settings: { ...defaultSettings, tabs: { ...defaultSettings.tabs, stopAgentOnClose: false } },
     problem: null,
   }
   expect(readWithDefaults(previous, "{")).toEqual({

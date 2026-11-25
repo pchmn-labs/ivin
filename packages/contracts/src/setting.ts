@@ -2,7 +2,10 @@ import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
 
 export const Settings = Schema.Struct({
-  tabs: Schema.Struct({ stopAgentOnClose: Schema.Boolean }),
+  tabs: Schema.Struct({
+    stopAgentOnClose: Schema.Boolean,
+    newTabPosition: Schema.Literals(["end", "afterCurrent"]),
+  }),
   worktrees: Schema.Struct({ removeOnTabClose: Schema.Boolean }),
   files: Schema.Struct({ folderIcons: Schema.Boolean }),
   sidebar: Schema.Struct({ layout: Schema.Literals(["rail", "strip"]) }),
@@ -14,7 +17,7 @@ export const Settings = Schema.Struct({
 export type Settings = typeof Settings.Type
 
 export const defaultSettings: Settings = {
-  tabs: { stopAgentOnClose: true },
+  tabs: { stopAgentOnClose: true, newTabPosition: "end" },
   worktrees: { removeOnTabClose: true },
   files: { folderIcons: true },
   sidebar: { layout: "rail" },
@@ -55,13 +58,23 @@ export const settingSections: ReadonlyArray<SettingSection> = [
   {
     key: "tabs",
     title: "Tabs",
-    description: "What happens when you close a session's tab.",
+    description: "How session tabs open and close.",
     settings: [
       {
         path: "tabs.stopAgentOnClose",
         label: "Stop the agent when its tab closes",
         description:
           "Closing the tab of a working session asks first, then stops its agent. Off, the agent keeps working with no tab open.",
+      },
+      {
+        path: "tabs.newTabPosition",
+        label: "New tab opens",
+        description:
+          "Where the New tab key, which starts a new session, puts its tab. At the end of the tab bar, or right after the selected tab.",
+        choices: choicesOf(Settings.fields.tabs.fields.newTabPosition, {
+          end: "At the end",
+          afterCurrent: "Next to the selected tab",
+        }),
       },
     ],
   },
