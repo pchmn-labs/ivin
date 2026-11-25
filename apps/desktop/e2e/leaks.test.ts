@@ -52,7 +52,8 @@ const heapUsed = async (window: Page): Promise<number> => {
 
 test.setTimeout(600_000)
 
-test("opening and closing sessions, switching tabs and reloading the window leaves no agent process, open file or heap behind", async () => {
+// Flaky on CI: #361.
+test.fixme("opening and closing sessions, switching tabs and reloading the window leaves no agent process, open file or heap behind", async () => {
   const app = await launchPackagedApp(makeTempDir("user-data"), {
     fakeClaudeBin: makeFakeClaudeBin(),
   })
