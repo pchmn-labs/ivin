@@ -181,6 +181,11 @@
   padding: var(--iv-space-1) 10px;
 }
 
+/* Puts the images 10px from the bubble's top edge, as from its left edge. */
+.iv-turn__steer .iv-message-images {
+  margin-top: 6px;
+}
+
 .iv-turn__summary {
   display: flex;
   align-items: center;
