@@ -14,22 +14,17 @@ The default vocabulary: `needs-triage`, `ready-for-agent`, `wontfix`, `bug`, `en
 
 ### Domain docs
 
-Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Read `docs/agents/domain.md` before exploring an area, and when a change runs into an ADR.
+Single-context: one `GLOSSARY.md` for the domain's terms and `docs/adr/` for its decisions, at the repo root. `docs/agents/domain.md` says what to do when a change runs into an ADR.
 
 ### Design of record
 
-`docs/architecture/` is the design the code follows: one file per module of its Domain model, and `README.md` for the rest. `DESIGN.md` is the design the UI follows. Read them before exploring an area. A change that departs from one updates it in the same PR; in `docs/architecture/`, it updates the file of the module it touches.
+`docs/architecture/` is the design the code follows: one file per module of its Domain model, and `README.md` for the rest. `DESIGN.md` is the design the UI follows. A change that departs from one updates it in the same PR; in `docs/architecture/`, it updates the file of the module it touches.
 
 ### Conventions
 
-Read `docs/conventions/README.md` before writing code anywhere, then the file for the package you write in:
+`docs/conventions/` holds how code is written: `README.md` for every package, and one file for each of `apps/server`, `packages/harness`, `packages/ui` and `plugins`.
 
-- `apps/server/`: `docs/conventions/server.md`
-- `packages/harness/`: `docs/conventions/harness.md`
-- `packages/ui/`: `docs/conventions/ui.md`
-- `plugins/`: `docs/conventions/plugins.md`
-
-Read `docs/finished-features.md` before specifying, ticketing or building anything a user sees or triggers.
+`docs/finished-features.md` lists what a feature the user sees is often missing.
 
 ### Launching ivin
 
@@ -39,7 +34,7 @@ To run ivin, show it to the user, capture its screens or show a UI change in a p
 
 Run a tool through the root `package.json` script that wraps it, because the script carries the config. With no script for what you need, call Vite+ through `pnpm vp <command>`, and any other tool through `pnpm exec <tool>`, never `npx`.
 
-While building, run the test files you touch: `pnpm test <path>…`. Run `pnpm check` once, before the commit: it runs the tests the branch changes reach, so don't run `pnpm test` on the same files just before it. After an edit that changes no code, only words in docs or a test's name, run `pnpm lint` and `pnpm format:check` instead. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI. `pnpm install-app` packages ivin and replaces `/Applications/ivin.app`: run it only when the user asks.
+While building, run the test files you touch: `pnpm test <path>…`. Run `pnpm check` before the commit: it runs the tests the branch changes reach. After an edit that changes no code, only words in docs or a test's name, run `pnpm lint` and `pnpm format:check` instead. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI. `pnpm install-app` packages ivin and replaces `/Applications/ivin.app`: run it only when the user asks.
 
 ### Grilling
 
