@@ -11,6 +11,8 @@ export type TranscriptRow =
       readonly itemIds: ReadonlyArray<string>
       // Every item of the turn, its user message and its answer included, to time it.
       readonly turnIds: ReadonlyArray<string>
+      // What the turn wrote after its last work item: the answer, drawn in this row so it stays one row when the turn ends.
+      readonly answerIds: ReadonlyArray<string>
     }
 
 const isSteer = (item: TranscriptItem) =>
@@ -43,34 +45,38 @@ export const transcriptRows = (all: ReadonlyArray<TranscriptItem>): TranscriptRo
     const rest = user ? turn.slice(1) : turn
     if (user) rows.push({ type: "item", id: user.id })
     const lastWork = rest.findLastIndex(isWork)
+    const after = rest.slice(lastWork + 1).filter((item) => item.type !== "usage")
     if (lastWork >= 0 || (user && index === turns.length - 1)) {
       rows.push({
         type: "work",
         id: `work:${turn[0]!.id}`,
         itemIds: rest.slice(0, lastWork + 1).map((item) => item.id),
         turnIds: turn.map((item) => item.id),
+        answerIds: after.map((item) => item.id),
       })
-    }
-    for (const item of rest.slice(lastWork + 1)) {
-      if (item.type !== "usage") rows.push({ type: "item", id: item.id })
+    } else {
+      for (const item of after) rows.push({ type: "item", id: item.id })
     }
   })
   return rows
 }
 
-// Every row after the last work row belongs to the last turn.
-export const runningTurnRows = (
-  rows: ReadonlyArray<TranscriptRow>,
-): ReadonlyArray<TranscriptRow> => {
+// While the turn runs, what it wrote after its last call heads a step of its work row.
+const runningTurnRows = (rows: ReadonlyArray<TranscriptRow>): ReadonlyArray<TranscriptRow> => {
   const index = rows.findLastIndex((row) => row.type === "work")
   const work = rows[index]
-  if (work?.type !== "work" || index === rows.length - 1) return rows
-  const after = rows.slice(index + 1).map((row) => row.id)
-  return [...rows.slice(0, index), { ...work, itemIds: [...work.itemIds, ...after] }]
+  if (work?.type !== "work") return rows
+  return [
+    ...rows.slice(0, index),
+    { ...work, itemIds: [...work.itemIds, ...work.answerIds], answerIds: [] },
+    ...rows.slice(index + 1),
+  ]
 }
 
 export const shownRows = (rows: ReadonlyArray<TranscriptRow>, live: boolean) =>
-  live ? runningTurnRows(rows) : rows.filter((row) => row.type === "item" || row.itemIds.length > 0)
+  live
+    ? runningTurnRows(rows)
+    : rows.filter((row) => row.type === "item" || row.itemIds.length + row.answerIds.length > 0)
 
 // A turn cut by paging starts with an item folded into its work row, so it has no message row.
 export const lastTurnMessageId = (rows: ReadonlyArray<TranscriptRow>): string | undefined => {

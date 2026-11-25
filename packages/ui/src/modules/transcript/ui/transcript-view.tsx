@@ -92,11 +92,18 @@ export function TranscriptView({
 function RowContent({ sessionId, row, live }: { sessionId: string; row: RowData; live: boolean }) {
   if (row.type === "item") return <TranscriptRow sessionId={sessionId} id={row.id} />
   return (
-    <div className="iv-transcript__column">
-      <div className="iv-transcript__item" data-testid="transcript-work">
-        <TurnWork sessionId={sessionId} rowId={row.id} live={live} />
-      </div>
-    </div>
+    <>
+      {(live || row.itemIds.length > 0) && (
+        <div className="iv-transcript__column">
+          <div className="iv-transcript__item" data-testid="transcript-work">
+            <TurnWork sessionId={sessionId} rowId={row.id} live={live} />
+          </div>
+        </div>
+      )}
+      {row.answerIds.map((id) => (
+        <TranscriptRow key={id} sessionId={sessionId} id={id} />
+      ))}
+    </>
   )
 }
 

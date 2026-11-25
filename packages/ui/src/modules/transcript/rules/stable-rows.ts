@@ -12,7 +12,10 @@ const sameIds = (a: ReadonlyArray<string>, b: ReadonlyArray<string>) =>
 const sameRow = (a: TranscriptRow, b: TranscriptRow) =>
   a.type === "item" || b.type === "item"
     ? a.type === b.type && a.id === b.id
-    : a.id === b.id && sameIds(a.itemIds, b.itemIds) && sameIds(a.turnIds, b.turnIds)
+    : a.id === b.id &&
+      sameIds(a.itemIds, b.itemIds) &&
+      sameIds(a.turnIds, b.turnIds) &&
+      sameIds(a.answerIds, b.answerIds)
 
 // Keeps each unchanged row, and the whole value when no row changed.
 export const stableRows = (previous: Shown, next: ReadonlyArray<TranscriptRow>): Shown => {

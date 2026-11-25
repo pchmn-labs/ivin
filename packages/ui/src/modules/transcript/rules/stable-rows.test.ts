@@ -8,6 +8,7 @@ const work = (id: string, itemIds: string[]): TranscriptRow => ({
   id,
   itemIds,
   turnIds: itemIds,
+  answerIds: [],
 })
 
 test("the same rows keep the previous value", () => {

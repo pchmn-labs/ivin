@@ -5,7 +5,7 @@ import {
   duration,
   lastTurnMessageId,
   pinnedCalls,
-  runningTurnRows,
+  shownRows,
   earlierSteps,
   stepOpenByDefault,
   transcriptRows,
@@ -52,7 +52,7 @@ const usage = (id: string): TranscriptItem => ({
   costUsd: null,
 })
 
-test("a turn's work up to its last tool call is one row, and its answer stays a row after it", () => {
+test("a turn's work up to its last tool call is one row, and its answer rides in the same row", () => {
   const rows = transcriptRows([
     user("u1"),
     text("t1"),
@@ -71,15 +71,15 @@ test("a turn's work up to its last tool call is one row, and its answer stays a 
       id: "work:u1",
       itemIds: ["t1", "c1", "t2", "c2"],
       turnIds: ["u1", "t1", "c1", "t2", "c2", "answer", "usage"],
+      answerIds: ["answer"],
     },
-    { type: "item", id: "answer" },
     { type: "item", id: "u2" },
-    { type: "work", id: "work:u2", itemIds: [], turnIds: ["u2"] },
+    { type: "work", id: "work:u2", itemIds: [], turnIds: ["u2"], answerIds: [] },
   ])
 })
 
 test("while the last turn runs, its text after the last tool call heads a step, not the answer", () => {
-  const rows = runningTurnRows(
+  const rows = shownRows(
     transcriptRows([
       user("u1"),
       call("c0"),
@@ -89,32 +89,39 @@ test("while the last turn runs, its text after the last tool call heads a step, 
       call("c1"),
       text("t2"),
     ]),
+    true,
   )
 
   expect(rows).toEqual([
     { type: "item", id: "u1" },
-    { type: "work", id: "work:u1", itemIds: ["c0"], turnIds: ["u1", "c0", "a1"] },
-    { type: "item", id: "a1" },
+    {
+      type: "work",
+      id: "work:u1",
+      itemIds: ["c0"],
+      turnIds: ["u1", "c0", "a1"],
+      answerIds: ["a1"],
+    },
     { type: "item", id: "u2" },
     {
       type: "work",
       id: "work:u2",
       itemIds: ["t1", "c1", "t2"],
       turnIds: ["u2", "t1", "c1", "t2"],
+      answerIds: [],
     },
   ])
 })
 
 test("a running turn with no tool call yet has its text in its work row", () => {
-  expect(runningTurnRows(transcriptRows([user("u1"), text("t1")]))).toEqual([
+  expect(shownRows(transcriptRows([user("u1"), text("t1")]), true)).toEqual([
     { type: "item", id: "u1" },
-    { type: "work", id: "work:u1", itemIds: ["t1"], turnIds: ["u1", "t1"] },
+    { type: "work", id: "work:u1", itemIds: ["t1"], turnIds: ["u1", "t1"], answerIds: [] },
   ])
 })
 
 test("a transcript with no work row is left as it is while running", () => {
   const rows = transcriptRows([text("a1")])
-  expect(runningTurnRows(rows)).toBe(rows)
+  expect(shownRows(rows, true)).toBe(rows)
 })
 
 test("an earlier turn with no tool call has no work row", () => {
@@ -128,8 +135,13 @@ test("an earlier turn with no tool call has no work row", () => {
 
 test("items before the first user message are a turn cut by paging", () => {
   expect(transcriptRows([call("c1"), text("answer")])).toEqual([
-    { type: "work", id: "work:c1", itemIds: ["c1"], turnIds: ["c1", "answer"] },
-    { type: "item", id: "answer" },
+    {
+      type: "work",
+      id: "work:c1",
+      itemIds: ["c1"],
+      turnIds: ["c1", "answer"],
+      answerIds: ["answer"],
+    },
   ])
 })
 
@@ -247,12 +259,12 @@ test("a steer stays in the running turn's work, and only a message that starts a
       id: "work:u1",
       itemIds: ["c1", "s1", "s2"],
       turnIds: ["u1", "c1", "s1", "s2", "answer"],
+      answerIds: ["answer"],
     },
-    { type: "item", id: "answer" },
     { type: "item", id: "u2" },
-    { type: "work", id: "work:u2", itemIds: [], turnIds: ["u2"] },
+    { type: "work", id: "work:u2", itemIds: [], turnIds: ["u2"], answerIds: [] },
   ])
-  expect(lastTurnMessageId(rows.slice(0, 3))).toBe("u1")
+  expect(lastTurnMessageId(rows.slice(0, 2))).toBe("u1")
 })
 
 test("a steer opens a step, and the sentence the agent writes next heads that step", () => {
@@ -287,10 +299,11 @@ const question = (id: string, toolCallId: string): TranscriptItem => ({
   answers: [],
 })
 
-test("the agent's questions replace the tool call that asked them, as a row of their own", () => {
+test("the agent's questions replace the tool call that asked them, in the turn's answer", () => {
   const items = [user("u"), text("t1"), call("ask", "other"), question("q", "ask"), text("t2")]
 
-  expect(transcriptRows(items).map((row) => row.id)).toEqual(["u", "work:u", "t1", "q", "t2"])
+  expect(transcriptRows(items).map((row) => row.id)).toEqual(["u", "work:u"])
+  expect(transcriptRows(items)[1]).toMatchObject({ answerIds: ["t1", "q", "t2"] })
 })
 
 test("questions asked before the turn's last tool call stay in its work, as a step's child", () => {
