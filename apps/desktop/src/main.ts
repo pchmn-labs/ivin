@@ -60,6 +60,9 @@ if (openInBackground && process.platform === "darwin") app.setActivationPolicy("
 const serverEntry = app.isPackaged
   ? join(app.getAppPath(), "server/main.js")
   : join(import.meta.dirname, "../../server/dist/main.js")
+const pluginHostEntry = app.isPackaged
+  ? join(process.resourcesPath, "plugin-host/plugin-host.js")
+  : join(import.meta.dirname, "../../server/dist/plugin-host.js")
 const cliEntry = app.isPackaged
   ? join(process.resourcesPath, "cli/ivin.js")
   : join(import.meta.dirname, "../../cli/dist/ivin.js")
@@ -331,6 +334,10 @@ void app.whenReady().then(() => {
     pnpmFolder,
     "--cli-command",
     cliCommand,
+    "--plugin-host",
+    pluginHostEntry,
+    "--plugin-host-runtime",
+    process.execPath,
   ]
   let nextRestart = createRestartPolicy()
   startServer = (options) => {

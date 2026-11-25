@@ -9,13 +9,15 @@ files:
     filter: ["main.js", "preload.cjs"]
   - from: ../server/dist
     to: server
-    filter: ["**/*", "!pnpm/**"]
+    filter: ["**/*", "!pnpm/**", "!plugin-host.js"]
   - from: ../../packages/ui/dist
     to: renderer
   - package.json
 extraResources:
   - from: ../cli/dist
     to: cli
+  - from: ../server/dist/plugin-host.js
+    to: plugin-host/plugin-host.js
   - from: ../server/skills
     to: skills
   - from: ../server/dist/pnpm

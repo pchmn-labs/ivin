@@ -35,6 +35,7 @@ const cliSocketTags = [
   "annotation.add",
   "plugin.lock",
   "plugin.readLog",
+  "plugin.status",
   "server.doctor",
   "session.rename",
   "setting.get",

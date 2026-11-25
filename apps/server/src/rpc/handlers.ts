@@ -31,7 +31,9 @@ import { discardChanges } from "../modules/file/usecases/discard-changes.ts"
 import { writeFile } from "../modules/file/usecases/write-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
+import { listPluginStatus } from "../modules/plugin/usecases/list-plugin-status.ts"
 import { listPlugins } from "../modules/plugin/usecases/list-plugins.ts"
+import { layerServerHalves } from "../modules/plugin/usecases/server-halves.ts"
 import { lockPlugin } from "../modules/plugin/usecases/lock-plugin.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
@@ -108,7 +110,12 @@ import { listWorktrees } from "../modules/worktree/usecases/list-worktrees.ts"
 import { newWorktreeBase } from "../modules/worktree/usecases/new-worktree-base.ts"
 
 export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
-  Layer.mergeAll(layerProjectTabs, layerFirstMessageReading, layerUnrestoredSubViewsDropped).pipe(
+  Layer.mergeAll(
+    layerProjectTabs,
+    layerFirstMessageReading,
+    layerUnrestoredSubViewsDropped,
+    layerServerHalves,
+  ).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
     Layer.provideMerge(Layer.mergeAll(layerSessionTabs, layerSessionsWithTab)),
     Layer.provideMerge(sessionRuns),
@@ -174,6 +181,7 @@ export const handlers = Rpcs.toLayer(
       "plugin.list": () => listPlugins,
       "plugin.reportFailure": ({ id, reason }) => reportPluginFailure(id, reason),
       "plugin.readLog": ({ id }) => readPluginLog(id),
+      "plugin.status": () => listPluginStatus,
       "plugin.lock": ({ id }) => lockPlugin(id),
       "setting.watch": () => watchSettings,
       "setting.get": ({ path }) => getSetting(path),
