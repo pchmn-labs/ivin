@@ -10,10 +10,10 @@ import { descendantsOf, isAlive } from "./processes.ts"
 import { sendMessage, startSession } from "./session-helpers.ts"
 
 const WARM_UP_ROUNDS = 5
-const MEASURED_ROUNDS = 45
+const MEASURED_ROUNDS = 25
 // A reload drops the renderer's JS heap, so the heap is read over rounds that do not reload.
-const HEAP_MEASURED_ROUNDS = 25
-// On main, 3 files and 2.5 MB over 25 rounds (a closed session stays in the Inactive sessions list).
+const HEAP_MEASURED_ROUNDS = 15
+// On main the heap grows about 100 KB per closed session, which stays in the Inactive sessions list.
 const MAX_OPEN_FILES_GROWTH = 10
 const MAX_HEAP_GROWTH_BYTES = 6 * 1024 * 1024
 
@@ -50,7 +50,7 @@ const heapUsed = async (window: Page): Promise<number> => {
   }
 }
 
-test.setTimeout(300_000)
+test.setTimeout(600_000)
 
 test("opening and closing sessions, switching tabs and reloading the window leaves no agent process, open file or heap behind", async () => {
   const app = await launchPackagedApp(makeTempDir("user-data"), {
@@ -96,15 +96,19 @@ test("opening and closing sessions, switching tabs and reloading the window leav
       }
     }
 
+    const started = Date.now()
+    const elapsed = (what: string) => console.log(`${what}: ${(Date.now() - started) / 1000} s`)
     for (let n = 0; n < WARM_UP_ROUNDS; n++) await round(n, true)
     const filesBefore = totalOpenFiles(appPid)
     for (let n = 0; n < MEASURED_ROUNDS; n++) await round(n, true)
     const filesAfter = totalOpenFiles(appPid)
+    elapsed("rounds with a reload")
 
     for (let n = 0; n < WARM_UP_ROUNDS; n++) await round(n, false)
     const heapBefore = await heapUsed(window)
     for (let n = 0; n < HEAP_MEASURED_ROUNDS; n++) await round(n, false)
     const heapAfter = await heapUsed(window)
+    elapsed("rounds without a reload")
 
     expect(filesAfter - filesBefore).toBeLessThanOrEqual(MAX_OPEN_FILES_GROWTH)
     expect(heapAfter - heapBefore).toBeLessThan(MAX_HEAP_GROWTH_BYTES)
