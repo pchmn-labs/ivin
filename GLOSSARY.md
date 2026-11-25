@@ -5,8 +5,8 @@ The terms ivin's code, docs and tickets use.
 ## Language
 
 **Project**:
-A folder, or a `.code-workspace` holding several folders, with its settings. Several projects are open at once in a window, in order; one is selected, and each has its own tab bar.
-_Avoid_: workspace, repo
+A folder, or a `.code-workspace` holding several folders, with its settings. Each folder of a project is a **project folder**, and each is its own git repository. Several projects are open at once in a window, in order; one is selected, and each has its own tab bar.
+_Avoid_: workspace, repo, root
 
 **Trusted project**:
 A project folder the user has said ivin may run git and sessions in, asked the first time the folder is opened. The trust covers the project's worktrees, and is never asked again for that folder.
@@ -20,7 +20,7 @@ A linked git worktree of the project's repository, on its own branch, that a ses
 _Avoid_: workspace, clone
 
 **Working folder**:
-Where a session's agent runs: the checkout or one worktree. Several sessions may share one.
+Where a session's agent runs: the checkout, one worktree, or, for a project with several project folders, a folder ivin creates that holds one worktree per project folder. Several sessions may share a checkout or a worktree.
 _Avoid_: cwd, workspace
 
 **Session**:
