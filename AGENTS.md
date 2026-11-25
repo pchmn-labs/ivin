@@ -18,7 +18,7 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. Read `docs/a
 
 ### Design of record
 
-`docs/architecture/` is the design the code follows: one file per module of its Domain model, and `README.md` for the rest. `DESIGN.md` is the design the UI follows. Read them before exploring an area. A change that departs from one updates it in the same PR; in `docs/architecture/`, it updates the file of the module it touches.
+`docs/architecture/` is the design the code follows: one file per module of its Domain model, and `README.md` for the rest. `DESIGN.md` is the design the UI follows. Read the file of the module you change, and `DESIGN.md` when you change the UI. A change that departs from one updates it in the same PR; in `docs/architecture/`, it updates the file of the module it touches.
 
 ### Conventions
 
@@ -29,7 +29,7 @@ Read `docs/conventions/README.md` before writing code anywhere, then the file fo
 - `packages/ui/`: `docs/conventions/ui.md`
 - `plugins/`: `docs/conventions/plugins.md`
 
-Read `docs/finished-features.md` before specifying, ticketing or building anything a user sees or triggers.
+Read `docs/finished-features.md` when you specify or ticket something a user sees or triggers, and when you review it.
 
 ### Launching ivin
 
