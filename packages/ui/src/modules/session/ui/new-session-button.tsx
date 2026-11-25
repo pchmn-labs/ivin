@@ -6,10 +6,12 @@ export function NewSessionButton({
   projectPath,
   icon,
   size,
+  after,
 }: {
   projectPath: string
   icon: IconProps["name"]
   size?: "sm" | "md"
+  after?: string | undefined
 }) {
   const startSession = useStartSession()
   return (
@@ -18,7 +20,7 @@ export function NewSessionButton({
       label="New session"
       tooltip="New session"
       {...(size && { size })}
-      onClick={() => void startSession(projectPath)}
+      onClick={() => void startSession(projectPath, after)}
     />
   )
 }

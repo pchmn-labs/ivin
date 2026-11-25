@@ -37,8 +37,7 @@ export const TabSubViews = Schema.Struct({
 export type TabSubViews = typeof TabSubViews.Type
 
 export const TabRpcs = RpcGroup.make(
-  // Selects the session's tab, creating it at the end of its project's bar if it has none, or
-  // right after the tab `after` names when it has one. A session that already has a tab keeps its place.
+  // Selects the session's tab, creating it at the end of its project's bar, or right after `after`'s tab.
   Rpc.make("tab.open", {
     payload: { sessionId: Schema.String, after: Schema.optional(Schema.String) },
     success: ProjectTabs,

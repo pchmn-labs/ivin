@@ -239,14 +239,13 @@ export function TabBar({ projectPath }: { projectPath: string }) {
     if (next !== null) reorder({ projectPath, sessionIds: next })
   }
   const startSession = useStartSession()
-  const { tabs: settings } = useAtomValue(settingsAtom)
+  const { tabs: tabSettings } = useAtomValue(settingsAtom)
+  const newTabAfter =
+    tabSettings.newTabPosition === "afterCurrent" ? (selectedSessionId ?? undefined) : undefined
   useCommandHandlers({
     "tab.moveLeft": () => step(-1),
     "tab.moveRight": () => step(1),
-    "tab.new": () => {
-      const after = settings.newTabPosition === "afterCurrent" ? selectedSessionId : null
-      void startSession(projectPath, after ?? undefined)
-    },
+    "tab.new": () => void startSession(projectPath, newTabAfter),
   })
 
   const focusableId = selectedSessionId ?? tabs[0]?.sessionId
@@ -278,7 +277,7 @@ export function TabBar({ projectPath }: { projectPath: string }) {
           />
         ))}
       </div>
-      <NewSessionButton projectPath={projectPath} icon="plus" size="sm" />
+      <NewSessionButton projectPath={projectPath} icon="plus" size="sm" after={newTabAfter} />
     </div>
   )
 }

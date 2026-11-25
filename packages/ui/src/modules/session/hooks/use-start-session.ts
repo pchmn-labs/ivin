@@ -12,10 +12,7 @@ export function useStartSession() {
   return async (projectPath: string, after?: string) => {
     setFailure(null)
     const exit = await createSession({ projectPath })
-    if (Exit.isSuccess(exit))
-      openTab(
-        after === undefined ? { sessionId: exit.value.id } : { sessionId: exit.value.id, after },
-      )
+    if (Exit.isSuccess(exit)) openTab({ sessionId: exit.value.id, after })
     else if (!Cause.hasInterruptsOnly(exit.cause)) {
       setFailure({ projectPath, failure: createSessionFailure(Cause.squash(exit.cause)) })
     }

@@ -5,13 +5,11 @@ import { tabsOf } from "./list-tabs.ts"
 
 export const openTabAtom = serverRuntime.fn<{
   readonly sessionId: string
-  readonly after?: string
+  readonly after?: string | undefined
 }>()(
   Effect.fnUntraced(function* ({ sessionId, after }) {
     const client = yield* ServerClient
-    const tabs = yield* client["tab.open"](
-      after === undefined ? { sessionId } : { sessionId, after },
-    )
+    const tabs = yield* client["tab.open"]({ sessionId, after })
     yield* tabsOf(tabs.projectPath).set(tabs)
     const projects = yield* projectsAtom.get
     if (projects !== null && projects.selectedPath !== tabs.projectPath) {
