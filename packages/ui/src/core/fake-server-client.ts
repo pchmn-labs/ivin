@@ -318,6 +318,17 @@ export const makeFakeServer = (
         ? Effect.succeed(run())
         : Effect.fail(new SessionNotFound({ sessionId })),
     )
+  const storedImages = new Map<string, { bytes: number; sentAt: number; deleted: boolean }>()
+  const keptImages = (olderThanDays: number | undefined) =>
+    [...storedImages.values()].filter(
+      (image) =>
+        !image.deleted &&
+        (olderThanDays === undefined || image.sentAt < Date.now() - olderThanDays * 86_400_000),
+    )
+  const spaceOf = (images: ReadonlyArray<{ bytes: number }>) => ({
+    images: images.length,
+    bytes: images.reduce((sum, image) => sum + image.bytes, 0),
+  })
   const failing = new Set<string>()
   const failingUntilRecovered = new Set<string>()
   const untrustedProjects = new Set<string>()
@@ -822,6 +833,13 @@ export const makeFakeServer = (
           const items = itemsOf(input.sessionId)
           const isFirstMessage = !session.started
           const sent = input.images ?? []
+          for (const image of sent) {
+            storedImages.set(image.id, {
+              bytes: Math.floor((image.base64.length * 3) / 4),
+              sentAt: Date.now(),
+              deleted: false,
+            })
+          }
           const unsent = {
             id: input.messageId,
             text: input.text,
@@ -1261,6 +1279,14 @@ export const makeFakeServer = (
             : [],
         ),
       ),
+    "transcript.getImageSpace": ({ olderThanDays }: { olderThanDays?: number | undefined }) =>
+      Effect.sync(() => spaceOf(keptImages(olderThanDays))),
+    "transcript.deleteImages": ({ olderThanDays }: { olderThanDays?: number | undefined }) =>
+      Effect.sync(() => {
+        const kept = keptImages(olderThanDays)
+        for (const image of kept) image.deleted = true
+        return spaceOf(kept)
+      }),
     "annotation.add": ({
       target,
       ns,

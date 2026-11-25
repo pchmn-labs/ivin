@@ -268,6 +268,18 @@ export const migrations: readonly Migration[] = [
     ALTER TABLE sub_views_next RENAME TO sub_views;
     CREATE INDEX sub_views_by_session ON sub_views (session_id, position)`,
   },
+  {
+    version: 26,
+    sql: `ALTER TABLE images ADD COLUMN sent_at INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE images ADD COLUMN deleted_at INTEGER;
+    UPDATE images SET sent_at = COALESCE(
+      (SELECT MIN(e.at) FROM transcript_events e, json_each(e.payload, '$.images') j
+       WHERE e.session_id = images.session_id AND e.type = 'user_message'
+         AND json_extract(j.value, '$.id') = images.id),
+      (SELECT created_at FROM sessions WHERE id = images.session_id),
+      0
+    )`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

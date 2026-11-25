@@ -268,3 +268,111 @@ test("an image whose id leaves the session's folder is refused and writes no fil
   expect(exit._tag).toBe("Failure")
   expect(existsSync(join(folder, "escaped.png"))).toBe(false)
 })
+
+const DAY = 24 * 60 * 60 * 1000
+
+const sendIn = (client: Client, projectPath: string, image: ImageData) =>
+  Effect.gen(function* () {
+    const session = yield* client["session.create"]({ projectPath })
+    yield* client["session.sendMessage"]({
+      sessionId: session.id,
+      messageId: `m-${image.id}`,
+      text: `[Image #${image.number}]`,
+      images: [image],
+    })
+    return session.id
+  })
+
+test("the space reported is the size of the image files", async () => {
+  const db = newDatabase()
+  const folder = newFolder()
+  const { space, sessionId } = await withServer(
+    db,
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const sessionId = yield* sendIn(client, "/p", screenshot)
+        yield* sendIn(client, "/q", photo)
+        return { space: yield* client["transcript.getImageSpace"]({}), sessionId }
+      }),
+    { cycle: true },
+    folder,
+  )
+
+  const screenshotBytes = readFileSync(join(folder, sessionId, "i1.png")).byteLength
+  const photoBytes = Buffer.from(photo.base64, "base64").byteLength
+  expect(space).toEqual({ images: 2, bytes: screenshotBytes + photoBytes })
+})
+
+test("deleting the images older than N days removes exactly those files, and their transcripts still load", async () => {
+  const db = newDatabase()
+  const folder = newFolder()
+  const result = await withServer(
+    db,
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const oldSession = yield* sendIn(client, "/p", screenshot)
+        const newSession = yield* sendIn(client, "/q", photo)
+        db.prepare("UPDATE images SET sent_at = sent_at - ? WHERE id = 'i1'").run(31 * DAY)
+        const before = yield* client["transcript.getImageSpace"]({ olderThanDays: 30 })
+        const freed = yield* client["transcript.deleteImages"]({ olderThanDays: 30 })
+        return {
+          oldSession,
+          newSession,
+          before,
+          freed,
+          after: yield* client["transcript.getImageSpace"]({}),
+          oldPage: yield* endOfTranscript(client, oldSession),
+          oldImages: yield* client["transcript.listImages"]({ sessionId: oldSession }),
+        }
+      }),
+    { cycle: true },
+    folder,
+  )
+
+  const screenshotBytes = Buffer.from(screenshot.base64, "base64").byteLength
+  const photoBytes = Buffer.from(photo.base64, "base64").byteLength
+  expect(result.before).toEqual({ images: 1, bytes: screenshotBytes })
+  expect(result.freed).toEqual({ images: 1, bytes: screenshotBytes })
+  expect(result.after).toEqual({ images: 1, bytes: photoBytes })
+  expect(existsSync(join(folder, result.oldSession, "i1.png"))).toBe(false)
+  expect(existsSync(join(folder, result.newSession, "i2.jpg"))).toBe(true)
+  expect(db.prepare("SELECT id FROM images WHERE deleted_at IS NOT NULL").all()).toEqual([
+    { id: "i1" },
+  ])
+  expect(result.oldPage.items[0]).toMatchObject({
+    role: "user",
+    text: "[Image #1]",
+    images: [{ id: "i1", number: 1, deleted: true }],
+  })
+  expect(result.oldImages).toMatchObject([{ id: "i1", deleted: true }])
+})
+
+test("deleting all images removes every file, and a session's next image takes the next number", async () => {
+  const db = newDatabase()
+  const folder = newFolder()
+  const result = await withServer(
+    db,
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const sessionId = yield* sendIn(client, "/p", screenshot)
+        yield* sendIn(client, "/q", photo)
+        const freed = yield* client["transcript.deleteImages"]({})
+        return {
+          freed,
+          after: yield* client["transcript.getImageSpace"]({}),
+          session: (yield* client["session.list"]({ projectPath: "/p" }))[0],
+          sessionId,
+        }
+      }),
+    { cycle: true },
+    folder,
+  )
+
+  expect(result.freed.images).toBe(2)
+  expect(result.after).toEqual({ images: 0, bytes: 0 })
+  expect(existsSync(join(folder, result.sessionId, "i1.png"))).toBe(false)
+  expect(result.session?.lastImageNumber).toBe(1)
+})

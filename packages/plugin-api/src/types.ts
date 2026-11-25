@@ -93,6 +93,7 @@ export interface ImageRef {
   readonly id: string
   readonly number: number
   readonly mediaType: "image/png" | "image/jpeg" | "image/gif" | "image/webp"
+  readonly deleted?: boolean | undefined
 }
 
 export interface ImageData extends ImageRef {

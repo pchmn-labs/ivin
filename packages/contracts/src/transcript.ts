@@ -15,8 +15,19 @@ export const ImageRef = Schema.Struct({
   id: Schema.String.check(Schema.isPattern(/^[A-Za-z0-9-]+$/)),
   number: Schema.Int,
   mediaType: ImageMediaType,
+  // The user deleted its file; the message keeps its marker.
+  deleted: Schema.optional(Schema.Boolean),
 })
 export type ImageRef = typeof ImageRef.Type
+
+export const ImageSpace = Schema.Struct({
+  images: Schema.Int,
+  bytes: Schema.Int,
+})
+export type ImageSpace = typeof ImageSpace.Type
+
+// Absent: every image.
+const OlderThanDays = Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)))
 
 export const ImageData = Schema.Struct({
   ...ImageRef.fields,
@@ -465,5 +476,15 @@ export const TranscriptRpcs = RpcGroup.make(
   Rpc.make("transcript.listImages", {
     payload: { sessionId: Schema.String },
     success: Schema.Array(SessionImage),
+  }),
+  // The images not deleted and sent more than `olderThanDays` days ago, and the size of their files.
+  Rpc.make("transcript.getImageSpace", {
+    payload: { olderThanDays: OlderThanDays },
+    success: ImageSpace,
+  }),
+  // Deletes those images' files, keeps their rows marked deleted, and returns what it freed.
+  Rpc.make("transcript.deleteImages", {
+    payload: { olderThanDays: OlderThanDays },
+    success: ImageSpace,
   }),
 )

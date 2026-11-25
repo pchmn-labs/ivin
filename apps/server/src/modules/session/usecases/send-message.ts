@@ -4,7 +4,7 @@ import {
   type WorkingFolderChoice,
   WorkingFolderDeleted,
 } from "@ivin/contracts/session"
-import { Effect } from "effect"
+import { Clock, Effect } from "effect"
 import { ImageStore } from "../../transcript/usecases/image-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { titleFromMessage } from "../rules/session-title.ts"
@@ -50,7 +50,7 @@ export const sendMessage = (
     if (title !== "") yield* store.setTitleIfUnset(sessionId, title)
     const session = (yield* store.findById(sessionId)) ?? found
     if (!found.started && title !== "") yield* (yield* FirstMessageReading).read(session, text)
-    yield* (yield* ImageStore).save(sessionId, images)
+    yield* (yield* ImageStore).save(sessionId, yield* Clock.currentTimeMillis, images)
     yield* runs.send(session, { id: messageId, text, images })
     return (yield* store.findById(sessionId)) ?? session
   })

@@ -90,6 +90,7 @@ import { layerSqliteTranscriptStore } from "../modules/transcript/adapters/sqlit
 import { layerFsImageStore } from "../modules/transcript/adapters/fs-image-store.ts"
 import { getItems } from "../modules/transcript/usecases/get-items.ts"
 import { getTaskItems } from "../modules/transcript/usecases/get-task-items.ts"
+import { deleteImages, getImageSpace } from "../modules/transcript/usecases/image-space.ts"
 import { listImages } from "../modules/transcript/usecases/list-images.ts"
 import { layerItemFeed } from "../modules/transcript/usecases/item-feed.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
@@ -246,6 +247,8 @@ export const handlers = Rpcs.toLayer(
       "transcript.watchUsage": ({ sessionId }) => watchUsage(sessionId),
       "transcript.getTaskItems": ({ sessionId, toolCallId }) => getTaskItems(sessionId, toolCallId),
       "transcript.listImages": ({ sessionId }) => listImages(sessionId),
+      "transcript.getImageSpace": ({ olderThanDays }) => getImageSpace(olderThanDays),
+      "transcript.deleteImages": ({ olderThanDays }) => deleteImages(olderThanDays),
     }),
   ),
 )
