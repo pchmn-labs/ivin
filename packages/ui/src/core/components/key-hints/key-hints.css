@@ -9,18 +9,16 @@
 }
 
 .iv-key-hints__hint {
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
 }
 
 .iv-key-hints kbd {
+  display: inline-flex;
+  align-items: center;
   margin-right: var(--iv-space-1);
   color: var(--iv-text-muted);
   font-family: var(--iv-font-sans);
   font-weight: var(--iv-weight-medium);
-}
-
-/* The font draws ↵ in the upper half of the line, above its label's centre. */
-.iv-key-hints kbd[data-key="↵"] {
-  display: inline-block;
-  transform: translateY(0.2em);
 }
