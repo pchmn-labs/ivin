@@ -48,6 +48,8 @@ export type IconName =
   | "arrow-left"
   | "arrow-right"
   | "arrows-left-right"
+  | "arrows-down-up"
+  | "enter"
   | "panel-left"
   | "new-session"
   | "search"
