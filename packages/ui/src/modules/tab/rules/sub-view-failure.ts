@@ -17,10 +17,17 @@ export const openDiffFailure = (error: unknown, path: string): ActionFailure =>
     ? { text: "This session no longer exists, so its diffs cannot be opened.", retryable: false }
     : { text: `The diff of ${fileName(path)} could not be opened. Retry.`, retryable: true }
 
-export const openViewFailure = (error: unknown, title: string): ActionFailure =>
-  errorTag(error) === "SessionNotFound"
-    ? { text: "This session no longer exists, so its views cannot be opened.", retryable: false }
-    : { text: `${title} could not be opened. Retry.`, retryable: true }
+export const openViewFailure = (error: unknown, view: string): ActionFailure => {
+  const tag = errorTag(error)
+  if (tag === "SessionNotFound")
+    return {
+      text: "This session no longer exists, so its views cannot be opened.",
+      retryable: false,
+    }
+  if (tag === "ViewNotDeclared")
+    return { text: `No active plugin provides the view ${view}.`, retryable: false }
+  return { text: `The view ${view} could not be opened. Retry.`, retryable: true }
+}
 
 export const closeFileFailure = (subView: SubView): string =>
   `${fileName(pathOf(subView) ?? subView.view)} could not be closed. Retry.`

@@ -163,7 +163,7 @@ test("a view the manifest does not declare is refused", async () => {
     ctx.views.register("note", { component: Note })
     ctx.views.register("ghost", { component: Note })
   })
-  expect(await open("demo/ghost", { id: 1 })).toMatchObject({ retryable: true })
+  expect(await open("demo/ghost", { id: 1 })).toMatchObject({ retryable: false })
 })
 
 test("a plugin that replaces files provides its own files/file view", async () => {

@@ -20,7 +20,6 @@ export interface ViewProps<P extends ViewParams = ViewParams> {
   readonly params: P
   // Where the app opened this view, not always where the plugin asked.
   readonly placement: ViewPlacement
-  // Closes this view.
   readonly close: () => void
 }
 

@@ -64,13 +64,13 @@ const WHERE: Record<ViewPlacement, string> = {
   dialog: "a dialog",
 }
 
-// A view with one placement has nothing to choose.
 export const placementSettings = (
   pluginId: string,
   pluginName: string,
   views: ReadonlyArray<ViewDeclaration>,
 ): ReadonlyArray<PluginSettingDeclaration> =>
   views
+    // A view with one placement has nothing to choose.
     .filter((view) => view.placements.length > 1)
     .map((view) => ({
       pluginId,

@@ -14,6 +14,7 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { statusLabel } from "@ivin/plugin-api/ui"
 import { ImageViewer } from "../../transcript/ui/image-viewer.tsx"
 import { TaskSheet } from "../../transcript/ui/task-sheet.tsx"
+import { useCloseViewsOnMove } from "../../view/hooks/use-close-views-on-move.ts"
 import { ViewDialog } from "../../view/ui/view-dialog.tsx"
 import { ViewSheet } from "../../view/ui/view-sheet.tsx"
 import { sheetViewsOf } from "../../view/atoms/overlay-views.ts"
@@ -41,6 +42,7 @@ function OpenSession({
     (project) => project.path === projectPath,
   )?.name
   const workingFolder = session?.workingFolder
+  useCloseViewsOnMove(sessionId, workingFolder)
   const sheetViews = useAtomValue(sheetViewsOf(sessionId, workingFolder ?? ""))
   const taskOpen = useAtomValue(openTaskOf(sessionId)) !== null || sheetViews.selected !== null
   const interrupt = useAtomSet(interruptSessionAtom)

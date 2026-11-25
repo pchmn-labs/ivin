@@ -16,7 +16,7 @@ import { useSubViewActions } from "../hooks/use-sub-view-actions.ts"
 import { adjacentRowTab, editedFileOf, pathOf, subViewKey } from "../rules/sub-views.ts"
 import { SubViewTabs } from "./sub-view-tabs.tsx"
 import { ViewBody } from "../../view/ui/view-body.tsx"
-import { useViewLook } from "../../view/ui/view-tab-icon.tsx"
+import { useViewLook } from "../../view/hooks/use-view-look.tsx"
 import "./sub-view-card.css"
 
 const CARD_MIN = 280

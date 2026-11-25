@@ -28,7 +28,7 @@
   padding-right: var(--iv-space-1);
 }
 
-/* A task's tab has no close button of its own, so it takes the same room on both sides. */
+/* A tab with no close button of its own takes the same room on both sides. */
 .iv-sub-view-card__tab.iv-sheet__tab {
   padding: 0 var(--iv-space-3);
 }

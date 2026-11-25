@@ -5,7 +5,7 @@ import { Icon } from "../../../core/components/icon/icon.tsx"
 import { useCommandHandler } from "../../command/hooks/use-command-handler.ts"
 import { sheetViewsOf } from "../atoms/overlay-views.ts"
 import { withSheetViewClosed, withSheetViewOpen } from "../rules/overlay-views.ts"
-import { useViewLook } from "./view-tab-icon.tsx"
+import { useViewLook } from "../hooks/use-view-look.tsx"
 import { ViewBody } from "./view-body.tsx"
 
 function SheetTab({

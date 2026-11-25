@@ -234,6 +234,7 @@ const tsxAllowed: Case[] = [
     "transcript/ui/task-sheet.tsx",
     "transcript/ui/turn-work.tsx",
     "update/ui/update-button.tsx",
+    "view/ui/view-sheet.tsx",
   ].map((file): Case => [
     `${ui}/modules/${file}`,
     "a native control, as a control no core component draws",

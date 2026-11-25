@@ -3,7 +3,7 @@ import type { SubView } from "@ivin/contracts/tab"
 import { useId, type KeyboardEvent } from "react"
 import { HarnessMark, type MarkName } from "../../../core/components/harness-mark/harness-mark.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
-import { useViewLook } from "../../view/ui/view-tab-icon.tsx"
+import { useViewLook } from "../../view/hooks/use-view-look.tsx"
 import { openSubViewAtom } from "../atoms/open-sub-view.ts"
 import { pathOf, sameSubView, subViewKey } from "../rules/sub-views.ts"
 
