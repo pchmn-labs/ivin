@@ -444,6 +444,27 @@ test("a turn that ends with a short answer stays at the end, its message in view
   expect(inView("question 40")).toBe(true)
 })
 
+test("when a turn ends, its answer stays where it was drawn while the agent wrote it", async () => {
+  const server = makeFakeServer()
+  const screen = await sendQuestion(server)
+  server.pushItem(toolCall(41))
+  server.pushItem(message(42, "The answer is long enough to wrap. ".repeat(40)))
+  await expect.poll(fromEnd).toBeLessThan(2)
+  const answer = () => {
+    const { left, width, bottom } = page
+      .getByText("The answer is long", { exact: false })
+      .element()
+      .getBoundingClientRect()
+    return { left, width, bottom }
+  }
+  const live = answer()
+
+  await screen.rerender(sessionView(server, 300, false))
+  await expect.poll(() => document.querySelector('[data-testid="turn"][data-live]')).toBeNull()
+
+  expect(answer()).toEqual(live)
+})
+
 test("scrolled up while the agent works, the transcript stays put", async () => {
   const server = makeFakeServer()
   await sendQuestion(server)
