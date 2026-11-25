@@ -449,6 +449,65 @@ test("a worktree the agent creates with git worktree add moves the session once 
   expect(starts.map((s) => s.cwd)).toEqual([project])
 })
 
+test("a command that runs in a worktree that existed before the run moves the checkout session there", async () => {
+  const path = join(project, ".worktrees", "earlier")
+  git(project, "worktree", "add", "--quiet", "-b", "earlier", path)
+  const { session, items } = await withServer(
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: project })
+        yield* send(client, created.id, "m1")
+        return {
+          session: yield* sessionOf(client, created.id),
+          items: yield* itemsOf(client, created.id),
+        }
+      }),
+    [
+      toolTurn([
+        { name: "Bash", input: { command: "cd .worktrees/earlier && git status" }, output: "ok" },
+      ]),
+    ],
+  )
+
+  expect(session).toMatchObject({ workingFolder: path, inWorktree: true, branch: "earlier" })
+  expect(items.filter((i) => i.type === "working_folder")).toMatchObject([
+    { path, cause: "adoption" },
+  ])
+})
+
+test("a command that only lists the worktrees of the project moves nothing", async () => {
+  addWorktree("earlier")
+  const session = await withServer(
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: project })
+        yield* send(client, created.id, "m1")
+        return yield* sessionOf(client, created.id)
+      }),
+    [toolTurn([{ name: "Bash", input: { command: "git worktree list" }, output: "ok" }])],
+  )
+
+  expect(session).toMatchObject({ workingFolder: project, inWorktree: false })
+})
+
+test("a file read in a worktree that existed before the run moves nothing", async () => {
+  const path = addWorktree("earlier")
+  const session = await withServer(
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: project })
+        yield* send(client, created.id, "m1")
+        return yield* sessionOf(client, created.id)
+      }),
+    [toolTurn([{ name: "Read", input: { file_path: join(path, "first.txt") }, output: "ok" }])],
+  )
+
+  expect(session).toMatchObject({ workingFolder: project, inWorktree: false })
+})
+
 test("a git worktree add that failed moves nothing", async () => {
   const starts: StartInput[] = []
   const { session, items } = await withServer(

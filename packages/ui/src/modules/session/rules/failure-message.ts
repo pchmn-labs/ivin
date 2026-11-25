@@ -174,7 +174,7 @@ export const checkoutFailure = (error: unknown, action: CheckoutAction): Checkou
   }
   if (isTag<CheckoutInUse>(error, "CheckoutInUse")) {
     return {
-      text: "Another session's agent is working in the checkout. Retry once it is done, or start this session in a new worktree.",
+      text: `The agent of the session "${(error as CheckoutInUse).blockingTitle}" is working in the checkout. Retry once it is done, or start this session in a new worktree.`,
       retryable: true,
       ...none,
     }

@@ -103,9 +103,18 @@ test("git's refusal to switch or pull carries its message, and says when local c
 })
 
 test("a checkout another agent works in can be retried once it is done", () => {
-  expect(checkoutFailure({ _tag: "CheckoutInUse", sessionId: "s1" }, "switch")).toMatchObject({
+  expect(
+    checkoutFailure(
+      {
+        _tag: "CheckoutInUse",
+        sessionId: "s1",
+        blockingTitle: "Fix login",
+      },
+      "switch",
+    ),
+  ).toMatchObject({
     retryable: true,
-    text: expect.stringMatching(/^Another session's agent is working in the checkout/),
+    text: expect.stringMatching(/^The agent of the session "Fix login" is working in the checkout/),
   })
 })
 

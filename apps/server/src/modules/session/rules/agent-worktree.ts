@@ -57,17 +57,17 @@ export const folderMovedTo = ({
     : null
 
 // Where the agent works after this tool call, or null when it stays.
-// `folders`: the checkout and the worktrees git lists; `created`: those the agent made and has not entered.
+// `folders`: the checkout and the worktrees git lists; `adoptable`: the worktrees the agent may be working in.
 export const folderAfterTool = ({
   activity,
   workingFolder,
   folders,
-  created,
+  adoptable,
 }: {
   readonly activity: ToolActivity
   readonly workingFolder: string
   readonly folders: readonly string[]
-  readonly created: readonly string[]
+  readonly adoptable: readonly string[]
 }): string | null => {
   const target =
     activity.type === "folder_switch"
@@ -76,7 +76,7 @@ export const folderAfterTool = ({
         : null
       : lastMentioned(
           activity.type === "shell" ? activity.command.replace(CREATION, "") : activity.text,
-          created,
+          adoptable,
           workingFolder,
         )
   return target === workingFolder ? null : target

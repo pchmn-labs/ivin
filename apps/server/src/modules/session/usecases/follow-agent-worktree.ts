@@ -51,6 +51,18 @@ export const followAgentWorktree = (
         })
       })
 
+    // From the checkout, a shell command can also adopt a worktree made in an earlier run, unless
+    // another session works in it: a command that merely names it is not proof it is the agent's.
+    const candidates = (
+      activity: ToolActivity,
+      workingFolder: string,
+      listed: ReadonlySet<string>,
+      taken: ReadonlySet<string>,
+    ) =>
+      [
+        ...(workingFolder === session.projectPath && activity.type === "shell" ? listed : created),
+      ].filter((path) => path !== session.projectPath && listed.has(path) && !taken.has(path))
+
     const observe = (output: HarnessOutput) =>
       Effect.gen(function* () {
         if (output.type === "tool_call") {
@@ -71,10 +83,15 @@ export const followAgentWorktree = (
             }
             known.add(worktree.path)
           }
-        } else if (created.size === 0) return
+        }
         const current = yield* store.findById(session.id)
         if (!current) return
         const listed = new Set(worktrees.map((w) => w.path))
+        const taken = new Set(
+          (yield* store.listByProject(session.projectPath))
+            .filter((other) => other.id !== session.id)
+            .map((other) => other.workingFolder),
+        )
         const movedTo = folderMovedTo({
           workingFolder: current.workingFolder,
           projectPath: session.projectPath,
@@ -87,7 +104,7 @@ export const followAgentWorktree = (
             activity,
             workingFolder: current.workingFolder,
             folders: [session.projectPath, ...listed],
-            created: [...created].filter((path) => listed.has(path)),
+            adoptable: candidates(activity, current.workingFolder, listed, taken),
           })
         if (target) yield* moveTo(target)
       })
