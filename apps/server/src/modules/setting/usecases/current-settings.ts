@@ -1,4 +1,9 @@
-import { type PluginSetting, type Settings, type UserSettings } from "@ivin/contracts/setting"
+import {
+  type PluginSetting,
+  type PluginSettingDeclaration,
+  type Settings,
+  type UserSettings,
+} from "@ivin/contracts/setting"
 import { Context, Effect, Layer, Stream, SubscriptionRef } from "effect"
 import { fileObjectOf, resolvePluginSettings } from "../rules/plugin-settings.ts"
 import { readSettingsFile } from "../rules/read-settings-file.ts"
@@ -47,7 +52,7 @@ export const layerCurrentSettings = Layer.effect(CurrentSettings)(
       ),
       Effect.forkScoped,
     )
-    const withPlugins = (declared: Parameters<typeof resolvePluginSettings>[1]) => (state: State) =>
+    const withPlugins = (declared: ReadonlyArray<PluginSettingDeclaration>) => (state: State) =>
       ({
         ...state.user,
         pluginSettings: resolvePluginSettings(state.file, declared),

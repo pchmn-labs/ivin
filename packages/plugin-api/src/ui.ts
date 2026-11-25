@@ -135,7 +135,7 @@ export interface SlotProps {
   "sidebar.panel": Record<string, never>
   // Mounted once in the window while a project is open, for a popup such as a quick pick.
   "window.overlay": Record<string, never>
-  // The plugin's page of the settings screen, in place of the one generated from its manifest.
+  // The plugin's section of the settings page, in place of the one generated from its manifest.
   "settings.section": Record<string, never>
 }
 export type SlotName = keyof SlotProps

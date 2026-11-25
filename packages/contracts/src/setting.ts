@@ -177,7 +177,7 @@ export type PluginSettingDeclaration = typeof PluginSettingDeclaration.Type
 export const PluginSetting = Schema.Struct({
   ...PluginSettingDeclaration.fields,
   value: PluginSettingValue,
-  // The file holds a value of the wrong type for this setting, so `value` is the default.
+  // The file holds a value of the wrong type or outside `values`, so `value` is the default.
   ignored: Schema.Boolean,
 })
 export type PluginSetting = typeof PluginSetting.Type

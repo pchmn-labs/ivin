@@ -6,7 +6,6 @@ export interface PageSetting {
   readonly description: string
   readonly choices?: ReadonlyArray<{ readonly value: string; readonly label: string }>
   readonly count?: { readonly min: number; readonly unit: string }
-  // Set for a setting a plugin's manifest declares.
   readonly plugin?: PluginSetting
 }
 
@@ -15,7 +14,6 @@ export interface PageSection {
   readonly title: string
   readonly description: string
   readonly settings: ReadonlyArray<PageSetting>
-  // Set for a plugin's section.
   readonly pluginId?: string
 }
 
