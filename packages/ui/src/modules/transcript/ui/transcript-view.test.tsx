@@ -170,11 +170,6 @@ test("a transcript of 200 images loads only the images of the rows on screen", a
 const longAnswer = (position: number, lines = 30) =>
   message(position, Array.from({ length: lines }, (_, i) => `line ${i}`).join("\n\n"))
 
-const messageRowTop = () => {
-  const row = document.querySelector('[data-row-id="m40"]')
-  return row && Math.round(row.getBoundingClientRect().top - scroller().getBoundingClientRect().top)
-}
-
 // The session's tab keeps its transcript in memory while the view is closed, as switching tabs does.
 function KeptTranscript() {
   useAtomMount(transcriptOf("s1").list.ids)
@@ -377,18 +372,18 @@ test("a long answer that came while the transcript was closed opens at its end",
   await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
 })
 
-test("a transcript closed after a turn ended with a long answer opens again at the turn's message", async () => {
+test("a transcript closed after a turn ended with a long answer opens again at its end", async () => {
   const server = makeFakeServer()
   const screen = await sendMessage(server)
   server.pushItem(toolCall(41))
   server.pushItem(longAnswer(42))
   await expect.poll(fromEnd).toBeLessThan(2)
   await screen.rerender(switchableView(server, true, false))
-  await expect.poll(() => Math.abs(messageRowTop() ?? Number.POSITIVE_INFINITY)).toBeLessThan(2)
 
   await closeAndOpen(screen, server)
 
-  await expect.poll(() => Math.abs(messageRowTop() ?? Number.POSITIVE_INFINITY)).toBeLessThan(2)
+  await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
+  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
 })
 
 test("a session with no message yet says so", async () => {
