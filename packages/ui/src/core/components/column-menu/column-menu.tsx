@@ -45,6 +45,7 @@ export function ColumnMenu(props: ColumnMenuProps) {
       open={props.open}
       onOpenChange={props.onOpenChange}
       preload={loadColumnMenuPopup}
+      haspopup="dialog"
     >
       {() => <ColumnMenuPopup {...props} />}
     </LazyPopup>

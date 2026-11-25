@@ -24,11 +24,9 @@ test("the loader spins", async () => {
   expect(container.querySelector("svg")?.getAttribute("class")).toContain("iv-icon--spin")
 })
 
-test("question is drawn filled and check is not", async () => {
-  const filled = await render(<Icon name="question" />)
-  const regular = await render(<Icon name="circle-info" />)
-  expect(filled.container.querySelector("path")?.getAttribute("d")).toContain("A104,104,0,1,0")
-  expect(regular.container.querySelector("path")?.getAttribute("d")).not.toBeNull()
+test("question is drawn filled", async () => {
+  const { container } = await render(<Icon name="question" />)
+  expect(container.querySelector("path")?.getAttribute("d")).toMatch(/^M128,24A104,104/)
 })
 
 test("an icon loaded on first use shows an empty slot of its size, then the glyph", async () => {

@@ -130,7 +130,6 @@ function Viewer({ state, onStep }: { state: ImageViewerState; onStep: (id: strin
   )
 }
 
-// Rendered by each session view; it opens for that session only.
 export default function ImageViewerDialog({ sessionId }: { sessionId: string }) {
   const [state, setState] = useAtom(imageViewerAtom)
   const open = state?.sessionId === sessionId

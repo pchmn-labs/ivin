@@ -1,6 +1,6 @@
 import type { DialogProps } from "@ivin/plugin-api/ui"
 import { lazy } from "react"
-import { LazyOnOpen } from "../lazy-popup/lazy-on-open.tsx"
+import { LazyOnOpen } from "../lazy-on-open/lazy-on-open.tsx"
 
 export type { DialogProps }
 

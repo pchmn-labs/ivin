@@ -31,7 +31,12 @@ const ContextMenuPopup = lazy(() => loadMenuPopup().then((m) => ({ default: m.Co
 
 export function Menu(props: CoreMenuProps) {
   return (
-    <LazyPopup trigger={props.trigger} onOpenChange={props.onOpenChange} preload={loadMenuPopup}>
+    <LazyPopup
+      trigger={props.trigger}
+      onOpenChange={props.onOpenChange}
+      preload={loadMenuPopup}
+      haspopup="menu"
+    >
       {(openedBy) => <MenuPopup {...props} openedBy={openedBy} />}
     </LazyPopup>
   )

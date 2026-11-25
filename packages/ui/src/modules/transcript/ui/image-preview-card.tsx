@@ -1,7 +1,6 @@
 import { PreviewCard } from "@base-ui/react/preview-card"
 import "./image-preview.css"
 
-// Above the anchor, or under it when there is no room.
 export default function ImagePreviewCard({
   anchor,
   number,

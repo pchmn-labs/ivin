@@ -49,6 +49,7 @@ export interface ComposerMenuProps<T> {
 }
 
 const loadComposerMenuPopup = () => import("./composer-menu-popup.tsx")
+// `lazy` drops the generic: the popup is typed for `unknown` values here.
 const ComposerMenuPopup = lazy(loadComposerMenuPopup) as unknown as ComponentType<
   ComposerMenuProps<unknown> & { openedBy: OpenedBy | undefined }
 >
@@ -61,6 +62,7 @@ export function ComposerMenu<T>(props: ComposerMenuProps<T>) {
       open={props.open}
       onOpenChange={props.onOpenChange}
       preload={loadComposerMenuPopup}
+      haspopup="listbox"
       role="combobox"
     >
       {(openedBy) => (
