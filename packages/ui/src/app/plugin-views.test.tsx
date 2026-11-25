@@ -3,7 +3,7 @@ import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
 import { defineUi, type UiContext, type ViewProps } from "@ivin/plugin-api/ui"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
-import { page } from "vitest/browser"
+import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
@@ -61,7 +61,7 @@ const setup = async (
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={[plugin]}>
-        <div style={{ height: 700 }}>
+        <div style={{ height: 700, display: "flex", flexDirection: "column" }}>
           <TabView projectPath="/p" />
         </div>
       </PluginsProvider>
@@ -198,4 +198,60 @@ test("a plugin that replaces files provides its own files/file view", async () =
   )
   await open!("s1", "files/file", { path: "a.ts" })
   await expect.element(page.getByText("my own file view")).toBeVisible()
+})
+
+const card = () => page.getByRole("region", { name: "Open files" })
+const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
+
+test("Move to takes a view from beside the chat to a dialog and back, keeping its params", async () => {
+  const { open } = await setup()
+  await open("demo/note", { id: 1 })
+
+  await card().getByRole("tab", { name: "Note 1" }).click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Dialog" }).click()
+  await expect.element(page.getByText("note 1 in dialog")).toBeVisible()
+  await expect.poll(() => card().query()).toBeNull()
+
+  await page.getByRole("dialog").getByRole("button", { name: "Note 1" }).click()
+  await page.getByRole("menuitem", { name: "Beside chat" }).click()
+  await expect.element(page.getByText("note 1 in subView")).toBeVisible()
+  await expect.poll(() => page.getByRole("dialog").query()).toBeNull()
+})
+
+test("the Move to menu lists only the view's other placements", async () => {
+  const { open } = await setup()
+  await open("demo/note", { id: 1 }, "sheet")
+
+  await page.getByRole("tab", { name: "Note 1" }).click({ button: "right" })
+  await expect.element(page.getByRole("menuitem", { name: "Beside chat" })).toBeVisible()
+  await expect.element(page.getByRole("menuitem", { name: "Dialog" })).toBeVisible()
+  expect(page.getByRole("menuitem", { name: "Sheet" }).query()).toBeNull()
+})
+
+test("a view with one placement shows no Move to", async () => {
+  const { open } = await setup()
+  await open("demo/tight", { id: 1 })
+
+  await card().getByRole("tab", { name: "Tight" }).click({ button: "right" })
+  await expect.element(page.getByRole("menuitem", { name: "Close" })).toBeVisible()
+  expect(page.getByText("Move to").query()).toBeNull()
+})
+
+test("the Move view key opens the menu of the view in focus, and the focus lands in the moved view", async () => {
+  const { open } = await setup()
+  await open("demo/note", { id: 1 }, "sheet")
+  ;(page.getByRole("tab", { name: "Note 1" }).element() as HTMLElement).focus()
+
+  await userEvent.keyboard(`{${mod}>}{Shift>}o{/Shift}{/${mod}}`)
+  await expect.element(page.getByRole("menuitem", { name: "Beside chat" })).toBeVisible()
+  await userEvent.keyboard("{ArrowDown}")
+  await expect
+    .element(page.getByRole("menuitem", { name: "Beside chat" }))
+    .toHaveAttribute("data-highlighted")
+  await userEvent.keyboard("{Enter}")
+
+  await expect.element(page.getByText("note 1 in subView")).toBeVisible()
+  await expect
+    .poll(() => document.activeElement)
+    .toBe(card().getByRole("tab", { name: "Note 1" }).element())
 })

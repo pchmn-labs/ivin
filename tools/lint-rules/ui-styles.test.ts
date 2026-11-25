@@ -231,9 +231,9 @@ const tsxAllowed: Case[] = [
     "transcript/ui/background-fold.tsx",
     "transcript/ui/image-marker.tsx",
     "transcript/ui/image-thumbnail.tsx",
-    "transcript/ui/task-sheet.tsx",
     "transcript/ui/turn-work.tsx",
     "update/ui/update-button.tsx",
+    "view/ui/view-dialog.tsx",
     "view/ui/view-sheet.tsx",
   ].map((file): Case => [
     `${ui}/modules/${file}`,

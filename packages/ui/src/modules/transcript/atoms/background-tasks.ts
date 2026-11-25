@@ -1,15 +1,14 @@
 import { Effect } from "effect"
 import { Atom, AsyncResult } from "effect/reactivity"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
-import type { TaskItem } from "../rules/background-tasks.ts"
+import { knownTasks, type TaskItem } from "../rules/background-tasks.ts"
 import { strongFamily } from "@ivin/state/strong-family"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
+import { openSessionsAtom } from "../../session/atoms/open-sessions.ts"
+import { subViewsOf } from "../../tab/atoms/list-sub-views.ts"
+import { sheetViewsOf } from "../../view/atoms/overlay-views.ts"
+import type { SubView } from "@ivin/contracts/tab"
 import { transcriptOf } from "./get-items.ts"
-
-// The task whose detail the sheet shows, by session; null while the sheet is closed.
-export const openTaskOf = strongFamily((_sessionId: string) =>
-  Atom.keepAlive(Atom.make<string | null>(null)),
-)
 
 // The loaded page's tasks, running or ended, in the order they started.
 export const tasksOf = strongFamily((sessionId: string) =>
@@ -17,6 +16,38 @@ export const tasksOf = strongFamily((sessionId: string) =>
     get(transcriptOf(sessionId).list.items).filter(
       (item): item is TaskItem => item.type === "task",
     ),
+  ),
+)
+
+export const taskOf = strongFamily((sessionId: string) =>
+  strongFamily((taskId: string) =>
+    Atom.readable((get) => {
+      const background =
+        get(openSessionsAtom).find((session) => session.id === sessionId)?.backgroundTasks ?? []
+      return knownTasks(sessionId, background, get(tasksOf(sessionId))).find(
+        (task) => task.taskId === taskId,
+      )
+    }),
+  ),
+)
+
+export const TASK_VIEW = "tool-calls/task"
+
+// Whether the task's view is the one its sheet or the files card shows.
+export const taskShownOf = strongFamily((sessionId: string) =>
+  strongFamily((taskId: string) =>
+    Atom.readable((get) => {
+      const workingFolder = get(openSessionsAtom).find(
+        (session) => session.id === sessionId,
+      )?.workingFolder
+      if (workingFolder === undefined) return false
+      const isTask = (view: SubView | null | undefined) =>
+        view?.view === TASK_VIEW && view.params["taskId"] === taskId
+      return (
+        isTask(get(sheetViewsOf(sessionId, workingFolder)).selected) ||
+        isTask(get(subViewsOf(sessionId, workingFolder).value)?.selected)
+      )
+    }),
   ),
 )
 

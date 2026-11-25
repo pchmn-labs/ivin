@@ -307,9 +307,9 @@
         "packages/ui/src/modules/transcript/ui/background-fold.tsx",
         "packages/ui/src/modules/transcript/ui/image-marker.tsx",
         "packages/ui/src/modules/transcript/ui/image-thumbnail.tsx",
-        "packages/ui/src/modules/transcript/ui/task-sheet.tsx",
         "packages/ui/src/modules/transcript/ui/turn-work.tsx",
         "packages/ui/src/modules/update/ui/update-button.tsx",
+        "packages/ui/src/modules/view/ui/view-dialog.tsx",
         "packages/ui/src/modules/view/ui/view-sheet.tsx"
       ],
       "plugins": ["react"],

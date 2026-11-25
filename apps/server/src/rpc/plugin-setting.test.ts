@@ -76,8 +76,8 @@ const watchedPluginSettings = (client: Client) =>
     ),
   )
 
-// The built-in files and changes plugins declare placement settings of their own.
-const builtinIds = new Set(["files", "changes"])
+// The built-in files, changes and tool-calls plugins declare placement settings of their own.
+const builtinIds = new Set(["files", "changes", "tool-calls"])
 
 test("a user plugin's manifest settings are read, with their defaults over the file's values", async () => {
   const settings = await withPlugins(homeWithPlugin(), '{ "prs": { "fold": 5 } }', (client) =>

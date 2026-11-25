@@ -41,7 +41,10 @@ export const builtinPlugins: ReadonlyArray<UiPluginEntry> = [
   { manifest: messagesPackage.ivin, activate: messages.activate },
   { manifest: questionsPackage.ivin, activate: questions.activate },
   { manifest: sessionsPackage.ivin, activate: sessions.activate },
-  { manifest: toolCallsPackage.ivin, activate: toolCalls.activate },
+  {
+    manifest: { ...toolCallsPackage.ivin, views: builtinViews(toolCallsPackage.ivin.views) },
+    activate: toolCalls.activate,
+  },
   { manifest: usagePackage.ivin, activate: usage.activate },
   { manifest: workingPackage.ivin, activate: working.activate },
 ]

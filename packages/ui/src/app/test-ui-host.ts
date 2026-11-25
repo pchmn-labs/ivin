@@ -38,6 +38,8 @@ export const testUiHost: UiHost = {
   useFolderChanges: () => {},
   useGitStatus: () => ({ entries: [], failure: null, retry: () => {} }),
   useFileOnScreen: () => null,
+  useTask: () => undefined,
+  useTaskOutput: () => "",
   useChanges: () => ({ listing: { kind: "loading" }, retry: () => {} }),
   useOpenDiff: () => async () => undefined,
   useDiffOnScreen: () => null,

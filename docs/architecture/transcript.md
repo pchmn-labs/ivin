@@ -24,6 +24,8 @@ What the design adds to the [glossary](../../GLOSSARY.md)'s terms in the `transc
 
 - Two polite live regions speak for the transcript (`transcript/ui/announcements.tsx`): the end of a turn in the session on screen, read from the items once its status leaves working or waiting, and each new approval in the selected project, read from the sessions waiting for one. The approvals already waiting when a project's sessions first list are not announced.
 
+- A background task's detail is the `tool-calls/task` view (params `{ taskId, kind, description }`; the kind and the description give its tab's icon and title before it mounts), placements `sheet` and `subView`, default `sheet`, `restore: false`. A task's Details or Output pill opens it through `view/atoms/open-view.ts`, only on click, so the rows of the transcript list read no view state but whether their task's view is the one shown (`taskShownOf`). The plugin reads the task through `useTask` and a command's output through `useTaskOutput` (read again every second while it runs); a subagent's run is the host component `TaskRun`, the transcript's own turn drawing, fed by `transcript.getTaskItems` and the live items whose `parentToolCallId` is the task's call.
+
 ## Owning the transcript
 
 - Codex and ACP have no equivalent of Claude's JSONL, and annotations and plugins need event ids that don't depend on a provider's file.

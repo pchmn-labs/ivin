@@ -1,12 +1,14 @@
-import { useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
+import { RegistryContext, useAtom, useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { BackgroundTask } from "@ivin/contracts/session"
 import { Exit } from "effect"
-import { useRef, useState } from "react"
+import { useContext, useRef, useState } from "react"
 import { notify } from "../../../core/components/notification/notification-manager.ts"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { foldsOf } from "../atoms/folds.ts"
 import { stopTaskAtom } from "../../session/atoms/stop-task.ts"
-import { openTaskOf, tasksOf, taskStepsOf } from "../atoms/background-tasks.ts"
+import { TASK_VIEW, taskShownOf, tasksOf, taskStepsOf } from "../atoms/background-tasks.ts"
+import { runOpenView } from "../../view/atoms/open-view.ts"
+import { openViewFailure } from "../../tab/rules/sub-view-failure.ts"
 import { runningTasks, type TaskItem } from "../rules/background-tasks.ts"
 import { AgentRun, CommandOutput } from "./task-run.tsx"
 import { ElapsedClock } from "./turn-work.tsx"
@@ -84,8 +86,20 @@ function TaskRow({ sessionId, task }: { sessionId: string; task: TaskItem }) {
   const [folds, setFolds] = useAtom(foldsOf(sessionId))
   const key = `task:${task.taskId}`
   const open = folds.get(key) ?? false
-  const [openTask, setOpenTask] = useAtom(openTaskOf(sessionId))
-  const active = openTask === task.taskId
+  const active = useAtomValue(taskShownOf(sessionId)(task.taskId))
+  const registry = useContext(RegistryContext)
+  const openDetails = async () => {
+    const failure = await runOpenView(
+      registry,
+      {
+        sessionId,
+        view: TASK_VIEW,
+        params: { taskId: task.taskId, kind: task.kind, description: task.description },
+      },
+      (error) => openViewFailure(error, TASK_VIEW),
+    )
+    if (failure !== undefined) notify({ message: failure.text })
+  }
   const stopTask = useAtomSet(stopTaskAtom, { mode: "promiseExit" })
   const [stopping, setStopping] = useState(false)
   const stop = async () => {
@@ -105,7 +119,7 @@ function TaskRow({ sessionId, task }: { sessionId: string; task: TaskItem }) {
       >
         <Icon name={taskIcon(task.kind)} size={14} />
         <span className="iv-task__name">{task.description}</span>
-        <RowPill testId="task-details" onActivate={() => setOpenTask(task.taskId)}>
+        <RowPill testId="task-details" onActivate={() => void openDetails()}>
           {task.kind === "agent" ? "Details" : "Output"}
         </RowPill>
         {stopping ? (

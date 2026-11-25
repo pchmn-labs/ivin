@@ -37,6 +37,7 @@ export function SheetFrame({
       data-testid={testId}
       role="region"
       aria-label={label}
+      data-view-frame="sheet"
     >
       <ResizeHandle
         label={resizeLabel}

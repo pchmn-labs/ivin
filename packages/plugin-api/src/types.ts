@@ -311,6 +311,18 @@ export interface RunOptionItem extends ItemFields {
   readonly toName: string
 }
 
+// A task the agent runs in the background: a subagent (`agent`) or a command.
+export interface TaskItem extends ItemFields {
+  readonly type: "task"
+  readonly taskId: string
+  readonly toolCallId: string
+  readonly kind: "agent" | "command"
+  readonly description: string
+  readonly status: "running" | "completed" | "failed" | "stopped"
+  readonly summary: string | null
+  readonly output: string | null
+}
+
 export interface TaskStopItem extends ItemFields {
   readonly type: "task_stop"
   readonly taskId: string

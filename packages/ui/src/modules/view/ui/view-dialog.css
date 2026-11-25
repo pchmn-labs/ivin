@@ -10,3 +10,31 @@
   min-height: 0;
   overflow: auto;
 }
+
+.iv-view-dialog__title-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  margin-left: calc(-1 * var(--iv-space-2));
+  padding: var(--iv-space-half) var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.iv-view-dialog__title-button:hover,
+.iv-view-dialog__title-button[aria-expanded="true"] {
+  background: var(--iv-bg-hover);
+}
+
+.iv-view-dialog__title-button:focus-visible {
+  outline: 2px solid var(--iv-focus-ring);
+  outline-offset: 0;
+}
+
+.iv-view-dialog__title-button .iv-icon {
+  color: var(--iv-text-faint);
+}

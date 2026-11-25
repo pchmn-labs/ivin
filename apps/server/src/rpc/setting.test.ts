@@ -82,6 +82,7 @@ test("setting.set writes the value, and setting.watch and setting.get then give 
     agents: { stopWhenIdleMinutes: 10 },
     updates: { automaticCheck: true, beta: false },
     changes: { diff: { placement: "subView" } },
+    "tool-calls": { task: { placement: "sheet" } },
   })
 })
 
@@ -131,6 +132,7 @@ test("an unknown path or a value of the wrong type is refused, and the file is u
     "updates.beta",
     "changes.diff.placement",
     "files.file.placement",
+    "tool-calls.task.placement",
   ]
   expect(result.unknown).toMatchObject({
     _tag: "SettingPathUnknown",

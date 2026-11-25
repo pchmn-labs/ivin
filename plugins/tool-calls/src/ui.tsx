@@ -1,5 +1,7 @@
+import { lazy } from "react"
 import { CodeBlock, Disclosure, FilePath, Icon, Stack, Text, defineUi } from "@ivin/plugin-api/ui"
 import type { SlotProps, ToolCallItem } from "@ivin/plugin-api/ui"
+import { taskIcon, taskTitle } from "./rules/task-params.ts"
 import { filePathArgument, mainArgument, prettyInput } from "./rules/tool-output.ts"
 import { toolIcon } from "./rules/tool-icon.ts"
 
@@ -53,6 +55,13 @@ function ToolCall({ item, sessionId }: SlotProps["transcript.toolCall"]) {
   )
 }
 
+const TaskView = lazy(() => import("./ui/task-view.tsx").then((m) => ({ default: m.TaskView })))
+
 export const activate = defineUi((ctx) => {
   ctx.slots.add("transcript.toolCall", ToolCall, { name: "default" })
+  ctx.views.register("task", {
+    component: TaskView,
+    title: taskTitle,
+    icon: (params) => <Icon name={taskIcon(params)} size={14} />,
+  })
 })

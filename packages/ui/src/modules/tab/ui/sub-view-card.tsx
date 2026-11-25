@@ -99,6 +99,7 @@ export function SubViewCard({
       ref={card}
       className="iv-sub-view-card"
       aria-label="Open files"
+      data-view-frame="subView"
       data-on-session={onSession || undefined}
     >
       {!fullWidth && (

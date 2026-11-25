@@ -32,6 +32,7 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "tab.toggleFullWidth", title: "Toggle full width", pluginId: null },
   { id: "tab.nextCardTab", title: "Next tab of the files card", pluginId: null },
   { id: "tab.previousCardTab", title: "Previous tab of the files card", pluginId: null },
+  { id: "view.moveTo", title: "Move view to…", pluginId: null },
   { id: "composer.chooseModel", title: "Choose the model", pluginId: null },
   { id: "composer.chooseEffort", title: "Choose the effort", pluginId: null },
   { id: "composer.choosePermissionMode", title: "Choose the permission mode", pluginId: null },
