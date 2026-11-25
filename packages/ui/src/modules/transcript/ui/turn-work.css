@@ -135,7 +135,7 @@
 }
 
 .iv-turn__earlier + .iv-turn__step {
-  margin-top: 6px;
+  margin-top: calc(10px - var(--iv-space-1));
 }
 
 .iv-turn__earlier-line {
