@@ -413,12 +413,7 @@ test("while the answer streams in, the view moves at a steady pace", async () =>
   expect(steady.length).toBeGreaterThan(0.8 * paces.length)
 })
 
-const messageRowTop = () => {
-  const row = document.querySelector('[data-row-id="m40"]')
-  return row && Math.round(row.getBoundingClientRect().top - scroller().getBoundingClientRect().top)
-}
-
-test("a turn that ends with a long answer moves its message to the top of the view in one step", async () => {
+test("a turn that ends with a long answer leaves the view at its end, never far from it", async () => {
   const server = makeFakeServer()
   const screen = await sendQuestion(server)
   for (let position = 41; position < 47; position++) server.pushItem(toolCall(position))
@@ -426,17 +421,11 @@ test("a turn that ends with a long answer moves its message to the top of the vi
   await expect.poll(fromEnd).toBeLessThan(2)
 
   void screen.rerender(sessionView(server, 300, false))
-  const frames = await everyFrame(
-    // Read cheaply, or the frames between Virtuoso's corrections are not seen.
-    () => ({ top: messageRowTop(), answer: document.querySelector('[data-row-id="m47"]') }),
-    (seen) => Math.abs(seen.at(-1)!.top ?? Number.POSITIVE_INFINITY) < 2,
-  )
+  const lags = await everyFrame(fromEnd, (seen) => seen.length === 30)
 
-  // Before the turn ends, its message is above the view and not drawn.
-  const ended = frames.filter((frame) => frame.top !== null)
-  expect(ended).toHaveLength(1)
-  expect(ended[0]!.answer).not.toBeNull()
-  expect(fromEnd()).toBeGreaterThan(100)
+  expect(Math.max(...lags)).toBeLessThan(80)
+  expect(fromEnd()).toBeLessThan(2)
+  expect(inView("line 29")).toBe(true)
 })
 
 test("a turn that ends with a short answer stays at the end, its message in view", async () => {
@@ -447,9 +436,10 @@ test("a turn that ends with a short answer stays at the end, its message in view
   await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
 
   void screen.rerender(sessionView(server, 300, false))
-  const lags = await everyFrame(fromEnd, () => messageRowTop() !== null)
+  const lags = await everyFrame(fromEnd, (seen) => seen.length === 30)
 
-  expect(Math.max(...lags)).toBeLessThan(2)
+  expect(Math.max(...lags)).toBeLessThan(80)
+  expect(fromEnd()).toBeLessThan(2)
   expect(inView("question 40")).toBe(true)
 })
 

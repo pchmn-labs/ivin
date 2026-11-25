@@ -566,6 +566,7 @@ try {
   await window
     .getByRole("navigation", { name: "Settings sections" })
     .getByRole("button", { name: "Files" })
+    .first()
     .click()
   await window.getByRole("switch", { name: "Show folder icons" }).click()
   await window.waitForTimeout(300)
@@ -589,6 +590,7 @@ try {
   await window
     .getByRole("navigation", { name: "Settings sections" })
     .getByRole("button", { name: "Files" })
+    .first()
     .click()
   await window.waitForTimeout(300)
   await window.getByRole("switch", { name: "Show folder icons" }).click()

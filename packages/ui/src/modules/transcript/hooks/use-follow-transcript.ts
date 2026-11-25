@@ -26,28 +26,18 @@ const readingPlace = (view: HTMLElement) => {
   return null
 }
 
-const rowTop = (view: HTMLElement, id: string) => {
-  const row = view.querySelector(`[data-row-id="${CSS.escape(id)}"]`)
-  return row && row.getBoundingClientRect().top - view.getBoundingClientRect().top
-}
-
-// `rows` are all the rows, to find the last turn's message; `shown` are the ones the list draws.
 export function useFollowTranscript({
   rows,
-  shown,
   live,
   following,
   list,
 }: {
   rows: ReadonlyArray<TranscriptRow>
-  shown: ReadonlyArray<TranscriptRow>
   live: boolean
   following: React.RefObject<boolean>
   list: React.RefObject<VirtuosoHandle | null>
 }) {
   const scroller = useRef<HTMLElement | null>(null)
-  // Set when a turn ends while followed: the view then keeps the turn's message at its top.
-  const anchor = useRef<string | undefined>(undefined)
   const userAt = useRef(Number.NEGATIVE_INFINITY)
   const scrollbarHeld = useRef(false)
   const lastTop = useRef(0)
@@ -59,8 +49,6 @@ export function useFollowTranscript({
     speed: 0,
   })
   const reading = useRef<ReturnType<typeof readingPlace>>(null)
-  const latest = useRef({ rows, shown })
-  latest.current = { rows, shown }
 
   const stopGlide = () => {
     cancelAnimationFrame(frame.current)
@@ -69,7 +57,6 @@ export function useFollowTranscript({
 
   const stopFollowing = () => {
     following.current = false
-    anchor.current = undefined
     stopGlide()
     if (scroller.current) reading.current = readingPlace(scroller.current)
   }
@@ -124,34 +111,13 @@ export function useFollowTranscript({
     reading.current = readingPlace(view)
   }
 
-  const placeAnchor = (view: HTMLElement, id: string, index: number) => {
-    stopGlide()
-    const top = rowTop(view, id)
-    if (top === null) {
-      list.current?.scrollToIndex({ index, align: "start" })
-      return
-    }
-    // Virtuoso's offsets are estimates until it measures the rows; the page's are not.
-    // Past the end the view stops at the end, so a short answer stays at the end with its message.
-    if (Math.abs(top) > 1) view.scrollTop += top
-    // At the top the view no longer follows the end, so closing the transcript saves this place.
-    if (Math.abs(rowTop(view, id) ?? Number.POSITIVE_INFINITY) <= 1) following.current = false
-  }
-
   const settle = () => {
     const view = scroller.current
     if (!view) return
-    const id = anchor.current
-    const index = id === undefined ? -1 : latest.current.shown.findIndex((row) => row.id === id)
-    if (id !== undefined && index >= 0) placeAnchor(view, id, index)
-    else {
-      anchor.current = undefined
-      if (following.current) glideToEnd(view)
-      else keepReadingPlace(view)
-    }
+    if (following.current) glideToEnd(view)
+    else keepReadingPlace(view)
   }
 
-  const placing = useRef(0)
   const onScroll = useCallback(() => {
     const view = scroller.current
     if (!view) return
@@ -160,18 +126,8 @@ export function useFollowTranscript({
     const up = view.scrollTop < lastTop.current - 1
     lastTop.current = view.scrollTop
     const byUser = scrollbarHeld.current || performance.now() - userAt.current < USER_SCROLL_MS
-    if (anchor.current !== undefined) {
-      // The anchor holds until the user scrolls: Virtuoso moves the view as it measures the rows above.
-      if (byUser) stopFollowing()
-      // Virtuoso draws the rows of a jump on its scroll event; the anchor is placed once they are drawn.
-      else if (!placing.current)
-        placing.current = requestAnimationFrame(() => {
-          placing.current = 0
-          settle()
-        })
-    }
     if (atEnd) {
-      if (anchor.current === undefined) following.current = true
+      following.current = true
     } else if (up && byUser) {
       stopFollowing()
     }
@@ -252,15 +208,11 @@ export function useFollowTranscript({
     // A message sent while scrolled up still shows its answer.
     const wasFollowing = following.current
     following.current = true
-    anchor.current = undefined
     if (wasFollowing) settle()
     else list.current?.scrollToIndex({ index: "LAST", align: "end" })
   }, [turn, list])
 
-  const wasLive = useRef(live)
   useLayoutEffect(() => {
-    if (wasLive.current && !live && following.current) anchor.current = lastTurnMessageId(rows)
-    wasLive.current = live
     watchFooter()
     settle()
   }, [rows, live])

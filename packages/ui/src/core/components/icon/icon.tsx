@@ -41,6 +41,8 @@ import arrowsOut from "@phosphor-icons/core/assets/regular/arrows-out.svg?raw"
 import clock from "@phosphor-icons/core/assets/regular/clock.svg?raw"
 import gitDiff from "@phosphor-icons/core/assets/regular/git-diff.svg?raw"
 import questionFill from "@phosphor-icons/core/assets/fill/question-fill.svg?raw"
+import arrowsDownUp from "@phosphor-icons/core/assets/regular/arrows-down-up.svg?raw"
+import arrowElbowDownLeft from "@phosphor-icons/core/assets/regular/arrow-elbow-down-left.svg?raw"
 import arrowRight from "@phosphor-icons/core/assets/regular/arrow-right.svg?raw"
 import squareSplitHorizontal from "@phosphor-icons/core/assets/regular/square-split-horizontal.svg?raw"
 import arrowClockwise from "@phosphor-icons/core/assets/regular/arrow-clockwise.svg?raw"
@@ -131,6 +133,8 @@ const eagerIcons = {
   split: squareSplitHorizontal,
   restart: arrowClockwise,
   "external-link": arrowSquareOut,
+  "arrows-down-up": arrowsDownUp,
+  enter: arrowElbowDownLeft,
 } satisfies Partial<Record<IconName, string>>
 
 // Drawn only by settings, the Files and Changes panels, deleted images and menus; each loads the first time it is drawn.
