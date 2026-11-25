@@ -221,7 +221,8 @@ export const applyEvent = (
       return { state: { ...state, openTasks }, item }
     }
     case "working_folder":
-    case "run_option": {
+    case "run_option":
+    case "task_stop": {
       const { id: _id, sessionId: _s, sequence: _q, at: _at, ...change } = event
       const item: TranscriptItem = { ...base, ...change }
       return { state: { ...state, openMessage: null }, item }

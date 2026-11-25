@@ -78,9 +78,29 @@
   opacity: 1;
 }
 
+.iv-task__pill:hover {
+  background: var(--iv-bg-active);
+}
+
 .iv-task__pill:focus-visible {
   outline: 2px solid var(--iv-focus-ring);
   outline-offset: 1px;
+}
+
+.iv-task__pill--danger {
+  border-color: color-mix(in srgb, var(--iv-danger) 40%, transparent);
+  color: var(--iv-danger);
+}
+
+.iv-task__pill--danger:hover {
+  background: var(--iv-danger-subtle);
+}
+
+.iv-task__stopping {
+  flex: none;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
 }
 
 .iv-task-meta {

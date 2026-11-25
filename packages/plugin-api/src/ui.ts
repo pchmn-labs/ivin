@@ -31,6 +31,7 @@ import type {
   QuestionItem,
   RunOption,
   RunOptionItem,
+  TaskStopItem,
   RunOptions,
   Session,
   SessionStatus,
@@ -94,6 +95,7 @@ export type {
   QuestionItem,
   RunOption,
   RunOptionItem,
+  TaskStopItem,
   RunOptions,
   Session,
   SessionStatus,
@@ -120,6 +122,7 @@ export type MessageSlotItem =
   | InterruptionItem
   | WorkingFolderItem
   | RunOptionItem
+  | TaskStopItem
 
 export interface SlotProps {
   "transcript.message": { readonly item: MessageSlotItem; readonly sessionId: string }

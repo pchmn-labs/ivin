@@ -311,6 +311,12 @@ export interface RunOptionItem extends ItemFields {
   readonly toName: string
 }
 
+export interface TaskStopItem extends ItemFields {
+  readonly type: "task_stop"
+  readonly taskId: string
+  readonly description: string
+}
+
 export type TranscriptItem =
   | MessageItem
   | ThinkingItem
@@ -321,3 +327,4 @@ export type TranscriptItem =
   | InterruptionItem
   | WorkingFolderItem
   | RunOptionItem
+  | TaskStopItem

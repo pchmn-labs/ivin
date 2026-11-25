@@ -255,6 +255,42 @@ test("a task is an item, ended by its notification with the output its command e
   ])
 })
 
+test("stopping a task asks the agent to stop that task and keeps the session in background", async () => {
+  const stoppedTasks: string[] = []
+  const db = newDatabase()
+  const stopped = await withServer(db, [turn], { stoppedTasks }, (client) =>
+    Effect.gen(function* () {
+      const created = yield* client["session.create"]({ projectPath: "/p" })
+      yield* send(client, created.id)
+      yield* untilSession(client, created.id, (s) => s.status === "in_background")
+      yield* client["session.stopTask"]({ sessionId: created.id, taskId: "k1" })
+      const after = yield* untilSession(client, created.id, () => true)
+      return { id: created.id, status: after.status }
+    }),
+  )
+  expect(stoppedTasks).toEqual([`${stopped.id}/k1`])
+  expect(stopped.status).toBe("in_background")
+  expect(itemsOf(db, stopped.id, "task_stop")).toMatchObject([
+    { taskId: "k1", description: "Task k1" },
+  ])
+})
+
+test("stopping a task the session does not list asks nothing and writes no line", async () => {
+  const stoppedTasks: string[] = []
+  const db = newDatabase()
+  const id = await withServer(db, [turn], { stoppedTasks }, (client) =>
+    Effect.gen(function* () {
+      const created = yield* client["session.create"]({ projectPath: "/p" })
+      yield* send(client, created.id)
+      yield* untilSession(client, created.id, (s) => s.status === "in_background")
+      yield* client["session.stopTask"]({ sessionId: created.id, taskId: "unknown" })
+      return created.id
+    }),
+  )
+  expect(stoppedTasks).toEqual([])
+  expect(itemsOf(db, id, "task_stop")).toEqual([])
+})
+
 test("a subagent's steps are stored under its call, and the steps of a call that is no task are not", async () => {
   const db = newDatabase()
   const step = (parent: string): HarnessOutput => ({

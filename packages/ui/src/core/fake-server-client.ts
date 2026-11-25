@@ -103,6 +103,8 @@ export interface FakeServer {
   ) => void
   // What `session.taskOutput` returns for a running command, by `<sessionId>/<taskId>`.
   readonly taskOutputs: Map<string, string>
+  // `<sessionId>/<taskId>` of each task `session.stopTask` was called for.
+  readonly stoppedTasks: string[]
   // Changes the tasks a session lists, as the server does when a task starts or ends.
   readonly setBackgroundTasks: (sessionId: string, tasks: Session["backgroundTasks"]) => void
   // Moves a session to another working folder, as the server does when the agent enters a worktree.
@@ -270,6 +272,7 @@ export const makeFakeServer = (
   const sessions = new Map<string, Session>()
   const transcripts = new Map<string, Array<TranscriptItem>>()
   const taskOutputs = new Map<string, string>()
+  const stoppedTasks: string[] = []
   const pubsub = Effect.runSync(PubSub.unbounded<TranscriptItemChange>())
   const sessionChanges = Effect.runSync(PubSub.unbounded<SessionChange>())
   const annotations = new Map<string, Annotation>()
@@ -1255,6 +1258,8 @@ export const makeFakeServer = (
           (item) => "parentToolCallId" in item && item.parentToolCallId === toolCallId,
         ),
       ),
+    "session.stopTask": ({ sessionId, taskId }: { sessionId: string; taskId: string }) =>
+      Effect.sync(() => void stoppedTasks.push(`${sessionId}/${taskId}`)),
     "session.taskOutput": ({ sessionId, taskId }: { sessionId: string; taskId: string }) =>
       Effect.sync(() => taskOutputs.get(`${sessionId}/${taskId}`) ?? null),
     "transcript.watchUsage": ({ sessionId }: { sessionId: string }) =>
@@ -1476,6 +1481,7 @@ export const makeFakeServer = (
       for (const image of images) storedImages.set(image.id, { ...image, deleted: false })
     },
     taskOutputs,
+    stoppedTasks,
     setBackgroundTasks: (sessionId, backgroundTasks) =>
       void saveSession({ ...sessions.get(sessionId)!, backgroundTasks }),
     moveSession: (sessionId, workingFolder) => {

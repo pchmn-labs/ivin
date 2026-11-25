@@ -53,6 +53,8 @@ export class SessionRuns extends Context.Service<
     ) => Effect.Effect<void, QuestionNotOpen>
     // No-op with no run. With only background tasks running, stops the agent and so its tasks.
     readonly interrupt: (sessionId: string) => Effect.Effect<void>
+    // No-op with no run or no such listed task; else records the stop, then asks the agent.
+    readonly stopTask: (sessionId: string, taskId: string) => Effect.Effect<void>
     // Stops the turn so the agent takes the pending messages as the next one; no-op without any.
     readonly sendNow: (sessionId: string) => Effect.Effect<void>
     // No-op with no run.
@@ -256,6 +258,24 @@ export const layerSessionRunsWith = (
               if (!run.busy() && run.hasTasks()) return yield* run.stopInterrupted
               const pending = yield* sessions.pendingMessages(sessionId)
               yield* pending.length === 0 ? interruptTurn(sessionId, run) : run.stopInterrupted
+            }),
+          ),
+        stopTask: (sessionId, taskId) =>
+          locked(
+            sessionId,
+            Effect.gen(function* () {
+              const run = runs.get(sessionId)
+              const task = (yield* sessions.findById(sessionId))?.backgroundTasks.find(
+                (candidate) => candidate.taskId === taskId,
+              )
+              if (!run || !task) return
+              yield* run.record({
+                type: "task_stop",
+                taskId,
+                description: task.description,
+                raw: null,
+              })
+              yield* run.stopTask(taskId)
             }),
           ),
         sendNow: (sessionId) =>

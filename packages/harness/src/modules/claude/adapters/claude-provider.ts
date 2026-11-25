@@ -247,6 +247,15 @@ export const layerClaudeWith = (
               }
               child.stdin.write(`${JSON.stringify(request)}\n`)
             }),
+            stopTask: (taskId) =>
+              Effect.sync(() => {
+                const request = {
+                  type: "control_request",
+                  request_id: randomUUID(),
+                  request: { subtype: "stop_task", task_id: taskId },
+                }
+                child.stdin.write(`${JSON.stringify(request)}\n`)
+              }),
           }
           return run
         }),

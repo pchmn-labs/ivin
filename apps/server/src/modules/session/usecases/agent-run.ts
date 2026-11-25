@@ -19,6 +19,8 @@ export interface AgentRun {
   readonly hasTasks: () => boolean
   // The end of a running background command's output, as the agent writes it; null with no such task.
   readonly taskOutput: (taskId: string) => Effect.Effect<string | null>
+  // Stops one background task; the agent reports its end like any other.
+  readonly stopTask: (taskId: string) => Effect.Effect<void>
   readonly record: (event: HarnessEvent) => Effect.Effect<void>
   // Starts a turn with the message; a harness failure ends the run and fails the session.
   readonly start: (message: UserMessage) => Effect.Effect<void>
@@ -154,6 +156,7 @@ const buildRun = (
           const path = taskFiles.get(taskId)
           return path === undefined ? Effect.succeed(null) : provider.readTaskOutput(path)
         }),
+      stopTask: harness.stopTask,
       record: (event) => writer.record(event),
       start: (message) =>
         Effect.gen(function* () {

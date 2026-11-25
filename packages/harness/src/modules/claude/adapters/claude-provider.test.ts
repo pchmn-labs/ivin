@@ -242,6 +242,39 @@ setInterval(() => {}, 1000)`,
   )
 })
 
+test("stopTask writes a stop_task control request for the task to stdin", async () => {
+  await withFakeClaude(
+    `${logStdin}
+setInterval(() => {}, 1000)`,
+    async (dir) => {
+      const log = join(dir, "stdin.log")
+      process.env["FAKE_LOG"] = log
+      await Effect.runPromise(
+        Effect.gen(function* () {
+          const harness = yield* (yield* HarnessProvider).start({
+            sessionId: "s1",
+            cwd: dir,
+            options: { model: "haiku", effort: "low", permissionMode: "manual" },
+            providerSessionId: null,
+          })
+          yield* harness.stopTask("b1a2")
+          yield* Effect.promise(() =>
+            vi.waitFor(() => expect(existsSync(log) && readFileSync(log, "utf8")).toContain("\n"), {
+              timeout: 800,
+            }),
+          )
+        }).pipe(Effect.provide(layerClaude), Effect.scoped),
+      )
+
+      const [line] = readFileSync(log, "utf8").trim().split("\n")
+      expect(JSON.parse(line!)).toMatchObject({
+        type: "control_request",
+        request: { subtype: "stop_task", task_id: "b1a2" },
+      })
+    },
+  )
+})
+
 test("closing the scope kills a process that ignores SIGTERM", async () => {
   await withFakeClaude(
     `process.on("SIGTERM", () => {})

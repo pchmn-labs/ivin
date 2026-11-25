@@ -177,6 +177,10 @@ const TaskEndedBody = Schema.Struct({
   output: Schema.NullOr(Schema.String),
 })
 
+// The user stopped a background task; the task's own end comes as `task_ended`.
+const taskStopFields = { taskId: Schema.String, description: Schema.String }
+const TaskStopBody = Schema.Struct({ type: Schema.Literal("task_stop"), ...taskStopFields })
+
 const InterruptionBody = Schema.Struct({ type: Schema.Literal("interruption") })
 
 const workingFolderFields = {
@@ -236,6 +240,7 @@ export const HarnessEvent = Schema.Union([
   TaskEndedBody.mapFields((f) => ({ ...f, ...raw })),
   WorkingFolderBody.mapFields((f) => ({ ...f, ...raw })),
   RunOptionBody.mapFields((f) => ({ ...f, ...raw })),
+  TaskStopBody.mapFields((f) => ({ ...f, ...raw })),
 ])
 export type HarnessEvent = typeof HarnessEvent.Type
 
@@ -297,6 +302,7 @@ export const TranscriptEvent = Schema.Union([
   TaskEndedBody.mapFields((f) => ({ ...f, ...stored })),
   WorkingFolderBody.mapFields((f) => ({ ...f, ...stored })),
   RunOptionBody.mapFields((f) => ({ ...f, ...stored })),
+  TaskStopBody.mapFields((f) => ({ ...f, ...stored })),
 ])
 export type TranscriptEvent = typeof TranscriptEvent.Type
 
@@ -410,6 +416,12 @@ export const RunOptionItem = Schema.Struct({
   ...runOptionFields,
 })
 
+export const TaskStopItem = Schema.Struct({
+  ...itemFields,
+  type: Schema.Literal("task_stop"),
+  ...taskStopFields,
+})
+
 export const TranscriptItem = Schema.Union([
   MessageItem,
   ThinkingItem,
@@ -422,6 +434,7 @@ export const TranscriptItem = Schema.Union([
   TaskItem,
   WorkingFolderItem,
   RunOptionItem,
+  TaskStopItem,
 ])
 export type TranscriptItem = typeof TranscriptItem.Type
 
