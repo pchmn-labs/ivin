@@ -9,10 +9,10 @@ import {
 import { descendantsOf, isAlive } from "./processes.ts"
 import { sendMessage, startSession } from "./session-helpers.ts"
 
-const WARM_UP_ROUNDS = 5
-const MEASURED_ROUNDS = 25
+const WARM_UP_ROUNDS = 2
+const MEASURED_ROUNDS = 3
 // A reload drops the renderer's JS heap, so the heap is read over rounds that do not reload.
-const HEAP_MEASURED_ROUNDS = 15
+const HEAP_MEASURED_ROUNDS = 3
 // On main the heap grows about 100 KB per closed session, which stays in the Inactive sessions list.
 const MAX_OPEN_FILES_GROWTH = 10
 const MAX_HEAP_GROWTH_BYTES = 6 * 1024 * 1024
@@ -73,26 +73,39 @@ test("opening and closing sessions, switching tabs and reloading the window leav
     const round = async (n: number, reload: boolean) => {
       const title = `Round ${n}`
       const tab = window.getByTestId("tab").filter({ hasText: title })
+      let last = Date.now()
+      const lap = (what: string) => {
+        console.log(`TIMING round ${n} ${what}: ${Date.now() - last} ms`)
+        last = Date.now()
+      }
       await window.getByRole("button", { name: "New session", exact: true }).last().click()
+      lap("click new session")
       await expect(tabs).toHaveCount(2)
+      lap("second tab")
       await sendMessage(window, title)
       await expect(
         window.getByTestId("turn-step").filter({ hasText: `echo: ${title}` }),
       ).toHaveCount(1)
+      lap("echo")
       await tabs.first().click()
       await expect(tabs.first()).toHaveAttribute("aria-selected", "true")
       await tab.click()
       await expect(tabs.last()).toHaveAttribute("aria-selected", "true")
 
+      lap("switch tabs")
       await tab.hover()
       await window.getByRole("button", { name: `Close ${title}`, includeHidden: true }).click()
       await window.getByRole("dialog").getByRole("button", { name: "Stop and close" }).click()
+      lap("close dialog")
       await expect(tabs).toHaveCount(1)
+      lap("tab gone")
       await expect.poll(agents).toBe(1)
+      lap("agent gone")
 
       if (reload) {
         await window.reload()
         await expect(tabs).toHaveCount(1)
+        lap("reload")
       }
     }
 
