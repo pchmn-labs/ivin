@@ -423,7 +423,7 @@ test("a turn that ends with a long answer leaves the view at its end, never far 
   void screen.rerender(sessionView(server, 300, false))
   const lags = await everyFrame(fromEnd, (seen) => seen.length === 30)
 
-  expect(Math.max(...lags)).toBeLessThan(80)
+  expect(Math.max(...lags)).toBeLessThan(2)
   expect(fromEnd()).toBeLessThan(2)
   expect(inView("line 29")).toBe(true)
 })
@@ -434,11 +434,12 @@ test("a turn that ends with a short answer stays at the end, its message in view
   server.pushItem(toolCall(41))
   server.pushItem(message(42))
   await expect.element(page.getByText("message 42", { exact: true })).toBeVisible()
+  await expect.poll(fromEnd).toBeLessThan(2)
 
   void screen.rerender(sessionView(server, 300, false))
   const lags = await everyFrame(fromEnd, (seen) => seen.length === 30)
 
-  expect(Math.max(...lags)).toBeLessThan(80)
+  expect(Math.max(...lags)).toBeLessThan(2)
   expect(fromEnd()).toBeLessThan(2)
   expect(inView("question 40")).toBe(true)
 })

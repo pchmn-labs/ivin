@@ -11,6 +11,8 @@ export type TranscriptRow =
       readonly itemIds: ReadonlyArray<string>
       // Every item of the turn, its user message and its answer included, to time it.
       readonly turnIds: ReadonlyArray<string>
+      // Drawn in this row, so the turn ending adds no row.
+      readonly answerIds: ReadonlyArray<string>
     }
 
 const isSteer = (item: TranscriptItem) =>
@@ -38,39 +40,42 @@ export const transcriptRows = (all: ReadonlyArray<TranscriptItem>): TranscriptRo
     if (isUserMessage(item) || turns.length === 0) turns.push([item])
     else turns.at(-1)!.push(item)
   }
-  turns.forEach((turn, index) => {
+  turns.forEach((turn) => {
     const user = isUserMessage(turn[0]!) ? turn[0]! : null
     const rest = user ? turn.slice(1) : turn
     if (user) rows.push({ type: "item", id: user.id })
     const lastWork = rest.findLastIndex(isWork)
-    if (lastWork >= 0 || (user && index === turns.length - 1)) {
+    const answer = rest.slice(lastWork + 1).filter((item) => item.type !== "usage")
+    if (lastWork >= 0 || user) {
       rows.push({
         type: "work",
         id: `work:${turn[0]!.id}`,
         itemIds: rest.slice(0, lastWork + 1).map((item) => item.id),
         turnIds: turn.map((item) => item.id),
+        answerIds: answer.map((item) => item.id),
       })
-    }
-    for (const item of rest.slice(lastWork + 1)) {
-      if (item.type !== "usage") rows.push({ type: "item", id: item.id })
+    } else {
+      for (const item of answer) rows.push({ type: "item", id: item.id })
     }
   })
   return rows
 }
 
-// Every row after the last work row belongs to the last turn.
-export const runningTurnRows = (
-  rows: ReadonlyArray<TranscriptRow>,
-): ReadonlyArray<TranscriptRow> => {
+const runningTurnRows = (rows: ReadonlyArray<TranscriptRow>): ReadonlyArray<TranscriptRow> => {
   const index = rows.findLastIndex((row) => row.type === "work")
   const work = rows[index]
-  if (work?.type !== "work" || index === rows.length - 1) return rows
-  const after = rows.slice(index + 1).map((row) => row.id)
-  return [...rows.slice(0, index), { ...work, itemIds: [...work.itemIds, ...after] }]
+  if (work?.type !== "work") return rows
+  return [
+    ...rows.slice(0, index),
+    { ...work, itemIds: [...work.itemIds, ...work.answerIds], answerIds: [] },
+    ...rows.slice(index + 1),
+  ]
 }
 
 export const shownRows = (rows: ReadonlyArray<TranscriptRow>, live: boolean) =>
-  live ? runningTurnRows(rows) : rows.filter((row) => row.type === "item" || row.itemIds.length > 0)
+  live
+    ? runningTurnRows(rows)
+    : rows.filter((row) => row.type === "item" || row.itemIds.length + row.answerIds.length > 0)
 
 // A turn cut by paging starts with an item folded into its work row, so it has no message row.
 export const lastTurnMessageId = (rows: ReadonlyArray<TranscriptRow>): string | undefined => {
