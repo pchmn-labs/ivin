@@ -14,6 +14,7 @@ import { settingsProblemAtom } from "../atoms/settings.ts"
 import { ignoredPluginSettingMessage } from "../rules/setting-message.ts"
 import type { PageSetting } from "../rules/settings-page-sections.ts"
 import { CommandLineSection } from "./command-line-section.tsx"
+import { ImagesSection } from "./images-section.tsx"
 import { SettingsFileProblem } from "./settings-file-problem.tsx"
 import "./settings-page.css"
 
@@ -214,6 +215,8 @@ export function SettingsPage() {
           <ul className="iv-settings-page__list">
             {section.key === "commandLine" ? (
               <CommandLineSection />
+            ) : section.key === "images" ? (
+              <ImagesSection />
             ) : (
               section.settings.map((setting) => (
                 <SettingRow key={setting.path} setting={setting} disabled={problem !== null} />

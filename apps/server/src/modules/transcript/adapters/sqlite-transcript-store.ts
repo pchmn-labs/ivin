@@ -57,25 +57,34 @@ type OpenToolCall = Extract<TranscriptItem, { type: "tool_call" }>
 type OpenRequest = Extract<TranscriptItem, { type: "approval" | "question" }>
 type OpenTask = Extract<TranscriptItem, { type: "task" }>
 
-// Images are stored with the type they were sent in; compression changes it afterwards.
-const compressedImages = (db: DatabaseSync, sessionId: string) => {
-  const compressed = new Map(
+// Images are stored with the type they were sent in; compression and deletion change them afterwards.
+const storedImages = (db: DatabaseSync, sessionId: string) => {
+  const changed = new Map(
     (
       db
         .prepare(
-          `SELECT id, compressed_media_type FROM images
-           WHERE session_id = ? AND compressed_media_type IS NOT NULL`,
+          `SELECT id, compressed_media_type, deleted_at FROM images
+           WHERE session_id = ? AND (compressed_media_type IS NOT NULL OR deleted_at IS NOT NULL)`,
         )
-        .all(sessionId) as { id: string; compressed_media_type: ImageMediaType }[]
-    ).map((row) => [row.id, row.compressed_media_type]),
+        .all(sessionId) as {
+        id: string
+        compressed_media_type: ImageMediaType | null
+        deleted_at: number | null
+      }[]
+    ).map((row) => [row.id, row]),
   )
   return (images: readonly ImageRef[]) =>
-    compressed.size === 0
+    changed.size === 0
       ? images
-      : images.map((image) => ({
-          ...image,
-          mediaType: compressed.get(image.id) ?? image.mediaType,
-        }))
+      : images.map((image) => {
+          const row = changed.get(image.id)
+          if (!row) return image
+          return {
+            ...image,
+            mediaType: row.compressed_media_type ?? image.mediaType,
+            ...(row.deleted_at === null ? {} : { deleted: true }),
+          }
+        })
 }
 
 const inTransaction = (db: DatabaseSync, body: () => void) => {
@@ -111,7 +120,7 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
            WHERE session_id = ? AND (? IS NULL OR type = ?) ORDER BY sequence`,
         )
         .all(sessionId, type, type) as unknown as EventRow[]
-      const images = compressedImages(db, sessionId)
+      const images = storedImages(db, sessionId)
       return rows
         .map((row) => toEvent(row, report))
         .filter((event) => event !== undefined)
@@ -205,7 +214,7 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
                   after + 1,
                 )
           const items = [...earlier.slice(0, before).toReversed(), ...later.slice(0, after)]
-          const images = compressedImages(db, sessionId)
+          const images = storedImages(db, sessionId)
           return {
             items: items.map((item) =>
               item.type === "message" && item.images.length > 0

@@ -68,3 +68,31 @@
   font-variant-numeric: tabular-nums;
   pointer-events: none;
 }
+
+.iv-image-thumbnail[data-deleted] {
+  background: transparent;
+}
+
+.iv-image-thumbnail[data-deleted]::after {
+  box-shadow: none;
+  border: 1px dashed var(--iv-border-strong);
+}
+
+.iv-image-thumbnail__deleted {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+  line-height: var(--iv-text-xs-lh);
+}
+
+/* Keeps the icon and its word clear of the #N label. */
+.iv-image-thumbnail[data-size="lg"] .iv-image-thumbnail__deleted {
+  padding-bottom: 10px;
+  box-sizing: border-box;
+}

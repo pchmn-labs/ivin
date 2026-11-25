@@ -22,7 +22,6 @@ import { desktopPlatform, showInFolder } from "../adapters/show-in-folder.ts"
 import { isOutsidePath } from "../rules/file-link.ts"
 import { fileName } from "../rules/file-name.ts"
 import {
-  byteSize,
   fileReading,
   fileReadingFailure,
   imageNotShown,
@@ -30,6 +29,7 @@ import {
   svgSource,
 } from "../rules/file-reading.ts"
 import { showInFolderLabel } from "../rules/show-in-folder.ts"
+import { byteSize } from "../../../shared/rules/byte-size.ts"
 import "./file-view.css"
 
 export function FileView({

@@ -133,12 +133,16 @@ const eagerIcons = {
   "external-link": arrowSquareOut,
 } satisfies Partial<Record<IconName, string>>
 
-// Drawn only by settings and the Files and Changes panels; each loads the first time it is drawn.
+// Drawn only by settings, the Files and Changes panels and deleted images; each loads the first time it is drawn.
 const lazyIcons = {
   "brackets-curly": lazyGlyph(
     () => import("@phosphor-icons/core/assets/regular/brackets-curly.svg?raw"),
   ),
   "app-window": lazyGlyph(() => import("@phosphor-icons/core/assets/regular/app-window.svg?raw")),
+  image: lazyGlyph(() => import("@phosphor-icons/core/assets/regular/image.svg?raw")),
+  "image-broken": lazyGlyph(
+    () => import("@phosphor-icons/core/assets/regular/image-broken.svg?raw"),
+  ),
   download: lazyGlyph(() => import("@phosphor-icons/core/assets/regular/download-simple.svg?raw")),
   "collapse-all": lazyGlyph(
     () => import("@phosphor-icons/core/assets/regular/arrows-in-line-vertical.svg?raw"),

@@ -15,8 +15,29 @@ export const ImageRef = Schema.Struct({
   id: Schema.String.check(Schema.isPattern(/^[A-Za-z0-9-]+$/)),
   number: Schema.Int,
   mediaType: ImageMediaType,
+  // The user deleted its file; the message keeps its marker.
+  deleted: Schema.optional(Schema.Boolean),
 })
 export type ImageRef = typeof ImageRef.Type
+
+export const ImageSpace = Schema.Struct({
+  images: Schema.Int,
+  bytes: Schema.Int,
+})
+export type ImageSpace = typeof ImageSpace.Type
+
+export const DeletedImages = Schema.Struct({
+  ...ImageSpace.fields,
+  imageIds: Schema.Array(Schema.String),
+})
+export type DeletedImages = typeof DeletedImages.Type
+
+// Each field narrows the images taken; none: every image.
+const ImageSelection = {
+  olderThanDays: Schema.optional(Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))),
+  // Sessions with no tab, archived or not.
+  inactiveSessions: Schema.optional(Schema.Boolean),
+}
 
 export const ImageData = Schema.Struct({
   ...ImageRef.fields,
@@ -465,5 +486,15 @@ export const TranscriptRpcs = RpcGroup.make(
   Rpc.make("transcript.listImages", {
     payload: { sessionId: Schema.String },
     success: Schema.Array(SessionImage),
+  }),
+  // The images not deleted that the selection takes, and the size of their files.
+  Rpc.make("transcript.getImageSpace", {
+    payload: ImageSelection,
+    success: ImageSpace,
+  }),
+  // Returns what it freed.
+  Rpc.make("transcript.deleteImages", {
+    payload: ImageSelection,
+    success: DeletedImages,
   }),
 )

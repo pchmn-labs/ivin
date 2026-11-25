@@ -1,0 +1,49 @@
+import type { ImageSpace } from "@ivin/contracts/transcript"
+import { byteSize } from "../../../shared/rules/byte-size.ts"
+
+// A number: the images sent more than that many days ago.
+export type DeleteScope = number | "all" | "inactive"
+
+export const imageSelectionOf = (scope: DeleteScope) =>
+  scope === "all"
+    ? {}
+    : scope === "inactive"
+      ? { inactiveSessions: true }
+      : { olderThanDays: scope }
+
+const count = (n: number, one: string) => `${n.toLocaleString("en")} ${one}${n === 1 ? "" : "s"}`
+
+export const imageCount = (n: number) => count(n, "image")
+
+export const storedImagesSummary = (space: ImageSpace) =>
+  space.images === 0 ? "No image is stored." : imageCount(space.images)
+
+export const olderImagesSummary = (space: ImageSpace, days: number) =>
+  space.images === 0
+    ? `No image is older than ${count(days, "day")}.`
+    : `${imageCount(space.images)} · ${byteSize(space.bytes)}`
+
+export const inactiveImagesSummary = (space: ImageSpace) =>
+  space.images === 0
+    ? "No inactive session has an image."
+    : `${imageCount(space.images)} · ${byteSize(space.bytes)}`
+
+export const deleteImagesTitle = (scope: DeleteScope, space: ImageSpace) =>
+  scope === "all"
+    ? space.images === 1
+      ? "Delete the stored image?"
+      : `Delete all ${imageCount(space.images)}?`
+    : scope === "inactive"
+      ? `Delete ${imageCount(space.images)} of inactive sessions?`
+      : `Delete ${imageCount(space.images)} sent more than ${count(scope, "day")} ago?`
+
+export const deleteImagesDescription = (space: ImageSpace) =>
+  `This frees ${byteSize(space.bytes)}. ${
+    space.images === 1
+      ? "Its message keeps its text and shows the image as deleted."
+      : "Their messages keep their text and show each image as deleted."
+  } This cannot be undone.`
+
+export const DAYS_INVALID = "Enter a whole number of days, 1 or more."
+export const SPACE_NOT_READ = "The space the images take could not be read. Try again."
+export const IMAGES_NOT_DELETED = "The images could not be deleted. Try again."

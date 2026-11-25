@@ -1,6 +1,7 @@
-import { RegistryProvider } from "@effect/atom-react"
+import { RegistryContext, RegistryProvider } from "@effect/atom-react"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { DateTime } from "effect"
+import { AtomRegistry } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
@@ -8,6 +9,7 @@ import { builtinPlugins } from "../../../app/builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { type FakeServer, makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { deletedImageIdsAtom } from "../../transcript/atoms/delete-images.ts"
 import { SessionView } from "./session-view.tsx"
 
 const PIXEL =
@@ -304,4 +306,66 @@ test("hovering a marker in a sent message shows its image in a preview card", as
   await expect.element(page.getByText("Image #3", { exact: true })).toBeVisible()
   await page.getByText("a test fails", { exact: false }).hover()
   await expect.element(page.getByText("Image #3", { exact: true })).not.toBeInTheDocument()
+})
+
+test("a deleted image keeps its place in the message and says it was deleted in the full-screen view", async () => {
+  const server = makeFakeServer()
+  server.openProject("/p")
+  addSession(server, "s1", 2)
+  server.seedItems("s1", [
+    {
+      id: "m1",
+      sessionId: "s1",
+      position: 0,
+      at: 0,
+      type: "message",
+      role: "user",
+      text: "the card overflows [Image #1] and [Image #2]",
+      images: [
+        { id: "img-1", number: 1, mediaType: "image/png", deleted: true },
+        { id: "img-2", number: 2, mediaType: "image/png" },
+      ],
+      steer: false,
+    },
+  ])
+  await render(view(server, "s1"))
+
+  const thumbnail = page.getByRole("button", { name: "Image #1, deleted" }).first()
+  await expect.element(thumbnail.getByText("Deleted", { exact: true })).toBeVisible()
+  await expect.element(page.getByRole("button", { name: "Image #1, deleted" }).last()).toBeVisible()
+  expect(thumbnail.element().querySelector("img")).toBeNull()
+  expect(document.querySelector(".iv-message-text")?.textContent).toBe(
+    "the card overflows #1 and #2",
+  )
+
+  await thumbnail.click()
+  const viewer = page.getByRole("dialog")
+  await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #1 · 1 of 2")
+  await expect.element(viewer.getByText("Image #1 was deleted")).toBeVisible()
+  await userEvent.keyboard("{ArrowRight}")
+  await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #2 · 2 of 2")
+  await expect.element(viewer.getByText("Image #1 was deleted")).not.toBeInTheDocument()
+})
+
+test("an image deleted from the settings while its transcript is loaded shows as deleted at once", async () => {
+  const server = makeFakeServer()
+  server.openProject("/p")
+  addSession(server, "s1", 3)
+  seedTranscript(server)
+  const registry = AtomRegistry.make({ initialValues: [[serverClientLayerAtom, server.layer]] })
+  await render(
+    <RegistryContext.Provider value={registry}>
+      <PluginsProvider plugins={builtinPlugins}>
+        <SessionView projectPath="/p" sessionId="s1" />
+      </PluginsProvider>
+    </RegistryContext.Provider>,
+  )
+  await expect.element(page.getByRole("button", { name: "View image #2" }).first()).toBeVisible()
+
+  registry.set(deletedImageIdsAtom, new Map([["img-2", true]]))
+
+  await expect
+    .element(page.getByRole("button", { name: "Image #2, deleted" }).first())
+    .toBeVisible()
+  await expect.element(page.getByRole("button", { name: "View image #3" }).first()).toBeVisible()
 })

@@ -14,6 +14,8 @@ import type { Draft, SessionLocationLabel } from "./host-context.ts"
 
 export type IconName =
   | "archive"
+  | "image"
+  | "image-broken"
   | "trash"
   | "restore"
   | "plus"

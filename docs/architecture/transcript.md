@@ -20,6 +20,8 @@ What the design adds to the [glossary](../../GLOSSARY.md)'s terms in the `transc
 - The window holds a window of items. A tab's transcript stays fed while the tab is open; when its view closes with the transcript left at its end (`place.atEnd`), the items before the last page (`PAGE_SIZE`, 50) are removed and `hasBefore` is set, so reopening starts on the last item and scrolling up loads older pages again. A transcript left scrolled back keeps every page it has. The view that is on screen is never trimmed: its rows above the viewport would move under the reader.
 - A transcript whose feed fails shows "The transcript could not be loaded." with Retry at the top of the transcript area, over a faint grey skeleton, in place of "Loading the transcript…". When the session is no longer in its project, it shows "This session no longer exists." with no Retry. Retry starts the feed again and keeps the items already loaded.
 
+- A transcript already in the window holds image references from before a delete from the settings. `transcript.deleteImages` returns the ids it deleted, and the window keeps them for as long as it runs (`deletedImageIdsAtom`), so those images show as deleted without reloading the transcript; a reference read after the delete carries `deleted` itself.
+
 - Two polite live regions speak for the transcript (`transcript/ui/announcements.tsx`): the end of a turn in the session on screen, read from the items once its status leaves working or waiting, and each new approval in the selected project, read from the sessions waiting for one. The approvals already waiting when a project's sessions first list are not announced.
 
 ## Owning the transcript

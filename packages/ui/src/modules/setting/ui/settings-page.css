@@ -75,3 +75,16 @@
   gap: var(--iv-space-1);
   color: var(--iv-text-muted);
 }
+
+.iv-images-section__size {
+  font-size: var(--iv-text-lg);
+  font-weight: var(--iv-weight-semibold);
+  line-height: var(--iv-text-lg-lh);
+  font-variant-numeric: tabular-nums;
+}
+
+.iv-images-section__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-2);
+}

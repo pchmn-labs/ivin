@@ -108,3 +108,25 @@
   margin: var(--iv-space-1) var(--iv-space-1);
   background: var(--iv-border-strong);
 }
+
+.iv-image-viewer__deleted {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--iv-space-2);
+  color: var(--iv-text-faint);
+  text-align: center;
+}
+
+.iv-image-viewer__deleted-title {
+  color: var(--iv-text);
+  font-weight: var(--iv-weight-medium);
+}
+
+.iv-image-viewer__deleted-text {
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+}

@@ -17,6 +17,13 @@ export interface PageSection {
   readonly pluginId?: string
 }
 
+const images: PageSection = {
+  key: "images",
+  title: "Images",
+  description: "The images you sent to agents. ivin keeps them until you delete them here.",
+  settings: [],
+}
+
 const commandLine: PageSection = {
   key: "commandLine",
   title: "Command line",
@@ -49,7 +56,9 @@ export const settingsPageSections = (
     if (!plugins.has(id)) plugins.set(id, { name: id, settings: [] })
   }
   return [
-    ...settingSections,
+    ...settingSections.filter((section) => section.key !== "updates"),
+    images,
+    ...settingSections.filter((section) => section.key === "updates"),
     ...[...plugins].map(([pluginId, { name, settings }]) => ({
       key: `plugin:${pluginId}`,
       title: name,

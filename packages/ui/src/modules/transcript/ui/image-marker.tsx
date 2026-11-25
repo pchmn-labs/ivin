@@ -1,5 +1,6 @@
 import { useAtom } from "@effect/atom-react"
 import { useState } from "react"
+import { Icon } from "../../../core/components/icon/icon.tsx"
 import { hoveredImageAtom } from "../atoms/image-viewer.ts"
 import { ImagePreview } from "./image-preview.tsx"
 import "./image-marker.css"
@@ -8,11 +9,13 @@ export function ImageMarker({
   imageId,
   number,
   src,
+  deleted = false,
   onOpen,
 }: {
   imageId: string
   number: number
   src: string
+  deleted?: boolean
   onOpen: () => void
 }) {
   const [hovered, setHovered] = useAtom(hoveredImageAtom)
@@ -31,7 +34,8 @@ export function ImageMarker({
         type="button"
         className="iv-image-marker"
         data-hot={hovered === imageId || undefined}
-        aria-label={`View image #${number}`}
+        data-deleted={deleted || undefined}
+        aria-label={deleted ? `Image #${number}, deleted` : `View image #${number}`}
         onClick={onOpen}
         onPointerEnter={(event) => show(event.currentTarget)}
         onPointerLeave={hide}
@@ -39,11 +43,11 @@ export function ImageMarker({
         onBlur={hide}
       >
         <span className="iv-image-marker__image">
-          <img src={src} alt="" />
+          {deleted ? <Icon name="image-broken" size={12} /> : <img src={src} alt="" />}
         </span>
         #{number}
       </button>
-      {anchor && <ImagePreview anchor={anchor} number={number} src={src} />}
+      {anchor && !deleted && <ImagePreview anchor={anchor} number={number} src={src} />}
     </>
   )
 }

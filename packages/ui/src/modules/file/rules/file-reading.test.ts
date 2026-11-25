@@ -2,7 +2,6 @@ import { FileNotRead, PathOutsideWorkingFolder } from "@ivin/contracts/file"
 import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
 import { expect, test } from "vitest"
 import {
-  byteSize,
   fileReading,
   fileReadingFailure,
   imageNotShown,
@@ -53,13 +52,10 @@ test("an SVG's text shows as an image, never as markup in the page", () => {
   )
 })
 
-test("an image that does not decode, and the size of an image, read in plain words", () => {
+test("an image that does not decode reads in plain words", () => {
   expect(imageNotShown("assets/broken.png")).toBe(
     "broken.png cannot be shown: its data is damaged or in a format ivin cannot read.",
   )
-  expect(byteSize(612)).toBe("612 B")
-  expect(byteSize(319_488)).toBe("312 KB")
-  expect(byteSize(1.4 * 1024 * 1024)).toBe("1.4 MB")
 })
 
 test("each failure names the file, and offers a retry only when one can work", () => {

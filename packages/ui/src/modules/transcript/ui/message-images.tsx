@@ -1,7 +1,9 @@
-import { useAtomSet } from "@effect/atom-react"
+import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import type { MessageImagesProps } from "@ivin/plugin-api/ui"
+import { deletedImageIdsAtom } from "../atoms/delete-images.ts"
 import { imageViewerAtom } from "../atoms/image-viewer.ts"
 import { imageSrc } from "../atoms/sent-images.ts"
+import { isImageDeleted } from "../rules/image-deleted.ts"
 import { ImageThumbnail } from "./image-thumbnail.tsx"
 import "./message-images.css"
 
@@ -12,6 +14,7 @@ export const useOpenSessionImage = (sessionId: string) => {
 
 export function MessageImages({ sessionId, images }: MessageImagesProps) {
   const openImage = useOpenSessionImage(sessionId)
+  const deletedIds = useAtomValue(deletedImageIdsAtom)
   if (images.length === 0) return null
   return (
     <div className="iv-message-images">
@@ -23,6 +26,7 @@ export function MessageImages({ sessionId, images }: MessageImagesProps) {
           src={imageSrc(sessionId, image)}
           size="lg"
           showNumber
+          deleted={isImageDeleted(image, deletedIds)}
           onOpen={() => openImage(image.id)}
         />
       ))}

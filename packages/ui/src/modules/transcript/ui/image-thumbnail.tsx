@@ -1,5 +1,6 @@
 import { useAtom } from "@effect/atom-react"
 import { useRef } from "react"
+import { Icon } from "../../../core/components/icon/icon.tsx"
 import { useInView } from "../hooks/use-in-view.ts"
 import { hoveredImageAtom } from "../atoms/image-viewer.ts"
 import "./image-thumbnail.css"
@@ -11,6 +12,7 @@ export interface ImageThumbnailProps {
   readonly src: string
   readonly showNumber?: boolean
   readonly current?: boolean
+  readonly deleted?: boolean
   // Loads the image only once the thumbnail scrolls into view, for a list that is not virtual.
   readonly lazy?: boolean
   readonly onOpen: () => void
@@ -23,6 +25,7 @@ export function ImageThumbnail({
   src,
   showNumber = false,
   current,
+  deleted = false,
   lazy = false,
   onOpen,
 }: ImageThumbnailProps) {
@@ -37,13 +40,21 @@ export function ImageThumbnail({
       data-image-id={imageId}
       data-size={size}
       data-hot={(hovered === imageId && size !== "sm") || undefined}
-      aria-label={`View image #${number}`}
+      data-deleted={deleted || undefined}
+      aria-label={deleted ? `Image #${number}, deleted` : `View image #${number}`}
       aria-current={current}
       onClick={onOpen}
       onPointerEnter={() => setHovered(imageId)}
       onPointerLeave={() => setHovered((now) => (now === imageId ? null : now))}
     >
-      {visible && <img src={src} alt="" decoding="async" />}
+      {deleted ? (
+        <span className="iv-image-thumbnail__deleted">
+          <Icon name="image-broken" size={size === "sm" ? 14 : 20} />
+          {size === "lg" && "Deleted"}
+        </span>
+      ) : (
+        visible && <img src={src} alt="" decoding="async" />
+      )}
       {showNumber && <span className="iv-image-thumbnail__number">#{number}</span>}
     </button>
   )

@@ -97,6 +97,10 @@ export interface FakeServer {
   // Marks the first turn after a change of run options as failed, as the server would.
   readonly failRelaunch: (sessionId: string, failure: RelaunchFailure) => void
   readonly seedItems: (sessionId: string, items: ReadonlyArray<TranscriptItem>) => void
+  // Stored images, as `transcript.getImageSpace` and `transcript.deleteImages` see them.
+  readonly seedStoredImages: (
+    images: ReadonlyArray<{ id: string; sessionId: string; bytes: number; sentAt: number }>,
+  ) => void
   // What `session.taskOutput` returns for a running command, by `<sessionId>/<taskId>`.
   readonly taskOutputs: Map<string, string>
   // Changes the tasks a session lists, as the server does when a task starts or ends.
@@ -318,6 +322,25 @@ export const makeFakeServer = (
         ? Effect.succeed(run())
         : Effect.fail(new SessionNotFound({ sessionId })),
     )
+  const storedImages = new Map<
+    string,
+    { id: string; sessionId: string; bytes: number; sentAt: number; deleted: boolean }
+  >()
+  interface ImageSelection {
+    readonly olderThanDays?: number | undefined
+    readonly inactiveSessions?: boolean | undefined
+  }
+  const selectedImages = ({ olderThanDays, inactiveSessions }: ImageSelection) =>
+    [...storedImages.values()].filter(
+      (image) =>
+        !image.deleted &&
+        (olderThanDays === undefined || image.sentAt < Date.now() - olderThanDays * 86_400_000) &&
+        (inactiveSessions !== true || !tabs.some((tab) => tab.sessionId === image.sessionId)),
+    )
+  const spaceOf = (images: ReadonlyArray<{ bytes: number }>) => ({
+    images: images.length,
+    bytes: images.reduce((sum, image) => sum + image.bytes, 0),
+  })
   const failing = new Set<string>()
   const failingUntilRecovered = new Set<string>()
   const untrustedProjects = new Set<string>()
@@ -822,6 +845,15 @@ export const makeFakeServer = (
           const items = itemsOf(input.sessionId)
           const isFirstMessage = !session.started
           const sent = input.images ?? []
+          for (const image of sent) {
+            storedImages.set(image.id, {
+              id: image.id,
+              sessionId: input.sessionId,
+              bytes: Math.floor((image.base64.length * 3) / 4),
+              sentAt: Date.now(),
+              deleted: false,
+            })
+          }
           const unsent = {
             id: input.messageId,
             text: input.text,
@@ -1261,6 +1293,14 @@ export const makeFakeServer = (
             : [],
         ),
       ),
+    "transcript.getImageSpace": (selection: ImageSelection) =>
+      Effect.sync(() => spaceOf(selectedImages(selection))),
+    "transcript.deleteImages": (selection: ImageSelection) =>
+      Effect.sync(() => {
+        const kept = selectedImages(selection)
+        for (const image of kept) image.deleted = true
+        return { ...spaceOf(kept), imageIds: kept.map((image) => image.id) }
+      }),
     "annotation.add": ({
       target,
       ns,
@@ -1432,6 +1472,9 @@ export const makeFakeServer = (
     failRelaunch: (sessionId, failure) =>
       void saveSession({ ...sessions.get(sessionId)!, relaunchFailure: failure }),
     seedItems: (sessionId, items) => itemsOf(sessionId).push(...items),
+    seedStoredImages: (images) => {
+      for (const image of images) storedImages.set(image.id, { ...image, deleted: false })
+    },
     taskOutputs,
     setBackgroundTasks: (sessionId, backgroundTasks) =>
       void saveSession({ ...sessions.get(sessionId)!, backgroundTasks }),

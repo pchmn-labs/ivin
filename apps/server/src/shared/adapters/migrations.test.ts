@@ -319,3 +319,24 @@ test("stored file, diff and committed diff sub-views become views with parameter
     },
   ])
 })
+
+test("a stored image takes the time of the message that sent it, else its session's creation", () => {
+  const db = new DatabaseSync(":memory:")
+  Effect.runSync(runMigrations(db, migrations.slice(0, 25)))
+  db.exec(
+    `INSERT INTO sessions (id, project_path, working_folder, title, created_at, last_activity_at)
+     VALUES ('s', '/p', '/p', 't', 3, 3);
+     INSERT INTO transcript_events (id, session_id, sequence, type, at, payload)
+     VALUES ('m1', 's', 1, 'user_message', 50,
+       '{"type":"user_message","text":"","images":[{"id":"i1","number":1,"mediaType":"image/png"}]}');
+     INSERT INTO images (id, session_id, number, media_type)
+     VALUES ('i1', 's', 1, 'image/png'), ('lost', 's', 2, 'image/png')`,
+  )
+
+  Effect.runSync(runMigrations(db))
+
+  expect(db.prepare("SELECT id, sent_at, deleted_at FROM images ORDER BY id").all()).toEqual([
+    { id: "i1", sent_at: 50, deleted_at: null },
+    { id: "lost", sent_at: 3, deleted_at: null },
+  ])
+})

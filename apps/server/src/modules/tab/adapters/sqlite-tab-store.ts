@@ -63,6 +63,11 @@ export const layerSqliteTabStore = Layer.effect(TabStore)(
           db.prepare("DELETE FROM sub_views WHERE session_id = ?").run(sessionId)
           db.prepare("DELETE FROM tabs WHERE session_id = ?").run(sessionId)
         }),
+      sessionIds: Effect.sync(() =>
+        (db.prepare("SELECT session_id FROM tabs").all() as { session_id: string }[]).map(
+          (row) => row.session_id,
+        ),
+      ),
       removeByProject: (projectPath) =>
         Effect.sync(() => {
           db.prepare(

@@ -18,6 +18,7 @@ const sectionIcons: Record<string, IconName> = {
   files: "folder",
   sidebar: "panel-left",
   agents: "robot",
+  images: "image",
   updates: "download",
   commandLine: "terminal",
 }
