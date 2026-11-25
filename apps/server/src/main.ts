@@ -2,6 +2,7 @@ import {
   demoApprovalScript,
   demoQuestionScript,
   demoScript,
+  demoAgentCommands,
   demoShotScript,
   layerClaude,
   layerScripted,
@@ -108,7 +109,9 @@ const layerHarnesses = {
   scripted: layerScripted(demoScript, { cycle: true }),
   "scripted-approval": layerScripted(demoApprovalScript),
   "scripted-question": layerScripted(demoQuestionScript),
-  "scripted-shot": layerScripted(demoShotScript),
+  "scripted-shot": layerScripted(demoShotScript, {
+    listCommands: () => Effect.succeed(demoAgentCommands),
+  }),
 } as const
 if (!(harnessId in layerHarnesses)) {
   fail(

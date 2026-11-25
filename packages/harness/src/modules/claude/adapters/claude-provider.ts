@@ -21,7 +21,7 @@ import {
   commandEntriesFromInitialize,
   commandsOfRun,
   initialFacts,
-  sameNames,
+  runListsSameNames,
 } from "../rules/agent-commands.ts"
 import {
   controlRequestInput,
@@ -136,7 +136,7 @@ const listedCommands = (timeout: Duration.Input) => {
     if (!run) return
     facts = run.facts
     const entries = entriesByFolder.get(cwd)
-    if (entries && !sameNames(agentCommands(entries, facts), run.names)) entriesByFolder.delete(cwd)
+    if (entries && !runListsSameNames(entries, run)) entriesByFolder.delete(cwd)
   }
   return { list, learnFromRun }
 }

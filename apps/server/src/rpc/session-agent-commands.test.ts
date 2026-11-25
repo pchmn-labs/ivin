@@ -30,14 +30,14 @@ const review: AgentCommand = {
 
 const withServer = <A, E>(
   options: ScriptedOptions,
-  use: (client: Client) => Effect.Effect<A, E>,
+  use: (client: Client, db: DatabaseSync) => Effect.Effect<A, E>,
 ) => {
   const db = new DatabaseSync(":memory:")
   Effect.runSync(runMigrations(db))
   trustEveryFolder(db)
   return Effect.runPromise(
     makeClient().pipe(
-      Effect.flatMap(use),
+      Effect.flatMap((client) => use(client, db)),
       Effect.provide(
         handlers.pipe(
           Layer.provide(layerServices),
@@ -101,4 +101,20 @@ test("an unknown session fails with SessionNotFound", async () => {
   )
 
   expect(error._tag).toBe("SessionNotFound")
+})
+
+test("a folder the user no longer trusts is not asked, and fails with AgentCommandsNotListed", async () => {
+  const folders: string[] = []
+  const error = await withServer(
+    { listCommands: (cwd) => Effect.sync(() => (folders.push(cwd), [review])) },
+    (client, db) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: "/p" })
+        db.prepare("DELETE FROM trusted_projects").run()
+        return yield* Effect.flip(client["session.listAgentCommands"]({ sessionId: created.id }))
+      }),
+  )
+
+  expect(error._tag).toBe("AgentCommandsNotListed")
+  expect(folders).toEqual([])
 })

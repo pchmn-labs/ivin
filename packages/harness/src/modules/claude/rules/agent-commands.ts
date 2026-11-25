@@ -81,7 +81,8 @@ export const agentCommands = (
   facts: CommandFacts,
 ): AgentCommand[] =>
   entries
-    .filter((entry) => isOffered(entry.name, facts))
+    // Claude keeps a command it removed in the list, with a description that says so.
+    .filter((entry) => isOffered(entry.name, facts) && !entry.description.startsWith("(removed)"))
     .map((entry) => toAgentCommand(entry, facts))
 
 // Undefined: the line is not a run's first line.
@@ -97,7 +98,12 @@ export const commandsOfRun = (
   return { names: init.value.slash_commands.filter((name) => isOffered(name, facts)), facts }
 }
 
-export const sameNames = (listed: readonly AgentCommand[], names: readonly string[]) => {
-  const known = new Set(listed.map((command) => command.name))
-  return known.size === new Set(names).size && names.every((name) => known.has(name))
+export const runListsSameNames = (
+  entries: readonly CommandEntry[],
+  run: { readonly names: readonly string[]; readonly facts: CommandFacts },
+) => {
+  const known = new Set(
+    entries.filter((entry) => isOffered(entry.name, run.facts)).map((entry) => entry.name),
+  )
+  return known.size === new Set(run.names).size && run.names.every((name) => known.has(name))
 }

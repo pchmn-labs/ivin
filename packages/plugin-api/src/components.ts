@@ -526,9 +526,7 @@ export interface CompletionItem {
   readonly description?: string
 }
 
-// A sheet docked on the message field that lists completions of the word at the caret, while
-// that word starts with `trigger`. The field's keys drive it: ↑ ↓ move, Enter or Tab picks,
-// Escape closes it until the word changes; Enter sends the message when nothing is listed.
+// Completes the word at the caret that starts with `trigger`, in a sheet the field's keys drive.
 export interface MessageFieldCompletion {
   readonly trigger: string
   // Only a word at the start of the draft opens it.
@@ -538,9 +536,7 @@ export interface MessageFieldCompletion {
   readonly items: (query: string) => ReadonlyArray<CompletionItem>
   // Shown in place of the items, such as while they load or after they failed.
   readonly message?: ReactNode
-  // Shown when no item matches the letters typed.
   readonly empty: (query: string) => ReactNode
-  // Runs each time the sheet opens.
   readonly onOpen?: () => void
 }
 

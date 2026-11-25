@@ -6,7 +6,7 @@ import {
   commandEntriesFromInitialize,
   commandsOfRun,
   initialFacts,
-  sameNames,
+  runListsSameNames,
 } from "./agent-commands.ts"
 
 const response = JSON.parse(initialize.trim()) as unknown
@@ -78,13 +78,14 @@ test("a built-in skill comes from Claude", () => {
   expect(commands.find((command) => command.name === "dataviz")?.source).toBe("built-in")
 })
 
-test("terminal-only and internal commands are left out", () => {
+test("terminal-only, internal and removed commands are left out", () => {
   const names = agentCommands(commandEntriesFromInitialize(response, "init")!, initialFacts).map(
     (command) => command.name,
   )
   expect(names).not.toContain("doctor")
   expect(names).not.toContain("color")
   expect(names).not.toContain("__remote-workflow")
+  expect(names).not.toContain("agents")
   expect(names).toContain("compact")
 })
 
@@ -97,9 +98,9 @@ test("a run's first line says which built-in commands are skills", () => {
 
 test("a run lists the same names as the initialize response, until a skill is added", () => {
   const run = commandsOfRun(runInit)!
-  const listed = agentCommands(commandEntriesFromInitialize(response, "init")!, run.facts)
-  expect(sameNames(listed, run.names)).toBe(true)
-  expect(sameNames(listed, [...run.names, "probe-skill"])).toBe(false)
+  const entries = commandEntriesFromInitialize(response, "init")!
+  expect(runListsSameNames(entries, run)).toBe(true)
+  expect(runListsSameNames(entries, { ...run, names: [...run.names, "probe-skill"] })).toBe(false)
 })
 
 test("a line other than a run's first line carries no command list", () => {

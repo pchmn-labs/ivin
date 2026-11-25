@@ -6,6 +6,7 @@
   z-index: 4;
   display: flex;
   flex-direction: column;
+  max-height: var(--iv-completion-room, none);
   border: 1px solid var(--iv-border-strong);
   border-bottom: 0;
   border-radius: var(--iv-radius-lg) var(--iv-radius-lg) 0 0;
@@ -41,6 +42,7 @@
 
 /* Six rows show; the seventh scrolls in. */
 .iv-completion-sheet__list {
+  min-height: 0;
   max-height: calc(6 * var(--iv-completion-row) + 2 * var(--iv-space-1));
   overflow-y: auto;
   overscroll-behavior: contain;

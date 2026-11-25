@@ -1,7 +1,6 @@
 export interface CompletionWord {
   readonly start: number
   readonly end: number
-  // The letters after the trigger.
   readonly query: string
 }
 
@@ -20,6 +19,8 @@ export const completionWord = (
   return { start, end, query: text.slice(start + trigger.length, end) }
 }
 
-// What the word becomes once an item is picked: the trigger, the label and one space after it.
+// Escape closes the sheet on this word until it changes.
+export const wordKey = (start: number, word: string) => `${start}:${word}`
+
 export const pickedText = (word: CompletionWord, trigger: string, label: string, text: string) =>
   `${trigger}${label}${/^\s/.test(text.slice(word.end)) ? "" : " "}`

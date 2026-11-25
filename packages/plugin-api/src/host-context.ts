@@ -207,8 +207,7 @@ export interface UiHost {
     sessionId: string,
     path: string,
   ) => Promise<ActionFailure | undefined>
-  // The skills and commands the session's harness runs from a message starting with `/name`.
-  // `refresh` asks the server again and keeps the list shown meanwhile.
+  // `refresh` keeps the list shown while the server is asked again.
   readonly useAgentCommands: (sessionId: string) => {
     readonly listing: AgentCommandListing
     readonly refresh: () => void

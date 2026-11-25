@@ -6,7 +6,7 @@ import "./completion-sheet.css"
 
 const HINTS = [
   { key: "↑↓", label: "Move" },
-  { key: "↵", label: "Pick" },
+  { key: "↵ Tab", label: "Pick" },
   { key: "Esc", label: "Close" },
 ]
 

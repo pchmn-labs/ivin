@@ -12,6 +12,7 @@ export {
   type UserMessage,
 } from "./shared/harness-provider.ts"
 export {
+  demoAgentCommands,
   demoAnswer,
   demoApprovalScript,
   demoQuestionScript,

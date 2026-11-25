@@ -6,6 +6,7 @@ import {
   useEffectEvent,
   useId,
   useImperativeHandle,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -19,7 +20,7 @@ import { imageDataUrl } from "../../transcript/rules/image-url.ts"
 import { ImagePreview } from "../../transcript/ui/image-preview.tsx"
 import { readImageFile } from "../adapters/read-image-file.ts"
 import { openSessionsAtom } from "../atoms/open-sessions.ts"
-import { completionWord, pickedText } from "../rules/completion-word.ts"
+import { completionWord, pickedText, wordKey } from "../rules/completion-word.ts"
 import { draftImages, nextImageNumber } from "../rules/draft.ts"
 import { HARNESSES } from "../rules/harnesses.ts"
 import { type ImageRefusal, imageRefusal, refusalMessage } from "../rules/image-refusal.ts"
@@ -64,8 +65,8 @@ export function MessageField({
   const word = completion
     ? completionWord(draft.text, caret, completion.trigger, completion.atStart ?? false)
     : null
-  const wordKey = word && `${word.start}:${draft.text.slice(word.start, word.end)}`
-  const open = completion !== undefined && word !== null && wordKey !== dismissed
+  const shownWord = word && wordKey(word.start, draft.text.slice(word.start, word.end))
+  const open = completion !== undefined && word !== null && shownWord !== dismissed
   const items = open ? completion.items(word.query) : []
   const message =
     items.length > 0 ? null : (completion?.message ?? completion?.empty(word?.query ?? ""))
@@ -77,6 +78,20 @@ export function MessageField({
   }
   const highlighted = Math.min(active, items.length - 1)
 
+  // The sheet docks above the field and must not cover the tab bar when the field sits high.
+  useLayoutEffect(() => {
+    const element = surface.current
+    if (!open || !element) return
+    const measure = () => {
+      const top = element.closest(".iv-session-view")?.getBoundingClientRect().top ?? 0
+      const room = Math.max(0, element.getBoundingClientRect().top - top - 8)
+      element.style.setProperty("--iv-completion-room", `${room}px`)
+    }
+    measure()
+    window.addEventListener("resize", measure)
+    return () => window.removeEventListener("resize", measure)
+  }, [open])
+
   const opened = useEffectEvent(() => completion?.onOpen?.())
   useEffect(() => {
     if (open) opened()
@@ -85,7 +100,7 @@ export function MessageField({
   const pick = (label: string) => {
     if (!completion || !word || caret === null) return
     const text = pickedText(word, completion.trigger, label, draft.text)
-    setDismissed(`${word.start}:${completion.trigger}${label}`)
+    setDismissed(wordKey(word.start, `${completion.trigger}${label}`))
     editor.current?.replaceAroundCaret(caret - word.start, word.end - caret, text)
   }
 
@@ -94,7 +109,7 @@ export function MessageField({
     const plain = !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey
     if (event.key === "Escape") {
       event.preventDefault()
-      setDismissed(wordKey)
+      setDismissed(shownWord)
       return
     }
     const current = items[highlighted]

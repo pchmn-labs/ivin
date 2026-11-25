@@ -158,9 +158,16 @@ try {
   await window.getByRole("option", { name: "New worktree" }).click()
   await window.getByText(/^New branch from/).waitFor()
   await shoot("new-worktree")
-  // A pasted screenshot: a terminal with a failing test, drawn in the window.
   const box = window.getByRole("textbox", { name: "Message" })
   await box.click()
+  await window.keyboard.type("/rev")
+  await window.getByTestId("completion-sheet").getByRole("option").first().waitFor()
+  await window.waitForTimeout(300)
+  await shoot("command-menu")
+  await window.keyboard.press("Escape")
+  await window.keyboard.press("Meta+A")
+  await window.keyboard.press("Backspace")
+  // A pasted screenshot: a terminal with a failing test, drawn in the window.
   await window.keyboard.type("How many files are there? The tests fail here: ")
   await box.evaluate(
     (field) =>

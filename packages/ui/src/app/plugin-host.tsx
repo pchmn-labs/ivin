@@ -155,7 +155,10 @@ const agentCommandListing = (
   if (AsyncResult.isSuccess(result))
     return result.value === null ? { kind: "none" } : { kind: "listed", commands: result.value }
   if (AsyncResult.isFailure(result) && !result.waiting)
-    return { kind: "failed", failure: agentCommandsFailure(HARNESSES[harness ?? "claude"].name) }
+    return {
+      kind: "failed",
+      failure: agentCommandsFailure(harness === undefined ? "the agent" : HARNESSES[harness].name),
+    }
   return { kind: "loading" }
 }
 
