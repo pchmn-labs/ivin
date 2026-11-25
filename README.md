@@ -30,6 +30,8 @@ Before writing code, read [AGENTS.md](AGENTS.md) and [docs/conventions/](docs/co
 
 ivin replaces a fork of MonoCode in which every feature was shaped by the cost of the next upstream merge. It starts from what that fork taught about the extension points a real feature set needs.
 
+ivin owes much of its design to [T3 Code](https://github.com/pingdotgg/t3code) (server process, Effect stack, provider layer…) and [MonoCode](https://github.com/hardbeat920/monocode) (features, agents running in worktrees…).
+
 ## Licence
 
 [MIT](LICENSE). Third-party material is listed in [NOTICE](NOTICE).
