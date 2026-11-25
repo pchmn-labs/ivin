@@ -96,6 +96,26 @@ test("a new tab goes at the end of its project's bar and is selected; reopening 
   expect(again.selectedSessionId).toBe(ids[0])
 })
 
+test("a new tab opened with `after` goes right after that tab; a session that has a tab keeps its place", async () => {
+  const { ids, added, bar, again } = await withServer(newDatabase(), (client) =>
+    Effect.gen(function* () {
+      yield* client["project.open"]({ path: "/a/first" })
+      const ids: string[] = []
+      for (let i = 0; i < 3; i++) ids.push((yield* newSession(client, "/a/first")).id)
+      for (const sessionId of ids) yield* client["tab.open"]({ sessionId })
+      const added = yield* newSession(client, "/a/first")
+      const bar = yield* client["tab.open"]({ sessionId: added.id, after: ids[0]! })
+      const again = yield* client["tab.open"]({ sessionId: ids[2]!, after: ids[0]! })
+      return { ids, added, bar, again }
+    }),
+  )
+
+  const order = [ids[0], added.id, ids[1], ids[2]]
+  expect(bar.tabs.map((t) => t.sessionId)).toEqual(order)
+  expect(bar.selectedSessionId).toBe(added.id)
+  expect(again.tabs.map((t) => t.sessionId)).toEqual(order)
+})
+
 test("a tab of another project goes to that project's bar", async () => {
   const { a, b } = await withServer(newDatabase(), (client) =>
     Effect.gen(function* () {

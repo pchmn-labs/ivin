@@ -23,6 +23,7 @@ export const coreCommands: ReadonlyArray<Command> = [
   { id: "session.archive", title: "Archive session", pluginId: null },
   { id: "session.showArchived", title: "Show archived sessions", pluginId: null },
   { id: "session.delete", title: "Delete session", pluginId: null },
+  { id: "tab.new", title: "New tab", pluginId: null },
   { id: "tab.close", title: "Close tab", pluginId: null },
   { id: "tab.moveLeft", title: "Move tab left", pluginId: null },
   { id: "tab.moveRight", title: "Move tab right", pluginId: null },

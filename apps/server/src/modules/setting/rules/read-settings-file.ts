@@ -67,6 +67,13 @@ const read = (text: string | null, defaults: Settings): Settings => {
   return {
     tabs: {
       stopAgentOnClose: booleanOf(file, "tabs", "stopAgentOnClose", defaults.tabs.stopAgentOnClose),
+      newTabPosition: choiceOf(
+        file,
+        "tabs",
+        "newTabPosition",
+        Settings.fields.tabs.fields.newTabPosition.literals,
+        defaults.tabs.newTabPosition,
+      ),
     },
     worktrees: {
       removeOnTabClose: booleanOf(

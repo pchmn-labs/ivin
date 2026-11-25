@@ -27,7 +27,10 @@ export interface Tab {
 }
 
 export interface Settings {
-  readonly tabs: { readonly stopAgentOnClose: boolean }
+  readonly tabs: {
+    readonly stopAgentOnClose: boolean
+    readonly newTabPosition: "end" | "afterCurrent"
+  }
   readonly worktrees: { readonly removeOnTabClose: boolean }
   readonly files: { readonly folderIcons: boolean }
   readonly sidebar: { readonly layout: "rail" | "strip" }

@@ -4,10 +4,11 @@ import { Effect } from "effect"
 import { ProjectStore } from "../../project/usecases/project-store.ts"
 import { checkWorkingFolder } from "../../session/usecases/check-working-folder.ts"
 import { SessionStore } from "../../session/usecases/session-store.ts"
+import { insertAfter } from "../rules/insert-after.ts"
 import { listTabs } from "./list-tabs.ts"
 import { TabStore } from "./tab-store.ts"
 
-export const openTab = (sessionId: string) =>
+export const openTab = (sessionId: string, after?: string) =>
   Effect.gen(function* () {
     const sessions = yield* SessionStore
     const store = yield* TabStore
@@ -20,7 +21,13 @@ export const openTab = (sessionId: string) =>
       return yield* new ProjectNotOpen({ path: projectPath })
     }
     yield* checkWorkingFolder(session)
-    if (!(yield* store.find(sessionId))) yield* store.append({ sessionId, projectPath })
+    if (!(yield* store.find(sessionId))) {
+      yield* store.append({ sessionId, projectPath })
+      if (after !== undefined) {
+        const order = (yield* store.listByProject(projectPath)).map((tab) => tab.sessionId)
+        yield* store.setOrder(projectPath, insertAfter(order, sessionId, after))
+      }
+    }
     yield* store.select(projectPath, sessionId)
     return yield* listTabs(projectPath)
   })

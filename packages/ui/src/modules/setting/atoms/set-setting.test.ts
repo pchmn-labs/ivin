@@ -28,7 +28,7 @@ test("a change is written to the file, and the file's new value shows", async ()
     }),
   )
   server.setUserSettings({
-    settings: { ...defaultSettings, tabs: { stopAgentOnClose: true } },
+    settings: { ...defaultSettings, tabs: { ...defaultSettings.tabs, stopAgentOnClose: true } },
     problem: null,
   })
   await vi.waitFor(() => expect(registry.get(shownSettingOf(PATH)).value).toBe(true))

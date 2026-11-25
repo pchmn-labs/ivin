@@ -73,9 +73,9 @@ test("setting.set writes the value, and setting.watch and setting.get then give 
   expect(result.text).toBe(text.replace("true", "false"))
   expect(result.watched._tag).toBe("Some")
   expect(result.leaf).toBe(false)
-  expect(result.section).toEqual({ stopAgentOnClose: false })
+  expect(result.section).toEqual({ stopAgentOnClose: false, newTabPosition: "end" })
   expect(result.all).toEqual({
-    tabs: { stopAgentOnClose: false },
+    tabs: { stopAgentOnClose: false, newTabPosition: "end" },
     worktrees: { removeOnTabClose: true },
     files: { folderIcons: true },
     sidebar: { layout: "rail" },
@@ -121,6 +121,7 @@ test("an unknown path or a value of the wrong type is refused, and the file is u
 
   const knownPaths = [
     "tabs.stopAgentOnClose",
+    "tabs.newTabPosition",
     "worktrees.removeOnTabClose",
     "files.folderIcons",
     "sidebar.layout",

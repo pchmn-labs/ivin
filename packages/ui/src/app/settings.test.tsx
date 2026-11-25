@@ -89,7 +89,7 @@ test("a change made outside the page, by the CLI or in the file, shows on its sw
   await expect.element(stopAgent()).toBeChecked()
 
   server.setUserSettings({
-    settings: { ...defaultSettings, tabs: { stopAgentOnClose: false } },
+    settings: { ...defaultSettings, tabs: { ...defaultSettings.tabs, stopAgentOnClose: false } },
     problem: null,
   })
   await expect.element(stopAgent()).not.toBeChecked()
