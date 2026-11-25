@@ -11,7 +11,7 @@ export type TranscriptRow =
       readonly itemIds: ReadonlyArray<string>
       // Every item of the turn, its user message and its answer included, to time it.
       readonly turnIds: ReadonlyArray<string>
-      // What the turn wrote after its last work item: the answer, drawn in this row so it stays one row when the turn ends.
+      // Drawn in this row, so the turn ending adds no row.
       readonly answerIds: ReadonlyArray<string>
     }
 
@@ -40,28 +40,27 @@ export const transcriptRows = (all: ReadonlyArray<TranscriptItem>): TranscriptRo
     if (isUserMessage(item) || turns.length === 0) turns.push([item])
     else turns.at(-1)!.push(item)
   }
-  turns.forEach((turn, index) => {
+  turns.forEach((turn) => {
     const user = isUserMessage(turn[0]!) ? turn[0]! : null
     const rest = user ? turn.slice(1) : turn
     if (user) rows.push({ type: "item", id: user.id })
     const lastWork = rest.findLastIndex(isWork)
-    const after = rest.slice(lastWork + 1).filter((item) => item.type !== "usage")
-    if (lastWork >= 0 || (user && index === turns.length - 1)) {
+    const answer = rest.slice(lastWork + 1).filter((item) => item.type !== "usage")
+    if (lastWork >= 0 || user) {
       rows.push({
         type: "work",
         id: `work:${turn[0]!.id}`,
         itemIds: rest.slice(0, lastWork + 1).map((item) => item.id),
         turnIds: turn.map((item) => item.id),
-        answerIds: after.map((item) => item.id),
+        answerIds: answer.map((item) => item.id),
       })
     } else {
-      for (const item of after) rows.push({ type: "item", id: item.id })
+      for (const item of answer) rows.push({ type: "item", id: item.id })
     }
   })
   return rows
 }
 
-// While the turn runs, what it wrote after its last call heads a step of its work row.
 const runningTurnRows = (rows: ReadonlyArray<TranscriptRow>): ReadonlyArray<TranscriptRow> => {
   const index = rows.findLastIndex((row) => row.type === "work")
   const work = rows[index]
