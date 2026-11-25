@@ -1,18 +1,10 @@
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
+import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type {
-  Session,
-  SlotName,
-  SlotProps,
-  QuestionItem,
-  TranscriptItem,
-  UiContext,
-  UiHost,
-} from "@ivin/plugin-api/ui"
+import type { Session, QuestionItem, TranscriptItem, UiHost } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
 const session = { id: "s1" } as Session
@@ -24,22 +16,9 @@ const mount = async (
   items: ReadonlyArray<TranscriptItem>,
   answer = vi.fn().mockResolvedValue(undefined),
 ) => {
-  const slots: Partial<Record<SlotName, ComponentType<never>>> = {}
-  const ctx: UiContext = {
-    pluginId: "questions",
-    slots: { add: (slot, component) => void (slots[slot] = component as ComponentType<never>) },
-    commands: { register: () => undefined },
-    keybindings: { add: () => undefined },
-    editorExtensions: { add: () => undefined },
-    fileIcons: { add: () => undefined },
-    fileUrl: (path) => path,
-    views: { register: () => undefined, open: async () => undefined },
-    notify: () => undefined,
-    sidebar: { showPanel: () => undefined },
-  }
-  activate(ctx)
-  const Record = slots["transcript.question"] as ComponentType<SlotProps["transcript.question"]>
-  const Sheet = slots["composer.above"] as ComponentType<SlotProps["composer.above"]>
+  const slot = activatePlugin(activate, "questions")
+  const Record = slot("transcript.question")
+  const Sheet = slot("composer.above")
   const host: UiHost = {
     ...testUiHost,
     usePendingQuestion: () =>

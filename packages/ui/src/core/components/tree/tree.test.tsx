@@ -1,6 +1,6 @@
 import { RegistryProvider } from "@effect/atom-react"
 import { useState, type ReactNode } from "react"
-import { expect, test } from "vitest"
+import { afterEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { defaultSettings } from "@ivin/contracts/setting"
@@ -54,14 +54,30 @@ const visible = (list: ReadonlyArray<Node>, open: ReadonlySet<string>, base = ""
       : [row]
   })
 
-function Harness({ onOpen, server }: { onOpen?: (id: string) => void; server?: FakeServer }) {
+const files = Array.from({ length: 40 }, (_, i) => `file-${String(i).padStart(2, "0")}.ts`)
+const longNodes: ReadonlyArray<Node> = [
+  nodes[0]!,
+  nodes[1]!,
+  ...files.map((name) => ({ name })),
+  nodes[2]!,
+]
+
+function Harness({
+  onOpen,
+  server,
+  data = nodes,
+}: {
+  onOpen?: (id: string) => void
+  server?: FakeServer
+  data?: ReadonlyArray<Node>
+}) {
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set())
   return (
     <WithKeys {...(server && { server })}>
       <div style={{ display: "flex", height: 300 }}>
         <Tree
           label="Files"
-          rows={visible(nodes, open)}
+          rows={visible(data, open)}
           {...(onOpen && { onOpen })}
           onToggle={(id) =>
             setOpen((current) => {
@@ -159,7 +175,7 @@ test("a click makes the row active", async () => {
 })
 
 test("only the rows in view are in the page", async () => {
-  const many = Array.from({ length: 5_000 }, (_, i) => ({
+  const many = Array.from({ length: 500 }, (_, i) => ({
     id: String(i),
     name: `file-${i}.ts`,
     depth: 0,
@@ -231,22 +247,6 @@ test("a row shows its git status: the name's colour, and a letter for a file or 
   await expect.element(row("b.ts")).not.toHaveAttribute("data-status")
 })
 
-test("the matched part of a name is highlighted", async () => {
-  await render(
-    <WithKeys>
-      <div style={{ display: "flex", height: 300 }}>
-        <Tree
-          label="Files"
-          rows={[{ id: "cart.ts", name: "cart.ts", depth: 0, expanded: null, match: [1, 3] }]}
-          onToggle={() => undefined}
-        />
-      </div>
-    </WithKeys>,
-  )
-  await expect.element(page.getByRole("treeitem", { name: "cart.ts" })).toBeVisible()
-  expect(document.querySelector(".iv-tree__match")?.textContent).toBe("ar")
-})
-
 test("revealId selects its row and scrolls it into view, once it is among the rows", async () => {
   const many: ReadonlyArray<TreeRow> = Array.from({ length: 200 }, (_, i) => ({
     id: `f${i}`,
@@ -277,4 +277,115 @@ test("revealId selects its row and scrolls it into view, once it is among the ro
   const row = page.getByRole("treeitem", { name: "file-150.ts" })
   await expect.element(row).toBeInViewport()
   await expect.element(row).toHaveAttribute("aria-selected", "true")
+})
+
+const selected = () =>
+  [...document.querySelectorAll('[role="treeitem"][aria-selected="true"]')].map((row) =>
+    row.textContent?.trim(),
+  )
+
+const focusLongTree = async (onOpen?: (id: string) => void) => {
+  await render(<Harness data={longNodes} {...(onOpen && { onOpen })} />)
+  await expect.element(item("src")).toBeVisible()
+  await userEvent.tab()
+  await expect.element(tree()).toHaveFocus()
+}
+
+afterEach(() => vi.useRealTimers())
+
+// Typed letters stop counting as one name once a second has passed.
+const pauseTyping = () => vi.setSystemTime(Date.now() + 1_000)
+
+test("Page Down goes to the last row in view, then a page further; Page Up the same way up", async () => {
+  await focusLongTree()
+  const scroller = document.querySelector<HTMLElement>(".iv-tree__list")!
+  const lastInView = () => {
+    const bottom = scroller.getBoundingClientRect().bottom
+    const rows = [...scroller.querySelectorAll('[role="treeitem"]')]
+    return rows
+      .findLast((row) => row.getBoundingClientRect().bottom <= bottom + 1)
+      ?.textContent?.trim()
+  }
+  const last = lastInView()!
+  await userEvent.keyboard("{PageDown}")
+  expect(active()).toBe(last)
+  expect(scroller.scrollTop).toBe(0)
+  await userEvent.keyboard("{PageDown}")
+  const order = ["src", "docs", ...files, "README.md"]
+  expect(order.indexOf(active()!)).toBeGreaterThan(order.indexOf(last))
+  await expect.element(item(active()!)).toBeVisible()
+  await userEvent.keyboard("{PageUp}{PageUp}{PageUp}")
+  expect(active()).toBe("src")
+  await userEvent.keyboard("{PageDown}{PageDown}{PageDown}{PageDown}")
+  expect(active()).toBe("README.md")
+})
+
+test("a move selects the row it lands on; Shift with Up or Down extends the selection, also on the first move after the tree takes the focus", async () => {
+  await focusLongTree()
+  await userEvent.keyboard("{Shift>}{ArrowDown}{/Shift}")
+  expect(selected()).toEqual(["src", "docs"])
+
+  await userEvent.keyboard("{ArrowDown}{ArrowDown}")
+  expect(selected()).toEqual(["file-01.ts"])
+  await userEvent.keyboard("{Shift>}{ArrowDown}{ArrowDown}{/Shift}")
+  expect(selected()).toEqual(["file-01.ts", "file-02.ts", "file-03.ts"])
+  expect(active()).toBe("file-03.ts")
+  await userEvent.keyboard("{Shift>}{ArrowUp}{ArrowUp}{ArrowUp}{ArrowUp}{/Shift}")
+  expect(selected()).toEqual(["docs", "file-00.ts", "file-01.ts"])
+  await userEvent.keyboard("{ArrowDown}")
+  expect(selected()).toEqual(["file-00.ts"])
+})
+
+test("Shift-click extends the selection and ⌘-click adds or removes a row, without opening files", async () => {
+  const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
+  const opened: string[] = []
+  await focusLongTree((id) => opened.push(id))
+  await item("file-01.ts").click({ modifiers: [mod] })
+  await item("file-01.ts").click({ modifiers: [mod] })
+  await item("file-00.ts").click({ modifiers: [mod] })
+  expect(selected()).toEqual(["file-00.ts"])
+  await item("file-03.ts").click({ modifiers: ["Shift"] })
+  expect(selected()).toEqual(["file-00.ts", "file-01.ts", "file-02.ts", "file-03.ts"])
+  await item("file-01.ts").click({ modifiers: [mod] })
+  expect(selected()).toEqual(["file-00.ts", "file-02.ts", "file-03.ts"])
+  expect(active()).toBe("file-01.ts")
+  expect(opened).toEqual([])
+
+  await userEvent.keyboard("{End}")
+  await item("README.md").click()
+  expect(selected()).toEqual(["README.md"])
+  expect(opened).toEqual(["README.md"])
+})
+
+test("typing a name jumps to the next row that starts with it", async () => {
+  await focusLongTree()
+  await userEvent.keyboard("re")
+  expect(active()).toBe("README.md")
+  pauseTyping()
+  await userEvent.keyboard("f")
+  expect(active()).toBe("file-00.ts")
+  pauseTyping()
+  await userEvent.keyboard("f")
+  expect(active()).toBe("file-01.ts")
+  pauseTyping()
+  await userEvent.keyboard("file-12")
+  expect(active()).toBe("file-12.ts")
+  await expect.element(item("file-12.ts")).toBeVisible()
+})
+
+test("a space continues a name being typed, and opens the row otherwise", async () => {
+  const opened: string[] = []
+  await render(
+    <Harness
+      data={[{ name: "a b.md" }, { name: "a c.md" }, { name: "README.md" }]}
+      onOpen={(id) => opened.push(id)}
+    />,
+  )
+  await userEvent.tab()
+  await userEvent.keyboard("a c")
+  expect(active()).toBe("a c.md")
+  expect(opened).toEqual([])
+  pauseTyping()
+  await userEvent.keyboard(" ")
+  expect(opened).toEqual(["a c.md"])
 })

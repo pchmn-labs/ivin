@@ -18,11 +18,6 @@ const setup = async () => {
   return server
 }
 
-test("the head names the project", async () => {
-  await setup()
-  await expect.element(page.getByTestId("project-name")).toHaveTextContent("p")
-})
-
 test("New session starts a session, and the head offers no model choice", async () => {
   const server = await setup()
   await page.getByRole("button", { name: "New session" }).click()

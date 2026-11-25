@@ -1,11 +1,11 @@
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
+import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { makeTestSession } from "../../../packages/ui/src/core/test-session.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type { Session, SlotProps, UiContext, UiHost } from "@ivin/plugin-api/ui"
+import type { Session, UiHost } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
 const session = (id: string, title: string) => makeTestSession({ id, title })
@@ -14,26 +14,7 @@ const mountSection = async (
   sessions: ReadonlyArray<Session>,
   openTabIds: ReadonlyArray<string>,
 ) => {
-  const added: Array<{ slot: string; component: ComponentType<never> }> = []
-  const ctx: UiContext = {
-    pluginId: "inactive-sessions",
-    slots: {
-      add: (slot, component) =>
-        void added.push({ slot, component: component as ComponentType<never> }),
-    },
-    commands: { register: () => undefined },
-    keybindings: { add: () => undefined },
-    editorExtensions: { add: () => undefined },
-    fileIcons: { add: () => undefined },
-    fileUrl: (path) => path,
-    views: { register: () => undefined, open: async () => undefined },
-    notify: () => undefined,
-    sidebar: { showPanel: () => undefined },
-  }
-  activate(ctx)
-  const Section = added.find((a) => a.slot === "sidebar.section")!.component as ComponentType<
-    SlotProps["sidebar.section"]
-  >
+  const Section = activatePlugin(activate, "inactive-sessions")("sidebar.section")
   const opened: string[] = []
   const archived: string[] = []
   const archivedAll: string[][] = []

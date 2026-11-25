@@ -1,21 +1,8 @@
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { layerScripted } from "@ivin/harness"
+import type { DatabaseSync } from "node:sqlite"
 import { Effect, Layer, Logger, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { ITEMS_VERSION } from "../modules/transcript/rules/derive-items.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { handlers, layerServices } from "./handlers.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
+import { type Client as RpcClient, makeClient, newDatabase, serverLayer } from "./test-server.ts"
 
 const insertSession = (db: DatabaseSync, id: string, stored: Record<string, string> = {}) => {
   const columns = {
@@ -64,9 +51,7 @@ const thinking = (id: string, sessionId: string, position: number) => ({
 })
 
 const seed = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
+  const db = newDatabase()
   insertSession(db, "s1")
   insertSession(db, "s2", {
     // Stored before the agent's error was kept.
@@ -89,9 +74,6 @@ const seed = () => {
   return db
 }
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type RpcClient = Effect.Success<ReturnType<typeof makeClient>>
-
 const run = async <A>(db: DatabaseSync, use: (client: RpcClient) => Effect.Effect<A, unknown>) => {
   const logged: string[] = []
   const logger = Logger.make<unknown, void>(({ message }) => {
@@ -100,20 +82,7 @@ const run = async <A>(db: DatabaseSync, use: (client: RpcClient) => Effect.Effec
   const result = await Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerScripted([])),
-          Layer.provideMerge(Logger.layer([logger])),
-        ),
-      ),
+      Effect.provide(serverLayer({ db }).pipe(Layer.provideMerge(Logger.layer([logger])))),
       Effect.scoped,
     ),
   )

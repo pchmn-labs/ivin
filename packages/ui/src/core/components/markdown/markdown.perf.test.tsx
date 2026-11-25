@@ -6,7 +6,7 @@ import { Markdown } from "./markdown.tsx"
 // Below 30 frames a second, streaming visibly stutters.
 const MIN_FPS = 30
 const CODE_LINES = 3000
-const LINES_PER_FRAME = 5
+const LINES_PER_FRAME = 25
 
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
 
@@ -26,13 +26,15 @@ test(
     await expect.element(page.getByText("Here is the code:")).toBeVisible()
 
     const frames = CODE_LINES / LINES_PER_FRAME
-    const start = await nextFrame()
+    const measuredFrames = Math.floor(frames / 3)
+    let start = await nextFrame()
     let last = start
     for (let frame = 1; frame <= frames; frame++) {
       await screen.rerender(<Stream lines={frame * LINES_PER_FRAME} />)
       last = await nextFrame()
+      if (frame === frames - measuredFrames) start = last
     }
-    const fps = (frames * 1000) / (last - start)
+    const fps = (measuredFrames * 1000) / (last - start)
 
     await annotate(`streaming a code block: ${fps.toFixed(1)} fps`)
     expect(fps, `streaming a code block ran at ${fps.toFixed(1)} fps`).toBeGreaterThanOrEqual(

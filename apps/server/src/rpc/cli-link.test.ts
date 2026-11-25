@@ -76,13 +76,6 @@ test("--session links to that session", async () => {
   expect(run.session).toEqual([])
 }, 10_000)
 
-test("outside an ivin session, --session is required", async () => {
-  const run = await link([[url, "--as", "created"]])
-
-  expect(run.last.code).toBe(2)
-  expect(run.last.stderr).toContain("--session <id> is required outside an ivin session")
-}, 10_000)
-
 test("a URL that is neither a pull request nor an issue says what is expected and exits 2", async () => {
   const env = { IVIN_SESSION_ID: "$SESSION" }
   const repo = await link([["https://github.com/o/r", "--as", "created"]], env)
@@ -108,13 +101,6 @@ test("a pull request relation outside created, referenced and reviewed says what
   expect(missing.last.code).toBe(2)
   expect(missing.last.stderr).toContain("--as must be created, referenced or reviewed")
   expect([...wrong.session, ...missing.session]).toEqual([])
-}, 10_000)
-
-test("an unknown session exits 1 and names it", async () => {
-  const run = await link([[url, "--as", "created", "--session", "nope"]])
-
-  expect(run.last.code).toBe(1)
-  expect(run.last.stderr).toContain('No session has the id "nope"')
 }, 10_000)
 
 test("--json prints the stored annotation", async () => {

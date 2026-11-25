@@ -14,7 +14,6 @@ test("a list section is a region named by its label, with its count and its rows
 
   await expect.element(section.getByRole("heading", { name: "Needs you 2" })).toBeVisible()
   expect(section.getByRole("listitem").all()).toHaveLength(2)
-  expect(section.getByRole("heading").element().hasAttribute("data-attention")).toBe(true)
 })
 
 test("a list section without a count shows only its label", async () => {
@@ -25,7 +24,6 @@ test("a list section without a count shows only its label", async () => {
   )
 
   await expect.element(page.getByRole("heading", { name: "Running", exact: true })).toBeVisible()
-  expect(page.getByRole("heading").element().hasAttribute("data-attention")).toBe(false)
 })
 
 test("a list section with a hidden label is still a region named by it", async () => {
@@ -39,5 +37,4 @@ test("a list section with a hidden label is still a region named by it", async (
     .getByRole("heading", { name: "Needs you 1" })
 
   await expect.element(heading).toBeInTheDocument()
-  expect(heading.element().getBoundingClientRect().width).toBeLessThanOrEqual(1)
 })

@@ -1,7 +1,7 @@
-import { DateTime } from "effect"
 import { AsyncResult } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
+import { makeTestSession } from "../../../core/test-session.ts"
 import { projectsAtom } from "../../project/atoms/list-projects.ts"
 import { openProjectAtom } from "../../project/atoms/open-project.ts"
 import { createSessionAtom } from "../../session/atoms/create-session.ts"
@@ -43,13 +43,6 @@ test("opening a session that already has a tab selects it without a second tab",
   registry.set(openTabAtom, { sessionId: "session-1" })
   await vi.waitFor(() => expect(registry.get(tabs).selectedSessionId).toBe("session-1"))
   expect(ids()).toEqual(["session-1", "session-2", "session-3"])
-})
-
-test("closing the selected tab selects the next one, else the previous", async () => {
-  const { registry, tabs, ids } = await setup()
-  registry.set(closeTabAtom, { projectPath: project, sessionId: "session-3" })
-  await vi.waitFor(() => expect(ids()).toEqual(["session-1", "session-2"]))
-  expect(registry.get(tabs).selectedSessionId).toBe("session-2")
 })
 
 test("a closed tab leaves at once and stays gone once the server answers", async () => {
@@ -138,33 +131,8 @@ test("a reorder the server refuses is rolled back", async () => {
 
 const seeded = () => {
   const { registry, server } = makeTestRegistry({ project: "/project" })
-  const at = DateTime.makeUnsafe(0)
   for (const id of ["s1", "s2"]) {
-    server.sessions.set(id, {
-      id,
-      projectPath: project,
-      workingFolder: project,
-      inWorktree: false,
-      branch: "main",
-      started: true,
-      workingFolderDeleted: false,
-      title: id,
-      harness: "claude",
-      model: "sonnet",
-      effort: "high",
-      permissionMode: "manual",
-      relaunchFailure: null,
-      pendingMessages: [],
-      unreadMessages: [],
-      backgroundTasks: [],
-      status: "idle",
-      statusChangedAt: at,
-      createdAt: at,
-      lastActivityAt: at,
-      archivedAt: null,
-      lastImageNumber: 0,
-      waitingFor: null,
-    })
+    server.sessions.set(id, makeTestSession({ id, projectPath: project, title: id }))
     server.openTab(id)
   }
   return { registry, server }

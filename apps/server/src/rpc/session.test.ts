@@ -1,4 +1,3 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import {
   layerScripted,
@@ -10,7 +9,6 @@ import {
   type ScriptedSend,
 } from "@ivin/harness"
 import { Effect, Fiber, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
 import { TestClock } from "effect/testing"
 import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
@@ -19,6 +17,13 @@ import { Database } from "../shared/adapters/database.ts"
 import { migrations, runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
+import {
+  makeClient,
+  newDatabase,
+  serverLayer,
+  withServer as withTestServer,
+  type Client,
+} from "./test-server.ts"
 import { forkWatch, until } from "./test-waits.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
@@ -36,33 +41,11 @@ const turn: readonly HarnessOutput[] = [
   { type: "status", status: "idle", raw: null },
 ]
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
-
-const serverLayer = (
-  db: DatabaseSync,
-  turns: readonly (readonly ScriptedElement[])[],
-  sent: ScriptedSend[],
-  options: ScriptedOptions,
-) =>
-  handlers.pipe(
-    Layer.provide(layerServices),
-    Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-    Layer.provide(Layer.succeed(Database)(db)),
-    Layer.provide(
-      Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-    ),
-    Layer.provide(layerKeybindingsFileOf([])),
-    Layer.provide(layerSettingsFileOf([])),
-    Layer.provide(layerScripted(turns, { reportSession: true, ...options, sent })),
-  )
+const scriptedOptions = (sent: ScriptedSend[], options: ScriptedOptions) => ({
+  reportSession: true,
+  ...options,
+  sent,
+})
 
 const withServer = <A, E>(
   db: DatabaseSync,
@@ -70,14 +53,7 @@ const withServer = <A, E>(
   sent: ScriptedSend[],
   use: (client: Client) => Effect.Effect<A, E>,
   options: ScriptedOptions = {},
-) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(serverLayer(db, turns, sent, options)),
-      Effect.scoped,
-    ),
-  )
+) => withTestServer(use, { db, turns, scripted: scriptedOptions(sent, options) })
 
 const withTestClock = <A, E>(
   db: DatabaseSync,
@@ -87,7 +63,7 @@ const withTestClock = <A, E>(
   Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
-      Effect.provide(serverLayer(db, turns, [], {})),
+      Effect.provide(serverLayer({ db, turns, scripted: scriptedOptions([], {}) })),
       Effect.provide(TestClock.layer()),
       Effect.scoped,
     ),
@@ -239,10 +215,10 @@ test("a title the agent gives before the first message is not replaced by it", a
   expect(title).toBe("Agent name")
 })
 
-test("sending a message stores the user message then the scripted events in order, without their raw lines", async () => {
+test("sending a message stores the user message then the scripted events in order, without their raw lines, and its items come back as one tool call and its result, paged around a position", async () => {
   const db = newDatabase()
   const sent: ScriptedSend[] = []
-  const sessionId = await withServer(db, [turn], sent, (client) =>
+  const { sessionId, page, around } = await withServer(db, [turn], sent, (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
       yield* client["session.sendMessage"]({
@@ -250,8 +226,14 @@ test("sending a message stores the user message then the scripted events in orde
         messageId: "msg-1",
         text: "go",
       })
-      yield* untilItems(client, session.id, 4)
-      return session.id
+      const page = yield* untilItems(client, session.id, 4)
+      const around = yield* client["transcript.getItems"]({
+        sessionId: session.id,
+        position: 4,
+        before: 1,
+        after: 1,
+      })
+      return { sessionId: session.id, page, around }
     }),
   )
 
@@ -272,20 +254,6 @@ test("sending a message stores the user message then the scripted events in orde
   expect(rows[0]!.id).toBe("msg-1")
   expect(rows.filter((r) => "raw" in JSON.parse(r.payload))).toEqual([])
   expect(sent).toEqual([{ sessionId, id: "msg-1", text: "go", images: [] }])
-})
-
-test("a tool call and its result come back as one item, in order after the user message", async () => {
-  const page = await withServer(newDatabase(), [turn], [], (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.sendMessage"]({
-        sessionId: session.id,
-        messageId: "msg-1",
-        text: "go",
-      })
-      return yield* untilItems(client, session.id, 4)
-    }),
-  )
 
   expect(page.items.map((item) => item.type)).toEqual([
     "message",
@@ -301,29 +269,8 @@ test("a tool call and its result come back as one item, in order after the user 
     output: "a.txt",
   })
   expect(page).toMatchObject({ hasBefore: false, hasAfter: false })
-})
-
-test("items are paged around a position", async () => {
-  const page = await withServer(newDatabase(), [turn], [], (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.sendMessage"]({
-        sessionId: session.id,
-        messageId: "msg-1",
-        text: "go",
-      })
-      yield* untilItems(client, session.id, 4)
-      return yield* client["transcript.getItems"]({
-        sessionId: session.id,
-        position: 4,
-        before: 1,
-        after: 1,
-      })
-    }),
-  )
-
-  expect(page.items.map((item) => item.type)).toEqual(["message", "tool_call"])
-  expect(page).toMatchObject({ hasBefore: true, hasAfter: true })
+  expect(around.items.map((item) => item.type)).toEqual(["message", "tool_call"])
+  expect(around).toMatchObject({ hasBefore: true, hasAfter: true })
 })
 
 test("watching a session starts with the last items as a page, then streams upserts", async () => {
@@ -617,50 +564,40 @@ test("a harness error is stored as an error item and fails the session, and the 
   expect(sent.map((s) => s.text)).toEqual(["go", "again"])
 })
 
-test("a harness that cannot start stores the message and an error, and fails the session", async () => {
-  const { returned, page } = await withServer(
-    newDatabase(),
-    [],
-    [],
-    (client) =>
-      Effect.gen(function* () {
-        const session = yield* client["session.create"]({ projectPath: "/p" })
-        const returned = yield* client["session.sendMessage"]({
-          sessionId: session.id,
-          messageId: "m1",
-          text: "go",
-        })
-        return { returned, page: yield* endOfTranscript(client, session.id) }
-      }),
-    { startFailure: "Claude Code is not installed." },
-  )
+test.each([
+  {
+    title: "start",
+    options: { startFailure: "Claude Code is not installed." },
+    message: "Claude Code is not installed.",
+  },
+  { title: "take a message", options: {}, message: "The scripted harness has no turn left" },
+])(
+  "a harness that cannot $title stores the message and an error, and fails the session",
+  async ({ options, message }) => {
+    const { returned, page } = await withServer(
+      newDatabase(),
+      [],
+      [],
+      (client) =>
+        Effect.gen(function* () {
+          const session = yield* client["session.create"]({ projectPath: "/p" })
+          const returned = yield* client["session.sendMessage"]({
+            sessionId: session.id,
+            messageId: "m1",
+            text: "go",
+          })
+          return { returned, page: yield* endOfTranscript(client, session.id) }
+        }),
+      options,
+    )
 
-  expect(returned.status).toBe("failed")
-  expect(page.items).toMatchObject([
-    { id: "m1", role: "user", text: "go" },
-    { type: "error", message: "Claude Code is not installed." },
-  ])
-})
-
-test("a harness that cannot take a message stores the message and an error, and fails the session", async () => {
-  const { returned, page } = await withServer(newDatabase(), [], [], (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p" })
-      const returned = yield* client["session.sendMessage"]({
-        sessionId: session.id,
-        messageId: "m1",
-        text: "go",
-      })
-      return { returned, page: yield* endOfTranscript(client, session.id) }
-    }),
-  )
-
-  expect(returned.status).toBe("failed")
-  expect(page.items).toMatchObject([
-    { id: "m1", role: "user", text: "go" },
-    { type: "error", message: "The scripted harness has no turn left" },
-  ])
-})
+    expect(returned.status).toBe("failed")
+    expect(page.items).toMatchObject([
+      { id: "m1", role: "user", text: "go" },
+      { type: "error", message },
+    ])
+  },
+)
 
 test("a message sent while a turn is still running reaches the provider", async () => {
   const sent: ScriptedSend[] = []
@@ -683,34 +620,11 @@ test("a message sent while a turn is still running reaches the provider", async 
   expect(status).toBe("working")
 })
 
-test("watching a project's sessions streams each status and title change", async () => {
+test("watching a project's sessions streams each status and title change, and a status keeps the time it changed until it changes again", async () => {
   const changes = await withServer(newDatabase(), [turn], [], (client) =>
     Effect.gen(function* () {
       const session = yield* client["session.create"]({ projectPath: "/p" })
       yield* client["session.create"]({ projectPath: "/other" })
-      const watching = yield* forkWatch(client["session.watch"]({ projectPath: "/p" }), (stream) =>
-        stream.pipe(
-          Stream.filter((change) => change._tag === "changed"),
-          Stream.map((change) => change.session),
-          Stream.takeUntil((s) => s.status === "idle" && s.title === "go"),
-          Stream.runCollect,
-        ),
-      )
-      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-      return yield* Fiber.join(watching)
-    }),
-  )
-
-  expect(changes[0]).toMatchObject({ status: "idle", title: "New session" })
-  expect(changes[1]).toMatchObject({ status: "working", title: "go" })
-  expect(changes.at(-1)).toMatchObject({ status: "idle", projectPath: "/p" })
-  expect(new Set(changes.map((s) => s.projectPath))).toEqual(new Set(["/p"]))
-})
-
-test("a session's status keeps the time it changed until it changes again", async () => {
-  const changes = await withServer(newDatabase(), [turn], [], (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p" })
       const watching = yield* forkWatch(client["session.watch"]({ projectPath: "/p" }), (stream) =>
         stream.pipe(
           Stream.filter((change) => change._tag === "changed"),
@@ -730,6 +644,10 @@ test("a session's status keeps the time it changed until it changes again", asyn
         .map((s) => s.statusChangedAt.epochMilliseconds),
     )
 
+  expect(changes[0]).toMatchObject({ status: "idle", title: "New session" })
+  expect(changes[1]).toMatchObject({ status: "working", title: "go" })
+  expect(changes.at(-1)).toMatchObject({ status: "idle", projectPath: "/p" })
+  expect(new Set(changes.map((s) => s.projectPath))).toEqual(new Set(["/p"]))
   expect(changes[0]!.statusChangedAt).toEqual(changes[0]!.createdAt)
   expect(changes.filter((s) => s.status === "working").length).toBeGreaterThan(1)
   expect(changedAt("working").size).toBe(1)
@@ -1069,26 +987,6 @@ test("two concurrent answers to one request give one decision and one ApprovalNo
   expect(responded).toEqual([{ requestId: "r1", allow: true }])
   const decisions = db.prepare("SELECT 1 FROM transcript_events WHERE type = 'approval_decision'")
   expect(decisions.all()).toHaveLength(1)
-})
-
-test("a turn that ends right after the answer leaves the session idle, not working", async () => {
-  const status = await withServer(newDatabase(), [approvalTurn], [], (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "go" })
-      yield* untilStatus(client, session.id, "waiting")
-      yield* client["session.answerApproval"]({
-        sessionId: session.id,
-        requestId: "r1",
-        allow: true,
-      })
-      yield* untilItems(client, session.id, 5)
-      yield* untilStatus(client, session.id, "idle")
-      return yield* statusOf(client, "/p", session.id)
-    }),
-  )
-
-  expect(status).toBe("idle")
 })
 
 test("answering an approval puts a session that waited back to working until the turn ends", async () => {

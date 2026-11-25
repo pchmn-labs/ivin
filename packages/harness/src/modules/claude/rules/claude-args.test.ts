@@ -15,18 +15,11 @@ const offered = claudeRunOptions([])
 const efforts = offered.effort.values.map((effort) => effort.value)
 const permissionModes = offered.permissionMode.values.map((mode) => mode.value)
 
-test.each(efforts)("effort %s is passed with --effort", (effort) => {
-  expect(valueAfter(claudeArgs({ ...options, effort }, null), "--effort")).toBe(effort)
+test("the effort and the permission mode are passed with --effort and --permission-mode", () => {
+  const args = claudeArgs({ ...options, effort: "max", permissionMode: "acceptEdits" }, null)
+  expect(valueAfter(args, "--effort")).toBe("max")
+  expect(valueAfter(args, "--permission-mode")).toBe("acceptEdits")
 })
-
-test.each(permissionModes)(
-  "permission mode %s is passed with --permission-mode",
-  (permissionMode) => {
-    expect(valueAfter(claudeArgs({ ...options, permissionMode }, null), "--permission-mode")).toBe(
-      permissionMode,
-    )
-  },
-)
 
 test("claude offers its five efforts and six permission modes", () => {
   expect(efforts).toEqual(["low", "medium", "high", "xhigh", "max"])

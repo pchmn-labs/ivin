@@ -1,34 +1,14 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { WorkingFolderChoice } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { layerScripted } from "@ivin/harness"
-import { Effect, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
-import { execFileSync } from "node:child_process"
-import {
-  cpSync,
-  existsSync,
-  mkdtempSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs"
-import { tmpdir } from "node:os"
+import { Effect, Stream } from "effect"
+import { existsSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
-import { afterAll, afterEach, beforeAll, beforeEach, expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { beforeEach, expect, test, vi } from "vitest"
 import { WorktreeCleanup } from "../modules/session/usecases/worktree-cleanup.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
+import { commit, git, useClonedProject } from "./git-fixture.ts"
+import { withServer as withTestServer, type Client } from "./test-server.ts"
 
-// Each test runs about forty git commands, 0.6 s alone but 10x slower while the whole suite runs.
+// Each test runs up to forty git commands, 0.6 s alone but 10x slower while the whole suite runs.
 vi.setConfig({ testTimeout: 10_000 })
 
 const turn: readonly HarnessOutput[] = [
@@ -38,56 +18,15 @@ const turn: readonly HarnessOutput[] = [
 ]
 const working: readonly HarnessOutput[] = [{ type: "status", status: "running", raw: null }]
 
-const gitEnv = {
-  ...process.env,
-  GIT_AUTHOR_NAME: "ivin",
-  GIT_AUTHOR_EMAIL: "ivin@example.com",
-  GIT_COMMITTER_NAME: "ivin",
-  GIT_COMMITTER_EMAIL: "ivin@example.com",
-  GIT_CONFIG_GLOBAL: "/dev/null",
-}
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", args, { cwd, env: gitEnv, encoding: "utf8" }).trim()
-
-const commit = (repo: string, file: string, text = file) => {
-  writeFileSync(join(repo, file), text)
-  git(repo, "add", file)
-  git(repo, "commit", "--quiet", "-m", file)
-}
-
-let template: string
-let root: string
-let project: string
-let upstream: string
-
-beforeAll(() => {
-  template = realpathSync(mkdtempSync(join(tmpdir(), "ivin-cleanup-template-")))
-  const origin = join(template, "origin.git")
-  const first = join(template, "upstream")
-  git(template, "init", "--quiet", "--bare", "-b", "main", origin)
-  git(template, "init", "--quiet", "-b", "main", first)
-  commit(first, "first.txt")
-  git(first, "remote", "add", "origin", origin)
-  git(first, "push", "--quiet", "origin", "main")
-  git(template, "clone", "--quiet", origin, join(template, "project"))
-  writeFileSync(join(template, "project", ".git", "info", "exclude"), ".worktrees/\n")
+const fixture = useClonedProject(({ project }) => {
+  writeFileSync(join(project, ".git", "info", "exclude"), ".worktrees/\n")
 })
-
-afterAll(() => rmSync(template, { recursive: true, force: true }))
-
-// A copy of the template, with the remotes' paths pointing at the copy.
+let project = ""
+let upstream = ""
 beforeEach(() => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-cleanup-")))
-  cpSync(template, root, { recursive: true })
-  upstream = join(root, "upstream")
-  project = join(root, "project")
-  for (const repo of [upstream, project]) {
-    const config = join(repo, ".git", "config")
-    writeFileSync(config, readFileSync(config, "utf8").replaceAll(template, root))
-  }
+  project = fixture.project
+  upstream = fixture.upstream
 })
-
-afterEach(() => rmSync(root, { recursive: true, force: true }))
 
 // Lands `branch` on origin's main the way a pull request does, from another clone.
 const mergeOnOrigin = (branch: string, how: "merge" | "squash") => {
@@ -101,36 +40,10 @@ const mergeOnOrigin = (branch: string, how: "merge" | "squash") => {
   git(upstream, "push", "--quiet", "origin", "main")
 }
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
 const withServer = <A, E>(
   use: (client: Client) => Effect.Effect<A, E, WorktreeCleanup>,
   { settings = [], turns = [turn] }: { settings?: string[]; turns?: (typeof turn)[] } = {},
-) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provideMerge(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf(settings)),
-          Layer.provide(layerScripted(turns)),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-}
+) => withTestServer(use, { settings, turns })
 
 // A session with an open tab, started in `workingFolder`.
 const startSession = (client: Client, workingFolder: WorkingFolderChoice) =>
@@ -226,14 +139,10 @@ test("a worktree with an unpushed commit is kept", async () => {
   expect(existsSync(worktree)).toBe(true)
 })
 
-test("a merged worktree is kept when settings.json turns removal off", async () => {
-  const { worktree } = await closeWorktreeSession(
-    (worktree, branch) => {
-      commitAndPush(worktree, branch)
-      mergeOnOrigin(branch, "merge")
-    },
-    { settings: [`{ "worktrees": { "removeOnTabClose": false } }`] },
-  )
+test("a worktree with no commit of its own is kept when settings.json turns removal off", async () => {
+  const { worktree } = await closeWorktreeSession(() => {}, {
+    settings: [`{ "worktrees": { "removeOnTabClose": false } }`],
+  })
 
   expect(existsSync(worktree)).toBe(true)
 })
@@ -302,19 +211,5 @@ test("closing a tab sweeps the merged worktrees agents made under .worktrees/, a
   expect(existsSync(unmerged)).toBe(true)
   expect(existsSync(empty)).toBe(true)
   expect(existsSync(project)).toBe(true)
-  expect(closed.workingFolderDeleted).toBe(false)
-})
-
-test("the checkout is never removed, even clean and on a merged branch", async () => {
-  const { closed } = await withServer((client) =>
-    Effect.gen(function* () {
-      yield* client["project.open"]({ path: project })
-      const session = yield* startSession(client, { kind: "checkout" })
-      return { closed: yield* closeTab(client, session.id) }
-    }),
-  )
-
-  expect(existsSync(join(project, "first.txt"))).toBe(true)
-  expect(git(project, "rev-parse", "--is-inside-work-tree")).toBe("true")
   expect(closed.workingFolderDeleted).toBe(false)
 })

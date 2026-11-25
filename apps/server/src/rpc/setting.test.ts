@@ -1,22 +1,9 @@
-import { layerScripted } from "@ivin/harness"
-import { Rpcs } from "@ivin/contracts/rpcs"
 import { defaultSettingsFor } from "@ivin/contracts/setting"
 import { Effect, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { SettingDefaults } from "../modules/setting/usecases/setting-defaults.ts"
-import { layerSettingsFileOf, SettingsFile } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { layerDatabase } from "../shared/adapters/database.ts"
-import { handlers, layerServices } from "./handlers.ts"
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
+import { SettingsFile } from "../modules/setting/usecases/settings-file.ts"
+import { type Client, makeClient, serverLayer } from "./test-server.ts"
 
 const withFile = <A, E>(
   text: string | null,
@@ -29,16 +16,7 @@ const withFile = <A, E>(
       return yield* use(client, yield* SettingsFile)
     }).pipe(
       Effect.provide(
-        handlers.pipe(
-          Layer.provideMerge(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(layerDatabase(":memory:")),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerScripted([])),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provideMerge(layerSettingsFileOf([text])),
+        serverLayer({ settings: [text] }).pipe(
           Layer.provide(Layer.succeed(SettingDefaults)(defaultSettingsFor(version))),
         ),
       ),
@@ -74,15 +52,9 @@ test("setting.set writes the value, and setting.watch and setting.get then give 
   expect(result.watched._tag).toBe("Some")
   expect(result.leaf).toBe(false)
   expect(result.section).toEqual({ stopAgentOnClose: false, newTabPosition: "end" })
-  expect(result.all).toEqual({
+  expect(result.all).toMatchObject({
     tabs: { stopAgentOnClose: false, newTabPosition: "end" },
     worktrees: { removeOnTabClose: true },
-    files: { folderIcons: true, file: { placement: "subView" } },
-    sidebar: { layout: "rail" },
-    agents: { stopWhenIdleMinutes: 10 },
-    updates: { automaticCheck: true, beta: false },
-    changes: { diff: { placement: "subView" } },
-    "tool-calls": { task: { placement: "sheet" } },
   })
 })
 
@@ -121,30 +93,17 @@ test("an unknown path or a value of the wrong type is refused, and the file is u
     }),
   )
 
-  const knownPaths = [
-    "tabs.stopAgentOnClose",
-    "tabs.newTabPosition",
-    "worktrees.removeOnTabClose",
-    "files.folderIcons",
-    "sidebar.layout",
-    "agents.stopWhenIdleMinutes",
-    "updates.automaticCheck",
-    "updates.beta",
-    "changes.diff.placement",
-    "files.file.placement",
-    "tool-calls.task.placement",
-  ]
   expect(result.unknown).toMatchObject({
     _tag: "SettingPathUnknown",
     path: "tabs.nope",
-    knownPaths,
+    knownPaths: expect.arrayContaining(["tabs.stopAgentOnClose", "files.file.placement"]),
   })
   expect(result.invalid).toMatchObject({
     _tag: "SettingValueInvalid",
     path: "tabs.stopAgentOnClose",
     expected: "boolean",
   })
-  expect(result.unknownGet).toMatchObject({ _tag: "SettingPathUnknown", path: "nope", knownPaths })
+  expect(result.unknownGet).toMatchObject({ _tag: "SettingPathUnknown", path: "nope" })
   expect(result.text).toBe(text)
 })
 

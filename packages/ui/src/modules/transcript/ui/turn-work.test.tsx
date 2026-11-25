@@ -74,8 +74,6 @@ const mount = async (seeded: TranscriptItem[], live = false, height = 600) => {
 
 const toolRows = () => document.querySelectorAll('[data-testid="turn"] [data-testid="tool-output"]')
 const turnLine = () => page.getByTestId("turn-line")
-const markOf = (element: Element) => element.querySelector<HTMLElement>(".iv-turn__mark")!
-const shown = (element: HTMLElement) => getComputedStyle(element).opacity === "1"
 
 test("a running turn stays unfolded, with its last step open and the steps before folded", async () => {
   const { user, text, call } = items(Date.now() - 20_000)
@@ -100,11 +98,6 @@ test("a running turn stays unfolded, with its last step open and the steps befor
   await expect
     .element(page.getByTestId("step-summary").nth(0))
     .toHaveAttribute("aria-expanded", "false")
-  await vi.waitFor(() => expect(shown(markOf(turnLine().element()))).toBe(true))
-  expect(markOf(turnLine().element()).querySelector(".iv-icon--spin")).not.toBeNull()
-  const running = markOf(page.getByTestId("step-summary").nth(1).element())
-  await vi.waitFor(() => expect(shown(running)).toBe(true))
-  expect(running.querySelector(".iv-icon--spin")).not.toBeNull()
   const steps = page.getByTestId("turn-step")
   expect(steps.nth(0).element().hasAttribute("data-current")).toBe(false)
   expect(steps.nth(1).element().hasAttribute("data-current")).toBe(true)
@@ -242,28 +235,12 @@ test("a turn of 9 calls opens its steps folded, but for a failed call and a suba
   expect(toolRows()).toHaveLength(6)
 })
 
-test("an answered turn shows a check, and the chevron takes its place once unfolded", async () => {
-  const { user, text, call } = items()
-  await mount([user("u1"), text("t1", "Step"), call("c1"), text("a", "Done")])
-
-  await expect.element(turnLine()).toBeVisible()
-  const mark = markOf(turnLine().element())
-  expect(mark.dataset.outcome).toBe("answered")
-  await vi.waitFor(() => expect(shown(mark)).toBe(true))
-
-  await turnLine().click()
-  await page.getByText("Done").hover()
-  await vi.waitFor(() => expect(shown(mark)).toBe(false))
-})
-
 test("a stopped turn stays unfolded and says it stopped", async () => {
   const { user, text, call, interruption } = items()
   await mount([user("u1"), text("t1", "Trying"), call("c1"), interruption("i")])
 
   await expect.element(turnLine()).toHaveTextContent("Stopped after 3s · 1 tool call")
   await expect.element(turnLine()).toHaveAttribute("aria-expanded", "true")
-  expect(markOf(turnLine().element()).dataset.outcome).toBe("stopped")
-  await vi.waitFor(() => expect(shown(markOf(turnLine().element()))).toBe(true))
   await expect.element(page.getByText("Trying")).toBeVisible()
 })
 

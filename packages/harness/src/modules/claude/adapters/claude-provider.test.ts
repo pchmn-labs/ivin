@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
@@ -7,6 +7,7 @@ import { expect, test, vi } from "vitest"
 import { HarnessProvider } from "../../../shared/harness-provider.ts"
 import { FALLBACK_MODELS } from "../rules/run-options.ts"
 import { layerClaude, layerClaudeWith } from "./claude-provider.ts"
+import { withFakeClaude } from "./test-fake-claude.ts"
 
 // Spawns the real `claude` CLI and calls the API; kept out of CI.
 const real = process.env["IVIN_TEST_CLAUDE"] === "1" ? test : test.skip
@@ -169,21 +170,6 @@ test("a process that fails to start ends the stream with a HarnessError", async 
 
   expect(exit._tag).toBe("Failure")
 })
-
-// A stand-in `claude` on the PATH, so the adapter's stdin and signal handling run without the API.
-const withFakeClaude = async <A>(body: string, use: (dir: string) => Promise<A>): Promise<A> => {
-  const dir = mkdtempSync(join(tmpdir(), "ivin-fake-claude-"))
-  const bin = join(dir, "claude")
-  writeFileSync(bin, `#!/usr/bin/env node\n${body}`)
-  chmodSync(bin, 0o755)
-  const path = process.env["PATH"]
-  process.env["PATH"] = `${dir}:${path}`
-  try {
-    return await use(dir)
-  } finally {
-    process.env["PATH"] = path
-  }
-}
 
 const logStdin = `
 const fs = require("node:fs")
@@ -428,7 +414,7 @@ test("a Claude Code that does not answer in time gives the fixed models, asked f
 setInterval(() => {}, 1000)`,
     async (dir) => {
       process.env["FAKE_LOG"] = join(dir, "starts.log")
-      const [first, second] = await listedModels(layerClaudeWith("100 millis", "1500 millis"))
+      const [first, second] = await listedModels(layerClaudeWith("100 millis", "500 millis"))
 
       expect(first!.model.values).toEqual(FALLBACK_MODELS)
       expect(second!.model.values).toEqual(FALLBACK_MODELS)
