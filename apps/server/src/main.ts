@@ -20,6 +20,8 @@ import {
 import { agentPath } from "./modules/cli/rules/agent-path.ts"
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
+import { layerChildPluginHost } from "./modules/plugin/adapters/child-plugin-host.ts"
+import { runPluginHost } from "./modules/plugin/usecases/run-plugin-host.ts"
 import { layerFsUserPlugins } from "./modules/plugin/adapters/fs-user-plugins.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
 import { SettingDefaults } from "./modules/setting/usecases/setting-defaults.ts"
@@ -57,6 +59,8 @@ const {
     skill: skillPath,
     pnpm: pnpmPath,
     "cli-command": cliCommandPath,
+    "plugin-host": pluginHostPath,
+    "plugin-host-runtime": pluginHostRuntime,
   },
 } = parseArgs({
   options: {
@@ -67,6 +71,8 @@ const {
     skill: { type: "string" },
     pnpm: { type: "string" },
     "cli-command": { type: "string" },
+    "plugin-host": { type: "string" },
+    "plugin-host-runtime": { type: "string" },
   },
   strict: false,
 })
@@ -98,6 +104,14 @@ const layerShellCommand =
         folders: ["/usr/local/bin", join(homedir(), ".local", "bin")],
         shellPath: loginShellPath.ready,
       })
+    : Layer.empty
+// Without them the server runs no plugin's server half.
+const layerPluginHost =
+  typeof pluginHostPath === "string"
+    ? layerChildPluginHost(
+        typeof pluginHostRuntime === "string" ? pluginHostRuntime : process.execPath,
+        pluginHostPath,
+      )
     : Layer.empty
 const socketPath = process.env["IVIN_SOCKET"]
 if (socketPath === undefined) fail("Missing IVIN_SOCKET, the path of the CLI socket")
@@ -163,8 +177,15 @@ const startup = Effect.gen(function* () {
           Layer.succeed(SettingDefaults)(defaultSettingsFor(pkg.version)),
           layerFsUserPlugins(ivinHome, pnpmFolder),
           layerShellCommand,
+          layerPluginHost,
         ),
       ),
+    ),
+  )
+  yield* Effect.forkScoped(
+    runPluginHost().pipe(
+      Effect.provide(context),
+      Effect.catchCause((cause) => Effect.logError("the plugin host runner stopped", cause)),
     ),
   )
   serve = (port) => {

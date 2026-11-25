@@ -10,6 +10,7 @@ test("a manifest with an id and a UI entry is valid, and its name defaults to it
       id: "hello-world",
       name: "hello-world",
       ui: "src/ui.tsx",
+      server: null,
       permissions: { harness: [], exec: [], fetch: [] },
       settings: [],
       views: [],
@@ -28,7 +29,9 @@ test.each([
     manifest({ id: "x", ui: "src/ui.tsx", permissions: { harness: ["*"] } }),
     "ivin.permissions.harness",
   ],
-  [manifest({ id: "x", server: "src/server.ts" }), "ivin.ui"],
+  [manifest({ id: "x" }), "ivin.ui or ivin.server"],
+  [manifest({ id: "x", server: 3 }), "ivin.server"],
+  [manifest({ id: "x", ui: "" }), "ivin.ui"],
 ])("%s is invalid, saying %s", (text, reason) => {
   const reading = readManifest(text)
   expect(reading.kind).toBe("invalid")
@@ -75,4 +78,14 @@ test("a manifest carries its views, and a view with several placements adds a pl
     }),
   )
   expect(bad.kind === "invalid" && bad.reason).toContain("ivin.views.shell.defaultPlacement")
+})
+
+test("a manifest may have a server half alone, or both halves", () => {
+  const server = readManifest(manifest({ id: "x", server: "src/server.ts" }))
+  expect(server).toMatchObject({ kind: "valid", manifest: { ui: null, server: "src/server.ts" } })
+  const both = readManifest(manifest({ id: "x", ui: "src/ui.tsx", server: "src/server.ts" }))
+  expect(both).toMatchObject({
+    kind: "valid",
+    manifest: { ui: "src/ui.tsx", server: "src/server.ts" },
+  })
 })

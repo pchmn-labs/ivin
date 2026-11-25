@@ -1,7 +1,13 @@
-import { HOST_MODULES, HOST_MODULES_GLOBAL, PluginNotLocked } from "@ivin/contracts/plugin"
+import {
+  HOST_MODULES,
+  HOST_MODULES_GLOBAL,
+  PluginNotLocked,
+  SERVER_HOST_MODULES,
+} from "@ivin/contracts/plugin"
 import { Effect, Layer } from "effect"
 import rolldownPackage from "rolldown/package.json" with { type: "json" }
 import { createHash } from "node:crypto"
+import { isBuiltin } from "node:module"
 import { existsSync } from "node:fs"
 import {
   appendFile,
@@ -18,9 +24,11 @@ import { PluginNotCompiled, UserPlugins, type PluginFolder } from "../usecases/u
 import { makePluginDependencies, type Installed } from "./plugin-dependencies.ts"
 import { installedPnpmFolder } from "./pnpm.ts"
 
+type Half = "ui" | "server"
+
 const HOST_PREFIX = "\0ivin-host:"
 // Bumped when a change to how plugins compile must invalidate the cached bundles.
-const COMPILE_VERSION = `2 ${rolldownPackage.version} ${HOST_MODULES.join(" ")}`
+const COMPILE_VERSION = `3 ${rolldownPackage.version} ${HOST_MODULES.join(" ")} ${SERVER_HOST_MODULES.join(" ")}`
 const PROVIDED_PACKAGES = ["react", "react-dom", "@ivin/plugin-api"]
 
 const isBare = (specifier: string) =>
@@ -57,8 +65,8 @@ const filesOf = async (folder: string): Promise<string[]> => {
     .sort()
 }
 
-const hashOf = async (folder: string, entry: string) => {
-  const hash = createHash("sha256").update(`${COMPILE_VERSION}\0${entry}\0`)
+const hashOf = async (folder: string, entry: string, half: Half) => {
+  const hash = createHash("sha256").update(`${COMPILE_VERSION}\0${half}\0${entry}\0`)
   for (const path of await filesOf(folder)) {
     hash
       .update(`${path}\0`)
@@ -85,12 +93,19 @@ const loadRolldown = async () => {
 const isUnder = (path: string | undefined, folder: string) =>
   path !== undefined && path.startsWith(folder + sep)
 
-const bundle = async (folder: string, entry: string, installed: Installed | null, name: string) => {
+const bundle = async (
+  folder: string,
+  entry: string,
+  installed: Installed | null,
+  name: string,
+  half: Half,
+) => {
+  const hostModules: ReadonlyArray<string> = half === "ui" ? HOST_MODULES : SERVER_HOST_MODULES
   const { rolldown } = await loadRolldown()
   const build = await rolldown({
     input: entry,
     cwd: folder,
-    platform: "browser",
+    platform: half === "ui" ? "browser" : "node",
     onLog: (level, log, handle) => {
       if (log.code === "UNRESOLVED_IMPORT") handle("error", log)
     },
@@ -100,9 +115,11 @@ const bundle = async (folder: string, entry: string, installed: Installed | null
         name: "ivin-plugin-imports",
         async resolveId(specifier, importer) {
           // Before any other rule, so a dependency's imports of React get the host's too.
-          if ((HOST_MODULES as ReadonlyArray<string>).includes(specifier)) {
+          if (hostModules.includes(specifier)) {
             return HOST_PREFIX + specifier
           }
+          // Rolldown's own output imports `node:module` for a Node target.
+          if (half === "server" && isBuiltin(specifier)) return { id: specifier, external: true }
           if (!isBare(specifier)) return null
           const name = packageOf(specifier)
           if (PROVIDED_PACKAGES.includes(name)) {
@@ -143,7 +160,7 @@ const bundle = async (folder: string, entry: string, installed: Installed | null
     const { output } = await build.generate({
       format: "esm",
       entryFileNames: name,
-      chunkFileNames: `${name.slice(0, -".js".length)}/[name]-[hash].js`,
+      chunkFileNames: `${name.slice(0, name.lastIndexOf("."))}/[name]-[hash]${name.slice(name.lastIndexOf("."))}`,
     })
     return output.map((file) => ({
       fileName: file.fileName,
@@ -176,16 +193,18 @@ export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string) => {
       }
       return folders
     }),
-    compile: ({ id, path, entry }) =>
+    bundlePath: (name) => join(cacheFolder, name),
+    compile: ({ id, path, entry, half }) =>
       Effect.tryPromise({
         try: async () => {
           // Rolldown names files from the real path, relative to `cwd`.
           const folder = await realpath(path)
           const entryPath = resolve(folder, entry)
           if (!entryPath.startsWith(folder + sep)) {
-            throw new Error(`ivin.ui, ${entry}, leads out of the plugin's folder.`)
+            throw new Error(`ivin.${half}, ${entry}, leads out of the plugin's folder.`)
           }
-          const name = `${await hashOf(folder, entry)}.js`
+          // A `.mjs` so Node reads the server half as an ES module wherever the cache sits.
+          const name = `${await hashOf(folder, entry, half)}${half === "ui" ? ".js" : ".mjs"}`
           const file = join(cacheFolder, name)
           if (await isFile(file)) return name
           const installed = await dependencies.install(
@@ -193,9 +212,11 @@ export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string) => {
             folder,
             (await readText(join(folder, "package.json"))) ?? "{}",
           )
-          const files = await bundle(folder, entryPath, installed, name).catch((error: unknown) => {
-            throw new Error(`Could not compile ${entry}: ${messageOf(error)}`)
-          })
+          const files = await bundle(folder, entryPath, installed, name, half).catch(
+            (error: unknown) => {
+              throw new Error(`Could not compile ${entry}: ${messageOf(error)}`)
+            },
+          )
           await mkdir(cacheFolder, { recursive: true, mode: 0o700 })
           // Chunks first and the entry last, so a bundle found in the cache is complete.
           for (const { fileName, code } of files.toSorted(

@@ -266,6 +266,9 @@ importers:
       '@ivin/harness':
         specifier: workspace:*
         version: link:../../packages/harness
+      '@ivin/plugin-api':
+        specifier: workspace:*
+        version: link:../../packages/plugin-api
       '@ivin/state':
         specifier: workspace:*
         version: link:../../packages/state

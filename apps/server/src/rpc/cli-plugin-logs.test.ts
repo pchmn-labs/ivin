@@ -27,7 +27,7 @@ test("ivin plugin logs prints why a plugin failed to load", async () => {
   )
 
   expect(run.code).toBe(0)
-  expect(run.stdout).toContain("ivin.ui in package.json names no file")
+  expect(run.stdout).toContain("package.json names no half")
 }, 10_000)
 
 test("a plugin that never failed has an empty log, and a missing id exits 2", async () => {
@@ -44,4 +44,31 @@ test("a plugin that never failed has an empty log, and a missing id exits 2", as
   expect(JSON.parse(empty.stdout)).toEqual({ ok: true, id: "fine", lines: [] })
   expect(missing.code).toBe(2)
   expect(missing.stderr).toContain("ivin plugin logs needs a plugin id")
+}, 10_000)
+
+test("ivin plugin list shows each plugin's halves, and a plugin whose manifest is invalid as failed", async () => {
+  const ivinHome = homeWithBrokenPlugin()
+  const folder = join(ivinHome, "plugins", "serverside")
+  mkdirSync(join(folder, "src"), { recursive: true })
+  writeFileSync(
+    join(folder, "package.json"),
+    JSON.stringify({ ivin: { id: "serverside", server: "src/server.ts" } }),
+  )
+  writeFileSync(join(folder, "src/server.ts"), "export const activate = () => {}")
+
+  const run = await withCliServer(
+    (socketPath) => runCli(["plugin", "list", "--json"], { IVIN_SOCKET: socketPath }),
+    {
+      ivinHome,
+    },
+  )
+
+  expect(JSON.parse(run.stdout)).toEqual({
+    ok: true,
+    plugins: [
+      { id: "broken", name: "broken", ui: "failed", server: "failed" },
+      // No plugin host runs in this server.
+      { id: "serverside", name: "serverside", ui: "none", server: "disabled" },
+    ],
+  })
 }, 10_000)

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./editor": "./src/editor.ts",
+    "./server": "./src/server.ts",
     "./ui": "./src/ui.ts"
   },
   "scripts": {

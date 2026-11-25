@@ -104,3 +104,37 @@ export const activate = defineUi((ctx) =>
     await app.close()
   }
 })
+
+test("the packaged app runs a plugin's server half in the plugin host, and restarts the host without a half that loops", async () => {
+  const userDataDir = makeTempDir("user-data")
+  writePlugin(userDataDir, "talker", {
+    "package.json": JSON.stringify({ ivin: { id: "talker", server: "src/server.ts" } }),
+    "src/server.ts": `import { defineServer } from "@ivin/plugin-api/server"
+export const activate = defineServer(() => { console.log("talker is active") })
+`,
+  })
+  writePlugin(userDataDir, "looper", {
+    "package.json": JSON.stringify({ ivin: { id: "looper", server: "src/server.ts" } }),
+    "src/server.ts": "export const activate = () => { while (true) {} }\n",
+  })
+
+  const app = await launchPackagedApp(userDataDir)
+  try {
+    const window = await startSession(app)
+    await expect
+      .poll(async () => (await runIvin(userDataDir, ["plugin", "list"])).output, {
+        timeout: 60_000,
+      })
+      .toMatch(/looper\s+ui: none\s+server: disabled\n.*talker\s+ui: none\s+server: active/s)
+    expect((await runIvin(userDataDir, ["plugin", "logs", "talker"])).output).toContain(
+      "talker is active",
+    )
+    expect((await runIvin(userDataDir, ["plugin", "logs", "looper"])).output).toContain(
+      "Disabled for blocking",
+    )
+    // The window and its sessions kept running.
+    await expect(window.getByRole("textbox").first()).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})

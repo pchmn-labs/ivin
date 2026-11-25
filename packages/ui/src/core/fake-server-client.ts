@@ -507,6 +507,7 @@ export const makeFakeServer = (
         : Effect.fail(new PluginNotFound({ id })),
     "plugin.readLog": ({ id }: { id: string }) =>
       Effect.sync(() => pluginFailures.filter((f) => f.id === id).map((f) => f.reason)),
+    "plugin.status": () => Effect.succeed([]),
     "keybinding.watch": () =>
       Stream.unwrap(
         Effect.map(PubSub.subscribe(keybindingChanges), (subscription) =>

@@ -20,7 +20,9 @@ export interface UserPluginsService {
     readonly id: string
     readonly path: string
     readonly entry: string
+    readonly half: "ui" | "server"
   }) => Effect.Effect<string, PluginNotCompiled>
+  readonly bundlePath: (name: string) => string
   readonly lock: (path: string) => Effect.Effect<void, PluginNotLocked>
   readonly appendLog: (id: string, line: string) => Effect.Effect<void>
   readonly readLog: (id: string) => Effect.Effect<ReadonlyArray<string>>

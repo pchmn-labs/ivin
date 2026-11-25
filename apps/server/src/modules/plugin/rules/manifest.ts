@@ -8,8 +8,9 @@ import type { Permissions } from "./permissions.ts"
 export interface UiManifest {
   readonly id: string
   readonly name: string
-  // The UI half's entry, relative to the plugin's folder.
-  readonly ui: string
+  // The halves' entries, relative to the plugin's folder; null for a half the plugin lacks.
+  readonly ui: string | null
+  readonly server: string | null
   readonly permissions: Permissions
   // The declared settings, then one placement setting per view with several placements.
   readonly settings: ReadonlyArray<PluginSettingDeclaration>
@@ -37,17 +38,23 @@ export const readManifest = (text: string | null): ManifestReading => {
   }
   const ivin = isRecord(json) ? json["ivin"] : undefined
   if (!isRecord(ivin)) return invalid("package.json has no ivin key, which holds the manifest.")
-  const { id, name, ui, permissions, settings, views } = ivin
+  const { id, name, ui, server, permissions, settings, views } = ivin
   if (typeof id !== "string" || !ID.test(id)) {
     return invalid("ivin.id in package.json must be lowercase letters, digits and dashes.")
   }
   if (name !== undefined && typeof name !== "string") {
     return invalid("ivin.name in package.json must be a string.")
   }
-  if (typeof ui !== "string" || ui === "") {
-    return invalid(
-      "ivin.ui in package.json names no file: ivin loads only a plugin's UI half for now.",
-    )
+  for (const [key, entry] of [
+    ["ui", ui],
+    ["server", server],
+  ] as const) {
+    if (entry !== undefined && (typeof entry !== "string" || entry === "")) {
+      return invalid(`ivin.${key} in package.json must name a file.`)
+    }
+  }
+  if (ui === undefined && server === undefined) {
+    return invalid("package.json names no half: ivin.ui or ivin.server must name a file.")
   }
   const reading = readPermissions(permissions)
   if (reading.kind === "invalid") return invalid(reading.reason)
@@ -60,7 +67,8 @@ export const readManifest = (text: string | null): ManifestReading => {
     manifest: {
       id,
       name: name ?? id,
-      ui,
+      ui: (ui as string | undefined) ?? null,
+      server: (server as string | undefined) ?? null,
       permissions: reading.permissions,
       settings: [...declared.settings, ...placementSettings(id, name ?? id, declaredViews.views)],
       views: declaredViews.views,

@@ -13,7 +13,7 @@ const rolldownBinding = join(
   `rolldown-binding.${platformTag}.node`,
 )
 
-export default {
+const server = {
   entry: { main: "src/main.ts", "webp-worker": "src/modules/transcript/adapters/webp-worker.ts" },
   format: "esm",
   platform: "node",
@@ -49,3 +49,16 @@ export default {
     },
   ],
 } satisfies PackUserConfig
+
+// Alone in its build, so the file shares no chunk with the server and can sit outside the asar.
+const pluginHost = {
+  entry: { "plugin-host": "src/plugin-host.ts" },
+  format: "esm",
+  platform: "node",
+  target: "node22",
+  outDir: "dist",
+  fixedExtension: false,
+  deps: { alwaysBundle: [/^effect/, /^@ivin\//], onlyBundle: false },
+} satisfies PackUserConfig
+
+export default [server, pluginHost] satisfies PackUserConfig[]

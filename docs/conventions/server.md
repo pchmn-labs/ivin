@@ -12,6 +12,7 @@ apps/server/src/
                         and the stateful Layers that need no outside: feeds, locks, runs
     adapters/           the Layers that reach the outside: SQLite, child processes, file watchers, sockets
   shared/               ids, errors, what every subject reads
+  plugin-host.ts        the plugin host process's entry, built alone: loads server halves
   main.ts               adds the configured Layers (paths, the harness, the database) and starts the server
 ```
 
