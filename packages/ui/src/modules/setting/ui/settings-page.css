@@ -46,9 +46,8 @@
   margin-top: var(--iv-space-1);
 }
 
-.iv-settings-page__setting-text > .iv-text + .iv-text,
-.iv-settings-page__state {
-  margin-top: var(--iv-space-1);
+.iv-settings-page__path {
+  margin-top: var(--iv-space-2);
 }
 
 .iv-settings-page__count {
@@ -71,6 +70,7 @@
 
 .iv-settings-page__state {
   display: flex;
+  margin-top: var(--iv-space-1);
   align-items: center;
   gap: var(--iv-space-1);
   color: var(--iv-text-muted);

@@ -91,9 +91,11 @@ function SettingRow({
             {setting.description}
           </Text>
         </div>
-        <Text size="xs" tone="faint" mono>
-          {setting.path}
-        </Text>
+        <div className="iv-settings-page__path">
+          <Text size="xs" tone="faint" mono>
+            {setting.path}
+          </Text>
+        </div>
         {shown.failure !== null && (
           <ErrorMessage
             message={shown.failure}
