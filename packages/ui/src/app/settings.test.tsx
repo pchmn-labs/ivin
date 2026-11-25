@@ -484,6 +484,8 @@ test("a plugin's own settings.section replaces the generated one", async () => {
 
   await expect.element(page.getByText("Custom PR settings")).toBeVisible()
   await expect.element(page.getByRole("textbox", { name: "Fold after" })).not.toBeInTheDocument()
+})
+
 const DAY = 86_400_000
 const daysField = () => page.getByRole("textbox", { name: "Delete images older than" })
 

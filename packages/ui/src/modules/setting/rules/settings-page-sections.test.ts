@@ -23,6 +23,7 @@ test("the app's sections come first, then one per plugin with settings, then the
     "files",
     "sidebar",
     "agents",
+    "images",
     "updates",
     "plugin:prs",
     "commandLine",
