@@ -413,11 +413,6 @@ test("while the answer streams in, the view moves at a steady pace", async () =>
   expect(steady.length).toBeGreaterThan(0.8 * paces.length)
 })
 
-const messageRowTop = () => {
-  const row = document.querySelector('[data-row-id="m40"]')
-  return row && Math.round(row.getBoundingClientRect().top - scroller().getBoundingClientRect().top)
-}
-
 test("a turn that ends with a long answer leaves the view at its end, never far from it", async () => {
   const server = makeFakeServer()
   const screen = await sendQuestion(server)
@@ -430,7 +425,7 @@ test("a turn that ends with a long answer leaves the view at its end, never far 
 
   expect(Math.max(...lags)).toBeLessThan(80)
   expect(fromEnd()).toBeLessThan(2)
-  expect(messageRowTop()).toBeNull()
+  expect(inView("line 29")).toBe(true)
 })
 
 test("a turn that ends with a short answer stays at the end, its message in view", async () => {
@@ -444,6 +439,7 @@ test("a turn that ends with a short answer stays at the end, its message in view
   const lags = await everyFrame(fromEnd, (seen) => seen.length === 30)
 
   expect(Math.max(...lags)).toBeLessThan(80)
+  expect(fromEnd()).toBeLessThan(2)
   expect(inView("question 40")).toBe(true)
 })
 
