@@ -492,6 +492,22 @@ test("a command that only lists the worktrees of the project moves nothing", asy
   expect(session).toMatchObject({ workingFolder: project, inWorktree: false })
 })
 
+test("a file read in a worktree that existed before the run moves nothing", async () => {
+  const path = addWorktree("earlier")
+  const session = await withServer(
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: project })
+        yield* send(client, created.id, "m1")
+        return yield* sessionOf(client, created.id)
+      }),
+    [toolTurn([{ name: "Read", input: { file_path: join(path, "first.txt") }, output: "ok" }])],
+  )
+
+  expect(session).toMatchObject({ workingFolder: project, inWorktree: false })
+})
+
 test("a git worktree add that failed moves nothing", async () => {
   const starts: StartInput[] = []
   const { session, items } = await withServer(

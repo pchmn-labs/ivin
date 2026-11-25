@@ -178,7 +178,6 @@ export class SessionAlreadyStarted extends Schema.TaggedError<SessionAlreadyStar
 // Another session's agent works in the checkout, which must not move under it.
 export class CheckoutInUse extends Schema.TaggedError<CheckoutInUse>()("CheckoutInUse", {
   sessionId: Schema.String,
-  blockingSessionId: Schema.String,
   blockingTitle: Schema.String,
 }) {}
 

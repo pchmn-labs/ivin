@@ -108,7 +108,6 @@ test("a checkout another agent works in can be retried once it is done", () => {
       {
         _tag: "CheckoutInUse",
         sessionId: "s1",
-        blockingSessionId: "s2",
         blockingTitle: "Fix login",
       },
       "switch",

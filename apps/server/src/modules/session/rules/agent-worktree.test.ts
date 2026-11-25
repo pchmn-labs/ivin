@@ -7,12 +7,12 @@ const switched = `${checkout}/.claude/worktrees/try-adopt`
 const added = `${checkout}/.worktrees/try-adopt`
 const shell = (command: string): ToolActivity => ({ type: "shell", command })
 
-const after = (activity: ToolActivity, created: readonly string[] = [added]) =>
+const after = (activity: ToolActivity, adoptable: readonly string[] = [added]) =>
   folderAfterTool({
     activity,
     workingFolder: checkout,
     folders: [checkout, switched, added],
-    created,
+    adoptable,
   })
 
 test("an agent switching to a folder git lists moves there", () => {
@@ -25,7 +25,7 @@ test("an agent switching back to the checkout moves there", () => {
       activity: { type: "folder_switch", path: checkout },
       workingFolder: switched,
       folders: [checkout, switched],
-      created: [],
+      adoptable: [],
     }),
   ).toBe(checkout)
 })

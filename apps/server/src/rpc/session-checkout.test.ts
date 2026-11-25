@@ -17,6 +17,7 @@ import { runMigrations } from "../shared/adapters/migrations.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
 import { handlers, layerServices } from "./handlers.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
+import { until } from "./test-waits.ts"
 
 // Real git: over 1 s when the suite runs other git tests beside it.
 vi.setConfig({ testTimeout: 5000 })
@@ -343,10 +344,44 @@ test("the checkout does not move while another session's agent works in it", asy
 
   expect(refused.error).toMatchObject({
     _tag: "CheckoutInUse",
-    blockingSessionId: refused.running.id,
+    blockingTitle: "go",
   })
-  expect(refused.error).toHaveProperty("blockingTitle", expect.any(String))
   expect(git(project, "branch", "--show-current")).toBe("feature")
+})
+
+test("the checkout moves once the other session's agent works in a worktree instead", async () => {
+  git(project, "checkout", "--quiet", "-b", "feature")
+  const path = join(project, ".worktrees", "earlier")
+  git(project, "worktree", "add", "--quiet", "-b", "earlier", path)
+  const switched = await withServer(
+    [],
+    (client) =>
+      Effect.gen(function* () {
+        const running = yield* newSession(client)
+        yield* client["session.sendMessage"]({ sessionId: running.id, messageId: "m1", text: "go" })
+        yield* until(
+          client["session.list"]({ projectPath: project }),
+          (sessions) => sessions.find((s) => s.id === running.id)?.inWorktree === true,
+        )
+        const created = yield* newSession(client)
+        return yield* client["session.switchToDefaultBranch"]({ sessionId: created.id })
+      }),
+    [
+      [
+        { type: "status", status: "running", raw: null },
+        {
+          type: "tool_call",
+          toolCallId: "t1",
+          name: "Bash",
+          input: { command: "cd .worktrees/earlier && git status" },
+          raw: null,
+        },
+        { type: "tool_result", toolCallId: "t1", output: "ok", isError: false, raw: null },
+      ],
+    ],
+  )
+
+  expect(switched.branch).toBe("main")
 })
 
 test("a default branch with no local copy is checked out as a tracking branch", async () => {

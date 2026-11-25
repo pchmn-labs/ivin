@@ -32,7 +32,6 @@ export const checkoutChange = (sessionId: string) =>
     if (blocking) {
       return yield* new CheckoutInUse({
         sessionId,
-        blockingSessionId: blocking.id,
         blockingTitle: blocking.title,
       })
     }
