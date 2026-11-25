@@ -104,7 +104,7 @@ test("a file's icon starts where the icons of the folders beside it do", async (
     .toBe(0)
 })
 
-test("with folder icons off, a folder's chevron is as wide as a file's icon, so their names start together", async () => {
+test("with folder icons off, a file's icon takes the place of the folders' chevrons, and file and folder names start together", async () => {
   const server = makeFakeServer()
   server.setUserSettings({
     settings: { ...defaultSettings, files: { folderIcons: false } },
@@ -115,7 +115,9 @@ test("with folder icons off, a folder's chevron is as wide as a file's icon, so 
   await expect
     .poll(() => left("README.md", ".iv-tree__name") - left("src", ".iv-tree__name"))
     .toBe(0)
-  expect(left("README.md", ".iv-tree__icon")).toBe(left("src", ".iv-tree__chevron"))
+  await expect
+    .poll(() => left("README.md", ".iv-tree__icon") - left("src", ".iv-tree__chevron"))
+    .toBe(0)
 })
 
 test("the arrows move, open and close, and the active row stays visible", async () => {
