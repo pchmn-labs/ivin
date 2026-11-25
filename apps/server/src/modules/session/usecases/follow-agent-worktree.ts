@@ -51,6 +51,12 @@ export const followAgentWorktree = (
         })
       })
 
+    // From the checkout, any listed worktree can be the agent's: it may have made it in an earlier run.
+    const candidates = (workingFolder: string, listed: ReadonlySet<string>) =>
+      [...(workingFolder === session.projectPath ? listed : created)].filter(
+        (path) => path !== session.projectPath && listed.has(path),
+      )
+
     const observe = (output: HarnessOutput) =>
       Effect.gen(function* () {
         if (output.type === "tool_call") {
@@ -71,7 +77,7 @@ export const followAgentWorktree = (
             }
             known.add(worktree.path)
           }
-        } else if (created.size === 0) return
+        }
         const current = yield* store.findById(session.id)
         if (!current) return
         const listed = new Set(worktrees.map((w) => w.path))
@@ -87,7 +93,7 @@ export const followAgentWorktree = (
             activity,
             workingFolder: current.workingFolder,
             folders: [session.projectPath, ...listed],
-            created: [...created].filter((path) => listed.has(path)),
+            created: candidates(current.workingFolder, listed),
           })
         if (target) yield* moveTo(target)
       })

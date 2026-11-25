@@ -21,7 +21,7 @@ export const checkoutChange = (sessionId: string) =>
     const session = yield* store.findById(sessionId)
     if (!session) return yield* new SessionNotFound({ sessionId })
     if (session.started) return yield* new SessionAlreadyStarted({ sessionId })
-    const busy = (yield* store.listByProject(session.projectPath)).some(
+    const blocking = (yield* store.listByProject(session.projectPath)).find(
       (other) =>
         other.id !== sessionId &&
         inCheckout(other) &&
@@ -29,7 +29,13 @@ export const checkoutChange = (sessionId: string) =>
           other.status === "waiting" ||
           other.status === "in_background"),
     )
-    if (busy) return yield* new CheckoutInUse({ sessionId })
+    if (blocking) {
+      return yield* new CheckoutInUse({
+        sessionId,
+        blockingSessionId: blocking.id,
+        blockingTitle: blocking.title,
+      })
+    }
     yield* fetchOriginQuietly(session.projectPath)
     return {
       session,

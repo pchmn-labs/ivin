@@ -331,14 +331,21 @@ test("the checkout does not move while another session's agent works in it", asy
         const running = yield* newSession(client)
         yield* client["session.sendMessage"]({ sessionId: running.id, messageId: "m1", text: "go" })
         const created = yield* newSession(client)
-        return yield* Effect.flip(
-          client["session.switchToDefaultBranch"]({ sessionId: created.id }),
-        )
+        return {
+          running,
+          error: yield* Effect.flip(
+            client["session.switchToDefaultBranch"]({ sessionId: created.id }),
+          ),
+        }
       }),
     [[{ type: "status", status: "running", raw: null }]],
   )
 
-  expect(refused._tag).toBe("CheckoutInUse")
+  expect(refused.error).toMatchObject({
+    _tag: "CheckoutInUse",
+    blockingSessionId: refused.running.id,
+  })
+  expect(refused.error).toHaveProperty("blockingTitle", expect.any(String))
   expect(git(project, "branch", "--show-current")).toBe("feature")
 })
 
