@@ -145,11 +145,11 @@ test("editing a plugin's UI half updates the window without a reload, and ivin p
   try {
     const window = await startSession(app)
     const created = await runIvin(userDataDir, ["plugin", "new", "demo"])
-    expect(created).toMatchObject({ code: 0 })
+    expect(created.code, created.output).toBe(0)
     await expect(window.getByText("The demo plugin is running.")).toBeVisible()
     const checked = await runIvin(userDataDir, ["plugin", "check", "demo"])
     expect(checked.output).toContain("has no type error")
-    expect(checked).toMatchObject({ code: 0 })
+    expect(checked.code, checked.output).toBe(0)
 
     const draft = window.getByRole("textbox", { name: "Message" })
     await draft.fill("a draft that must survive")
