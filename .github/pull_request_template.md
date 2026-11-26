@@ -15,6 +15,16 @@
 
 **What breaks if it is wrong:** <!-- What, and for whom. -->
 
+## Code summary
+
+<!-- The shape of the change, readable before the diff: pseudocode, a call tree, a file tree or a Mermaid diagram. Delete the section when the diff is short enough to read directly. -->
+
+## Read first
+
+<!-- 2 to 5 files or symbols, in reading order, each with one line on why to read it closely. -->
+
+1. `path:symbol` —
+
 ## Decisions to check
 
 <!-- Only what the reviewer may want to refuse: an acceptance criterion met differently or left out, an addition outside the ticket, a choice that changes what the user sees, a code-review finding left as it is (with why). -->
