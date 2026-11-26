@@ -31,6 +31,7 @@ import type { ErrorReport } from "@ivin/contracts/log"
 import { PluginNotFound, type PluginFailure, type UserPlugin } from "@ivin/contracts/plugin"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type {
+  AgentCommand,
   Harness,
   HarnessRunOptions,
   RelaunchFailure,
@@ -101,6 +102,8 @@ export interface FakeServer {
   readonly seedStoredImages: (
     images: ReadonlyArray<{ id: string; sessionId: string; bytes: number; sentAt: number }>,
   ) => void
+  // What `session.listAgentCommands` returns for every session; null for a harness without them.
+  agentCommands: ReadonlyArray<AgentCommand> | null
   // What `session.taskOutput` returns for a running command, by `<sessionId>/<taskId>`.
   readonly taskOutputs: Map<string, string>
   // `<sessionId>/<taskId>` of each task `session.stopTask` was called for.
@@ -1261,6 +1264,10 @@ export const makeFakeServer = (
       ),
     "session.stopTask": ({ sessionId, taskId }: { sessionId: string; taskId: string }) =>
       Effect.sync(() => void stoppedTasks.push(`${sessionId}/${taskId}`)),
+    "session.listAgentCommands": ({ sessionId }: { sessionId: string }) =>
+      sessions.has(sessionId)
+        ? Effect.sync(() => fake.agentCommands)
+        : Effect.fail(new SessionNotFound({ sessionId })),
     "session.taskOutput": ({ sessionId, taskId }: { sessionId: string; taskId: string }) =>
       Effect.sync(() => taskOutputs.get(`${sessionId}/${taskId}`) ?? null),
     "transcript.watchUsage": ({ sessionId }: { sessionId: string }) =>
@@ -1540,6 +1547,7 @@ export const makeFakeServer = (
       Effect.runSync(PubSub.publish(diskChanges, { workingFolder, change: { paths } })),
     files,
     unwritable: false,
+    agentCommands: null,
     holdNextRead: () => {
       let release!: () => void
       holdRead = new Promise<void>((resolve) => (release = resolve))

@@ -34,6 +34,17 @@ export type BackgroundTask = typeof BackgroundTask.Type
 export const Harness = Schema.Literals(["claude", "codex", "acp", "scripted"])
 export type Harness = typeof Harness.Type
 
+// What the user can send as `/name` at the start of a message; the harness runs it.
+export const AgentCommand = Schema.Struct({
+  name: Schema.String,
+  description: Schema.String,
+  argumentHint: Schema.NullOr(Schema.String),
+  kind: Schema.Literals(["skill", "command"]),
+  // Where a skill comes from; null for the harness's own commands.
+  source: Schema.NullOr(Schema.Literals(["project", "user", "plugin", "built-in"])),
+})
+export type AgentCommand = typeof AgentCommand.Type
+
 export const RunOptions = Schema.Struct({
   model: Schema.String,
   effort: Schema.String,
@@ -212,6 +223,11 @@ export class CheckoutRefused extends Schema.TaggedError<CheckoutRefused>()("Chec
   gitMessage: Schema.String,
 }) {}
 
+export class AgentCommandsNotListed extends Schema.TaggedError<AgentCommandsNotListed>()(
+  "AgentCommandsNotListed",
+  { sessionId: Schema.String },
+) {}
+
 export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.create", {
     payload: { projectPath: Schema.String },
@@ -325,6 +341,12 @@ export const SessionRpcs = RpcGroup.make(
   Rpc.make("session.taskOutput", {
     payload: { sessionId: Schema.String, taskId: Schema.String },
     success: Schema.NullOr(Schema.String),
+  }),
+  // The agent commands of the session's harness in its working folder; null when it takes none.
+  Rpc.make("session.listAgentCommands", {
+    payload: { sessionId: Schema.String },
+    success: Schema.NullOr(Schema.Array(AgentCommand)),
+    error: Schema.Union([SessionNotFound, AgentCommandsNotListed]),
   }),
   // Stops the running turn so the agent starts a new one with the pending messages.
   Rpc.make("session.sendNow", {

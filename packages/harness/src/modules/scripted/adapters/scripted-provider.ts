@@ -1,4 +1,4 @@
-import type { HarnessRunOptions } from "@ivin/contracts/session"
+import type { AgentCommand, HarnessRunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
 import type { Cause } from "effect"
 import { Deferred, type Duration, Effect, Layer, Queue, Stream } from "effect"
@@ -90,6 +90,7 @@ export interface ScriptedOptions {
   readonly reportSession?: boolean
   readonly runOptions?: HarnessRunOptions
   readonly completeText?: (prompt: string) => Effect.Effect<string, HarnessError>
+  readonly listCommands?: (cwd: string) => Effect.Effect<readonly AgentCommand[], HarnessError>
   // What reading a task's output file gives, by path.
   readonly taskOutputs?: Readonly<Record<string, string>>
 }
@@ -135,6 +136,7 @@ export const layerScripted = (
     reportSession = false,
     runOptions = scriptedRunOptions,
     completeText,
+    listCommands,
     taskOutputs = {},
   }: ScriptedOptions = {},
 ) =>
@@ -147,6 +149,7 @@ export const layerScripted = (
       program: Effect.succeed(null),
       skillsFolder: null,
       completeText: completeText ?? null,
+      listCommands: listCommands ?? null,
       readTaskOutput: (path) => Effect.succeed(taskOutputs[path] ?? ""),
       // Scripts replay recorded Claude output.
       toolActivity,

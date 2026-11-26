@@ -50,6 +50,7 @@ import { getVersion } from "../modules/server/usecases/get-version.ts"
 import { layerSqliteSessionStore } from "../modules/session/adapters/sqlite-session-store.ts"
 import { archiveSession } from "../modules/session/usecases/archive-session.ts"
 import { deleteSession } from "../modules/session/usecases/delete-session.ts"
+import { listAgentCommands } from "../modules/session/usecases/list-agent-commands.ts"
 import { listArchivedSessions } from "../modules/session/usecases/list-archived-sessions.ts"
 import { restoreSession } from "../modules/session/usecases/restore-session.ts"
 import { answerApproval } from "../modules/session/usecases/answer-approval.ts"
@@ -220,6 +221,7 @@ export const handlers = Rpcs.toLayer(
       "session.interrupt": ({ sessionId }) => interruptSession(sessionId),
       "session.stopTask": ({ sessionId, taskId }) => stopTask(sessionId, taskId),
       "session.taskOutput": ({ sessionId, taskId }) => taskOutput(sessionId, taskId),
+      "session.listAgentCommands": ({ sessionId }) => listAgentCommands(sessionId),
       "session.sendNow": ({ sessionId }) => sendNow(sessionId),
       "session.switchToDefaultBranch": ({ sessionId, localChanges }) =>
         switchToDefaultBranch(sessionId, localChanges),

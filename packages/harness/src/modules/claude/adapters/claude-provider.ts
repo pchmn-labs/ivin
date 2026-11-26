@@ -4,7 +4,7 @@ import { open } from "node:fs/promises"
 import { homedir } from "node:os"
 import { randomUUID } from "node:crypto"
 import { createInterface } from "node:readline"
-import type { HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
+import type { AgentCommand, HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import type { Duration } from "effect"
 import { Effect, Layer, Stream } from "effect"
@@ -15,7 +15,20 @@ import { claudeRunOptions } from "../rules/run-options.ts"
 import { completeTextWithClaude } from "./complete-text.ts"
 import { findOnPath } from "./find-on-path.ts"
 import { listClaudeModels } from "./list-models.ts"
-import { controlRequestInput, decodeClaudeLine } from "../rules/decode-claude-line.ts"
+import {
+  agentCommands,
+  type CommandEntry,
+  commandEntriesFromInitialize,
+  commandsOfRun,
+  initialFacts,
+  runListsSameNames,
+} from "../rules/agent-commands.ts"
+import {
+  controlRequestInput,
+  decodeParsedLine,
+  parseClaudeLine,
+} from "../rules/decode-claude-line.ts"
+import { askInitialize } from "./ask-initialize.ts"
 import { describeExit, type ProcessExit } from "../rules/describe-exit.ts"
 import { claudeSkillsFolder } from "../rules/skills-folder.ts"
 import { toolActivity } from "../rules/tool-activity.ts"
@@ -27,6 +40,7 @@ const STDERR_LIMIT = 8_192
 const DEFAULT_KILL_GRACE: Duration.Input = "2 seconds"
 const LIST_MODELS_TIMEOUT: Duration.Input = "10 seconds"
 const COMPLETE_TEXT_TIMEOUT: Duration.Input = "30 seconds"
+const LIST_COMMANDS_TIMEOUT: Duration.Input = "20 seconds"
 
 // A negative pid signals the group the child leads, with the shells and servers it started.
 const signalGroup = (pid: number, signal: NodeJS.Signals) => {
@@ -105,17 +119,41 @@ const listedRunOptions = (timeout: Duration.Input) => {
   )
 }
 
+const listedCommands = (timeout: Duration.Input) => {
+  let facts = initialFacts
+  const entriesByFolder = new Map<string, readonly CommandEntry[]>()
+  const list = (cwd: string): Effect.Effect<readonly AgentCommand[], HarnessError> =>
+    Effect.suspend(() => {
+      const entries = entriesByFolder.get(cwd)
+      if (entries) return Effect.succeed(agentCommands(entries, facts))
+      return askInitialize(cwd, commandEntriesFromInitialize, timeout).pipe(
+        Effect.tap((listed) => Effect.sync(() => entriesByFolder.set(cwd, listed))),
+        Effect.map((listed) => agentCommands(listed, facts)),
+      )
+    })
+  const learnFromRun = (cwd: string, line: unknown) => {
+    const run = commandsOfRun(line)
+    if (!run) return
+    facts = run.facts
+    const entries = entriesByFolder.get(cwd)
+    if (entries && !runListsSameNames(entries, run)) entriesByFolder.delete(cwd)
+  }
+  return { list, learnFromRun }
+}
+
 export const layerClaudeWith = (
   killGrace: Duration.Input,
   listTimeout: Duration.Input = LIST_MODELS_TIMEOUT,
 ) =>
-  Layer.sync(HarnessProvider)(() =>
-    HarnessProvider.of({
+  Layer.sync(HarnessProvider)(() => {
+    const commands = listedCommands(LIST_COMMANDS_TIMEOUT)
+    return HarnessProvider.of({
       id: "claude",
       runOptions: listedRunOptions(listTimeout),
       program: Effect.sync(() => ({ name: "claude", path: findOnPath("claude") })),
       skillsFolder: claudeSkillsFolder(process.env, homedir()),
       completeText: (prompt) => completeTextWithClaude(prompt, COMPLETE_TEXT_TIMEOUT),
+      listCommands: commands.list,
       readTaskOutput: (path) => Effect.promise(() => readTail(path).catch(() => "")),
       toolActivity,
       toolKind,
@@ -173,7 +211,9 @@ export const layerClaudeWith = (
                 lines,
                 (cause) => new HarnessError({ message: "Could not read claude's output", cause }),
               ).pipe(
-                Stream.map(decodeClaudeLine),
+                Stream.map(parseClaudeLine),
+                Stream.tap((line) => Effect.sync(() => commands.learnFromRun(cwd, line))),
+                Stream.map(decodeParsedLine),
                 Stream.flattenIterable,
                 Stream.tap((output: HarnessOutput) =>
                   Effect.sync(() => {
@@ -259,7 +299,7 @@ export const layerClaudeWith = (
           }
           return run
         }),
-    }),
-  )
+    })
+  })
 
 export const layerClaude = layerClaudeWith(DEFAULT_KILL_GRACE)

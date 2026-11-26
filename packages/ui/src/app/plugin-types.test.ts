@@ -11,6 +11,7 @@ import type {
   Project as ContractProject,
 } from "@ivin/contracts/project"
 import type {
+  AgentCommand,
   HarnessRunOptions,
   RunOptions,
   Session as ContractSession,
@@ -33,6 +34,7 @@ test("the plugin API's types match the contracts' they are converted from", () =
   expectTypeOf<GitStatusEntry>().toEqualTypeOf<Api.GitStatusEntry>()
   expectTypeOf<FolderEntry>().toEqualTypeOf<Api.FolderEntry>()
   expectTypeOf<RunOptions>().toEqualTypeOf<Api.RunOptions>()
+  expectTypeOf<AgentCommand>().toEqualTypeOf<Api.AgentCommand>()
   expectTypeOf<HarnessRunOptions>().toEqualTypeOf<Api.HarnessRunOptions>()
   expectTypeOf<ContractSettings>().toEqualTypeOf<Omit<Api.Settings, "plugins">>()
   expectTypeOf<ContractTab>().toEqualTypeOf<Api.Tab>()

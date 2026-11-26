@@ -304,13 +304,20 @@ const fromCommandLifecycle = (line: unknown): HarnessOutput[] => {
   return state === "started" ? [{ type: "message_read", messageId: command_uuid }] : []
 }
 
-export const decodeClaudeLine = (text: string): HarnessOutput[] => {
-  let line: unknown
+// Undefined: the line is not JSON.
+export const parseClaudeLine = (text: string): unknown => {
   try {
-    line = JSON.parse(text)
+    return JSON.parse(text) as unknown
   } catch {
-    return []
+    return undefined
   }
+}
+
+export const decodeClaudeLine = (text: string): HarnessOutput[] =>
+  decodeParsedLine(parseClaudeLine(text))
+
+export const decodeParsedLine = (line: unknown): HarnessOutput[] => {
+  if (line === undefined) return []
   try {
     const { type, subtype, parent_tool_use_id } = Schema.decodeUnknownSync(Envelope)(line)
     // Only the steps of a subagent are kept; its streamed text and other lines are not.

@@ -1,3 +1,4 @@
+import type { AgentCommand } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import { scriptedRead, type ScriptedElement } from "./scripted-provider.ts"
 
@@ -293,4 +294,46 @@ export const demoShotScript: readonly (readonly ScriptedElement[])[] = [
   demoTypecheckTurn,
   demoSteerTurn,
   demoBackgroundTurn,
+]
+
+const skill = (
+  name: string,
+  description: string,
+  source: AgentCommand["source"],
+  argumentHint: string | null = null,
+): AgentCommand => ({ name, description, argumentHint, kind: "skill", source })
+
+export const demoAgentCommands: readonly AgentCommand[] = [
+  skill(
+    "implement",
+    "Implement a ticket end to end: branch, tests first, review, pull request.",
+    "project",
+    "<issue>",
+  ),
+  skill(
+    "code-review",
+    "Review the changes since a fixed point against the standards and the spec.",
+    "project",
+    "[<branch>]",
+  ),
+  skill("review-animations", "Review motion code against a high craft bar.", "user"),
+  skill(
+    "security-review",
+    "Review the pending changes on the branch for security issues.",
+    "built-in",
+  ),
+  {
+    name: "review",
+    description: "Review a pull request.",
+    argumentHint: null,
+    kind: "command",
+    source: null,
+  },
+  {
+    name: "compact",
+    description: "Free up context by summarizing the conversation so far.",
+    argumentHint: "<instructions>",
+    kind: "command",
+    source: null,
+  },
 ]
