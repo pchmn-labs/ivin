@@ -84,7 +84,12 @@ export const markProjectChangesSeen = (project: string) =>
 export const watchProjectPlugins = Stream.unwrap(
   Effect.gen(function* () {
     const updates = yield* (yield* ProjectPluginUpdates).subscribe
-    const snapshot = resolveProjectPlugins().pipe(Effect.map(toProjectPlugins))
+    const projects = yield* PluginProjects
+    const snapshot = Effect.gen(function* () {
+      const openAs =
+        projects === null ? new Map<string, ReadonlyArray<string>>() : yield* projects.openAs
+      return toProjectPlugins(yield* resolveProjectPlugins(), openAs)
+    })
     return Stream.fromEffect(snapshot).pipe(
       Stream.concat(updates.pipe(Stream.mapEffect(() => snapshot))),
     )

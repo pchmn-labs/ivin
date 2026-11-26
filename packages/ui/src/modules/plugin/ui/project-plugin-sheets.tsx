@@ -158,7 +158,9 @@ export function ProjectPluginSheets() {
   const project = useAtomValue(selectedProjectAtom)
   const result = useAtomValue(projectPluginsAtom)
   if (project === null || !AsyncResult.isSuccess(result)) return null
-  const state = result.value.find((candidate) => candidate.project === project.path)
+  const state = result.value.find(
+    (candidate) => candidate.project === project.path || candidate.openAs.includes(project.path),
+  )
   if (state === undefined) return null
   const waiting = waitingPlugins(result.value, project.path)
   const unseen = state.fullTrust ? unseenChanges(state) : []

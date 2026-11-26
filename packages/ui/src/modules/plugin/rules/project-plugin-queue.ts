@@ -5,7 +5,7 @@ export const waitingPlugins = (
   projectPath: string,
 ): ReadonlyArray<ProjectPlugin> =>
   projects
-    .find((state) => state.project === projectPath)
+    .find((state) => state.project === projectPath || state.openAs.includes(projectPath))
     ?.plugins.filter((plugin) => plugin.state !== "trusted") ?? []
 
 export const unseenChanges = (state: ProjectPlugins): ReadonlyArray<ProjectPluginChange> =>

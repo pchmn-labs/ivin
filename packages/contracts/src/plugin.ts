@@ -90,6 +90,8 @@ export const ProjectPlugins = Schema.Struct({
   // The project's folder.
   project: Schema.String,
   projectName: Schema.String,
+  // Paths the window knows the project by when they differ from `project`, which is its real path.
+  openAs: Schema.Array(Schema.String),
   fullTrust: Schema.Boolean,
   plugins: Schema.Array(ProjectPlugin),
   changes: Schema.Array(ProjectPluginChange),

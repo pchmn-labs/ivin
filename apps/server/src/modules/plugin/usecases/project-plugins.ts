@@ -139,7 +139,10 @@ export const resolveProjectPlugins = (seenOnAdopt = false) =>
   }).pipe(lock.withPermits(1))
 
 // What a window shows: projects with no plugin and no change are left out.
-export const toProjectPlugins = (resolved: ReadonlyArray<ResolvedProject>): ProjectPlugins[] =>
+export const toProjectPlugins = (
+  resolved: ReadonlyArray<ResolvedProject>,
+  openAs: ReadonlyMap<string, ReadonlyArray<string>> = new Map(),
+): ProjectPlugins[] =>
   resolved
     .filter(
       ({ plugins, unreadable, changes }) => plugins.length + unreadable.length + changes.length > 0,
@@ -147,6 +150,7 @@ export const toProjectPlugins = (resolved: ReadonlyArray<ResolvedProject>): Proj
     .map(({ project, fullTrust, plugins, changes }) => ({
       project,
       projectName: projectNameOf(project),
+      openAs: openAs.get(project) ?? [],
       fullTrust,
       plugins: plugins.map(({ plugin }) => plugin),
       changes,

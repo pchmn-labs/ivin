@@ -21,6 +21,7 @@ const plugin = (state: ProjectPlugin["state"], hash: string): ProjectPlugin => (
 const shop = (plugins: ProjectPlugin[]): ProjectPlugins => ({
   project: "/dev/shop",
   projectName: "shop",
+  openAs: [],
   fullTrust: false,
   plugins,
   changes: [

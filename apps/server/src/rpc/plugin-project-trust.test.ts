@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { expect, test, vi } from "vitest"
 import { projectPluginKey } from "../modules/plugin/rules/project-plugin-trust.ts"
+import { watchPluginFolders } from "../modules/plugin/usecases/watch-plugin-folders.ts"
 import { PluginReloads } from "../modules/plugin/usecases/plugin-reloads.ts"
 import {
   bundlePath,
@@ -226,4 +227,34 @@ test("a project that is not trusted offers and runs nothing", async () => {
 
   expect(result.projects).toEqual([])
   expect(result.status).toEqual([])
+})
+
+test("a project trusted while the server runs offers its plugins to a window that already listens", async () => {
+  const { home, project, db } = setup()
+  db.prepare("DELETE FROM trusted_projects WHERE path = ?").run(project)
+  let trusted = false
+
+  const offered = await withServer(
+    home,
+    (client) =>
+      Effect.gen(function* () {
+        yield* Effect.forkScoped(watchPluginFolders)
+        return yield* client["plugin.projectPlugins"]().pipe(
+          Stream.tap(() =>
+            Effect.sync(() => {
+              if (trusted) return
+              trusted = true
+              db.prepare("INSERT INTO trusted_projects (path) VALUES (?)").run(project)
+            }),
+          ),
+          Stream.filter((projects) => projects.length > 0),
+          Stream.take(1),
+          Stream.runCollect,
+          Effect.timeout("15 seconds"),
+        )
+      }),
+    { db },
+  )
+
+  expect(offered[0]?.[0]?.plugins[0]?.state).toBe("new")
 })

@@ -1,5 +1,6 @@
 import { Duration, Effect, Stream } from "effect"
-import { projectPluginKey } from "../rules/project-plugin-trust.ts"
+import { projectPluginKey, projectPluginsRoot } from "../rules/project-plugin-trust.ts"
+import { ProjectPluginUpdates } from "./project-plugin-updates.ts"
 import { PluginProjects } from "./plugin-projects.ts"
 import { PluginSwitches } from "./plugin-switches.ts"
 import { requestReload } from "./request-reload.ts"
@@ -14,13 +15,22 @@ export const watchPluginFolders = Effect.gen(function* () {
   if (plugins === null) return
   const projects = yield* PluginProjects
   const switches = yield* PluginSwitches
+  const updates = yield* ProjectPluginUpdates
   const watched = new Set<string>()
   const watchProjects = Effect.gen(function* () {
     if (projects === null || switches?.safe === true) return
+    let started = true
     while (true) {
       for (const project of yield* projects.trusted) {
         if (watched.has(project)) continue
         watched.add(project)
+        // The window listed the plugins before this project was trusted.
+        if (!started) {
+          for (const folder of yield* plugins.foldersIn(projectPluginsRoot(project))) {
+            yield* requestReload(projectPluginKey(project, folder.name))
+          }
+          yield* updates.publish
+        }
         yield* Effect.forkScoped(
           plugins.projectChanges(project).pipe(
             Stream.map((folderName) => projectPluginKey(project, folderName)),
@@ -29,6 +39,7 @@ export const watchPluginFolders = Effect.gen(function* () {
           ),
         )
       }
+      started = false
       yield* Effect.sleep(PROJECTS_LOOKED_UP_EVERY)
     }
   })

@@ -26,6 +26,7 @@ const mount = async (plugin: ProjectPlugin = changed) => {
   server.projectPlugins.push({
     project: "/dev/shop",
     projectName: "shop",
+    openAs: [],
     fullTrust: false,
     plugins: [plugin],
     changes: [],

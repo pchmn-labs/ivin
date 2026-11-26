@@ -28,6 +28,7 @@ const project = (path: string, plugins: ProjectPlugin[], changes: ProjectPluginC
   ({
     project: path,
     projectName: path,
+    openAs: [],
     fullTrust: false,
     plugins,
     changes,
@@ -40,6 +41,11 @@ test("only the plugins of the project on screen that wait for trust are waiting"
   ]
   expect(waitingPlugins(projects, "/a").map((p) => p.id)).toEqual(["two", "three"])
   expect(waitingPlugins(projects, "/c")).toEqual([])
+})
+
+test("a project the window opened by a path that resolves to the trusted folder still matches", () => {
+  const aliased = { ...project("/private/a", [plugin("two", "new")]), openAs: ["/a"] }
+  expect(waitingPlugins([aliased], "/a").map((p) => p.id)).toEqual(["two"])
 })
 
 test("only the changes the user has not marked as read are unseen", () => {
