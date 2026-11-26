@@ -10,6 +10,7 @@ import xBold from "@phosphor-icons/core/assets/bold/x-bold.svg?raw"
 import warning from "@phosphor-icons/core/assets/regular/warning-circle.svg?raw"
 import external from "@phosphor-icons/core/assets/regular/arrow-square-out.svg?raw"
 import plus from "@phosphor-icons/core/assets/regular/plus.svg?raw"
+import clock from "@phosphor-icons/core/assets/bold/clock-bold.svg?raw"
 import draft from "./pull-request-draft.svg?raw"
 import pencil from "@phosphor-icons/core/assets/bold/pencil-simple-bold.svg?raw"
 import { SessionMark } from "../../src/modules/session/ui/session-mark.tsx"
@@ -17,7 +18,7 @@ import "../../src/core/components/list-row/list-row.css"
 import "../../src/modules/tab/ui/tab-bar.css"
 import { SESSIONS, TAB_IDS, type Pr, type PrState, type ProtoSession } from "./data.ts"
 
-const RAW = { pullRequest, merge, xCircle, circleDashed, x, check, xBold, warning, external, plus, pencil, draft }
+const RAW = { pullRequest, merge, xCircle, circleDashed, x, check, xBold, warning, external, plus, pencil, draft, clock }
 export type SvgName = keyof typeof RAW
 
 export function Svg({ name, size = 14, className }: { name: SvgName; size?: number; className?: string }) {
@@ -54,41 +55,74 @@ export interface Variant {
   readonly cardWidth: number
 }
 
+type Place = "row" | "tab"
+const handles = {
+  row: PreviewCard.createHandle<string>(),
+  tab: PreviewCard.createHandle<string>(),
+}
+
+function HoverTrigger({ place, sessionId, children }: { place: Place; sessionId: string; children: ReactNode }) {
+  return (
+    <PreviewCard.Trigger
+      handle={handles[place]}
+      payload={sessionId}
+      delay={400}
+      closeDelay={150}
+      render={<div className="proto-trigger" data-place={place} />}
+    >
+      {children}
+    </PreviewCard.Trigger>
+  )
+}
+
 function HoverCard({
-  variant,
-  session,
-  prs,
-  onRemove,
   place,
+  variant,
+  render,
+}: {
+  place: Place
+  variant: Variant
+  render: (sessionId: string) => ReactNode
+}) {
+  return (
+    <PreviewCard.Root handle={handles[place]}>
+      {({ payload }) => (
+        <PreviewCard.Portal>
+          <PreviewCard.Positioner
+            className="proto-positioner"
+            side={place === "row" ? "right" : "bottom"}
+            align="start"
+            sideOffset={place === "row" ? 10 : 6}
+            collisionPadding={8}
+          >
+            <PreviewCard.Popup className="proto-card" style={{ width: variant.cardWidth }}>
+              <PreviewCard.Viewport className="proto-viewport">
+                {payload === undefined ? null : render(payload)}
+              </PreviewCard.Viewport>
+            </PreviewCard.Popup>
+          </PreviewCard.Positioner>
+        </PreviewCard.Portal>
+      )}
+    </PreviewCard.Root>
+  )
+}
+
+function MaybeTrigger({
+  place,
+  sessionId,
+  active,
   children,
 }: {
-  variant: Variant
-  session: ProtoSession
-  prs: ReadonlyArray<Pr>
-  onRemove: (pr: Pr) => void
-  place: "row" | "tab"
+  place: Place
+  sessionId: string
+  active: boolean
   children: ReactNode
 }) {
-  if (prs.length === 0) return children
-  const { Card } = variant
+  if (!active) return <div className="proto-trigger" data-place={place}>{children}</div>
   return (
-    <PreviewCard.Root>
-      <PreviewCard.Trigger delay={400} closeDelay={150} render={<div className="proto-trigger" data-place={place} />}>
-        {children}
-      </PreviewCard.Trigger>
-      <PreviewCard.Portal>
-        <PreviewCard.Positioner
-          side={place === "row" ? "right" : "bottom"}
-          align="start"
-          sideOffset={place === "row" ? 10 : 6}
-          collisionPadding={8}
-        >
-          <PreviewCard.Popup className="proto-card" style={{ width: variant.cardWidth }}>
-            <Card session={session} prs={prs} onRemove={onRemove} />
-          </PreviewCard.Popup>
-        </PreviewCard.Positioner>
-      </PreviewCard.Portal>
-    </PreviewCard.Root>
+    <HoverTrigger place={place} sessionId={sessionId}>
+      {children}
+    </HoverTrigger>
   )
 }
 
@@ -108,7 +142,11 @@ export function Window({ variant }: { variant: Variant }) {
   const prsOf = (s: ProtoSession) => s.prs.filter((pr) => !removed.has(`${s.id}#${pr.repo}#${pr.number}`))
   const remove = (s: ProtoSession) => (pr: Pr) =>
     setRemoved((prev) => new Set(prev).add(`${s.id}#${pr.repo}#${pr.number}`))
-  const { Badge } = variant
+  const { Badge, Card } = variant
+  const card = (sessionId: string) => {
+    const session = SESSIONS.find((x) => x.id === sessionId)!
+    return <Card session={session} prs={prsOf(session)} onRemove={remove(session)} />
+  }
   const tabs = TAB_IDS.map((id) => SESSIONS.find((s) => s.id === id)!)
 
   return (
@@ -123,7 +161,7 @@ export function Window({ variant }: { variant: Variant }) {
             const prs = prsOf(s)
             return (
               <li key={s.id}>
-                <HoverCard variant={variant} session={s} prs={prs} onRemove={remove(s)} place="row">
+                <MaybeTrigger place="row" sessionId={s.id} active={prs.length > 0}>
                   <div
                     className="iv-list-row"
                     data-selected={selected === s.id || undefined}
@@ -140,11 +178,12 @@ export function Window({ variant }: { variant: Variant }) {
                       </button>
                     </div>
                   </div>
-                </HoverCard>
+                </MaybeTrigger>
               </li>
             )
           })}
         </ul>
+        <HoverCard place="row" variant={variant} render={card} />
       </aside>
       <div className="proto-main">
         <div className="proto-topbar">
@@ -153,7 +192,7 @@ export function Window({ variant }: { variant: Variant }) {
               {tabs.map((s) => {
                 const prs = prsOf(s)
                 return (
-                  <HoverCard key={s.id} variant={variant} session={s} prs={prs} onRemove={remove(s)} place="tab">
+                  <MaybeTrigger key={s.id} place="tab" sessionId={s.id} active={prs.length > 0}>
                     <div className="iv-tab-bar__item" data-selected={selected === s.id || undefined}>
                       <button
                         type="button"
@@ -170,10 +209,11 @@ export function Window({ variant }: { variant: Variant }) {
                         <Svg name="x" size={12} />
                       </button>
                     </div>
-                  </HoverCard>
+                  </MaybeTrigger>
                 )
               })}
             </div>
+            <HoverCard place="tab" variant={variant} render={card} />
             <button type="button" className="proto-new-tab" aria-label="New session">
               <Svg name="plus" size={14} />
             </button>

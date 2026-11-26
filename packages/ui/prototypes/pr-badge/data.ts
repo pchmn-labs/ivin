@@ -308,3 +308,6 @@ export const mergeableOf = (prs: ReadonlyArray<Pr>): Mergeable => {
     pr.state === "open" && pr.review === "approved" && pr.checks.every((c) => c.result === "passed")
   return live.some(ready) ? "yes" : "no"
 }
+
+export const awaitsReview = (prs: ReadonlyArray<Pr>) =>
+  prs.some((pr) => pr.state === "open" && pr.review !== "approved")

@@ -1203,3 +1203,61 @@ body {
 .m-pr-link:hover .t-check-corner {
   --ring: color-mix(in srgb, var(--iv-bg-raised) 94%, var(--iv-accent));
 }
+
+/* Round 8: a grey mark while review is pending; one card that slides between rows or tabs */
+
+.t-check-corner[data-ci="review"] {
+  background: var(--iv-text-muted);
+}
+
+.proto-trigger[data-place="row"] {
+  display: block;
+}
+
+.proto-positioner {
+  transition:
+    top var(--iv-duration-base) var(--iv-ease-out),
+    left var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.proto-positioner[data-instant] {
+  transition: none;
+}
+
+.proto-card {
+  height: var(--popup-height, auto);
+  overflow: hidden;
+  transition:
+    opacity var(--iv-duration-fast) var(--iv-ease-out),
+    transform var(--iv-duration-fast) var(--iv-ease-out),
+    height var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.proto-viewport {
+  position: relative;
+}
+
+.proto-viewport [data-previous] {
+  transition: opacity var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.proto-viewport [data-previous][data-ending-style] {
+  opacity: 0;
+}
+
+.proto-viewport [data-current] {
+  transition: opacity var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.proto-viewport [data-current][data-starting-style] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proto-positioner,
+  .proto-card,
+  .proto-viewport [data-previous],
+  .proto-viewport [data-current] {
+    transition: none;
+  }
+}

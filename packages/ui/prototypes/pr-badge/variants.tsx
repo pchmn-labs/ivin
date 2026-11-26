@@ -7,6 +7,7 @@ import {
   isRunning,
   iconToneOf,
   mergeableOf,
+  awaitsReview,
   leadPr,
   mergeText,
   urlOf,
@@ -133,7 +134,13 @@ function Tile({ prs }: { prs: ReadonlyArray<Pr> }) {
   const lead = leadPr(prs)!
   const mergeable = mergeableOf(prs)
   const verdict =
-    mergeable === "yes" ? "passed" : mergeable === "conflict" || iconToneOf(prs) === "failed" ? "failed" : null
+    mergeable === "conflict" || iconToneOf(prs) === "failed"
+      ? "failed"
+      : mergeable === "yes"
+        ? "passed"
+        : awaitsReview(prs)
+          ? "review"
+          : null
   return (
     <span
       className="t-tile"
@@ -145,7 +152,7 @@ function Tile({ prs }: { prs: ReadonlyArray<Pr> }) {
       <Svg name={STATE_ICON[lead.state]} size={13} />
       {verdict && (
         <span className="t-check-corner" data-ci={verdict}>
-          <Svg name={verdict === "passed" ? "check" : "xBold"} size={5} />
+          <Svg name={verdict === "passed" ? "check" : verdict === "failed" ? "xBold" : "clock"} size={verdict === "review" ? 6 : 5} />
         </span>
       )}
     </span>
