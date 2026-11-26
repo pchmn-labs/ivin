@@ -9,6 +9,10 @@ import { afterEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { contributionsAtom } from "../modules/plugin/atoms/contributions.ts"
+import {
+  settingsPageOpenAtom,
+  settingsSectionAtom,
+} from "../modules/setting/atoms/settings-page.ts"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { App } from "./app.tsx"
@@ -42,6 +46,15 @@ const mountApp = async () => {
   )
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
   return server
+}
+
+const showSection = (key: string) => {
+  registryOfApp.set(settingsSectionAtom, key)
+  registryOfApp.set(settingsPageOpenAtom, true)
+}
+const openSection = async (key: string, title: string) => {
+  showSection(key)
+  await expect.element(page.getByRole("heading", { name: title })).toBeVisible()
 }
 
 const openSettingsFile = vi.fn<() => Promise<string | null>>()
@@ -99,7 +112,7 @@ test("the keyboard alone reaches each section and changes its setting", async ()
 
 test("a change made outside the page, by the CLI or in the file, shows on its switch", async () => {
   const server = await mountApp()
-  await page.getByRole("button", { name: "Settings" }).click()
+  await openSection("tabs", "Tabs")
   await expect.element(stopAgent()).toBeChecked()
 
   server.setUserSettings({
@@ -111,7 +124,7 @@ test("a change made outside the page, by the CLI or in the file, shows on its sw
 
 test("a broken settings.json shows what is wrong and what to do, with the switches disabled", async () => {
   const server = await mountApp()
-  await page.getByRole("button", { name: "Settings" }).click()
+  await openSection("tabs", "Tabs")
   server.setUserSettings({
     settings: defaultSettings,
     problem: { reason: "notJson", setting: null },
@@ -136,7 +149,7 @@ test("a broken settings.json shows what is wrong and what to do, with the switch
 
 test("a failed write shows its message next to the switch, keeps the choice, and Retry saves it", async () => {
   const server = await mountApp()
-  await page.getByRole("button", { name: "Settings" }).click()
+  await openSection("tabs", "Tabs")
   server.failNextCall("setting.set")
 
   await stopAgent().click()
@@ -152,7 +165,7 @@ test("a failed write shows its message next to the switch, keeps the choice, and
 
 test("Open settings.json opens the file, and says so when it could not", async () => {
   const server = await mountApp()
-  await page.getByRole("button", { name: "Settings" }).click()
+  await openSection("tabs", "Tabs")
   const open = sections().getByRole("button", { name: "Open settings.json" })
 
   openSettingsFile.mockResolvedValue("could not open settings.json: no application")
@@ -167,11 +180,7 @@ test("Open settings.json opens the file, and says so when it could not", async (
   expect(openSettingsFile).toHaveBeenCalledTimes(2)
 })
 
-const openAgents = async () => {
-  await page.getByRole("button", { name: "Settings" }).click()
-  await sections().getByRole("button", { name: "Agents" }).click()
-  await expect.element(page.getByRole("heading", { name: "Agents" })).toBeVisible()
-}
+const openAgents = () => openSection("agents", "Agents")
 
 test("the idle limit shows its value in minutes, Enter saves a new one, and 0 is accepted as the limit that never stops agents", async () => {
   await mountApp()
@@ -185,7 +194,6 @@ test("the idle limit shows its value in minutes, Enter saves a new one, and 0 is
 
   await userEvent.keyboard("{Escape}")
   await userEvent.keyboard(`{${mod}>},{/${mod}}`)
-  await sections().getByRole("button", { name: "Agents" }).click()
   await expect.element(idleLimit()).toHaveValue("30")
 
   await idleLimit().fill("0")
@@ -259,11 +267,7 @@ test("the idle limit follows a change made outside the page and is disabled whil
     .toBeVisible()
 })
 
-const openCommandLine = async () => {
-  await page.getByRole("button", { name: "Settings" }).click()
-  await sections().getByRole("button", { name: "Command line" }).click()
-  await expect.element(page.getByRole("heading", { name: "Command line" })).toBeVisible()
-}
+const openCommandLine = () => openSection("commandLine", "Command line")
 
 test("Install links ivin into the shell and shows where, then offers to reinstall", async () => {
   await mountApp()
@@ -414,8 +418,7 @@ const prsSettings: PluginSetting[] = [
 test("a plugin's settings show in a section built from its manifest, and a change is written", async () => {
   const server = await mountApp()
   server.setUserSettings({ settings: defaultSettings, problem: null, pluginSettings: prsSettings })
-  await page.getByRole("button", { name: "Settings" }).click()
-  await sections().getByRole("button", { name: "Session PRs" }).click()
+  await openSection("plugin:prs", "Session PRs")
 
   await expect.element(page.getByRole("heading", { name: "Session PRs" })).toBeVisible()
   await expect.element(page.getByText("Pull requests listed before the rest fold.")).toBeVisible()
@@ -438,8 +441,7 @@ test("a plugin's settings show in a section built from its manifest, and a chang
 test("a plugin setting whose value in the file is the wrong type says its default is used", async () => {
   const server = await mountApp()
   server.setUserSettings({ settings: defaultSettings, problem: null, pluginSettings: prsSettings })
-  await page.getByRole("button", { name: "Settings" }).click()
-  await sections().getByRole("button", { name: "Session PRs" }).click()
+  await openSection("plugin:prs", "Session PRs")
 
   await expect
     .element(
@@ -469,8 +471,7 @@ test("a plugin's own settings.section replaces the generated one", async () => {
       badge: undefined,
     },
   ])
-  await page.getByRole("button", { name: "Settings" }).click()
-  await sections().getByRole("button", { name: "Session PRs" }).click()
+  showSection("plugin:prs")
 
   await expect.element(page.getByText("Custom PR settings")).toBeVisible()
   await expect.element(page.getByRole("textbox", { name: "Fold after" })).not.toBeInTheDocument()
@@ -490,9 +491,7 @@ const openImages = async () => {
       sentAt: Date.now() - 2 * DAY,
     },
   ])
-  await page.getByRole("button", { name: "Settings" }).click()
-  await sections().getByRole("button", { name: "Images" }).click()
-  await expect.element(page.getByRole("heading", { name: "Images" })).toBeVisible()
+  await openSection("images", "Images")
   return server
 }
 
