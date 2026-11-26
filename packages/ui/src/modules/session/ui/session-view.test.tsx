@@ -508,6 +508,21 @@ test("a pick that fails says so beside the picker, keeps the choice and offers a
 
 const runOptions = (name: string) => page.getByRole("button", { name: `Run options: ${name}` })
 
+test("a model that does not take the current effort moves it down, and greys out what it does not take", async () => {
+  const server = await mountSession("idle")
+  await runOptions("Sonnet 5.5, High, Manual").click()
+  await page.getByTestId("run-option-effort-xhigh").click()
+  await vi.waitFor(() => expect(server.sessions.get("s1")?.effort).toBe("xhigh"))
+  await page.getByTestId("run-option-model-claude-opus-4-6").click()
+
+  await vi.waitFor(() =>
+    expect(server.sessions.get("s1")).toMatchObject({ model: "claude-opus-4-6", effort: "high" }),
+  )
+  await expect
+    .element(page.getByTestId("run-option-effort-xhigh"))
+    .toHaveAttribute("aria-disabled", "true")
+})
+
 test("keyboard only: open the menu, move to the effort column, pick low, and close back on the button", async () => {
   const server = await mountSession("idle")
   const trigger = runOptions("Sonnet 5.5, High, Manual")
