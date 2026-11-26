@@ -4,12 +4,12 @@ import "../../src/core/theme/tokens.css"
 import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
-import { Dot, Marks, HealthVariant } from "./variants.tsx"
+import { Dashed, Hollow, Pencil } from "./variants.tsx"
 
 const VARIANTS = [
-  { name: "Dot", Component: Dot },
-  { name: "Marks", Component: Marks },
-  { name: "Health", Component: HealthVariant },
+  { name: "Dashed", Component: Dashed },
+  { name: "Hollow", Component: Hollow },
+  { name: "Pencil", Component: Pencil },
 ]
 
 const requested = Number.parseInt(new URLSearchParams(location.search).get("v") ?? "", 10)

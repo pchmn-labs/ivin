@@ -125,69 +125,42 @@ function More({ prs }: { prs: ReadonlyArray<Pr> }) {
   return prs.length > 1 ? <span className="g-more">+{prs.length - 1}</span> : null
 }
 
-/* 1. Dot: the icon in its state colour, a dot on its corner for checks and mergeability. */
+type DraftStyle = "dashed" | "hollow" | "pencil"
 
-function DotBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
-  const lead = leadPr(prs)!
-  const health = worstHealth(prs)
-  return (
-    <span className="d-badge" aria-label={label(prs, health)}>
-      <span className="d-icon" data-state={lead.state}>
-        <Svg name={STATE_ICON[lead.state]} size={14} />
-        {health !== "none" && <span className="d-dot" data-health={health} />}
-      </span>
-      <More prs={prs} />
-    </span>
-  )
-}
+/* The tile's colour is checks and mergeability; its outline says draft. */
 
-/* 2. Marks: the icon in its state colour, then a checks mark and a merge mark. */
-
-function MarksBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
-  const lead = leadPr(prs)!
-  const health = worstHealth(prs)
-  const live = prs.filter((pr) => pr.state === "open")
-  const ci = live.some((pr) => ciOf(pr.checks) === "failed")
-    ? "failed"
-    : live.some((pr) => ciOf(pr.checks) === "running")
-      ? "running"
-      : live.some((pr) => pr.checks.length > 0)
-        ? "passed"
-        : "none"
-  const conflict = live.some((pr) => pr.conflict)
-  const ready = live.length > 0 && live.every((pr) => healthOf(pr) === "ready")
-  return (
-    <span className="k-badge" aria-label={label(prs, health)}>
-      <span className="d-icon" data-state={lead.state}>
-        <Svg name={STATE_ICON[lead.state]} size={14} />
-      </span>
-      <CiMark ci={ci} />
-      {conflict && <Svg name="warning" size={13} className="k-conflict" />}
-      {ready && <Svg name="merge" size={13} className="k-ready" />}
-      <More prs={prs} />
-    </span>
-  )
-}
-
-/* 3. Health: the icon's shape is the state, one colour and tile for checks and mergeability together. */
-
-function HealthBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
+function HealthBadge({ prs, draftStyle }: { prs: ReadonlyArray<Pr>; draftStyle: DraftStyle }) {
   const lead = leadPr(prs)!
   const health = worstHealth(prs)
   return (
     <span className="h-badge" aria-label={label(prs, health)}>
-      <span className="h-tile" data-state={lead.state} data-health={health}>
+      <span
+        className="h-tile"
+        data-state={lead.state}
+        data-health={health}
+        data-draft-style={lead.state === "draft" ? draftStyle : undefined}
+      >
         <Svg name={STATE_ICON[lead.state]} size={13} />
+        {lead.state === "draft" && draftStyle === "pencil" && (
+          <span className="h-pencil">
+            <Svg name="pencil" size={7} />
+          </span>
+        )}
       </span>
       <More prs={prs} />
     </span>
   )
 }
 
-const dot: Variant = { Badge: DotBadge, Card: MixCard, cardWidth: 340 }
-const marks: Variant = { Badge: MarksBadge, Card: MixCard, cardWidth: 340 }
-const health: Variant = { Badge: HealthBadge, Card: MixCard, cardWidth: 340 }
+const variant = (draftStyle: DraftStyle): Variant => ({
+  Badge: (props) => <HealthBadge {...props} draftStyle={draftStyle} />,
+  Card: MixCard,
+  cardWidth: 340,
+})
+const dashed = variant("dashed")
+const hollow = variant("hollow")
+const pencil = variant("pencil")
 
-export const Dot = () => <Window variant={dot} />
-export const Marks = () => <Window variant={marks} />
-export const HealthVariant = () => <Window variant={health} />
+export const Dashed = () => <Window variant={dashed} />
+export const Hollow = () => <Window variant={hollow} />
+export const Pencil = () => <Window variant={pencil} />

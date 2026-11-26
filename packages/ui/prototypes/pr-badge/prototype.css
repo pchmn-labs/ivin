@@ -1015,3 +1015,42 @@ body {
 .c-pill[data-tone="blocked"] {
   --tone: var(--iv-text-muted);
 }
+
+/* Round 3: a draft's outline */
+
+.h-tile {
+  position: relative;
+  box-sizing: border-box;
+}
+
+.h-tile[data-draft-style="dashed"] {
+  border: 1px dashed color-mix(in srgb, var(--tone) 80%, transparent);
+  background: transparent;
+}
+
+.h-tile[data-draft-style="hollow"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tone) 55%, transparent);
+}
+
+.h-pencil {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  width: 10px;
+  height: 10px;
+  place-items: center;
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-text-muted);
+  box-shadow: 0 0 0 1.5px var(--ground, var(--iv-bg-card));
+  color: var(--iv-bg-card);
+}
+
+.iv-tab-bar__item .h-pencil {
+  --ground: var(--iv-bg);
+}
+
+.iv-tab-bar__item[data-selected] .h-pencil {
+  --ground: color-mix(in srgb, var(--iv-accent) 12%, var(--iv-bg-raised));
+}

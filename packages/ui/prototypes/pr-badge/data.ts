@@ -90,7 +90,7 @@ export const SESSIONS: ReadonlyArray<ProtoSession> = [
         number: 58,
         title: "docs: describe the settings tables",
         state: "draft",
-        checks: [],
+        checks: [passed("lint", "22s"), passed("links", "41s")],
         review: null,
         conflict: false,
         updated: "31 min ago",
@@ -118,7 +118,7 @@ export const SESSIONS: ReadonlyArray<ProtoSession> = [
         number: 415,
         title: "docs(onboarding): say what a session is before asking for a folder",
         state: "draft",
-        checks: [],
+        checks: [passed("lint"), passed("typecheck", "48s"), running("build", "running 1m")],
         review: null,
         conflict: false,
         updated: "1 h ago",
@@ -201,7 +201,7 @@ export const SESSIONS: ReadonlyArray<ProtoSession> = [
   { id: "tabs", title: "Refactor the tab store", status: "idle", time: "5h", prs: [] },
 ]
 
-export const TAB_IDS = ["login", "rate", "drizzle", "keys", "release"]
+export const TAB_IDS = ["login", "copy", "keys", "release", "drizzle"]
 
 const STATE_ORDER: Record<PrState, number> = { open: 0, draft: 1, merged: 2, closed: 3 }
 export const leadPr = (prs: ReadonlyArray<Pr>): Pr | undefined =>
@@ -258,11 +258,12 @@ export const urlOf = (pr: Pr) => `https://github.com/${pr.repo}/pull/${pr.number
 export type Health = "conflict" | "failed" | "running" | "blocked" | "ready" | "none"
 
 export const healthOf = (pr: Pr): Health => {
-  if (pr.state !== "open") return "none"
+  if (pr.state !== "open" && pr.state !== "draft") return "none"
   if (pr.conflict) return "conflict"
   const ci = ciOf(pr.checks)
   if (ci === "failed") return "failed"
   if (ci === "running") return "running"
+  if (pr.state === "draft") return ci === "passed" ? "ready" : "blocked"
   if (pr.review !== "approved") return "blocked"
   return "ready"
 }
@@ -281,8 +282,9 @@ export const HEALTH_LABEL: Record<Health, string> = {
 }
 
 export const mergeText = (pr: Pr): { tone: "ready" | "blocked" | "conflict"; text: string } | null => {
-  if (pr.state !== "open") return null
+  if (pr.state !== "open" && pr.state !== "draft") return null
   if (pr.conflict) return { tone: "conflict", text: "Conflicts with main" }
+  if (pr.state === "draft") return null
   if (pr.review === "changes") return { tone: "conflict", text: "Changes requested" }
   if (pr.review === "required") return { tone: "blocked", text: "Review required" }
   if (ciOf(pr.checks) === "passed") return { tone: "ready", text: "Ready to merge" }

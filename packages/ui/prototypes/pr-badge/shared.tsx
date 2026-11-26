@@ -10,12 +10,13 @@ import xBold from "@phosphor-icons/core/assets/bold/x-bold.svg?raw"
 import warning from "@phosphor-icons/core/assets/regular/warning-circle.svg?raw"
 import external from "@phosphor-icons/core/assets/regular/arrow-square-out.svg?raw"
 import plus from "@phosphor-icons/core/assets/regular/plus.svg?raw"
+import pencil from "@phosphor-icons/core/assets/bold/pencil-simple-bold.svg?raw"
 import { SessionMark } from "../../src/modules/session/ui/session-mark.tsx"
 import "../../src/core/components/list-row/list-row.css"
 import "../../src/modules/tab/ui/tab-bar.css"
 import { SESSIONS, TAB_IDS, type Pr, type PrState, type ProtoSession } from "./data.ts"
 
-const RAW = { pullRequest, merge, xCircle, circleDashed, x, check, xBold, warning, external, plus }
+const RAW = { pullRequest, merge, xCircle, circleDashed, x, check, xBold, warning, external, plus, pencil }
 export type SvgName = keyof typeof RAW
 
 export function Svg({ name, size = 14, className }: { name: SvgName; size?: number; className?: string }) {
