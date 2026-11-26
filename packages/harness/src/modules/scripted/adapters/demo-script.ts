@@ -130,6 +130,23 @@ export const demoApprovalTurn: readonly HarnessOutput[] = [
   { type: "status", status: "idle", raw: null },
 ]
 
+export const demoPrUrl = "https://github.com/acme/widgets/pull/7"
+
+// A turn whose agent opens a pull request with gh, for the PR status end-to-end test.
+export const demoPrScript: readonly (readonly HarnessOutput[])[] = [
+  [
+    { type: "status", status: "running", raw: null },
+    ...call(
+      "demo-pr-1",
+      "Bash",
+      { command: 'gh pr create --title "Add the widget" --body "Adds the widget."' },
+      `Creating pull request for ivin/widget into main in acme/widgets\n\n${demoPrUrl}\n`,
+    ),
+    { type: "assistant_text", text: `Opened ${demoPrUrl}.`, raw: null },
+    { type: "status", status: "idle", raw: null },
+  ],
+]
+
 export const demoApprovalScript: readonly (readonly HarnessOutput[])[] = [
   demoTurn,
   demoApprovalTurn,

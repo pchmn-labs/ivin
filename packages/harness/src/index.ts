@@ -15,6 +15,8 @@ export {
   demoAgentCommands,
   demoAnswer,
   demoApprovalScript,
+  demoPrScript,
+  demoPrUrl,
   demoQuestionScript,
   demoShotScript,
   demoScript,
