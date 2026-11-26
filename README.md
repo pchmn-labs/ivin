@@ -21,7 +21,7 @@ Needs Node 22.18 or later and pnpm (the version is pinned by `packageManager` in
 pnpm install
 pnpm dev        # builds the server and the CLI, then starts the UI and the desktop app
 pnpm test       # runs the tests; pass paths to run only some
-pnpm check      # lint, format, type-check and test, as CI does
+pnpm check      # lint, format and type-check; the CI also runs the tests
 ```
 
 Before writing code, read [AGENTS.md](AGENTS.md) and [docs/conventions/](docs/conventions/README.md).
