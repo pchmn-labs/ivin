@@ -1,16 +1,10 @@
-const parentOf = (folder: string) => folder.slice(0, folder.lastIndexOf("/")) || "/"
 const nameOf = (folder: string) => folder.slice(folder.lastIndexOf("/") + 1)
 
-// Where a session that stays on the checkouts starts: the folders' common parent, otherwise the
-// first folder, with the others as extra directories.
+// Where a session that stays on the checkouts starts: the first folder, with the others as extra
+// directories.
 export const checkoutStart = (folders: readonly string[]) => {
   const [first] = folders
   if (first === undefined) return null
-  if (folders.length === 1) return { cwd: first, extraDirectories: [] as string[] }
-  const parent = parentOf(first)
-  if (folders.every((folder) => parentOf(folder) === parent)) {
-    return { cwd: parent, extraDirectories: [] as string[] }
-  }
   return { cwd: first, extraDirectories: folders.slice(1) }
 }
 

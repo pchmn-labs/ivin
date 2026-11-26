@@ -1,5 +1,5 @@
 import { FileChangedOnDisk, FileNotWritten, PathOutsideWorkingFolder } from "@ivin/contracts/file"
-import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
+import { SessionNotFound } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
 import { isWithin, relativeNames } from "../rules/folder-path.ts"
@@ -7,6 +7,7 @@ import { contentVersion } from "./content-version.ts"
 import { FileReader } from "./file-reader.ts"
 import { FileWriter } from "./file-writer.ts"
 import { FolderReader } from "./folder-reader.ts"
+import { folderOfNames } from "./repositories.ts"
 
 export const writeFile = (
   sessionId: string,
@@ -17,12 +18,14 @@ export const writeFile = (
   Effect.gen(function* () {
     const session = yield* (yield* SessionStore).findById(sessionId)
     if (session === null) return yield* new SessionNotFound({ sessionId })
-    const names = relativeNames(path)
-    if (names === null || names.length === 0)
+    const relative = relativeNames(path)
+    if (relative === null || relative.length === 0)
       return yield* new PathOutsideWorkingFolder({ sessionId, path })
     const folders = yield* FolderReader
-    const root = yield* folders.realPath(session.workingFolder)
-    if (root === null) return yield* new WorkingFolderDeleted({ sessionId })
+    const resolved = yield* folderOfNames(session, relative)
+    if (resolved === null) return yield* new FileNotWritten({ sessionId, path, reason: "missing" })
+    const { root, names } = resolved
+    if (names.length === 0) return yield* new PathOutsideWorkingFolder({ sessionId, path })
     const existing = yield* folders.realPath([root, ...names].join("/"))
     const parent = yield* folders.realPath([root, ...names.slice(0, -1)].join("/"))
     const file = existing ?? (parent === null ? null : `${parent}/${names.at(-1)}`)

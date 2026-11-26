@@ -729,7 +729,12 @@ try {
   await window.getByRole("dialog").getByRole("button", { name: "Trust", exact: true }).click()
   await window.getByTestId("project-name").getByText("shop").waitFor()
   await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
-  // The picker has no worktree choice for a workspace yet, so the session stays on the checkouts.
+  // The folder also holds the origins, which Files must not show before the first message.
+  await sidebar.getByRole("tab", { name: "Files" }).click()
+  await sidebar.getByRole("treeitem", { name: "web" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("files-workspace-before-first-message")
+  // Before its first message the session reads the checkouts.
   const webDir = join(workspaceDir, "web")
   writeFileSync(join(apiDir, "src/orders.ts"), "export const orders = []\n")
   gitIn(apiDir, "add", ".")

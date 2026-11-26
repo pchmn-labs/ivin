@@ -41,6 +41,7 @@ export const listChanges = (sessionId: string) =>
   Effect.gen(function* () {
     const { repositories } = yield* sessionRoot(sessionId)
     if (repositories === null) return yield* listRepositoryChanges(sessionId)
+    if (repositories.length === 0) return { kind: "not_repository" } satisfies ChangeList
     const feed = yield* ChangeFeed
     const changes: Change[] = []
     for (const repository of repositories) {
