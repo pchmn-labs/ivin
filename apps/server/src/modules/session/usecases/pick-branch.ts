@@ -1,7 +1,9 @@
 import { CheckoutRefused, SessionNotFound, SessionWorking } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { resolveBranchPick } from "../../worktree/rules/branch-pick.ts"
+import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
 import { Git } from "../../worktree/usecases/git.ts"
+import { sessionProjectFolder } from "./session-project-folder.ts"
 import { isBusy } from "../rules/busy-session.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
@@ -17,9 +19,18 @@ export const pickBranch = (sessionId: string, name: string, remote: boolean) =>
 
     const refused = (error: { readonly message: string }) =>
       new CheckoutRefused({ sessionId, gitMessage: error.message })
+    // On a workspace, the branches are those of the project folder the session is in.
+    const repository = isWorkspaceFile(session.projectPath)
+      ? yield* sessionProjectFolder(session)
+      : session.projectPath
+    if (repository === null) {
+      return yield* refused({
+        message: "A working folder of several repositories has no one branch to pick.",
+      })
+    }
     const [branches, worktrees] = yield* Effect.all([
-      git.listBranches(session.projectPath),
-      git.listWorktrees(session.projectPath),
+      git.listBranches(repository),
+      git.listWorktrees(repository),
     ]).pipe(Effect.mapError(refused))
     const pick = resolveBranchPick(
       { name, remote },
@@ -36,11 +47,11 @@ export const pickBranch = (sessionId: string, name: string, remote: boolean) =>
     }
 
     const path = pick.kind === "move" ? pick.path : session.workingFolder
-    yield* store.setWorkingFolder(sessionId, path, pick.branch)
+    yield* store.setWorkingFolder(sessionId, path, pick.branch, path !== repository)
     yield* runs.record(session, {
       type: "working_folder",
       path,
-      inWorktree: path !== session.projectPath,
+      inWorktree: path !== repository,
       branch: pick.branch,
       cause: "branch_picker",
       // ivin created no folder here, so there is no untracked folder to warn about.

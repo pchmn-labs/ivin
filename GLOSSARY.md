@@ -20,7 +20,7 @@ A linked git worktree of the project's repository, on its own branch, that a ses
 _Avoid_: workspace, clone
 
 **Working folder**:
-Where a session's agent runs: the checkout, one worktree, or, for a project with several project folders, a folder ivin creates, under `~/.ivin/worktrees/<workspace name>/<branch>/`, that holds one worktree per project folder that is a git repository, all on the same branch name; a session on such a project gets it by default, from its first message. It is not a git repository itself. Several sessions may share a checkout or a worktree.
+Where a session's agent runs: the checkout, one worktree, or, for a project with several project folders, a folder ivin creates, under `~/.ivin/worktrees/<workspace name>/<branch>/`, that holds one worktree per project folder that is a git repository, all on the same branch name; a session on such a project gets it by default, from its first message, unless the user picks one project folder, whose checkout or worktree is then the working folder as on a project of its own. It is not a git repository itself. Several sessions may share a checkout or a worktree.
 _Avoid_: cwd, workspace
 
 **Session**:

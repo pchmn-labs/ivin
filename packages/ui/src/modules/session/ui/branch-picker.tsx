@@ -26,17 +26,21 @@ type Failure = ReturnType<typeof pickBranchFailure>
 export function BranchPicker({
   session,
   branch,
+  repository = session.projectPath,
   onPicked,
 }: {
   session: Session
   branch: string
+  // On a workspace, the project folder the session is in.
+  repository?: string
   onPicked?: (session: Session) => void
 }) {
+  const place = { projectPath: repository, workingFolder: session.workingFolder }
   const [open, setOpen] = useState(false)
   const [highlighted, setHighlighted] = useState<Branch | undefined>(undefined)
   const [picking, setPicking] = useState(false)
   const [failure, setFailure] = useState<Failure | null>(null)
-  const branchesAtom = branchesOf(session.projectPath)
+  const branchesAtom = branchesOf(repository)
   const listed = useAtomValue(branchesAtom)
   const refresh = useAtomRefresh(branchesAtom)
   const pickBranch = useAtomSet(pickBranchAtom, { mode: "promiseExit" })
@@ -69,7 +73,7 @@ export function BranchPicker({
   }
 
   const items: ComposerMenuItem<Branch>[] = branches.map((b) => {
-    const mark = branchMark(b, session)
+    const mark = branchMark(b, place)
     const held = mark === "checkout" || mark === "worktree"
     return {
       value: b,
@@ -160,7 +164,7 @@ export function BranchPicker({
       <div className="iv-branch-picker__foot">
         <span className="iv-branch-picker__preview">
           {highlighted
-            ? pickPreview(highlighted, branches, session)
+            ? pickPreview(highlighted, branches, place)
             : `On ${branch}. Pick a branch to switch to it.`}
         </span>
         <KeyHints

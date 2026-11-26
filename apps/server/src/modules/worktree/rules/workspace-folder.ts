@@ -32,5 +32,48 @@ export const freeWorkspaceBranch = (
   }
 }
 
+// Holds every working folder of the workspace.
+export const workspaceFolderPath = (root: string, workspaceName: string) =>
+  `${root.replace(/\/+$/, "")}/${workspaceName}`
+
 export const workingFolderPath = (root: string, workspaceName: string, branch: string) =>
-  `${root.replace(/\/+$/, "")}/${workspaceName}/${branch.replaceAll("/", "-")}`
+  `${workspaceFolderPath(root, workspaceName)}/${branch.replaceAll("/", "-")}`
+
+export interface WorkingFolderWorktree {
+  readonly repository: string
+  readonly path: string
+  readonly branch: string | null
+}
+
+export interface WorkingFolder {
+  readonly path: string
+  // The branch every worktree is on; null when they differ or one is detached.
+  readonly branch: string | null
+  readonly worktrees: readonly WorkingFolderWorktree[]
+}
+
+// The working folders under `workspaceFolder` (`<root>/<workspace name>`), from each repository's
+// linked worktrees, sorted by path.
+export const workingFoldersOf = (
+  workspaceFolder: string,
+  worktrees: readonly WorkingFolderWorktree[],
+): WorkingFolder[] => {
+  const prefix = `${workspaceFolder.replace(/\/+$/, "")}/`
+  const byFolder = new Map<string, WorkingFolderWorktree[]>()
+  for (const worktree of worktrees) {
+    if (!worktree.path.startsWith(prefix)) continue
+    const [name, sub] = worktree.path.slice(prefix.length).split("/")
+    if (!name || !sub) continue
+    const path = `${prefix}${name}`
+    byFolder.set(path, [...(byFolder.get(path) ?? []), worktree])
+  }
+  return [...byFolder.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([path, inside]) => {
+      const [first] = inside
+      const shared = inside.every((w) => w.branch === first?.branch)
+        ? (first?.branch ?? null)
+        : null
+      return { path, branch: shared, worktrees: inside }
+    })
+}

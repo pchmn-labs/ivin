@@ -3,8 +3,12 @@ import { Rpc, RpcGroup } from "effect/rpc"
 
 export const Worktree = Schema.Struct({
   path: Schema.String,
-  // Null on a detached HEAD.
+  // Null on a detached HEAD, or in a workspace's working folder whose worktrees differ.
   branch: Schema.NullOr(Schema.String),
+  // A workspace's working folder: each worktree's subfolder and branch.
+  repositories: Schema.optionalKey(
+    Schema.Array(Schema.Struct({ name: Schema.String, branch: Schema.NullOr(Schema.String) })),
+  ),
 })
 export type Worktree = typeof Worktree.Type
 
@@ -45,8 +49,8 @@ export class WorktreeGitFailed extends Schema.TaggedError<WorktreeGitFailed>()(
 ) {}
 
 export const WorktreeRpcs = RpcGroup.make(
-  // The project's linked worktrees, without its checkout; none outside a git repository, and a
-  // failure when git cannot list them.
+  // The project's linked worktrees, without its checkout, or a workspace's working folders; none
+  // outside a git repository, and a failure when git cannot list them.
   Rpc.make("worktree.list", {
     payload: { projectPath: Schema.String },
     success: Schema.Array(Worktree),

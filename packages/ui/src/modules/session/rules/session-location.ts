@@ -15,12 +15,11 @@ export const sessionLocation = (
     Partial<Pick<Session, "workingFolderDeleted">>,
   choice: WorkingFolderChoice,
   worktrees: ReadonlyArray<Worktree>,
-  workspace = false,
 ): SessionLocationLabel => {
   if (session.workingFolderDeleted === true) {
     return { kind: "worktree", label: "Worktree deleted", branch: session.branch, deleted: true }
   }
-  if (!session.started && (choice.kind === "new_worktree" || (workspace && !session.inWorktree))) {
+  if (!session.started && choice.kind === "new_worktree") {
     return { kind: "worktree", label: "New worktree", branch: null }
   }
   if (!session.started && choice.kind === "existing_worktree") {

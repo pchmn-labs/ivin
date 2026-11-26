@@ -159,18 +159,26 @@ export class WorkingFolderDeleted extends Schema.TaggedError<WorkingFolderDelete
 ) {}
 
 export const WorkingFolderChoice = Schema.Union([
-  Schema.Struct({ kind: Schema.Literal("checkout") }),
-  Schema.Struct({ kind: Schema.Literal("new_worktree") }),
+  // `path`: one of a workspace's project folders. Without it, a workspace's first message makes
+  // new worktrees, and a pick goes to the first project folder.
+  Schema.Struct({ kind: Schema.Literal("checkout"), path: Schema.optionalKey(Schema.String) }),
+  // `folder`: on a workspace, a worktree of that project folder alone, instead of new worktrees.
+  Schema.Struct({
+    kind: Schema.Literal("new_worktree"),
+    folder: Schema.optionalKey(Schema.String),
+  }),
   Schema.Struct({ kind: Schema.Literal("existing_worktree"), path: Schema.String }),
 ])
 export type WorkingFolderChoice = typeof WorkingFolderChoice.Type
 
 // `not_a_worktree`: the chosen folder is no longer one of the project's worktrees.
+// `not_a_project_folder`: the chosen folder is no longer one of the workspace's project folders.
 export const WorktreeFailure = Schema.Literals([
   "git",
   "fetch_timed_out",
   "no_default_branch",
   "not_a_worktree",
+  "not_a_project_folder",
 ])
 export type WorktreeFailure = typeof WorktreeFailure.Type
 

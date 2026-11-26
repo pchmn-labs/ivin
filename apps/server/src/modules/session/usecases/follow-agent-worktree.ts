@@ -5,7 +5,7 @@ import type { ToolActivity, ToolOutcome, ToolUse } from "@ivin/harness"
 import { Effect } from "effect"
 import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
 import { Git } from "../../worktree/usecases/git.ts"
-import { listWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
+import { listCheckoutWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
 import { folderAfterTool, folderMovedTo, needsWorktreeList } from "../rules/agent-worktree.ts"
 import { SessionStore } from "./session-store.ts"
 
@@ -26,7 +26,7 @@ export const followAgentWorktree = (
     const calls = new Map<string, ToolUse>()
     let worktrees: readonly Worktree[] = []
 
-    const refreshWorktrees = listWorktreesOrNone(session.projectPath).pipe(
+    const refreshWorktrees = listCheckoutWorktreesOrNone(session.projectPath).pipe(
       Effect.provideService(Git, git),
       Effect.tap((listed) => Effect.sync(() => void (worktrees = listed))),
     )

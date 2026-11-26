@@ -4,6 +4,7 @@ import {
   freeWorkspaceBranch,
   subfolderNames,
   workingFolderPath,
+  workingFoldersOf,
 } from "./workspace-folder.ts"
 
 test("a session on the checkouts starts in the first folder, even when the folders share a parent", () => {
@@ -33,4 +34,20 @@ test("the working folder is named after the workspace and the branch", () => {
   expect(workingFolderPath("/h/.ivin/worktrees/", "ws", "ivin/12345678")).toBe(
     "/h/.ivin/worktrees/ws/ivin-12345678",
   )
+})
+
+test("a workspace's worktrees group into the working folders that hold them, with their shared branch", () => {
+  const folders = workingFoldersOf("/w/ivin", [
+    { repository: "/r/api", path: "/w/ivin/ivin-b/api", branch: "feat/b" },
+    { repository: "/r/api", path: "/w/ivin/ivin-a/api", branch: "ivin/a" },
+    { repository: "/r/web", path: "/w/ivin/ivin-a/web", branch: "ivin/a" },
+    { repository: "/r/web", path: "/w/ivin/ivin-b/web", branch: "main" },
+    { repository: "/r/web", path: "/elsewhere/web", branch: "x" },
+    { repository: "/r/web", path: "/w/ivin-other/x/web", branch: "x" },
+  ])
+
+  expect(folders.map((f) => [f.path, f.branch, f.worktrees.length])).toEqual([
+    ["/w/ivin/ivin-a", "ivin/a", 2],
+    ["/w/ivin/ivin-b", null, 2],
+  ])
 })
