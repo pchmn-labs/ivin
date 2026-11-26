@@ -1,6 +1,6 @@
 import { RegistryProvider } from "@effect/atom-react"
 import { DateTime } from "effect"
-import { afterEach, expect, test } from "vitest"
+import { expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { defineUi } from "@ivin/plugin-api/ui"
@@ -12,7 +12,7 @@ import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
 import { makeTestSession } from "../../../core/test-session.ts"
 import type { UiPluginEntry } from "../../plugin/atoms/activate-plugin.ts"
 import { TabBar } from "../../tab/ui/tab-bar.tsx"
-import { SessionCards, cardHandles } from "./session-card.tsx"
+import { SessionCards } from "./session-card.tsx"
 
 // A section for the sessions whose title starts with "Has", nothing for the others.
 const cardPlugin: UiPluginEntry = {
@@ -24,17 +24,9 @@ const cardPlugin: UiPluginEntry = {
   }),
 }
 
-// The handles outlive a test, so a card left open would show in the next one.
-afterEach(() => {
-  cardHandles.row.close()
-  cardHandles.tab.close()
-})
-
 const setup = async () => {
   // Wide enough for the card to open beside the rows without covering the next one.
   await page.viewport(1200, 800)
-  // The pointer stays where the previous test left it, over a trigger.
-  await userEvent.unhover(document.body)
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
@@ -49,12 +41,19 @@ const setup = async () => {
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={[...builtinPlugins, cardPlugin]}>
-        <SidebarTabs />
-        <TabBar projectPath="/p" />
-        <SessionCards />
+        <SessionCards>
+          <SidebarTabs />
+          <TabBar projectPath="/p" />
+        </SessionCards>
       </PluginsProvider>
     </RegistryProvider>,
   )
+  // A hover before the rows settle lands on whichever row moved under the pointer.
+  await expect.element(page.getByRole("button", { name: /Plain/ })).toBeVisible()
+  await expect.element(page.getByRole("tab", { name: /Plain/ })).toBeVisible()
+  // Chrome hovers whatever is drawn under a still pointer, so park it on no trigger first.
+  await userEvent.hover(page.getByRole("heading", { name: /Sessions/ }))
+  await expect.element(page.getByText(/^Section of/)).not.toBeInTheDocument()
 }
 
 const cards = () => document.querySelectorAll('[data-testid="session-card"]')
@@ -86,6 +85,6 @@ test("one card moves to another row hovered while it is open", async () => {
 
   await page.getByTestId("session-item").nth(1).hover()
   await expect.element(page.getByText("Section of Has two")).toBeVisible()
-  await expect.element(page.getByText("Section of Has one")).not.toBeVisible()
+  await expect.element(page.getByText("Section of Has one")).not.toBeInTheDocument()
   expect(cards()).toHaveLength(1)
 })

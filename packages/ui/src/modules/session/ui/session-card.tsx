@@ -1,32 +1,31 @@
 import { PreviewCard } from "@base-ui/react/preview-card"
-import { Suspense, lazy, useSyncExternalStore } from "react"
+import { Suspense, createContext, lazy, useContext, useMemo, useState, type ReactNode } from "react"
 import type { SessionCardTriggerProps } from "@ivin/plugin-api/ui"
 import "./session-card.css"
 
 export type Place = SessionCardTriggerProps["place"]
 
-// One card per place: moving to another trigger while it is open moves this card.
-export const cardHandles = {
-  row: PreviewCard.createHandle<string>(),
-  tab: PreviewCard.createHandle<string>(),
-}
+type Handles = Readonly<Record<Place, PreviewCard.Handle<string>>>
 
 const loadPopup = () => import("./session-card-popup.tsx")
 const SessionCardParts = lazy(loadPopup)
 
-let wanted = false
-const listeners = new Set<() => void>()
-const want = () => {
-  if (wanted) return
-  wanted = true
-  listeners.forEach((listener) => listener())
-  void loadPopup()
-}
+const CardContext = createContext<{ readonly handles: Handles; readonly want: () => void } | null>(
+  null,
+)
 
-// Mounted once in the window. The Root listens from the start, so a hover that began before the parts' code arrived still opens the card.
-function PlaceRoot({ place, loaded }: { place: Place; loaded: boolean }) {
+// The Root listens from the start, so a hover that began before the parts' code arrived still opens the card.
+function PlaceRoot({
+  place,
+  handle,
+  loaded,
+}: {
+  place: Place
+  handle: PreviewCard.Handle<string>
+  loaded: boolean
+}) {
   return (
-    <PreviewCard.Root handle={cardHandles[place]}>
+    <PreviewCard.Root handle={handle}>
       {({ payload }) =>
         loaded ? (
           <Suspense fallback={null}>
@@ -38,31 +37,49 @@ function PlaceRoot({ place, loaded }: { place: Place; loaded: boolean }) {
   )
 }
 
-export function SessionCards() {
-  const loaded = useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener)
-      return () => void listeners.delete(listener)
-    },
-    () => wanted,
+// Around the window's content: one card per place, which moves to another trigger hovered while it is open.
+export function SessionCards({ children }: { readonly children: ReactNode }) {
+  const [handles] = useState<Handles>(() => ({
+    row: PreviewCard.createHandle<string>(),
+    tab: PreviewCard.createHandle<string>(),
+  }))
+  const [loaded, setLoaded] = useState(false)
+  const context = useMemo(
+    () => ({
+      handles,
+      want: () => {
+        setLoaded(true)
+        void loadPopup()
+      },
+    }),
+    [handles],
   )
   return (
-    <>
-      <PlaceRoot place="row" loaded={loaded} />
-      <PlaceRoot place="tab" loaded={loaded} />
-    </>
+    <CardContext value={context}>
+      {children}
+      <PlaceRoot place="row" handle={handles.row} loaded={loaded} />
+      <PlaceRoot place="tab" handle={handles.tab} loaded={loaded} />
+    </CardContext>
   )
 }
 
 export function SessionCardTrigger({ session, place, children }: SessionCardTriggerProps) {
+  const context = useContext(CardContext)
+  if (context === null) {
+    return (
+      <div className="iv-session-card-trigger" data-place={place}>
+        {children}
+      </div>
+    )
+  }
   return (
     <PreviewCard.Trigger
-      handle={cardHandles[place]}
+      handle={context.handles[place]}
       payload={session.id}
       delay={400}
       closeDelay={150}
-      onPointerEnter={want}
-      onFocus={want}
+      onPointerEnter={context.want}
+      onFocus={context.want}
       render={<div className="iv-session-card-trigger" data-place={place} />}
     >
       {children}
