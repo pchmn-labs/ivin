@@ -1070,3 +1070,65 @@ body {
     animation: none;
   }
 }
+
+/* Round 5: the icon is the state and its checks, the ground is whether it can merge */
+
+.t-tile {
+  --icon: var(--pr-open);
+  --ground: var(--iv-text-muted);
+
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: var(--iv-radius-sm);
+  background: color-mix(in srgb, var(--ground) 16%, transparent);
+  color: var(--icon);
+}
+
+.t-tile[data-icon="draft"] {
+  --icon: var(--iv-text-muted);
+}
+
+.t-tile[data-icon="merged"] {
+  --icon: var(--pr-merged);
+}
+
+.t-tile[data-icon="closed"] {
+  --icon: var(--pr-closed);
+}
+
+.t-tile[data-icon="failed"] {
+  --icon: var(--ci-failed);
+}
+
+.t-tile[data-mergeable="yes"] {
+  --ground: var(--ci-passed);
+}
+
+.t-tile[data-mergeable="conflict"] {
+  --ground: var(--ci-failed);
+}
+
+.t-tile[data-mergeable="done"] {
+  --ground: var(--icon);
+}
+
+.t-tile[data-running] > .proto-svg {
+  animation: proto-breathe var(--iv-duration-pulse) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .t-tile[data-running] > .proto-svg {
+    animation: none;
+  }
+}
+
+.t-tile[data-mergeable="no"] {
+  background: color-mix(in srgb, var(--iv-text-muted) 12%, transparent);
+}
+
+.t-tile[data-mergeable="yes"],
+.t-tile[data-mergeable="conflict"] {
+  background: color-mix(in srgb, var(--ground) 26%, transparent);
+}

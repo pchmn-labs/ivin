@@ -5,6 +5,8 @@ import {
   ciOf,
   ciText,
   isRunning,
+  iconToneOf,
+  mergeableOf,
   leadPr,
   mergeText,
   urlOf,
@@ -133,9 +135,10 @@ function HealthBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
   return (
     <span className="h-badge" aria-label={label(prs, health)}>
       <span
-        className="h-tile"
+        className="t-tile"
         data-state={lead.state}
-        data-health={health}
+        data-mergeable={mergeableOf(prs)}
+        data-icon={iconToneOf(prs)}
         data-running={isRunning(prs) || undefined}
       >
         <Svg name={STATE_ICON[lead.state]} size={13} />

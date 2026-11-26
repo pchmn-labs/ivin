@@ -289,3 +289,22 @@ export const mergeText = (pr: Pr): { tone: "ready" | "blocked" | "conflict"; tex
   if (ciOf(pr.checks) === "passed") return { tone: "ready", text: "Ready to merge" }
   return { tone: "blocked", text: "Approved" }
 }
+
+export type IconTone = "open" | "draft" | "merged" | "closed" | "failed"
+export type Mergeable = "yes" | "no" | "conflict" | "done"
+
+export const iconToneOf = (prs: ReadonlyArray<Pr>): IconTone => {
+  const lead = leadPr(prs)!
+  const live = prs.filter((pr) => pr.state === "open" || pr.state === "draft")
+  if (live.some((pr) => pr.checks.some((c) => c.result === "failed"))) return "failed"
+  return lead.state
+}
+
+export const mergeableOf = (prs: ReadonlyArray<Pr>): Mergeable => {
+  const live = prs.filter((pr) => pr.state === "open" || pr.state === "draft")
+  if (live.length === 0) return "done"
+  if (live.some((pr) => pr.conflict)) return "conflict"
+  const ready = (pr: Pr) =>
+    pr.state === "open" && pr.review === "approved" && pr.checks.every((c) => c.result === "passed")
+  return live.some(ready) ? "yes" : "no"
+}
