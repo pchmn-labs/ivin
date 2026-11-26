@@ -17,6 +17,13 @@ async function mount() {
       <NotificationViewport />
     </NotificationProvider>,
   )
+  await expect.element(page.getByRole("region", { name: "Notifications" })).toBeInTheDocument()
+  // A notify before the provider's passive subscribe effect runs is lost; this message queues behind it.
+  await new Promise<void>((resolve) => {
+    const { port1, port2 } = new MessageChannel()
+    port1.onmessage = () => resolve()
+    port2.postMessage(null)
+  })
 }
 
 test("a notification shows its message and goes away on its own", async () => {

@@ -119,6 +119,7 @@ test.each(["the composer", "the page"])(
   "Escape interrupts a working session whether the focus is in %s",
   async (focus) => {
     await mountSession("working")
+    await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Working")
     if (focus === "the composer") await page.getByRole("textbox", { name: "Message" }).click()
     await userEvent.keyboard("{Escape}")
     await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
@@ -241,6 +242,7 @@ test.each([
 
 test("Enter on the focused Interrupt button presses it rather than running composer.send", async () => {
   await mountSession("working")
+  await expect.element(page.getByRole("button", { name: "Interrupt" })).toBeVisible()
   page.getByRole("button", { name: "Interrupt" }).element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
@@ -301,6 +303,7 @@ test("15 worktrees scroll inside the working folder menu; keyboard only filters,
   for (let i = 0; i < 15; i++) {
     server.worktrees.push({ path: `/p/.worktrees/wt-${i}`, branch: `chore/wt-${i}` })
   }
+  await expect.element(picker()).toBeVisible()
   picker().element().focus()
   await userEvent.keyboard("{Enter}")
   const search = page.getByRole("combobox", { name: "Working folder" })
@@ -374,7 +377,7 @@ test("a branch behind origin pulls in one click, and a pull refused by local cha
     "error: Your local changes to the following files would be overwritten by merge"
   const server = await mountNewSession({ behind: 3, dirty: true, pullRefusal: gitMessage })
   const pull = page.getByRole("button", { name: "Pull 3 commits from origin/main" })
-  expect(pull.element().textContent).toBe("3")
+  await expect.element(pull).toHaveTextContent("3")
   await pull.click()
 
   const dialog = page.getByRole("dialog", { name: "Pull failed" })
@@ -526,6 +529,7 @@ test("a model that does not take the current effort moves it down, and greys out
 test("keyboard only: open the menu, move to the effort column, pick low, and close back on the button", async () => {
   const server = await mountSession("idle")
   const trigger = runOptions("Sonnet 5.5, High, Manual")
+  await expect.element(trigger).toBeVisible()
   trigger.element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByTestId("run-option-effort-low")).toBeVisible()

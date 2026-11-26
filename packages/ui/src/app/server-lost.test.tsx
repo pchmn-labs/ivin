@@ -1,4 +1,4 @@
-import { RegistryContext } from "@effect/atom-react"
+import { RegistryContext, scheduleTask } from "@effect/atom-react"
 import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { DateTime, Layer } from "effect"
 import { AtomRegistry } from "effect/reactivity"
@@ -31,7 +31,10 @@ const mountApp = async ({ failVersion = false } = {}) => {
   server.openTab("s1")
   if (failVersion) server.failNextCall("server.getVersion")
   await page.viewport(1280, 800)
-  const registry = AtomRegistry.make({ initialValues: [[serverClientLayerAtom, server.layer]] })
+  const registry = AtomRegistry.make({
+    scheduleTask,
+    initialValues: [[serverClientLayerAtom, server.layer]],
+  })
   await render(
     <RegistryContext.Provider value={registry}>
       <App plugins={builtinPlugins} />

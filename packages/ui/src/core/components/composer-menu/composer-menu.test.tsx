@@ -89,6 +89,7 @@ test("a list longer than the menu holds gets a search field, focused on open, th
 
 test("keyboard only: open, move, pick, and focus returns to the button", async () => {
   const { onPick } = await setup(["apple", "pear", "plum"])
+  await expect.element(trigger()).toBeVisible()
   trigger().element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByRole("option", { name: "apple" })).toBeVisible()
@@ -104,6 +105,7 @@ test("keyboard only: open, move, pick, and focus returns to the button", async (
 
 test("keyboard only in a long list: filter, move, pick", async () => {
   const { onPick } = await setup(manyNames)
+  await expect.element(trigger()).toBeVisible()
   trigger().element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByRole("combobox", { name: "Pick a fruit" })).toHaveFocus()

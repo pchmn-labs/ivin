@@ -50,6 +50,7 @@ test("the options are a radio group with the value checked and the hint shown", 
 
 test("the arrows move the choice and the focus, Enter submits it, Escape escapes", async () => {
   const { onSubmit, onEscape } = await mount()
+  await expect.element(radio("Allow")).toBeVisible()
   radio("Allow").element().focus()
   await userEvent.keyboard("{ArrowDown}")
   await expect.element(radio(/^Deny/)).toBeChecked()

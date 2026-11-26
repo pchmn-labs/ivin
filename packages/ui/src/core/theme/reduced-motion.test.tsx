@@ -27,6 +27,10 @@ test("under reduced motion, the spinning icon and the Working ring keep turning,
       <SessionMark status="in_background" harness="claude" />
     </>,
   )
+  await expect.poll(() => document.querySelector(".iv-icon--spin")).not.toBeNull()
+  await expect
+    .poll(() => document.querySelector('[data-status="in_background"] .iv-session-mark__overlay'))
+    .not.toBeNull()
   const turning = {
     iterations: "infinite",
     duration: expect.not.stringMatching(/^0\.01ms|^1e-05s/),

@@ -2,7 +2,7 @@ import { RegistryProvider } from "@effect/atom-react"
 import type { UserSettings } from "@ivin/contracts/setting"
 import { defineUi, type UiContext, type ViewProps } from "@ivin/plugin-api/ui"
 import { DateTime } from "effect"
-import { expect, test } from "vitest"
+import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { NotificationProvider } from "../core/components/notification/notification.tsx"
@@ -73,6 +73,7 @@ const setup = async (
       </PluginsProvider>
     </RegistryProvider>,
   )
+  await vi.waitFor(() => expect(context).not.toBeNull())
   const open = (view: string, params: Record<string, number>, placement?: ViewPlacement) =>
     context!.views.open("s1", view, params, placement && { placement })
   return { server, open }
@@ -171,6 +172,7 @@ test("a plugin that replaces files provides its own files/file view", async () =
       </PluginsProvider>
     </RegistryProvider>,
   )
+  await vi.waitFor(() => expect(open).not.toBeNull())
   await open!("s1", "files/file", { path: "a.ts" })
   await expect.element(page.getByText("my own file view")).toBeVisible()
 })

@@ -1,3 +1,4 @@
+import { scheduleTask } from "@effect/atom-react"
 import { DateTime } from "effect"
 import { AtomRegistry } from "effect/reactivity"
 import { makeFakeServer } from "./fake-server-client.ts"
@@ -16,6 +17,10 @@ export const makeTestRegistry = (options: { readonly project?: string } = {}) =>
           },
         },
   )
-  const registry = AtomRegistry.make({ initialValues: [[serverClientLayerAtom, server.layer]] })
+  // As `RegistryProvider` does: with the default, production React never shows the server's answers.
+  const registry = AtomRegistry.make({
+    scheduleTask,
+    initialValues: [[serverClientLayerAtom, server.layer]],
+  })
   return { server, registry }
 }

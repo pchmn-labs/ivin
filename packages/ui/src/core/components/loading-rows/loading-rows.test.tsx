@@ -10,6 +10,8 @@ test("with a label the rows are announced as a status", async () => {
 
 test("without a label the rows are hidden from assistive technology", async () => {
   const { container } = await render(<LoadingRows />)
+  await expect
+    .poll(() => container.querySelector(".iv-loading-rows")?.getAttribute("aria-hidden"))
+    .toBe("true")
   expect(page.getByRole("status").elements()).toHaveLength(0)
-  expect(container.querySelector(".iv-loading-rows")?.getAttribute("aria-hidden")).toBe("true")
 })

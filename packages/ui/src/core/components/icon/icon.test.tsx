@@ -5,6 +5,7 @@ import { Icon } from "./icon.tsx"
 
 test("an icon in the main chunk is one svg sized by size and coloured by currentColor", async () => {
   const { container } = await render(<Icon name="check" size={14} />)
+  await expect.poll(() => container.querySelector("svg")).not.toBeNull()
   const svg = container.querySelector("svg")
   expect(svg?.getAttribute("width")).toBe("14")
   expect(svg?.getAttribute("height")).toBe("14")
@@ -21,6 +22,6 @@ test("a label makes the icon an image with that name", async () => {
 
 test("an icon loaded on first use shows an empty slot of its size, then the glyph", async () => {
   const { container } = await render(<Icon name="lock" size={12} />)
-  expect(container.querySelector("svg")?.getAttribute("width")).toBe("12")
+  await expect.poll(() => container.querySelector("svg")?.getAttribute("width")).toBe("12")
   await expect.poll(() => container.querySelector("svg path")).not.toBeNull()
 })
