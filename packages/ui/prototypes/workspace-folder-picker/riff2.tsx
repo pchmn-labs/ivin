@@ -326,7 +326,9 @@ function OneTrigger({
 export function Columns({ started }: LocationProps) {
   const [pick, setPick] = useState<Pick>(START)
   const popup = usePopup()
+  // `project` is the one whose working folders show; `cursor` is where the keys are on the left.
   const [project, setProject] = useState<Project>(pick.project)
+  const [cursor, setCursor] = useState<Project>(pick.project)
   const [column, setColumn] = useState<0 | 1>(1)
   const [active, setActive] = useState(0)
   const box = useRef<HTMLDivElement>(null)
@@ -334,8 +336,15 @@ export function Columns({ started }: LocationProps) {
   useEffect(() => box.current?.focus(), [popup.open])
   if (started) return <Started pick={pick} />
 
+  const show = (p: Project) => {
+    setProject(p)
+    setCursor(p)
+    setActive(0)
+    setColumn(1)
+  }
   const open = () => {
     setProject(pick.project)
+    setCursor(pick.project)
     setColumn(1)
     setActive(
       Math.max(
@@ -351,23 +360,22 @@ export function Columns({ started }: LocationProps) {
   const onKeyDown = (event: KeyboardEvent) => {
     event.stopPropagation()
     const rows = column === 0 ? ALL_PROJECTS.length : items.length
-    const index = column === 0 ? ALL_PROJECTS.indexOf(project) : active
+    const index = column === 0 ? ALL_PROJECTS.indexOf(cursor) : active
     if (event.key === "ArrowDown" || event.key === "ArrowUp") {
       event.preventDefault()
       const next = (index + (event.key === "ArrowDown" ? 1 : -1) + rows) % rows
-      if (column === 0) {
-        setProject(ALL_PROJECTS[next])
-        setActive(0)
-      } else setActive(next)
+      if (column === 0) setCursor(ALL_PROJECTS[next])
+      else setActive(next)
     } else if (event.key === "ArrowRight" && column === 0) {
       event.preventDefault()
-      setColumn(1)
+      show(cursor)
     } else if (event.key === "ArrowLeft" && column === 1) {
       event.preventDefault()
+      setCursor(project)
       setColumn(0)
     } else if (event.key === "Enter") {
       event.preventDefault()
-      if (column === 0) setColumn(1)
+      if (column === 0) show(cursor)
       else choose(items[active].where)
     } else if (event.key === "Escape") {
       event.preventDefault()
@@ -387,22 +395,15 @@ export function Columns({ started }: LocationProps) {
             onKeyDown={onKeyDown}
           >
             <div className="proto-column proto-column--projects">
-              <div className="proto-caption">Project</div>
               <div className="iv-composer-menu__viewport">
                 {ALL_PROJECTS.map((p, i) => (
                   <div key={p}>
-                    {i === 1 && (
-                      <div className="iv-composer-menu__heading proto-heading">One project</div>
-                    )}
+                    {i === 1 && <div className="proto-separator" />}
                     <div
-                      className="iv-composer-menu__item"
-                      data-highlighted={p === project ? "" : undefined}
-                      data-dim={p === project && column === 1 ? "" : undefined}
-                      onMouseEnter={() => {
-                        setProject(p)
-                        setActive(0)
-                      }}
-                      onClick={() => setColumn(1)}
+                      className="iv-composer-menu__item proto-project-row"
+                      data-shown={p === project ? "" : undefined}
+                      data-highlighted={column === 0 && p === cursor ? "" : undefined}
+                      onClick={() => show(p)}
                     >
                       <span className="iv-composer-menu__icon">
                         <Icon name={projectIcon(p)} size={14} />
@@ -417,7 +418,6 @@ export function Columns({ started }: LocationProps) {
               </div>
             </div>
             <div className="proto-column proto-column--detail">
-              <div className="proto-caption">Working folder</div>
               <div className="iv-composer-menu__viewport">
                 {items.map((item, i) => (
                   <div key={item.key}>

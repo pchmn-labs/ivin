@@ -462,8 +462,24 @@ body {
   outline: none;
 }
 
-.iv-composer-menu__item[data-dim] {
+.proto-project-row[data-shown] {
+  background: var(--iv-bg-active);
+}
+
+.proto-project-row[data-highlighted]:not([data-shown]) {
   background: var(--iv-bg-hover);
+  box-shadow: inset 0 0 0 1px var(--iv-border-strong);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .proto-project-row:not([data-shown]):hover {
+    background: var(--iv-bg-hover);
+  }
+}
+
+.proto-separator {
+  margin: var(--iv-space-1) 0;
+  border-top: 1px solid var(--iv-border);
 }
 
 .proto-chips {
