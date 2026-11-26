@@ -82,12 +82,6 @@ function MixCard({
                   <span>{pr.updated}</span>
                 </span>
                 <span className="c-pills">
-                  {pr.state !== "open" && (
-                    <Pill tone={pr.state}>
-                      <Svg name={STATE_ICON[pr.state]} size={12} />
-                      {STATE_LABEL[pr.state]}
-                    </Pill>
-                  )}
                   {live && pr.checks.length > 0 && (
                     <Pill tone={ci}>
                       <CiMark ci={ci} />

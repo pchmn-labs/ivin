@@ -1262,14 +1262,16 @@ body {
   }
 }
 
-/* Round 9: a quick crossfade of the content */
+/* Round 9: the content swaps at once; the card's move and height carry the motion */
 
 .proto-viewport [data-previous] {
-  top: 0;
-  left: 0;
-  transition: opacity 80ms ease-out;
+  display: none;
 }
 
 .proto-viewport [data-current] {
-  transition: opacity 80ms ease-out;
+  transition: none;
+}
+
+.m-pr-link {
+  cursor: pointer;
 }
