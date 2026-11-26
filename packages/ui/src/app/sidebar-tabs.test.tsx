@@ -7,14 +7,18 @@ const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 const project = shopProject
 const worktree = shopWorktree
 
-const makeServer = () => {
+const startOnFiles = () => localStorage.setItem("ivin.sidebar.tab", "files/panel")
+
+const makeServer = ({ openTabs = true }: { openTabs?: boolean } = {}) => {
   const server = makeShopServer()
   server.folders.set(project, folder("src/", "package.json", "README.md"))
   server.folders.set(`${project}/src`, folder("lib/", "main.ts"))
   server.folders.set(`${project}/src/lib`, folder("cart.ts"))
   server.folders.set(worktree, folder("cart/", "notes.md"))
-  server.openTab("s1")
-  server.openTab("s2")
+  if (openTabs) {
+    server.openTab("s1")
+    server.openTab("s2")
+  }
   return server
 }
 
@@ -61,8 +65,8 @@ test("each tab has a keybinding, which also opens a hidden sidebar", async () =>
 })
 
 test("the tree follows the session on screen, and keeps each session's open folders", async () => {
+  startOnFiles()
   await mount(makeServer())
-  await sidebarTab("Files").click()
   await item("cart").click()
   await expect.element(item("notes.md")).toBeVisible()
 
@@ -77,9 +81,9 @@ test("the tree follows the session on screen, and keeps each session's open fold
 
 test("folders open one level at a time, by click and by the arrow keys", async () => {
   const server = makeServer()
+  startOnFiles()
   await mount(server)
   await sessionTab("Checkout flow").click()
-  await sidebarTab("Files").click()
   await expect.element(item("src")).toBeVisible()
   expect(server.listedFolders).not.toContain(`${project}/src`)
 
@@ -105,29 +109,24 @@ test("the selected tab is kept between launches", async () => {
 })
 
 test("with no session on screen, Files says so", async () => {
-  const server = makeServer()
-  await mount(server)
-  await sidebarTab("Files").click()
-  for (const title of ["Fix the cart", "Checkout flow"]) {
-    await sessionTab(title).hover()
-    await page.getByRole("button", { name: `Close ${title}`, includeHidden: true }).click()
-  }
+  startOnFiles()
+  await mount(makeServer({ openTabs: false }))
   await expect.element(page.getByText("No session on screen.", { exact: false })).toBeVisible()
 })
 
 test("an empty working folder says it is empty", async () => {
   const server = makeServer()
   server.folders.set(worktree, [])
+  startOnFiles()
   await mount(server)
-  await sidebarTab("Files").click()
   await expect.element(page.getByText("This folder is empty.")).toBeVisible()
 })
 
 test("a deleted working folder says so, with no retry", async () => {
   const server = makeServer()
   server.folders.delete(worktree)
+  startOnFiles()
   await mount(server)
-  await sidebarTab("Files").click()
   await expect
     .element(
       page.getByText("This session's working folder was deleted, so it has no files to show."),
@@ -139,8 +138,8 @@ test("a deleted working folder says so, with no retry", async () => {
 test("a listing that fails shows why where the tree is, and Retry lists it again", async () => {
   const server = makeServer()
   server.failNextCall("file.listFolder")
+  startOnFiles()
   await mount(server)
-  await sidebarTab("Files").click()
   await expect
     .element(page.getByText("The working folder could not be listed. Retry."))
     .toBeVisible()

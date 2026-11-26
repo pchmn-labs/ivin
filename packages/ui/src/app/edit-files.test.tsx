@@ -60,7 +60,8 @@ const fileOf = (server: FakeServer, path = readme) => {
 }
 
 const typeAtEnd = async (name: string, text: string) => {
-  await code(name).click()
+  await expect.element(code(name)).toBeVisible()
+  ;(code(name).element() as HTMLElement).focus()
   await userEvent.keyboard(`{${mod}>}{End}{/${mod}}${text}`)
 }
 const save = () => userEvent.keyboard(`{${mod}>}s{/${mod}}`)
@@ -100,6 +101,7 @@ test("unsaved edits survive a session switch, and are saved afterwards", async (
 })
 
 test("closing an unsaved file asks first; Cancel keeps it, Close without saving drops the edits", async () => {
+  localStorage.setItem("ivin.sidebar.tab", "files/panel")
   const server = makeServer()
   await mount(server)
   await typeAtEnd("README.md", " draft")
@@ -114,7 +116,6 @@ test("closing an unsaved file asks first; Cancel keeps it, Close without saving 
   await dialog().getByRole("button", { name: "Close without saving" }).click()
   await expect.element(fileTab("README.md")).not.toBeInTheDocument()
   expect(fileOf(server)).toBe("# Shop")
-  await page.getByRole("tablist", { name: "Sidebar" }).getByRole("tab", { name: "Files" }).click()
   await page.getByRole("treeitem", { name: "README.md", exact: true }).click()
   await expect.element(code("README.md")).toHaveTextContent("# Shop")
   await expect.element(fileTab("README.md")).not.toHaveAccessibleDescription("Unsaved edits")

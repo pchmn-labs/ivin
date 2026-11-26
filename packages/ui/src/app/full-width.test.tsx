@@ -50,6 +50,21 @@ const toggleKeys = `{${mod}>}{Shift>}{Enter}{/Shift}{/${mod}}`
 const nextKeys = `{${mod}>}{Alt>}{ArrowRight}{/Alt}{/${mod}}`
 const previousKeys = `{${mod}>}{Alt>}{ArrowLeft}{/Alt}{/${mod}}`
 
+const seedTwoFiles = (
+  server: FakeServer,
+  state: { fullWidth?: boolean; sessionTab?: boolean } = {},
+) =>
+  server.subViews.set("s1", {
+    sessionId: "s1",
+    subViews: [
+      { view: "files/file", params: { path: "README.md" } },
+      { view: "files/file", params: { path: "src/main.ts" } },
+    ],
+    selected: { view: "files/file", params: { path: "src/main.ts" } },
+    fullWidth: state.fullWidth ?? false,
+    sessionTabSelected: state.sessionTab ?? false,
+  })
+
 const openTwoFiles = async () => {
   await showFiles()
   await item("README.md").click()
@@ -83,11 +98,11 @@ test("the button covers the main area with the card, which gains a Session tab, 
   expect(server.subViews.get("s1")?.fullWidth).toBe(false)
 })
 
-test("in full width, the Session tab shows the chat inside the card, and a file tab shows the file", async () => {
+test("in full width, the Session tab shows the chat inside the card, a file tab shows the file, and the arrow keys move through the Session tab", async () => {
   const server = makeServer()
+  seedTwoFiles(server, { fullWidth: true })
   await mount(server)
-  await openTwoFiles()
-  await fullWidthButton().click()
+  await expect.element(besideButton()).toBeVisible()
 
   await rowTab("Session").click()
   await expect.element(composer()).toBeVisible()
@@ -99,11 +114,17 @@ test("in full width, the Session tab shows the chat inside the card, and a file 
   await expect.element(code("README.md")).toBeVisible()
   await expect.element(composer()).not.toBeInTheDocument()
   expect(server.subViews.get("s1")?.sessionTabSelected).toBe(false)
+
+  await userEvent.keyboard("{ArrowLeft}")
+  await expect.element(rowTab("Session")).toHaveAttribute("aria-selected", "true")
+  await expect.element(rowTab("Session")).toHaveFocus()
 })
 
 test("the keybinding switches the mode, and the next and previous tab keybindings go round the row", async () => {
-  await mount(makeServer())
-  await openTwoFiles()
+  const server = makeServer()
+  seedTwoFiles(server)
+  await mount(server)
+  await expect.element(code("main.ts")).toBeVisible()
   await composer().click()
 
   await userEvent.keyboard(toggleKeys)
@@ -123,22 +144,11 @@ test("the keybinding switches the mode, and the next and previous tab keybinding
   await expect.element(rowTab("README.md")).toHaveAttribute("aria-selected", "true")
 })
 
-test("the arrow keys move through the Session tab in full width", async () => {
-  await mount(makeServer())
-  await openTwoFiles()
-  await fullWidthButton().click()
-  await rowTab("README.md").click()
-
-  await userEvent.keyboard("{ArrowLeft}")
-  await expect.element(rowTab("Session")).toHaveAttribute("aria-selected", "true")
-  await expect.element(rowTab("Session")).toHaveFocus()
-})
-
 test("closing files in full width keeps the mode, and closing the last one leaves the chat alone", async () => {
   const server = makeServer()
+  seedTwoFiles(server, { fullWidth: true })
   await mount(server)
-  await openTwoFiles()
-  await fullWidthButton().click()
+  await expect.element(besideButton()).toBeVisible()
 
   await card().getByRole("button", { name: "Close main.ts", includeHidden: true }).click()
   await expect.element(rowTab("README.md")).toHaveAttribute("aria-selected", "true")
@@ -152,10 +162,9 @@ test("closing files in full width keeps the mode, and closing the last one leave
 
 test("the Close file keybinding does nothing while the Session tab is selected", async () => {
   const server = makeServer()
+  seedTwoFiles(server, { fullWidth: true, sessionTab: true })
   await mount(server)
-  await openTwoFiles()
-  await fullWidthButton().click()
-  await rowTab("Session").click()
+  await expect.element(rowTab("Session")).toHaveAttribute("aria-selected", "true")
 
   await userEvent.keyboard(`{${mod}>}{Shift>}w{/Shift}{/${mod}}`)
   expect(server.callsOf("tab.closeSubView")).toBe(0)
@@ -163,9 +172,11 @@ test("the Close file keybinding does nothing while the Session tab is selected",
 })
 
 test("each tab keeps its own mode", async () => {
-  await mount(makeServer())
-  await openTwoFiles()
-  await fullWidthButton().click()
+  const server = makeServer()
+  seedTwoFiles(server, { fullWidth: true })
+  await mount(server)
+  await expect.element(besideButton()).toBeVisible()
+  await showFiles()
 
   await sessionTab("Fix the cart").getByRole("tab").click()
   await expect.element(composer()).toBeVisible()
@@ -195,8 +206,9 @@ test("full width and the selected Session tab are back at launch, from the serve
 
 test("a mode switch the server refuses goes back", async () => {
   const server = makeServer()
+  seedTwoFiles(server)
   await mount(server)
-  await openTwoFiles()
+  await expect.element(code("main.ts")).toBeVisible()
   server.failNextCall("tab.setFullWidth")
 
   await fullWidthButton().click()
@@ -213,9 +225,8 @@ test("a mode switch the server refuses goes back", async () => {
 
 test("the file tab list holds only tabs: its close buttons and separator are hidden from screen readers", async () => {
   const server = makeServer()
+  seedTwoFiles(server, { fullWidth: true })
   await mount(server)
-  await openTwoFiles()
-  await fullWidthButton().click()
   await expect.element(rowTab("Session")).toBeVisible()
 
   const list = card().getByRole("tablist", { name: "Open files" }).element()

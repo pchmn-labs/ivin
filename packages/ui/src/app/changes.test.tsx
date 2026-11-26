@@ -110,9 +110,25 @@ const makeServer = () => {
 }
 
 const mount = async (server: FakeServer) => {
+  localStorage.setItem("ivin.sidebar.tab", "changes/panel")
   await mountApp(server, { height: 800 })
-  await userEvent.keyboard(`{${mod}>}3{/${mod}}`)
   return server
+}
+
+const openDiff = (server: FakeServer, kind: "working" | "committed", path: string) => {
+  const view = { view: "changes/diff", params: { kind, path } } as const
+  server.subViews.set("s1", {
+    sessionId: "s1",
+    subViews: [view],
+    selected: view,
+    fullWidth: false,
+    sessionTabSelected: false,
+  })
+}
+
+const discard = async (name: string) => {
+  await row(name).hover()
+  await page.getByRole("button", { name: `Discard the changes to ${name}` }).click()
 }
 
 const changesTab = () =>
@@ -196,15 +212,17 @@ test("a click on a change opens its diff beside the chat, and Open file opens th
 })
 
 test("a deleted file's diff has no Open file button", async () => {
-  await mount(makeServer())
-  await row("old.ts").click()
+  const server = makeServer()
+  openDiff(server, "working", "old.ts")
+  await mount(server)
   await expect.element(page.getByTestId("diff-view").getByText("export {}")).toBeVisible()
   await expect.element(card().getByRole("button", { name: "Open file" })).not.toBeInTheDocument()
 })
 
 test("a diff with no change left, or a binary one, says so in its place", async () => {
-  const server = await mount(makeServer())
-  await row("cart.ts").click()
+  const server = makeServer()
+  openDiff(server, "working", "src/cart.ts")
+  await mount(server)
   await expect.element(card().getByText("cart.ts has no uncommitted changes.")).toBeVisible()
 
   server.diffs.set(`${project}/src/cart.ts`, { kind: "binary" })
@@ -426,8 +444,7 @@ test("a failed Discard all shows git's message under the heading", async () => {
 test("discarding an untracked file says it deletes it", async () => {
   await mount(makeServer())
   await sessionTab("Fix the cart").getByRole("tab").click()
-  await row("notes.md").hover()
-  await page.getByRole("button", { name: "Discard the changes to notes.md" }).click()
+  await discard("notes.md")
   await expect.element(discardDialog()).toHaveAccessibleName("Delete “notes.md”?")
   await expect
     .element(discardDialog())
@@ -444,8 +461,7 @@ test("a failed discard shows git's message under the file's row", async () => {
   const server = makeServer()
   server.discardFailures.set(`${project}/README.md`, "fatal: Unable to create 'index.lock'")
   await mount(server)
-  await row("README.md").hover()
-  await page.getByRole("button", { name: "Discard the changes to README.md" }).click()
+  await discard("README.md")
   await discardDialog().getByRole("button", { name: "Discard changes" }).click()
   const failure = list().getByRole("listitem").filter({ hasText: "README.md" }).getByRole("alert")
   await expect
@@ -456,8 +472,7 @@ test("a failed discard shows git's message under the file's row", async () => {
   await expect.element(row("README.md")).toBeVisible()
 
   server.discardFailures.clear()
-  await row("README.md").hover()
-  await page.getByRole("button", { name: "Discard the changes to README.md" }).click()
+  await discard("README.md")
   await discardDialog().getByRole("button", { name: "Discard changes" }).click()
   await expect.element(row("README.md")).not.toBeInTheDocument()
 })
