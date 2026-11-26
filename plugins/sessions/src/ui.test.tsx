@@ -1,25 +1,17 @@
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
+import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { makeTestSession, testDateTime } from "../../../packages/ui/src/core/test-session.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type { UiContext, UiHost } from "@ivin/plugin-api/ui"
+import type { UiHost } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
 type Status = ReturnType<UiHost["useSessionListStatus"]>
 
 const mountPanel = async (status: Partial<Status>, withSession: boolean | "tab-only" = false) => {
-  const added: Array<{ slot: string; component: ComponentType }> = []
-  const ctx = {
-    pluginId: "sessions",
-    slots: {
-      add: (slot: string, component: ComponentType) => void added.push({ slot, component }),
-    },
-  } as unknown as UiContext
-  activate(ctx)
-  const Panel = added.find((a) => a.slot === "sidebar.panel")!.component
+  const Panel = activatePlugin(activate, "sessions")("sidebar.panel")
   const retry = vi.fn()
   const session = makeTestSession({ id: "s1", title: "Fix the export" })
   const host: UiHost = {

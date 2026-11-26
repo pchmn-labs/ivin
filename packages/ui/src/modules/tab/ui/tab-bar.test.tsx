@@ -42,32 +42,15 @@ const setup = async (
       problem: null,
     })
   }
-  const at = DateTime.makeUnsafe(0)
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/p",
-    workingFolder: "/p",
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "Fix the login",
-    harness: options.harness ?? "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status,
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set(
+    "s1",
+    makeTestSession({
+      id: "s1",
+      title: "Fix the login",
+      status,
+      harness: options.harness ?? "claude",
+    }),
+  )
   for (const title of options.others ?? []) {
     server.sessions.set(title, makeTestSession({ id: title, projectPath: "/p", title }))
     server.openTab(title)
@@ -125,19 +108,9 @@ test.each([
   expect(server.sessions.get("s1")?.status).toBe(status)
 })
 
-test("a tab draws its session's harness mark", async () => {
-  await setup("idle", { harness: "codex" })
-  const tab = page.getByTestId("tab").element()
-  expect(tab.querySelector(".iv-harness-mark--agent")).not.toBeNull()
-  expect(tab.querySelector(".iv-harness-mark--claude")).toBeNull()
-})
-
-test("the tab of a session in background draws the pulsing dot and asks before it stops the tasks", async () => {
+test("closing the tab of a session in background asks before it stops the tasks", async () => {
   await setup("in_background")
 
-  expect(document.querySelector(".iv-session-mark")?.getAttribute("data-status")).toBe(
-    "in_background",
-  )
   await closeTab()
   await expect.element(confirmation()).toBeVisible()
 })
@@ -175,12 +148,16 @@ test("the tab list holds only tabs: its close buttons are out of the Tab order a
   expect(page.getByRole("button", { name: /^Close / }).query()).toBeNull()
 })
 
-test("mod+T starts a session whose tab goes at the end of the bar", async () => {
-  const server = await setup("idle", { others: ["a", "b"] })
+const selectA = async () => {
   await page.getByRole("tab", { name: /Idle a/ }).click()
   await expect
     .element(page.getByRole("tab", { name: /Idle a/ }))
     .toHaveAttribute("aria-selected", "true")
+}
+
+test("mod+T starts a session whose tab goes at the end of the bar", async () => {
+  const server = await setup("idle", { others: ["a", "b"] })
+  await selectA()
   await userEvent.keyboard(`{${mod}>}t{/${mod}}`)
   await expect.poll(() => server.tabOrder("/p").length).toBe(4)
   expect(server.tabOrder("/p").slice(0, 3)).toEqual(["a", "b", "s1"])
@@ -188,10 +165,7 @@ test("mod+T starts a session whose tab goes at the end of the bar", async () => 
 
 test("mod+T puts the new tab after the selected one when the setting says so", async () => {
   const server = await setup("idle", { others: ["a", "b"], newTabPosition: "afterCurrent" })
-  await page.getByRole("tab", { name: /Idle a/ }).click()
-  await expect
-    .element(page.getByRole("tab", { name: /Idle a/ }))
-    .toHaveAttribute("aria-selected", "true")
+  await selectA()
   await userEvent.keyboard(`{${mod}>}t{/${mod}}`)
   await expect.poll(() => server.tabOrder("/p").length).toBe(4)
   const order = server.tabOrder("/p")
@@ -202,10 +176,7 @@ test("mod+T puts the new tab after the selected one when the setting says so", a
 
 test("the new session button of the tab bar follows the same setting", async () => {
   const server = await setup("idle", { others: ["a", "b"], newTabPosition: "afterCurrent" })
-  await page.getByRole("tab", { name: /Idle a/ }).click()
-  await expect
-    .element(page.getByRole("tab", { name: /Idle a/ }))
-    .toHaveAttribute("aria-selected", "true")
+  await selectA()
   await page.getByRole("button", { name: "New session" }).click()
   await expect.poll(() => server.tabOrder("/p").length).toBe(4)
   expect(server.tabOrder("/p").slice(2)).toEqual(["b", "s1"])

@@ -1,49 +1,7 @@
-import { layerScripted } from "@ivin/harness"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { Effect, Fiber, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
+import { Effect, Fiber, Stream } from "effect"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
 import { forkWatch } from "./test-waits.ts"
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E>) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([])),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-}
+import { withServer } from "./test-server.ts"
 
 const sessionTarget = (sessionId: string) => ({ _tag: "session", sessionId }) as const
 const pr = (url: string, relation: "created" | "referenced") => ({ url, relation })

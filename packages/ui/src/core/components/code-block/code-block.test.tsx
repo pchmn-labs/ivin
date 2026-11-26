@@ -3,15 +3,6 @@ import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { CodeBlock } from "./code-block.tsx"
 
-test("a code block's Copy button puts its text on the clipboard", async () => {
-  const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue()
-  await render(<CodeBlock text={"error: pathspec 'main' did not match"} />)
-  await page.getByText("error: pathspec", { exact: false }).hover()
-  await page.getByRole("button", { name: "Copy" }).click()
-  await expect.element(page.getByRole("button", { name: "Copied" })).toBeVisible()
-  expect(writeText).toHaveBeenCalledWith("error: pathspec 'main' did not match")
-})
-
 test("a 5,000-line output shows 2,000 lines and a note, and Copy still copies all of it", async () => {
   const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue()
   const text = Array.from({ length: 5000 }, (_, i) => `line ${i + 1}`).join("\n")

@@ -1,6 +1,5 @@
-import { RegistryContext, RegistryProvider } from "@effect/atom-react"
+import { RegistryContext } from "@effect/atom-react"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
-import { DateTime } from "effect"
 import { AtomRegistry } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
@@ -11,76 +10,17 @@ import { type FakeServer, makeFakeServer } from "../../../core/fake-server-clien
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { deletedImageIdsAtom } from "../../transcript/atoms/delete-images.ts"
 import { SessionView } from "./session-view.tsx"
-
-const PIXEL =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-
-const png = (name: string) =>
-  new File([Uint8Array.from(atob(PIXEL), (c) => c.charCodeAt(0))], name, { type: "image/png" })
-
-const addSession = (server: FakeServer, id: string, lastImageNumber = 0) => {
-  const at = DateTime.makeUnsafe(0)
-  server.sessions.set(id, {
-    id,
-    projectPath: "/p",
-    workingFolder: "/p",
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: id,
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "idle",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber,
-    waitingFor: null,
-  })
-}
-
-const view = (server: FakeServer, sessionId: string) => (
-  <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-    <PluginsProvider plugins={builtinPlugins}>
-      <SessionView projectPath="/p" sessionId={sessionId} />
-    </PluginsProvider>
-  </RegistryProvider>
-)
-
-const mount = async ({ lastImageNumber = 0 } = {}) => {
-  const server = makeFakeServer()
-  server.openProject("/p")
-  addSession(server, "s1", lastImageNumber)
-  const screen = await render(view(server, "s1"))
-  return { server, screen }
-}
-
-const field = () => page.getByRole("textbox", { name: "Message" })
-
-const transfer = (files: ReadonlyArray<File>) => {
-  const data = new DataTransfer()
-  for (const file of files) data.items.add(file)
-  return data
-}
-
-const paste = (files: ReadonlyArray<File>) =>
-  field()
-    .element()
-    .dispatchEvent(
-      new ClipboardEvent("paste", {
-        clipboardData: transfer(files),
-        bubbles: true,
-        cancelable: true,
-      }),
-    )
+import {
+  draftThumbnails,
+  field,
+  mount,
+  paste,
+  PIXEL,
+  png,
+  transfer,
+  view,
+  addSession,
+} from "./test-composer.tsx"
 
 const drop = (files: ReadonlyArray<File>) => {
   const target = field().element()
@@ -88,9 +28,6 @@ const drop = (files: ReadonlyArray<File>) => {
   for (const type of ["dragenter", "dragover", "drop"])
     target.dispatchEvent(new DragEvent(type, { dataTransfer, bubbles: true, cancelable: true }))
 }
-
-const draftThumbnails = () =>
-  page.getByTestId("draft-images").getByRole("button", { name: /View image/ })
 
 test("a pasted image puts its marker at the caret and its thumbnail above the text, and is sent with the message", async () => {
   const { server } = await mount()
@@ -191,7 +128,7 @@ const seedTranscript = (server: FakeServer) => {
   ])
 }
 
-test("a sent image opens full screen; the arrows move through the session's images and Escape returns to the thumbnail", async () => {
+test("a sent image opens full screen; the arrows move through the session's images and Escape returns to the thumbnail of the image it closes on", async () => {
   const server = makeFakeServer()
   server.openProject("/p")
   addSession(server, "s1", 3)
@@ -199,8 +136,7 @@ test("a sent image opens full screen; the arrows move through the session's imag
   await render(view(server, "s1"))
 
   // The bubble shows its thumbnails before the markers in its text.
-  const thumbnail = page.getByRole("button", { name: "View image #1" }).first()
-  await thumbnail.click()
+  await page.getByRole("button", { name: "View image #1" }).first().click()
   const viewer = page.getByRole("dialog")
   await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #1 · 1 of 3")
   await expect.element(viewer.getByText("From your message: “the card overflows”")).toBeVisible()
@@ -212,31 +148,9 @@ test("a sent image opens full screen; the arrows move through the session's imag
   await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #3 · 3 of 3")
   await userEvent.keyboard("{ArrowLeft}")
   await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #2 · 2 of 3")
-  await userEvent.keyboard("{ArrowLeft}")
 
   await userEvent.keyboard("{Escape}")
   await expect.element(viewer).not.toBeInTheDocument()
-  await expect.element(thumbnail).toHaveFocus()
-})
-
-test("closing the full-screen view on another image puts the focus on that image's thumbnail", async () => {
-  const server = makeFakeServer()
-  server.openProject("/p")
-  addSession(server, "s1", 3)
-  seedTranscript(server)
-  await render(view(server, "s1"))
-
-  await page.getByRole("button", { name: "View image #1" }).first().click()
-  await expect
-    .element(page.getByRole("dialog").getByRole("heading"))
-    .toHaveTextContent("Image #1 · 1 of 3")
-  await userEvent.keyboard("{ArrowRight}")
-  await expect
-    .element(page.getByRole("dialog").getByRole("heading"))
-    .toHaveTextContent("Image #2 · 2 of 3")
-  await userEvent.keyboard("{Escape}")
-
-  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
   await expect.element(page.getByRole("button", { name: "View image #2" }).first()).toHaveFocus()
 })
 

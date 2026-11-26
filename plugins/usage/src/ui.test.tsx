@@ -1,33 +1,14 @@
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
+import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type { SessionUsage, SlotProps, UiContext } from "@ivin/plugin-api/ui"
+import type { SessionUsage } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
 const mountStatus = async (total: SessionUsage) => {
-  const added: Array<{ slot: string; component: ComponentType<never> }> = []
-  const ctx: UiContext = {
-    pluginId: "usage",
-    slots: {
-      add: (slot, component) =>
-        void added.push({ slot, component: component as ComponentType<never> }),
-    },
-    commands: { register: () => undefined },
-    keybindings: { add: () => undefined },
-    editorExtensions: { add: () => undefined },
-    fileIcons: { add: () => undefined },
-    fileUrl: (path) => path,
-    views: { register: () => undefined, open: async () => undefined },
-    notify: () => undefined,
-    sidebar: { showPanel: () => undefined },
-  }
-  activate(ctx)
-  const Status = added.find((a) => a.slot === "composer.status")!.component as ComponentType<
-    SlotProps["composer.status"]
-  >
+  const Status = activatePlugin(activate, "usage")("composer.status")
   const host = {
     ...testUiHost,
     useUsage: () => total,

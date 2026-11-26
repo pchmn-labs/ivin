@@ -1,76 +1,36 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { SubView } from "@ivin/contracts/tab"
-import { layerScripted } from "@ivin/harness"
 import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
-import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { mkdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
-import { afterEach, beforeEach, expect, test, vi } from "vitest"
+import type { DatabaseSync } from "node:sqlite"
+import { beforeEach, expect, test, vi } from "vitest"
+import { git, useClonedProject } from "./git-fixture.ts"
+import { makeClient, newDatabase, serverLayer, type Client } from "./test-server.ts"
 import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
 
 // Real git: over 1 s when the suite runs other git tests beside it.
 vi.setConfig({ testTimeout: 5000 })
 
-const gitEnv = {
-  ...process.env,
-  GIT_AUTHOR_NAME: "ivin",
-  GIT_AUTHOR_EMAIL: "ivin@example.com",
-  GIT_COMMITTER_NAME: "ivin",
-  GIT_COMMITTER_EMAIL: "ivin@example.com",
-  GIT_CONFIG_GLOBAL: "/dev/null",
-}
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", args, { cwd, env: gitEnv, encoding: "utf8" }).trim()
-
-let root: string
-let project: string
-
+const fixture = useClonedProject()
+let root = ""
+let project = ""
 beforeEach(() => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-subviews-")))
-  project = join(root, "project")
-  git(root, "init", "--quiet", "-b", "main", project)
-  writeFileSync(join(project, "a.txt"), "a")
-  git(project, "add", "a.txt")
-  git(project, "commit", "--quiet", "-m", "first")
+  root = fixture.root
+  project = fixture.project
 })
-
-afterEach(() => rmSync(root, { recursive: true, force: true }))
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
 
 const withServer = <A, E>(db: DatabaseSync, use: (client: Client) => Effect.Effect<A, E>) =>
   Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
       Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: join(root, "images") })),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([], { starts: [], closed: [] })),
-          Layer.provide(layerFsUserPlugins(join(root, "home"))),
+        Layer.provide(
+          serverLayer({
+            db,
+            imageFolder: join(root, "images"),
+            scripted: { starts: [], closed: [] },
+          }),
+          layerFsUserPlugins(join(root, "home")),
         ),
       ),
       Effect.scoped,
@@ -100,16 +60,6 @@ const newTab = (client: Client) =>
     yield* client["tab.open"]({ sessionId: id })
     return id
   })
-
-test("a new tab has no sub-view", async () => {
-  const listed = await withServer(newDatabase(), (client) =>
-    Effect.gen(function* () {
-      return yield* client["tab.listSubViews"]({ sessionId: yield* newTab(client) })
-    }),
-  )
-
-  expect(listed).toMatchObject({ subViews: [], selected: null })
-})
 
 test("the last sub-view opened is selected, and reopening an earlier one only selects it", async () => {
   const { second, again } = await withServer(newDatabase(), (client) =>
@@ -165,59 +115,6 @@ test("closing a sub-view that is not the selected one keeps the selection, and a
 
   expect(closed.selected).toEqual(file("b"))
   expect(missing).toEqual(closed)
-})
-
-test("sub-views and the selected one are back after a restart on the same database", async () => {
-  const db = newDatabase()
-  const sessionId = await withServer(db, (client) =>
-    Effect.gen(function* () {
-      const sessionId = yield* newTab(client)
-      for (const path of ["a", "b", "c"]) {
-        yield* client["tab.openSubView"]({ sessionId, subView: file(path) })
-      }
-      yield* client["tab.openSubView"]({ sessionId, subView: file("b") })
-      return sessionId
-    }),
-  )
-
-  const listed = await withServer(db, (client) => client["tab.listSubViews"]({ sessionId }))
-
-  expect(listed.subViews).toEqual([file("a"), file("b"), file("c")])
-  expect(listed.selected).toEqual(file("b"))
-})
-
-test("a diff sub-view is back after a restart beside the file of the same path", async () => {
-  const db = newDatabase()
-  const sessionId = await withServer(db, (client) =>
-    Effect.gen(function* () {
-      const sessionId = yield* newTab(client)
-      yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
-      yield* client["tab.openSubView"]({ sessionId, subView: diff("a") })
-      return sessionId
-    }),
-  )
-
-  const listed = await withServer(db, (client) => client["tab.listSubViews"]({ sessionId }))
-
-  expect(listed.subViews).toEqual([file("a"), diff("a")])
-  expect(listed.selected).toEqual(diff("a"))
-})
-
-test("opening a view equal to an open one, whatever the order of its parameters, selects it", async () => {
-  const listed = await withServer(newDatabase(), (client) =>
-    Effect.gen(function* () {
-      const sessionId = yield* newTab(client)
-      yield* client["tab.openSubView"]({
-        sessionId,
-        subView: { view: "changes/diff", params: { path: "a", kind: "working" } },
-      })
-      yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
-      return yield* client["tab.openSubView"]({ sessionId, subView: diff("a") })
-    }),
-  )
-
-  expect(listed.subViews).toHaveLength(2)
-  expect(listed.selected).toEqual(diff("a"))
 })
 
 test("a view that declares restore: false is dropped when the server starts, the others stay", async () => {
@@ -294,18 +191,19 @@ test("moving the session to another working folder closes its sub-views", async 
   expect(reopened.subViews).toEqual([file("a.txt")])
 })
 
-test("closing the tab drops its sub-views", async () => {
+test("closing the tab drops its sub-views and forgets its full width", async () => {
   const listed = await withServer(newDatabase(), (client) =>
     Effect.gen(function* () {
       const sessionId = yield* newTab(client)
       yield* client["tab.openSubView"]({ sessionId, subView: file("a.txt") })
+      yield* client["tab.setFullWidth"]({ sessionId, fullWidth: true })
       yield* client["tab.close"]({ sessionId })
       yield* client["tab.open"]({ sessionId })
       return yield* client["tab.listSubViews"]({ sessionId })
     }),
   )
 
-  expect(listed).toMatchObject({ subViews: [], selected: null })
+  expect(listed).toMatchObject({ subViews: [], selected: null, fullWidth: false })
 })
 
 test("the sub-view RPCs fail for an unknown session", async () => {
@@ -325,12 +223,20 @@ test("the sub-view RPCs fail for an unknown session", async () => {
   expect(errors).toEqual(Array(5).fill("SessionNotFound"))
 })
 
-test("a tab starts beside the chat, and full width with the Session tab selected is back after a restart", async () => {
+test("sub-views, the selected one, the full width and the Session tab are back after a restart on the same database, a diff beside the file of the same path", async () => {
   const db = newDatabase()
   const { fresh, sessionId } = await withServer(db, (client) =>
     Effect.gen(function* () {
       const sessionId = yield* newTab(client)
       const fresh = yield* client["tab.openSubView"]({ sessionId, subView: file("a") })
+      for (const path of ["b", "c"]) {
+        yield* client["tab.openSubView"]({ sessionId, subView: file(path) })
+      }
+      yield* client["tab.openSubView"]({
+        sessionId,
+        subView: { view: "changes/diff", params: { path: "a", kind: "working" } },
+      })
+      yield* client["tab.openSubView"]({ sessionId, subView: diff("a") })
       yield* client["tab.openSubView"]({ sessionId, subView: file("b") })
       yield* client["tab.setFullWidth"]({ sessionId, fullWidth: true })
       yield* client["tab.selectSessionTab"]({ sessionId })
@@ -342,7 +248,7 @@ test("a tab starts beside the chat, and full width with the Session tab selected
 
   expect(fresh).toMatchObject({ fullWidth: false, sessionTabSelected: false })
   expect(listed).toMatchObject({
-    subViews: [file("a"), file("b")],
+    subViews: [file("a"), file("b"), file("c"), diff("a")],
     selected: file("b"),
     fullWidth: true,
     sessionTabSelected: true,
@@ -369,18 +275,4 @@ test("opening a sub-view or going back beside the chat leaves the Session tab", 
     sessionTabSelected: false,
   })
   expect(beside).toMatchObject({ selected: file("a"), fullWidth: false, sessionTabSelected: false })
-})
-
-test("closing the tab forgets its full width", async () => {
-  const listed = await withServer(newDatabase(), (client) =>
-    Effect.gen(function* () {
-      const sessionId = yield* newTab(client)
-      yield* client["tab.setFullWidth"]({ sessionId, fullWidth: true })
-      yield* client["tab.close"]({ sessionId })
-      yield* client["tab.open"]({ sessionId })
-      return yield* client["tab.listSubViews"]({ sessionId })
-    }),
-  )
-
-  expect(listed.fullWidth).toBe(false)
 })

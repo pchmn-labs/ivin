@@ -6,7 +6,7 @@ import { Markdown } from "./markdown.tsx"
 // Below 30 frames a second, streaming visibly stutters.
 const MIN_FPS = 30
 const CODE_LINES = 3000
-const LINES_PER_FRAME = 5
+const LINES_PER_FRAME = 25
 
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
 

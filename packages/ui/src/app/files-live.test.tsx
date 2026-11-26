@@ -1,26 +1,12 @@
-import { RegistryProvider } from "@effect/atom-react"
-import type { FolderEntry } from "@ivin/contracts/file"
 import { DateTime } from "effect"
 import { afterEach, beforeEach, expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
-import { render } from "vitest-browser-react"
 import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
 import { makeTestSession } from "../core/test-session.ts"
-import { App } from "./app.tsx"
+import { folder, mountApp } from "./test-app.tsx"
 
 const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 const project = "/dev/shop"
-
-// A trailing `/` makes a folder, a leading `!` an entry git ignores.
-const folder = (...names: string[]): ReadonlyArray<FolderEntry> =>
-  names.map((raw) => {
-    const ignored = raw.startsWith("!")
-    const name = ignored ? raw.slice(1) : raw
-    return name.endsWith("/")
-      ? { name: name.slice(0, -1), kind: "folder", ignored }
-      : { name, kind: "file", ignored }
-  })
 
 const makeServer = () => {
   const server = makeFakeServer({
@@ -46,13 +32,7 @@ const makeServer = () => {
 }
 
 const mount = async (server: FakeServer) => {
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ height: 800 }}>
-        <App />
-      </div>
-    </RegistryProvider>,
-  )
+  await mountApp(server, { height: 800 })
   await userEvent.keyboard(`{${mod}>}2{/${mod}}`)
   await expect.element(item("src")).toBeVisible()
   return server

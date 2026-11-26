@@ -21,11 +21,7 @@ test("a failed rename keeps the old title and records its message with the title
 
   registry.set(renameSessionAtom, { projectPath: project, sessionId: "s1", title: "Plan" })
   await vi.waitFor(() =>
-    expect(registry.get(renameFailureOf("s1"))).toEqual({
-      text: "The session was not renamed.",
-      retryable: true,
-      title: "Plan",
-    }),
+    expect(registry.get(renameFailureOf("s1"))).toMatchObject({ retryable: true, title: "Plan" }),
   )
   expect(registry.get(sessionsOf(project).item("s1"))?.title).toBe("One")
 

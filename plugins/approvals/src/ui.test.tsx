@@ -1,18 +1,10 @@
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
+import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type {
-  Session,
-  SlotName,
-  SlotProps,
-  ApprovalItem,
-  TranscriptItem,
-  UiContext,
-  UiHost,
-} from "@ivin/plugin-api/ui"
+import type { Session, ApprovalItem, TranscriptItem, UiHost } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
 const session = { id: "s1" } as Session
@@ -24,22 +16,9 @@ const mount = async (
   items: ReadonlyArray<TranscriptItem>,
   answer = vi.fn().mockResolvedValue(undefined),
 ) => {
-  const slots: Partial<Record<SlotName, ComponentType<never>>> = {}
-  const ctx: UiContext = {
-    pluginId: "approvals",
-    slots: { add: (slot, component) => void (slots[slot] = component as ComponentType<never>) },
-    commands: { register: () => undefined },
-    keybindings: { add: () => undefined },
-    editorExtensions: { add: () => undefined },
-    fileIcons: { add: () => undefined },
-    fileUrl: (path) => path,
-    views: { register: () => undefined, open: async () => undefined },
-    notify: () => undefined,
-    sidebar: { showPanel: () => undefined },
-  }
-  activate(ctx)
-  const Record = slots["transcript.approval"] as ComponentType<SlotProps["transcript.approval"]>
-  const Sheet = slots["composer.above"] as ComponentType<SlotProps["composer.above"]>
+  const slot = activatePlugin(activate, "approvals")
+  const Record = slot("transcript.approval")
+  const Sheet = slot("composer.above")
   const host: UiHost = {
     ...testUiHost,
     usePendingApproval: () =>
@@ -102,18 +81,6 @@ test("clicking Deny answers deny", async () => {
   expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
 })
 
-test("the arrows move the choice and Enter answers it", async () => {
-  const answer = await mount([approval(null)])
-  page.getByRole("radio", { name: "Allow" }).element().focus()
-  await userEvent.keyboard("{ArrowDown}")
-  await expect.element(page.getByRole("radio", { name: /^Deny/ })).toBeChecked()
-  await expect.element(page.getByRole("radio", { name: /^Deny/ })).toHaveFocus()
-  await userEvent.keyboard("{ArrowUp}")
-  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeChecked()
-  await userEvent.keyboard("{ArrowDown}{Enter}")
-  expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
-})
-
 test("Esc denies", async () => {
   const answer = await mount([approval(null)])
   page.getByRole("radio", { name: "Allow" }).element().focus()
@@ -132,26 +99,12 @@ test("the arrows, Enter and Esc work from the empty composer", async () => {
   expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
 })
 
-test("Esc from the empty composer denies", async () => {
-  const answer = await mount([approval(null)])
-  await page.getByRole("textbox", { name: "Message" }).click()
-  await userEvent.keyboard("{Escape}")
-  expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })
-})
-
 test("a composer with text keeps its keys", async () => {
   const answer = await mount([approval(null)])
   const composer = page.getByRole("textbox", { name: "Message" })
   await composer.fill("hello")
   await userEvent.keyboard("{ArrowDown}{Enter}{Escape}")
   await expect.element(page.getByRole("radio", { name: "Allow" })).toBeChecked()
-  expect(answer).not.toHaveBeenCalled()
-})
-
-test("Enter with the focus on the page body answers nothing", async () => {
-  const answer = await mount([approval(null)])
-  ;(document.activeElement as HTMLElement | null)?.blur()
-  await userEvent.keyboard("{Enter}{Escape}")
   expect(answer).not.toHaveBeenCalled()
 })
 

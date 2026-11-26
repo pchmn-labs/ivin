@@ -1,6 +1,7 @@
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
+import { makeTestSession } from "../../../core/test-session.ts"
 import { transcriptOf } from "../../transcript/atoms/get-items.ts"
 import { answerApprovalAtom } from "./answer-approval.ts"
 import { sessionsOf } from "./list-sessions.ts"
@@ -10,31 +11,18 @@ const project = "/project"
 test("answering an approval stores the decision on its item and updates the session", async () => {
   const { registry, server } = makeTestRegistry()
   const at = DateTime.makeUnsafe(Date.now())
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: project,
-    workingFolder: project,
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "t",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "waiting",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set(
+    "s1",
+    makeTestSession({
+      id: "s1",
+      projectPath: project,
+      title: "t",
+      status: "waiting",
+      statusChangedAt: at,
+      createdAt: at,
+      lastActivityAt: at,
+    }),
+  )
   server.seedItems("s1", [
     {
       id: "a1",

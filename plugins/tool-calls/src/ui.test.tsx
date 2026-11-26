@@ -1,27 +1,14 @@
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
+import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type { SlotProps, ToolCallItem, UiContext } from "@ivin/plugin-api/ui"
+import type { ToolCallItem } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
 const mount = async (item: ToolCallItem) => {
-  let ToolCall!: ComponentType<SlotProps["transcript.toolCall"]>
-  const ctx: UiContext = {
-    pluginId: "tool-calls",
-    slots: { add: (_slot, component) => void (ToolCall = component as typeof ToolCall) },
-    commands: { register: () => undefined },
-    keybindings: { add: () => undefined },
-    editorExtensions: { add: () => undefined },
-    fileIcons: { add: () => undefined },
-    fileUrl: (path) => path,
-    views: { register: () => undefined, open: async () => undefined },
-    notify: () => undefined,
-    sidebar: { showPanel: () => undefined },
-  }
-  activate(ctx)
+  const ToolCall = activatePlugin(activate, "tool-calls")("transcript.toolCall")
   const host = {
     ...testUiHost,
     components: {
@@ -50,10 +37,8 @@ const tool = (status: ToolCallItem["status"], output: string | null): ToolCallIt
   output,
 })
 
-test("a tool call shows its icon, name and input on one row, its result opening under it", async () => {
+test("a tool call's result stays folded under its row until the row is clicked", async () => {
   await mount(tool("done", "file contents"))
-  const row = page.getByTestId("tool-output").element().querySelector("summary")!
-  expect(row.textContent).toBe("Read/a.ts")
   await expect.element(page.getByText("file contents")).not.toBeInTheDocument()
   await page.getByText("Read").click()
   await expect.element(page.getByText("file contents")).toBeVisible()

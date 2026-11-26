@@ -1,24 +1,15 @@
-import { layerScripted } from "@ivin/harness"
 import { HOST_MODULES_GLOBAL, type UserPlugin } from "@ivin/contracts/plugin"
-import { Rpcs } from "@ivin/contracts/rpcs"
 import { Effect, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
 import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import * as React from "react"
 import * as jsxRuntime from "react/jsx-runtime"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { layerDatabase } from "../shared/adapters/database.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { type Client, makeClient, serverLayer } from "./test-server.ts"
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-export type Client = Effect.Success<ReturnType<typeof makeClient>>
+export type { Client }
 
 export const tempDir = (prefix: string) => mkdtempSync(join(tmpdir(), `ivin-${prefix}-`))
 
@@ -26,18 +17,7 @@ export const withServer = <A, E>(home: string, use: (client: Client) => Effect.E
   Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(layerDatabase(":memory:")),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: tempDir("images") })),
-          Layer.provide(layerScripted([])),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerFsUserPlugins(home)),
-        ),
-      ),
+      Effect.provide(serverLayer().pipe(Layer.provide(layerFsUserPlugins(home)))),
       Effect.scoped,
     ),
   )

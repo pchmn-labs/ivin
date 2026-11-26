@@ -1,23 +1,13 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
-import { layerScripted } from "@ivin/harness"
-import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
+import { Effect } from "effect"
 import { existsSync, mkdtempSync, readFileSync, readdirSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
+import type { DatabaseSync } from "node:sqlite"
 import { crc32, deflateSync } from "node:zlib"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { type Client, newDatabase, withServer as serve } from "./test-server.ts"
 import { ImageCompression } from "../modules/tab/usecases/image-compression.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
 
 const turn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: null },
@@ -70,38 +60,11 @@ const undecodable: ImageData = {
   base64: "iVBORw0KGgoAAAANSUhEUg==",
 }
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
 const withServer = <A, E>(
   db: DatabaseSync,
   folder: string,
   use: (client: Client) => Effect.Effect<A, E, ImageCompression>,
-) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provideMerge(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: folder })),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([turn], { cycle: true })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
+) => serve(use, { db, imageFolder: folder, turns: [turn], scripted: { cycle: true } })
 
 const sessionWithImage = (client: Client, image: ImageData) =>
   Effect.gen(function* () {

@@ -79,18 +79,13 @@ test("closing a session's tab drops its transcript, which loads again when shown
   again()
 })
 
-test("archiving a session drops its transcript", async () => {
+test.each([
+  ["archiving", archiveSessionAtom],
+  ["deleting", deleteSessionAtom],
+])("%s a session drops its transcript", async (_, atom) => {
   const { registry, sessionId, transcript, show } = await setup()
   ;(await show())()
 
-  registry.set(archiveSessionAtom, { projectPath: project, sessionId })
-  await vi.waitFor(() => expect(registry.get(transcript.paging).loaded).toBe(false))
-})
-
-test("deleting a session drops its transcript", async () => {
-  const { registry, sessionId, transcript, show } = await setup()
-  ;(await show())()
-
-  registry.set(deleteSessionAtom, { projectPath: project, sessionId })
+  registry.set(atom, { projectPath: project, sessionId })
   await vi.waitFor(() => expect(registry.get(transcript.paging).loaded).toBe(false))
 })

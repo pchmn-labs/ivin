@@ -123,14 +123,6 @@ test("Alt+Down moves the line down", async () => {
   await expect.poll(changed).toBe("alpha\ngamma\nbeta")
 })
 
-test("Mod+D selects the word, then its next occurrence, for one cursor each", async () => {
-  const { changed } = await editor("one\none")
-  await page.getByText("one").first().click()
-  await userEvent.keyboard(`{${mod}>}dd{/${mod}}`)
-  await userEvent.keyboard("two")
-  await expect.poll(changed).toBe("two\ntwo")
-})
-
 test("Alt+click adds a cursor", async () => {
   const { changed } = await editor("ab\nab")
   await page.getByText("ab").first().click()
@@ -156,16 +148,6 @@ test("Ctrl+G goes to a line", async () => {
   await page.getByRole("textbox", { name: /Go to line/ }).fill("400")
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByText("line 400", { exact: true })).toBeInViewport()
-})
-
-test("Mod+F searches inside the file", async () => {
-  await editor(numbered(500))
-  await page.getByText("line 1", { exact: true }).click()
-  await userEvent.keyboard(`{${mod}>}f{/${mod}}`)
-  const find = page.getByRole("textbox", { name: "Find" })
-  await expect.element(find).toHaveFocus()
-  await userEvent.keyboard("line 450{Enter}")
-  await expect.element(page.getByText("line 450", { exact: true })).toBeInViewport()
 })
 
 test("extensions passed in take effect, and a new set replaces them", async () => {

@@ -1,57 +1,19 @@
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput, TranscriptItem } from "@ivin/contracts/transcript"
-import { layerScripted, type ScriptedElement } from "@ivin/harness"
-import { Effect, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
+import type { ScriptedElement } from "@ivin/harness"
+import { Effect, Stream } from "effect"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
+import { idle, running, said } from "./test-scripts.ts"
+import { newDatabase, withServer as withTestServer, type Client } from "./test-server.ts"
 import { migrations, runMigrations } from "../shared/adapters/migrations.ts"
-import { handlers, layerServices } from "./handlers.ts"
 import { until } from "./test-waits.ts"
 import { trustEveryFolder } from "./trust-every-folder.ts"
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
 
 const withServer = <A, E>(
   db: DatabaseSync,
   turns: readonly (readonly ScriptedElement[])[],
   use: (client: Client) => Effect.Effect<A, E>,
-) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerScripted(turns)),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
+) => withTestServer(use, { db, turns })
 
 const statusOf = (client: Client, sessionId: string) =>
   client["session.list"]({ projectPath: "/p" }).pipe(
@@ -64,9 +26,6 @@ const untilStatus = (client: Client, sessionId: string, status: string) =>
 const everything = (client: Client, sessionId: string) =>
   client["transcript.getItems"]({ sessionId, position: null, before: 10_000, after: 0 })
 
-const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
-const running: HarnessOutput = { type: "status", status: "running", raw: null }
-const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
 const call = (id: string): HarnessOutput => ({
   type: "tool_call",
   toolCallId: id,
@@ -260,32 +219,50 @@ test("a session stored before items existed gets them on its first read, and onl
   expect(second.items[1]).toMatchObject({ id: "e2", text: "kept" })
 })
 
-const approvalTurn: readonly ScriptedElement[] = [running, approval("r1"), said("done"), idle]
+const approvalTurn: readonly ScriptedElement[] = [
+  running,
+  call("t1"),
+  { ...approval("r1"), toolCallId: "t1" } as HarnessOutput,
+  said("done"),
+  idle,
+]
 
-test("stopping a session that waits for an approval leaves the approval unanswered and the session idle", async () => {
-  const { item, session, answer } = await withServer(newDatabase(), [approvalTurn], (client) =>
-    Effect.gen(function* () {
-      const { id } = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.sendMessage"]({ sessionId: id, messageId: "m1", text: "go" })
-      yield* untilStatus(client, id, "waiting")
-      yield* client["session.interrupt"]({ sessionId: id })
-      const page = yield* until(everything(client, id), (page) =>
-        page.items.some((item) => item.type === "approval" && item.decision !== null),
-      )
-      const answer = yield* client["session.answerApproval"]({
-        sessionId: id,
-        requestId: "r1",
-        allow: true,
-      }).pipe(Effect.flip)
-      return {
-        item: page.items.find((item) => item.type === "approval"),
-        session: yield* untilStatus(client, id, "idle"),
-        answer: answer._tag,
-      }
-    }),
+test("stopping a session that waits for an approval leaves the approval unanswered, fails its tool call with the reason, and the session idle", async () => {
+  const { item, tool, session, answer } = await withServer(
+    newDatabase(),
+    [approvalTurn],
+    (client) =>
+      Effect.gen(function* () {
+        const { id } = yield* client["session.create"]({ projectPath: "/p" })
+        yield* client["session.sendMessage"]({ sessionId: id, messageId: "m1", text: "go" })
+        yield* untilStatus(client, id, "waiting")
+        yield* client["session.interrupt"]({ sessionId: id })
+        const page = yield* until(
+          everything(client, id),
+          (page) =>
+            page.items.some((item) => item.type === "approval" && item.decision !== null) &&
+            page.items.some((item) => item.type === "tool_call" && item.status !== "running"),
+        )
+        const answer = yield* client["session.answerApproval"]({
+          sessionId: id,
+          requestId: "r1",
+          allow: true,
+        }).pipe(Effect.flip)
+        return {
+          item: page.items.find((item) => item.type === "approval"),
+          tool: page.items.find((item) => item.type === "tool_call"),
+          session: yield* untilStatus(client, id, "idle"),
+          answer: answer._tag,
+        }
+      }),
   )
 
   expect(item).toMatchObject({ requestId: "r1", decision: "unanswered" })
+  expect(tool).toMatchObject({
+    toolCallId: "t1",
+    status: "error",
+    output: "Not run: the approval was not answered.",
+  })
   expect(session).toMatchObject({ status: "idle", waitingFor: null })
   expect(answer).toBe("ApprovalNotOpen")
 })
@@ -344,36 +321,6 @@ test("a new run leaves unanswered, before its first turn ends, the requests an e
   )
 
   expect(item).toMatchObject({ requestId: "r1", decision: "unanswered" })
-})
-
-test("the tool call of an unanswered approval fails, with the reason as its output", async () => {
-  const held: ScriptedElement[] = [
-    running,
-    call("t1"),
-    { ...approval("r1"), toolCallId: "t1" } as HarnessOutput,
-  ]
-  const { tool, toolCalls } = await withServer(newDatabase(), [held], (client) =>
-    Effect.gen(function* () {
-      const { id } = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.sendMessage"]({ sessionId: id, messageId: "m1", text: "go" })
-      yield* untilStatus(client, id, "waiting")
-      yield* client["session.interrupt"]({ sessionId: id })
-      const page = yield* until(everything(client, id), (page) =>
-        page.items.some((item) => item.type === "tool_call" && item.status !== "running"),
-      )
-      return {
-        tool: page.items.find((item) => item.type === "tool_call"),
-        toolCalls: page.items.filter((item) => item.type === "tool_call").length,
-      }
-    }),
-  )
-
-  expect(tool).toMatchObject({
-    toolCallId: "t1",
-    status: "error",
-    output: "Not run: the approval was not answered.",
-  })
-  expect(toolCalls).toBe(1)
 })
 
 const usage = (

@@ -9,14 +9,6 @@ const readWithDefaults = (previous: UserSettings, text: string | null) =>
 test("a missing or empty file holds the default settings: every switch on, the rail layout", () => {
   expect(readWithDefaults(initial, null)).toEqual(initial)
   expect(readWithDefaults(initial, " \n")).toEqual(initial)
-  expect(defaultSettings).toEqual({
-    tabs: { stopAgentOnClose: true, newTabPosition: "end" },
-    worktrees: { removeOnTabClose: true },
-    files: { folderIcons: true },
-    sidebar: { layout: "rail" },
-    agents: { stopWhenIdleMinutes: 10 },
-    updates: { automaticCheck: true, beta: false },
-  })
 })
 
 test("a setting in the file replaces its default, and one left out falls back to it", () => {

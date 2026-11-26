@@ -15,31 +15,18 @@ const draft = (text: string) => ({ text, images: [] })
 const setup = async () => {
   const { registry, server } = makeTestRegistry()
   const at = DateTime.makeUnsafe(Date.now())
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: project,
-    workingFolder: project,
-    inWorktree: false,
-    branch: "main",
-    started: false,
-    workingFolderDeleted: false,
-    title: "New session",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "idle",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set(
+    "s1",
+    makeTestSession({
+      id: "s1",
+      projectPath: project,
+      started: false,
+      title: "New session",
+      statusChangedAt: at,
+      createdAt: at,
+      lastActivityAt: at,
+    }),
+  )
   const sessions = sessionsOf(project)
   const transcript = transcriptOf("s1")
   registry.mount(sessions.ids)
@@ -161,7 +148,6 @@ test("a failed send puts its draft back and records its error, with nobody looki
 
   await vi.waitFor(() =>
     expect(registry.get(sendFailureOf("s1"))).toMatchObject({
-      text: "The message was not sent.",
       retryable: true,
       draft: draft("lost?"),
     }),

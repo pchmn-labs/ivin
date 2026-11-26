@@ -1,7 +1,5 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { layerScripted, type StartInput } from "@ivin/harness"
-import { Effect, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
+import type { StartInput } from "@ivin/harness"
+import { Effect, Stream } from "effect"
 import { execFileSync } from "node:child_process"
 import {
   existsSync,
@@ -15,63 +13,21 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import { beforeEach, expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
 import { migrations, runMigrations } from "../shared/adapters/migrations.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { git } from "./git-fixture.ts"
+import { type Client, newDatabase as newDb, withServer as serve } from "./test-server.ts"
 
 // Real git: about 300 ms alone.
 vi.setConfig({ testTimeout: 3000 })
 
-const gitEnv = {
-  ...process.env,
-  GIT_AUTHOR_NAME: "ivin",
-  GIT_AUTHOR_EMAIL: "ivin@example.com",
-  GIT_COMMITTER_NAME: "ivin",
-  GIT_COMMITTER_EMAIL: "ivin@example.com",
-  GIT_CONFIG_GLOBAL: "/dev/null",
-}
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", args, { cwd, env: gitEnv, encoding: "utf8" }).trim()
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  return db
-}
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
+const newDatabase = () => newDb({ trusted: false })
 
 const withServer = <A, E>(
   db: DatabaseSync,
   use: (client: Client) => Effect.Effect<A, E>,
   starts: StartInput[] = [],
 ) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(
-            layerScripted([[{ type: "status", status: "idle", raw: null }]], { starts }),
-          ),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
+  serve(use, { db, turns: [[{ type: "status", status: "idle", raw: null }]], scripted: { starts } })
 
 let root: string
 let project: string

@@ -51,6 +51,19 @@ Every other direction is a convention nothing checks: `ui/` reads `hooks/` and `
 
 Beside the file they test, as `<file>.test.ts`. `rules/` are called directly; each package's file says how the other layers are tested.
 
+A test is written for a behaviour that can break without anyone seeing it soon. None is written for:
+
+- how the UI looks: a size, an alignment, a spacing, a colour, which icon or mark is drawn. The prototype and the app in use show it. A frame rate is the exception, in a `*.perf.test.tsx`.
+- copy, a label, an attribute, a class name or a constant: the test would repeat the code.
+- what a library does on its own, such as Base UI's focus and Escape or CodeMirror's default keys.
+- a case a lower layer already tests. A rule's cases are tested in `rules/`; a layer above tests one of them, to prove it calls the rule.
+
+A UI test covers what the user does and what it leads to: a key or a click, the server call it makes, what stays on screen when that call fails. A ticket's criterion about looks is checked in the app, not by a test.
+
+A bug fix is the exception to the list above: it may come with a test of the case that broke, whatever the case, when the bug could come back unseen.
+
+Setup that two test files need goes in a `test-<what>.ts` beside them, never copied. A test that needs a git repository copies one built once for its file (`apps/server/src/rpc/git-fixture.ts`).
+
 The `node` test project puts a failing `claude` first on the PATH, so a test that spawns Claude Code puts its own fake before it. `IVIN_TEST_CLAUDE=1` runs against the installed CLI.
 
 A test does not depend on timing: a browser test waits for what the user would see (`expect.element`, `expect.poll`), never for a fixed delay or a number of frames. The CI runs each test a pull request adds or changes 20 times; when that job fails, `pnpm test:repeat-changed` reproduces it. Find the cause in the app or the test, never hide it with `--retry` or a longer wait.

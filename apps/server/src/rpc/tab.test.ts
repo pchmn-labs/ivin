@@ -1,29 +1,10 @@
-import { layerScripted, type ScriptedElement } from "@ivin/harness"
-import { Rpcs } from "@ivin/contracts/rpcs"
+import type { ScriptedElement } from "@ivin/harness"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { Effect, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
-import { DatabaseSync } from "node:sqlite"
+import { Effect, Stream } from "effect"
+import type { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { newDatabase, withServer as withTestServer, type Client } from "./test-server.ts"
 import { until } from "./test-waits.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
 
 interface Harness {
   readonly settings?: ReadonlyArray<string | null>
@@ -34,30 +15,9 @@ interface Harness {
 
 const withServer = <A, E>(
   db: DatabaseSync,
-  use: (client: Effect.Success<ReturnType<typeof makeClient>>) => Effect.Effect<A, E>,
+  use: (client: Client) => Effect.Effect<A, E>,
   { settings = [], turns = [], closed = [] }: Harness = {},
-) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf(settings)),
-          Layer.provide(layerScripted(turns, { closed })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
+) => withTestServer(use, { db, settings, turns, scripted: { closed } })
 
 const newSession = (client: Client, projectPath: string) =>
   client["session.create"]({ projectPath })
@@ -161,21 +121,6 @@ const barOf = (client: Client, count: number) =>
     return ids
   })
 
-test("reordering puts the named tabs first and keeps the others after them", async () => {
-  const { ids, reordered } = await withServer(newDatabase(), (client) =>
-    Effect.gen(function* () {
-      const ids = yield* barOf(client, 4)
-      const reordered = yield* client["tab.reorder"]({
-        projectPath: "/a/first",
-        sessionIds: [ids[2]!, ids[0]!],
-      })
-      return { ids, reordered }
-    }),
-  )
-
-  expect(reordered.tabs.map((t) => t.sessionId)).toEqual([ids[2], ids[0], ids[1], ids[3]])
-})
-
 test.each([
   ["a selected tab selects the next one", 1, 2],
   ["the selected last tab selects the previous one", 2, 1],
@@ -261,11 +206,7 @@ const currentSettings = (client: Client) =>
     Effect.map((head) => (head._tag === "Some" ? head.value : null)),
   )
 
-// Closes the tab of a session whose agent is working, once the settings file reads as `settingsAre` says.
-const closeWorkingTab = (
-  settings: ReadonlyArray<string | null>,
-  settingsAre: (stop: boolean, problem: string | null) => boolean,
-) => {
+const closeWorkingTab = (settings: ReadonlyArray<string | null>, stopAgentOnClose: boolean) => {
   const closed: string[] = []
   return withServer(
     newDatabase(),
@@ -274,8 +215,7 @@ const closeWorkingTab = (
         yield* until(
           currentSettings(client),
           (current) =>
-            current !== null &&
-            settingsAre(current.settings.tabs.stopAgentOnClose, current.problem?.reason ?? null),
+            current !== null && current.settings.tabs.stopAgentOnClose === stopAgentOnClose,
         )
         const [sessionId] = yield* barOf(client, 1)
         yield* client["session.sendMessage"]({
@@ -297,7 +237,7 @@ const closeWorkingTab = (
 }
 
 test("closing a tab stops its session's agent, and the session is idle", async () => {
-  const { sessionId, tabs, status, closed } = await closeWorkingTab([null], (stop) => stop)
+  const { sessionId, tabs, status, closed } = await closeWorkingTab([null], true)
 
   expect(tabs.tabs).toEqual([])
   expect(closed).toEqual([sessionId])
@@ -307,29 +247,10 @@ test("closing a tab stops its session's agent, and the session is idle", async (
 test("closing a tab leaves the agent running when settings.json turns stopping off", async () => {
   const { tabs, status, closed } = await closeWorkingTab(
     [`{ "tabs": { "stopAgentOnClose": false } }`],
-    (stop) => !stop,
+    false,
   )
 
   expect(tabs.tabs).toEqual([])
-  expect(closed).toEqual([])
-  expect(status).toBe("working")
-})
-
-test("a change to settings.json is read again: turning stopping back on stops the agent", async () => {
-  const { sessionId, closed } = await closeWorkingTab(
-    [`{ "tabs": { "stopAgentOnClose": false } }`, `{ "tabs": { "stopAgentOnClose": true } }`],
-    (stop) => stop,
-  )
-
-  expect(closed).toEqual([sessionId])
-})
-
-test("an invalid settings.json keeps the previous settings", async () => {
-  const { status, closed } = await closeWorkingTab(
-    [`{ "tabs": { "stopAgentOnClose": false } }`, `{ "tabs": `],
-    (stop, problem) => !stop && problem === "notJson",
-  )
-
   expect(closed).toEqual([])
   expect(status).toBe("working")
 })

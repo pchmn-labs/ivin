@@ -1,9 +1,5 @@
-import { FILE_LIST_LIMIT, FILE_SIZE_LIMIT, IMAGE_SIZE_LIMIT } from "@ivin/contracts/file"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { layerScripted } from "@ivin/harness"
-import { Effect, Layer, type Scope, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
-import { execFileSync } from "node:child_process"
+import { FILE_SIZE_LIMIT, IMAGE_SIZE_LIMIT } from "@ivin/contracts/file"
+import { Effect, Stream } from "effect"
 import {
   chmodSync,
   readdirSync,
@@ -19,16 +15,10 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { git } from "./git-fixture.ts"
+import { callIn, commitAll as commitAllIn, write } from "./test-file-repo.ts"
+import { type Client, withServer } from "./test-server.ts"
 
 // Real git: over 1 s when the suite runs other git tests beside it.
 vi.setConfig({ testTimeout: 5000 })
@@ -36,63 +26,15 @@ vi.setConfig({ testTimeout: 5000 })
 let root: string
 let project: string
 
-const write = (path: string, text = "") => {
-  mkdirSync(join(path, ".."), { recursive: true })
-  writeFileSync(path, text)
-}
+const initRepo = () => git(project, "init", "--quiet", "-b", "main")
 
 beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-files-")))
   project = join(root, "project")
   mkdirSync(project)
-  execFileSync("git", ["init", "--quiet", "-b", "main"], {
-    cwd: project,
-    env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" },
-  })
 })
 
 afterEach(() => rmSync(root, { recursive: true, force: true }))
-
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync(
-    "git",
-    [
-      "-c",
-      "user.name=ivin",
-      "-c",
-      "user.email=ivin@example.com",
-      "-c",
-      "commit.gpgsign=false",
-      ...args,
-    ],
-    { cwd, env: { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" } },
-  )
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E, Scope.Scope>) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: join(root, "images") })),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([], { starts: [], closed: [] })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-}
 
 // Lists `path` in a new session of `projectPath`, and the error's tag when it fails.
 const listIn = (projectPath: string, ...paths: string[]) =>
@@ -127,6 +69,7 @@ test("lists one level of the working folder, folders first, then a folder inside
 })
 
 test("lists what git ignores, flagged, at every level, and leaves out the .git folder", async () => {
+  initRepo()
   write(join(project, ".gitignore"), "dist/\n*.log\n")
   write(join(project, "dist/bundle.js"))
   write(join(project, "dist/lib/deep.js"))
@@ -420,24 +363,12 @@ test("reading outside the working folder needs an existing absolute path and a s
   ).toBe("SessionNotFound")
 })
 
-// Runs `call` in a new session of `projectPath`, and the error's tag when it fails.
-const callIn = <A>(
-  projectPath: string,
-  call: (client: Client, sessionId: string) => Effect.Effect<A, { readonly _tag: string }>,
-) =>
-  withServer((client) =>
-    Effect.gen(function* () {
-      const { id } = yield* client["session.create"]({ projectPath })
-      return yield* call(client, id).pipe(Effect.catch((error) => Effect.succeed(error._tag)))
-    }),
-  )
-
 const statusIn = (projectPath: string) =>
   callIn(projectPath, (client, sessionId) => client["file.gitStatus"]({ sessionId }))
 
 const commitAll = () => {
-  git(project, "add", "--all")
-  git(project, "commit", "--quiet", "-m", "initial")
+  initRepo()
+  commitAllIn(project)
 }
 
 test("git status reports a modified, an added, an untracked and a deleted file", async () => {
@@ -526,6 +457,7 @@ test("lists the files git does not ignore, untracked included and deleted left o
 })
 
 test("lists a subfolder's files relative to it", async () => {
+  initRepo()
   write(join(project, "apps/web/src/a.ts"))
   write(join(project, "root.ts"))
 
@@ -543,16 +475,6 @@ test("outside a git repository, walks the folder without the .git folder", async
 
   expect(await filesIn(plain)).toEqual({ paths: ["dist/out.js", "notes.log"], truncated: false })
 })
-
-test("outside a git repository, the walk stops at the limit and says so", async () => {
-  const plain = join(root, "plain")
-  mkdirSync(plain)
-  for (let index = 0; index <= FILE_LIST_LIMIT; index++) writeFileSync(join(plain, `${index}`), "")
-
-  const list = await filesIn(plain)
-  expect(list).toMatchObject({ truncated: true })
-  expect((list as { paths: ReadonlyArray<string> }).paths).toHaveLength(FILE_LIST_LIMIT)
-}, 30_000)
 
 test("listing files fails for a deleted working folder and an unknown session", async () => {
   const gone = join(root, "gone")
@@ -599,7 +521,7 @@ const watchIn = <A, E>(
         }
       })
       return yield* use(next, yield* Effect.race(next, probes))
-    }),
+    }).pipe(Effect.scoped),
   )
 
 // Pulls batches until one holds `path`, and every path seen on the way.
@@ -649,6 +571,7 @@ test("a change in an ignored folder does not reach the watch", async () => {
 
 test("a change to git's index reaches the watch as a change with no path", async () => {
   write(join(project, "a.ts"))
+  initRepo()
   git(project, "add", "a.ts")
 
   const first = await watchIn(

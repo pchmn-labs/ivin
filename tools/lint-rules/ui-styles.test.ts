@@ -216,30 +216,13 @@ const tsxAllowed: Case[] = [
     "a native <button>, as a test file",
     `export const A = () => (\n  <button type="button" />\n)\n`,
   ],
-  ...[
-    "project/ui/project-rail.tsx",
-    "project/ui/project-select.tsx",
-    "project/ui/project-strip.tsx",
-    "session/ui/branch-picker.tsx",
-    "session/ui/checkout-sync.tsx",
-    "session/ui/draft-images.tsx",
-    "session/ui/pick-working-folder.tsx",
-    "session/ui/run-options-menu.tsx",
-    "session/ui/working-folder-picker.tsx",
-    "tab/ui/sub-view-tabs.tsx",
-    "tab/ui/tab-bar.tsx",
-    "transcript/ui/background-fold.tsx",
-    "transcript/ui/image-marker.tsx",
-    "transcript/ui/image-thumbnail.tsx",
-    "transcript/ui/turn-work.tsx",
-    "update/ui/update-button.tsx",
-    "view/ui/view-dialog.tsx",
-    "view/ui/view-sheet.tsx",
-  ].map((file): Case => [
-    `${ui}/modules/${file}`,
-    "a native control, as a control no core component draws",
-    `export const A = () => (\n  <button type="button"><input type="radio" /></button>\n)\n`,
-  ]),
+  ...["project/ui/project-rail.tsx", "transcript/ui/turn-work.tsx", "view/ui/view-sheet.tsx"].map(
+    (file): Case => [
+      `${ui}/modules/${file}`,
+      "a native control, as a control no core component draws",
+      `export const A = () => (\n  <button type="button"><input type="radio" /></button>\n)\n`,
+    ],
+  ),
 ]
 
 beforeAll(async () => {

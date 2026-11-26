@@ -1,19 +1,6 @@
 import { defaultSettings } from "@ivin/contracts/setting"
 import { expect, test } from "vitest"
-import { checkSetting, settingPaths, valueAt } from "./setting-path.ts"
-
-test("the known paths are the dotted paths of the settings schema's leaves", () => {
-  expect(settingPaths).toEqual([
-    "tabs.stopAgentOnClose",
-    "tabs.newTabPosition",
-    "worktrees.removeOnTabClose",
-    "files.folderIcons",
-    "sidebar.layout",
-    "agents.stopWhenIdleMinutes",
-    "updates.automaticCheck",
-    "updates.beta",
-  ])
-})
+import { checkSetting, valueAt } from "./setting-path.ts"
 
 test("a value of the setting's type is accepted, whatever path holds it", () => {
   expect(checkSetting("tabs.stopAgentOnClose", false)).toEqual({ ok: true })

@@ -19,16 +19,6 @@ test("a label makes the icon an image with that name", async () => {
   await expect.element(page.getByRole("img", { name: "Done" })).toBeVisible()
 })
 
-test("the loader spins", async () => {
-  const { container } = await render(<Icon name="loader" />)
-  expect(container.querySelector("svg")?.getAttribute("class")).toContain("iv-icon--spin")
-})
-
-test("question is drawn filled", async () => {
-  const { container } = await render(<Icon name="question" />)
-  expect(container.querySelector("path")?.getAttribute("d")).toMatch(/^M128,24A104,104/)
-})
-
 test("an icon loaded on first use shows an empty slot of its size, then the glyph", async () => {
   const { container } = await render(<Icon name="lock" size={12} />)
   expect(container.querySelector("svg")?.getAttribute("width")).toBe("12")

@@ -1,6 +1,7 @@
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
+import { makeTestSession } from "../../../core/test-session.ts"
 import { transcriptOf } from "../../transcript/atoms/get-items.ts"
 import { interruptSessionAtom } from "./interrupt-session.ts"
 import { sessionsOf } from "./list-sessions.ts"
@@ -10,31 +11,18 @@ const project = "/project"
 const setup = async () => {
   const { registry, server } = makeTestRegistry()
   const at = DateTime.makeUnsafe(Date.now())
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: project,
-    workingFolder: project,
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "t",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "working",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set(
+    "s1",
+    makeTestSession({
+      id: "s1",
+      projectPath: project,
+      title: "t",
+      status: "working",
+      statusChangedAt: at,
+      createdAt: at,
+      lastActivityAt: at,
+    }),
+  )
   const sessions = sessionsOf(project)
   registry.mount(sessions.ids)
   registry.mount(interruptSessionAtom)
