@@ -4,31 +4,42 @@ import { expect, test } from "vitest"
 import { PluginHost, type RunningPluginHost } from "./plugin-host.ts"
 import { layerPluginStubs } from "./plugin-stubs.ts"
 import { runPluginHost } from "./run-plugin-host.ts"
+import { layerPluginReloads, PluginReloads } from "./plugin-reloads.ts"
 import { layerServerHalves, ServerHalves } from "./server-halves.ts"
-import { UserPlugins, type UserPluginsService } from "./user-plugins.ts"
+import { PluginNotCompiled, UserPlugins, type UserPluginsService } from "./user-plugins.ts"
 
 const timings = {
   heartbeatEvery: Duration.millis(5),
   heartbeatTimeout: Duration.millis(40),
   restartDelay: Duration.millis(5),
+  maxActivations: 50,
 }
 
 type Behaviour = "ok" | "blocks" | "exits" | "throws"
 
 // Each plugin's server half behaves as its id says; a launch is one host process.
 const setup = (behaviours: Record<string, Behaviour>) => {
+  const events: string[] = []
   const logs: string[] = []
   const launches: string[][] = []
+  const versions: Record<string, number> = {}
+  const failing = new Set<string>()
   const folders = Object.keys(behaviours).map((name) => ({
     name,
     path: `/plugins/${name}`,
     manifest: JSON.stringify({ ivin: { id: name, server: "src/server.ts" } }),
   }))
   const userPlugins: UserPluginsService = {
-    folders: Effect.succeed(folders),
-    compile: ({ id }) => Effect.succeed(`${id}.mjs`),
+    folders: Effect.sync(() => [...folders]),
+    compile: ({ id }) =>
+      failing.has(id)
+        ? Effect.fail(new PluginNotCompiled({ reason: "Could not compile src/server.ts" }))
+        : Effect.succeed(`${id}-${versions[id] ?? 1}.mjs`),
     bundlePath: (name) => `/cache/${name}`,
     lock: () => Effect.void,
+    changes: Stream.empty,
+    check: () => Effect.succeed([]),
+    create: () => Effect.succeed(""),
     appendLog: (id, line) => Effect.sync(() => void logs.push(`${id}: ${line}`)),
     readLog: () => Effect.succeed([]),
   }
@@ -40,8 +51,9 @@ const setup = (behaviours: Record<string, Behaviour>) => {
       const out = yield* Queue.unbounded<HostLog>()
       let blocked = false
       const host: RunningPluginHost = {
-        activate: ({ id }) =>
+        activate: ({ id, file }) =>
           Effect.gen(function* () {
+            events.push(`activate ${file}`)
             const behaviour = behaviours[id]
             if (behaviour === "blocks") {
               blocked = true
@@ -55,7 +67,7 @@ const setup = (behaviours: Record<string, Behaviour>) => {
             active.push(id)
             yield* Queue.offer(out, { id, line: "activated" })
           }),
-        deactivate: () => Effect.void,
+        deactivate: (id) => Effect.sync(() => void events.push(`deactivate ${id}`)),
         ping: Effect.suspend(() => (blocked ? Effect.never : Effect.void)),
         logs: Stream.fromQueue(out),
         calls: Stream.empty,
@@ -66,18 +78,22 @@ const setup = (behaviours: Record<string, Behaviour>) => {
       return host
     }),
   }
-  return { logs, launches, userPlugins, launcher }
+  return { events, versions, failing, folders, logs, launches, userPlugins, launcher }
 }
 
 const run = <A>(
   fixture: ReturnType<typeof setup>,
-  use: (halves: ServerHalves["Service"]) => Effect.Effect<A>,
+  use: (halves: ServerHalves["Service"], reloads: PluginReloads["Service"]) => Effect.Effect<A>,
+  hostTimings = timings,
 ) =>
   Effect.runPromise(
     Effect.gen(function* () {
       const halves = yield* ServerHalves
-      const fiber = yield* Effect.forkChild(runPluginHost(timings))
-      const result = yield* use(halves)
+      const reloads = yield* PluginReloads
+      const fiber = yield* Effect.forkChild(runPluginHost(hostTimings))
+      // The runner subscribes as it starts.
+      yield* Effect.sleep(Duration.millis(10))
+      const result = yield* use(halves, reloads)
       yield* Fiber.interrupt(fiber)
       return result
     }).pipe(
@@ -85,6 +101,7 @@ const run = <A>(
         Layer.mergeAll(
           layerServerHalves,
           layerPluginStubs,
+          layerPluginReloads,
           Layer.succeed(UserPlugins)(fixture.userPlugins),
           Layer.succeed(PluginHost)(fixture.launcher),
         ),
@@ -162,4 +179,106 @@ test("no host starts when no plugin has a server half", async () => {
   const fixture = setup({})
   await run(fixture, () => Effect.sleep(Duration.millis(50)))
   expect(fixture.launches).toHaveLength(0)
+})
+
+test("a reload request deactivates the running half and activates the new version", async () => {
+  const fixture = setup({ a: "ok" })
+  await run(fixture, (_, reloads) =>
+    Effect.gen(function* () {
+      yield* until(() => fixture.events.length === 1)
+      fixture.versions["a"] = 2
+      yield* reloads.request("a")
+      yield* until(() => fixture.events.length === 3)
+    }),
+  )
+  expect(fixture.events).toEqual([
+    "activate /cache/a-1.mjs",
+    "deactivate a",
+    "activate /cache/a-2.mjs",
+  ])
+  expect(fixture.launches).toHaveLength(1)
+})
+
+test("a half that failed to activate is activated again by a reload", async () => {
+  const fixture = setup({ bad: "throws", good: "ok" })
+  await run(fixture, (halves, reloads) =>
+    Effect.gen(function* () {
+      yield* until(() => fixture.launches[0]?.includes("good") === true)
+      expect(yield* halves.get("bad")).toBe("failed")
+      yield* reloads.request("bad", true)
+      yield* until(
+        () => fixture.events.filter((e) => e.startsWith("activate /cache/bad")).length === 2,
+      )
+    }),
+  )
+})
+
+test("a reload of a plugin that fails to compile leaves the running version alone", async () => {
+  const fixture = setup({ a: "ok" })
+  await run(fixture, (halves, reloads) =>
+    Effect.gen(function* () {
+      yield* until(() => fixture.events.length === 1)
+      fixture.failing.add("a")
+      yield* reloads.request("a")
+      yield* until(() => fixture.logs.some((line) => line.includes("Could not compile")))
+      expect(yield* halves.get("a")).toBe("active")
+    }),
+  )
+  expect(fixture.events).toEqual(["activate /cache/a-1.mjs"])
+})
+
+test("the host starts when a reload brings the first server half", async () => {
+  const fixture = setup({ late: "ok" })
+  const folder = fixture.folders[0]!
+  fixture.folders.length = 0
+  await run(fixture, (halves, reloads) =>
+    Effect.gen(function* () {
+      yield* Effect.sleep(Duration.millis(30))
+      expect(fixture.launches).toHaveLength(0)
+      fixture.folders.push(folder)
+      yield* reloads.request("late")
+      yield* until(() => fixture.events.length === 1)
+      expect(yield* halves.get("late")).toBe("active")
+    }),
+  )
+})
+
+test("an idle host is replaced once enough versions have piled up, and the new one runs the current halves", async () => {
+  const fixture = setup({ a: "ok" })
+  await run(
+    fixture,
+    (_, reloads) =>
+      Effect.gen(function* () {
+        yield* until(() => fixture.events.length === 1)
+        fixture.versions["a"] = 2
+        yield* reloads.request("a")
+        yield* until(() => fixture.launches.length === 2)
+        yield* until(
+          () =>
+            fixture.events.at(-1) === "activate /cache/a-2.mjs" &&
+            fixture.launches[1]?.length === 1,
+        )
+      }),
+    { ...timings, maxActivations: 1 },
+  )
+  expect(fixture.logs.some((line) => /Disabled/.test(line))).toBe(false)
+})
+
+test("a request after a save that left the compiled file as it was swaps nothing, and a forced one does", async () => {
+  const fixture = setup({ a: "ok" })
+  await run(fixture, (_, reloads) =>
+    Effect.gen(function* () {
+      yield* until(() => fixture.events.length === 1)
+      yield* reloads.request("a")
+      yield* Effect.sleep(Duration.millis(30))
+      expect(fixture.events).toEqual(["activate /cache/a-1.mjs"])
+      yield* reloads.request("a", true)
+      yield* until(() => fixture.events.length === 3)
+    }),
+  )
+  expect(fixture.events).toEqual([
+    "activate /cache/a-1.mjs",
+    "deactivate a",
+    "activate /cache/a-1.mjs",
+  ])
 })

@@ -59,9 +59,7 @@ const harnessCheck = ({ id, program }: Diagnosis["harness"]): Check => {
     : { check: "harness", ok: true, message: `${program.name} found at ${program.path}` }
 }
 
-const skillCheck = (harness: Diagnosis["harness"]["id"], skill: Diagnosis["skill"]): Check => {
-  if (skill === null)
-    return { check: "skill", ok: true, message: `The ${harness} harness takes no skills` }
+const skillCheck = (skill: Diagnosis["skills"][number]): Check => {
   const { name, path, status } = skill
   switch (status) {
     case "installed":
@@ -85,13 +83,24 @@ const skillCheck = (harness: Diagnosis["harness"]["id"], skill: Diagnosis["skill
   }
 }
 
+const skillChecks = (diagnosis: Diagnosis): readonly Check[] =>
+  diagnosis.skills.length === 0
+    ? [
+        {
+          check: "skill",
+          ok: true,
+          message: `The ${diagnosis.harness.id} harness takes no skills`,
+        },
+      ]
+    : diagnosis.skills.map(skillCheck)
+
 export const checksOf = (diagnosis: Diagnosis, socketPath: string): readonly Check[] => [
   { check: "app", ok: true, message: `ivin ${diagnosis.version} is running` },
   { check: "socket", ok: true, message: `Answering on ${socketPath}` },
   fileCheck("settings", diagnosis.settings, settingsProblem, "settings"),
   fileCheck("keybindings", diagnosis.keybindings, keybindingsProblem, "keybindings"),
   harnessCheck(diagnosis.harness),
-  skillCheck(diagnosis.harness.id, diagnosis.skill),
+  ...skillChecks(diagnosis),
 ]
 
 export const doctor: Command = {
@@ -99,7 +108,7 @@ export const doctor: Command = {
   summary: "Check that ivin, its files and the agent's program are healthy",
   usage: "ivin doctor [--json]",
   description:
-    "Prints one line per check: the app's version, the socket, settings.json, keybindings.json, the program the agents run and the install of ivin's skill for them. Exits 1 when a check fails.",
+    "Prints one line per check: the app's version, the socket, settings.json, keybindings.json, the program the agents run and the install of ivin's skills for them. Exits 1 when a check fails.",
   options: {},
   maxArguments: 0,
   run: () =>

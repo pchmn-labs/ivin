@@ -37,13 +37,16 @@ const targetArg = (args: Args): Effect.Effect<AnnotationTarget, PluginCallFailed
 // Answers the plugins' `ctx` calls and tells them what happens, for as long as `host` runs.
 export const serveHost = (
   host: RunningPluginHost,
-  plugins: ReadonlyArray<{ readonly id: string; readonly permissions: Permissions }>,
+  plugins: {
+    // The ids of the running plugins, in load order.
+    readonly order: () => ReadonlyArray<string>
+    readonly permissions: (id: string) => Permissions
+  },
 ) =>
   Effect.gen(function* () {
     const bridge = yield* PluginBridge
     const services = yield* PluginServices
     const storage = yield* PluginStorage
-    const permissionsOf = new Map(plugins.map((p) => [p.id, p.permissions]))
     const subscribers = new Map<WatchedKind | "settingChanged" | "beforeSpawn", Set<string>>()
     const commands = new Map<string, string>()
 
@@ -59,7 +62,7 @@ export const serveHost = (
       if (kind === "transcript" || kind === "sessionCreated") bridge.watch(kind, true)
     }
     const subscribersOf = (kind: WatchedKind | "settingChanged" | "beforeSpawn") =>
-      plugins.map((p) => p.id).filter((id) => subscribers.get(kind)?.has(id))
+      plugins.order().filter((id) => subscribers.get(kind)?.has(id))
 
     const scheduler = yield* makePollScheduler(bridge.windowVisible, (plugin, key) =>
       dispatch(plugin, "poll", { key }).pipe(
@@ -217,7 +220,7 @@ export const serveHost = (
         case "permission.check":
           return Effect.sync(() => {
             const verdict = verdictFor(
-              permissionsOf.get(id)!,
+              plugins.permissions(id),
               args["call"] as unknown as PluginCall,
             )
             return verdict.allowed ? null : verdict.missing
@@ -297,4 +300,14 @@ export const serveHost = (
       ),
       Effect.forkScoped,
     )
+
+    return {
+      // What a plugin registered goes with its deactivation: its handlers die in the host.
+      forget: (id: string) =>
+        Effect.suspend(() => {
+          for (const set of subscribers.values()) set.delete(id)
+          for (const [command, owner] of commands) if (owner === id) commands.delete(command)
+          return scheduler.stopPlugin(id)
+        }),
+    }
   })

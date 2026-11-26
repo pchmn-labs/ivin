@@ -11,6 +11,12 @@ test("a stored session id is passed to claude with --resume", () => {
   expect(claudeArgs(options, null)).not.toContain("--resume")
 })
 
+test("each extra directory is passed with its own --add-dir, before --resume", () => {
+  const args = claudeArgs(options, "abc", ["/a", "/b"])
+  expect(args.join(" ")).toContain("--add-dir /a --add-dir /b --resume abc")
+  expect(claudeArgs(options, null)).not.toContain("--add-dir")
+})
+
 const offered = claudeRunOptions([])
 const efforts = offered.effort.values.map((effort) => effort.value)
 const permissionModes = offered.permissionMode.values.map((mode) => mode.value)

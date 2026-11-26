@@ -1,5 +1,6 @@
 import type { RunOptions, Session } from "@ivin/contracts/session"
 import type { HarnessEvent, HarnessOutput } from "@ivin/contracts/transcript"
+import { extraDirectoriesOf } from "./extra-directories.ts"
 import { HarnessError, HarnessProvider, type RequestAnswer } from "@ivin/harness"
 import { Cause, Effect, Exit, Option, Scope, Stream } from "effect"
 import { PluginBridge } from "../../plugin/usecases/plugin-bridge.ts"
@@ -108,6 +109,7 @@ const buildRun = (
       .start({
         sessionId: session.id,
         cwd: session.workingFolder,
+        extraDirectories: yield* extraDirectoriesOf(session),
         options,
         providerSessionId: storedProviderSessionId,
         env: spawn.env,

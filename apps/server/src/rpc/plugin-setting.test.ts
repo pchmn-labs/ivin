@@ -181,7 +181,7 @@ test("a manifest with a malformed setting is refused and logged, and declares no
 
   const result = await withPlugins(home, null, (client) =>
     Effect.gen(function* () {
-      const plugins = yield* client["plugin.list"]().pipe(Stream.runCollect)
+      const plugins = yield* client["plugin.list"]().pipe(Stream.take(1), Stream.runCollect)
       return {
         plugins: [...plugins],
         log: yield* client["plugin.readLog"]({ id: "bad" }),

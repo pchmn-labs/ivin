@@ -11,9 +11,12 @@ import {
 import { socketPathOf, withServer } from "./connection.ts"
 import { doctor } from "./doctor.ts"
 import { link } from "./link.ts"
+import { pluginCheck } from "./plugin-check.ts"
 import { pluginList } from "./plugin-list.ts"
 import { pluginLock } from "./plugin-lock.ts"
 import { pluginLogs } from "./plugin-logs.ts"
+import { pluginNew } from "./plugin-new.ts"
+import { pluginReload } from "./plugin-reload.ts"
 import { runPluginCommand } from "./run.ts"
 import { sessionAnnotate } from "./session-annotate.ts"
 import { sessionRename } from "./session-rename.ts"
@@ -29,6 +32,9 @@ const commands: readonly Command[] = [
   pluginList,
   pluginLock,
   pluginLogs,
+  pluginReload,
+  pluginCheck,
+  pluginNew,
   settingsGet,
   settingsSet,
 ]

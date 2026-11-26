@@ -298,6 +298,25 @@ test("a folder in no trusted project asks to be trusted before it opens, and Tru
   expect(server.untrustedProjects.has("/dev/other")).toBe(false)
 })
 
+test("a workspace with untrusted folders asks once, listing them, and Trust opens it", async () => {
+  Object.defineProperty(window, "ivin", {
+    configurable: true,
+    value: { pickFolder: () => Promise.resolve("/dev/ws/ivin.code-workspace") },
+  })
+  const server = await mountWithSessions()
+  server.untrustedProjects.add("/dev/ws/ivin.code-workspace")
+  server.workspaceFolders.set("/dev/ws/ivin.code-workspace", ["/dev/api", "/dev/web"])
+  await page.getByRole("button", { name: "Open folder…" }).click()
+  const dialog = page.getByRole("dialog")
+  await expect.element(dialog.getByText("Trust 2 folders of “ivin.code-workspace”?")).toBeVisible()
+  await expect.element(dialog.getByText(/\/dev\/api/)).toBeVisible()
+  await expect.element(dialog.getByText(/\/dev\/web/)).toBeVisible()
+
+  await dialog.getByRole("button", { name: "Trust", exact: true }).click()
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
+  expect(server.untrustedProjects.has("/dev/ws/ivin.code-workspace")).toBe(false)
+})
+
 test("cancelling the trust dialog leaves the folder unopened and shows no error", async () => {
   Object.defineProperty(window, "ivin", {
     configurable: true,

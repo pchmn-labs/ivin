@@ -18,6 +18,7 @@ const ARGS = [
 export const claudeArgs = (
   { model, effort, permissionMode }: RunOptions,
   providerSessionId: string | null,
+  extraDirectories: readonly string[] = [],
 ) => [
   ...ARGS,
   "--model",
@@ -26,5 +27,6 @@ export const claudeArgs = (
   effort,
   "--permission-mode",
   permissionMode,
+  ...extraDirectories.flatMap((directory) => ["--add-dir", directory]),
   ...(providerSessionId === null ? [] : ["--resume", providerSessionId]),
 ]

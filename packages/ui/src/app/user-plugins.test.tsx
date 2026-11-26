@@ -191,6 +191,43 @@ test("a plugin listed later, once its dependencies install, loads beside those a
   await expect.element(page.getByText("first plugin")).toBeVisible()
 })
 
+test("a plugin listed again with a new bundle replaces its running version, and the others stay", async () => {
+  const { server } = await renderWith(
+    [],
+    importFromSource({
+      "v1.js": textBundle("version one"),
+      "v2.js": textBundle("version two"),
+      "o.js": textBundle("other plugin"),
+    }),
+    (server) =>
+      server.userPlugins.push(
+        { _tag: "compiled", id: "reloaded", name: "Reloaded", bundle: "v1.js", views: [] },
+        { _tag: "compiled", id: "other", name: "Other", bundle: "o.js", views: [] },
+      ),
+  )
+  await expect.element(page.getByText("version one")).toBeVisible()
+  let bothShown = false
+  const observer = new MutationObserver(() => {
+    const text = document.body.textContent ?? ""
+    if (text.includes("version one") && text.includes("version two")) bothShown = true
+  })
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true })
+
+  server.addUserPlugin({
+    _tag: "compiled",
+    id: "reloaded",
+    name: "Reloaded",
+    bundle: "v2.js",
+    views: [],
+  })
+
+  await expect.element(page.getByText("version two")).toBeVisible()
+  observer.disconnect()
+  await expect.element(page.getByText("version one")).not.toBeInTheDocument()
+  await expect.element(page.getByText("other plugin")).toBeVisible()
+  expect(bothShown).toBe(false)
+})
+
 test("a user plugin whose activate throws leaves the built-in in place, logged once, through later listings", async () => {
   let builtInActivations = 0
   const builtIn: UiPluginEntry = {

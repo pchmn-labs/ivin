@@ -1,9 +1,10 @@
 import { Effect, Layer } from "effect"
-import { readFileSync, realpathSync, statSync } from "node:fs"
+import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
 import { isInTrustedProject } from "../rules/trusted-project.ts"
 import { ProjectTrust } from "../usecases/project-trust.ts"
 import { ProjectStore } from "../usecases/project-store.ts"
+import { WorkingFolderRoot } from "../usecases/working-folder-root.ts"
 
 const realPath = (path: string) => {
   try {
@@ -41,18 +42,47 @@ const checkoutOf = (folder: string): string | null => {
   }
 }
 
+// Mirrors `workingFolderPath` in the worktree rules.
+const workingFolderOf = (root: string, folder: string): string | null => {
+  const base = root.endsWith("/") ? root : `${root}/`
+  if (!folder.startsWith(base)) return null
+  const [workspace, branch] = folder.slice(base.length).split("/")
+  return workspace && branch ? join(root, workspace, branch) : null
+}
+
+const subfoldersOf = (workingFolder: string): string[] => {
+  try {
+    return readdirSync(workingFolder, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(workingFolder, entry.name))
+  } catch {
+    return []
+  }
+}
+
 export const layerFsProjectTrust = Layer.effect(ProjectTrust)(
   Effect.gen(function* () {
     const store = yield* ProjectStore
+    const workingFolderRoot = (yield* WorkingFolderRoot).path
     return {
       isTrusted: (folder) =>
         store.trustedProjects.pipe(
           Effect.map((trusted) => {
             const real = realPath(folder)
-            return isInTrustedProject(trusted.map(realPath), {
-              folder: real,
-              checkout: checkoutOf(real),
-            })
+            const trustedReal = trusted.map(realPath)
+            const place = { folder: real, checkout: checkoutOf(real) }
+            if (isInTrustedProject(trustedReal, place)) return true
+            // A working folder's own folder is trusted when each of its worktrees is of a trusted repository.
+            const working = workingFolderOf(realPath(workingFolderRoot), real)
+            if (working === null) return false
+            const worktrees = subfoldersOf(working).filter((sub) => checkoutOf(sub) !== null)
+            return (
+              worktrees.length > 0 &&
+              real === working &&
+              worktrees.every((sub) =>
+                isInTrustedProject(trustedReal, { folder: sub, checkout: checkoutOf(sub) }),
+              )
+            )
           }),
         ),
       trust: (folder) => store.trust(realPath(folder)),

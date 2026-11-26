@@ -11,6 +11,7 @@ import { expect, test } from "vitest"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { WorkingFolderRoot } from "../modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
@@ -47,6 +48,11 @@ const withServer = <A, E>(
           Layer.provide(layerSettingsFileOf([])),
           Layer.provide(
             Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+          ),
+          Layer.provide(
+            Layer.succeed(WorkingFolderRoot)({
+              path: mkdtempSync(join(tmpdir(), "ivin-worktrees-")),
+            }),
           ),
           Layer.provide(layerScripted([], options)),
         ),

@@ -52,6 +52,8 @@ export class SessionStore extends Context.Service<
       id: string,
       workingFolder: string,
       branch: string | null,
+      // Omitted: the session is in a worktree when its folder is not the project's.
+      inWorktree?: boolean,
     ) => Effect.Effect<void>
     // Cleared by the next `setWorkingFolder`.
     readonly markWorkingFolderDeleted: (id: string) => Effect.Effect<void>

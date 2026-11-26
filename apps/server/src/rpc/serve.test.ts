@@ -7,6 +7,7 @@ import { expect, test, vi } from "vitest"
 import { KeybindingsFile } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { SettingsFile } from "../modules/setting/usecases/settings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { WorkingFolderRoot } from "../modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
 import { layerServices } from "./handlers.ts"
@@ -38,6 +39,9 @@ test("closing a port ends the streams it opened", async () => {
             Layer.mergeAll(
               layerDatabase(":memory:"),
               Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+              Layer.succeed(WorkingFolderRoot)({
+                path: mkdtempSync(join(tmpdir(), "ivin-worktrees-")),
+              }),
               layerScripted([]),
               layerKeybindings,
               layerSettingsFileOf([]),
@@ -99,6 +103,9 @@ test("a handler that dies fails only its own request, and the connection's other
             Layer.mergeAll(
               layerDatabase(":memory:"),
               Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+              Layer.succeed(WorkingFolderRoot)({
+                path: mkdtempSync(join(tmpdir(), "ivin-worktrees-")),
+              }),
               layerScripted([]),
               layerKeybindings,
               layerBrokenSettings,

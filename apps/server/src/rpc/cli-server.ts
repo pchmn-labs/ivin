@@ -12,6 +12,7 @@ import { runPluginHost } from "../modules/plugin/usecases/run-plugin-host.ts"
 import { layerFsSettingsFile } from "../modules/setting/adapters/fs-settings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { SkillInstallation } from "../modules/skill/usecases/skill-installation.ts"
+import { WorkingFolderRoot } from "../modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
 import { layerServices } from "./handlers.ts"
@@ -56,7 +57,7 @@ export interface CliServerOptions {
   readonly ivinHome?: string
   readonly keybindings?: string | null
   readonly version?: string
-  readonly skill?: SkillInstall | null
+  readonly skills?: ReadonlyArray<SkillInstall>
   // Runs the plugin host from this entry, so the plugins of `ivinHome` run their server halves.
   readonly pluginHostEntry?: string
 }
@@ -65,7 +66,7 @@ const layerCliServer = ({
   settings = null,
   keybindings = null,
   ivinHome,
-  skill = null,
+  skills = [],
   pluginHostEntry,
 }: CliServerOptions) =>
   layerServices.pipe(
@@ -73,10 +74,11 @@ const layerCliServer = ({
       Layer.mergeAll(
         layerDatabase(":memory:"),
         Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+        Layer.succeed(WorkingFolderRoot)({ path: mkdtempSync(join(tmpdir(), "ivin-worktrees-")) }),
         layerScripted([]),
         ivinHome === undefined ? layerSettingsFileOf([settings]) : layerFsSettingsFile(ivinHome),
         layerKeybindingsFileOf([keybindings]),
-        Layer.succeed(SkillInstallation)(skill),
+        Layer.succeed(SkillInstallation)(skills),
         ivinHome === undefined ? Layer.empty : layerFsUserPlugins(ivinHome),
         pluginHostEntry === undefined
           ? Layer.empty

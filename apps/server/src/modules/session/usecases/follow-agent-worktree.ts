@@ -3,6 +3,7 @@ import type { HarnessEvent, HarnessOutput } from "@ivin/contracts/transcript"
 import type { Worktree } from "@ivin/contracts/worktree"
 import type { ToolActivity, ToolOutcome, ToolUse } from "@ivin/harness"
 import { Effect } from "effect"
+import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { listWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
 import { folderAfterTool, folderMovedTo, needsWorktreeList } from "../rules/agent-worktree.ts"
@@ -14,6 +15,10 @@ export const followAgentWorktree = (
   toolActivity: (call: ToolUse, result: ToolOutcome) => ToolActivity,
 ) =>
   Effect.gen(function* () {
+    // A workspace has no checkout whose worktrees git could list.
+    if (isWorkspaceFile(session.projectPath)) {
+      return { turnStarted: Effect.void, observe: (_output: HarnessOutput) => Effect.void }
+    }
     const git = yield* Git
     const store = yield* SessionStore
     const known = new Set<string>()

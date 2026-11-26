@@ -77,8 +77,19 @@ export class CommandFailed extends Schema.TaggedError<CommandFailed>()("CommandF
   reason: Schema.String,
 }) {}
 
+// The reason is the check's own message: a plugin whose tsconfig.json cannot be read.
+export class PluginCheckFailed extends Schema.TaggedError<PluginCheckFailed>()(
+  "PluginCheckFailed",
+  { reason: Schema.String },
+) {}
+
+export class PluginNotCreated extends Schema.TaggedError<PluginNotCreated>()("PluginNotCreated", {
+  reason: Schema.String,
+}) {}
+
 export const PluginRpcs = RpcGroup.make(
   // Each plugin as soon as it is compiled or failed: one whose dependencies install comes last.
+  // The stream stays open: a plugin whose files change, or that `plugin.reload` names, comes again with its new bundle, which replaces the earlier entry with its id.
   Rpc.make("plugin.list", { success: UserPlugin, stream: true }),
   // The plugins prebuilt with the app, all at once: the window starts once they are active.
   Rpc.make("plugin.listBuiltin", { success: Schema.Array(UserPlugin) }),
@@ -101,6 +112,24 @@ export const PluginRpcs = RpcGroup.make(
   }),
   // Whether the window is on screen: `ctx.poll` pauses while it is not.
   Rpc.make("plugin.setWindowVisible", { payload: { visible: Schema.Boolean } }),
+  // Compiles both halves again and swaps the running ones; the status is what the plugin reached.
+  Rpc.make("plugin.reload", {
+    payload: { id: Schema.String },
+    success: PluginStatus,
+    error: PluginNotFound,
+  }),
+  // One line per type error, `file(line,column): error TSxxxx: message`; empty when the plugin type-checks.
+  Rpc.make("plugin.check", {
+    payload: { id: Schema.String },
+    success: Schema.Array(Schema.String),
+    error: Schema.Union([PluginNotFound, PluginCheckFailed]),
+  }),
+  // The path of the new plugin's folder.
+  Rpc.make("plugin.create", {
+    payload: { id: Schema.String },
+    success: Schema.String,
+    error: PluginNotCreated,
+  }),
 )
 export class PluginActivateFailed extends Schema.TaggedError<PluginActivateFailed>()(
   "PluginActivateFailed",

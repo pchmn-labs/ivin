@@ -15,7 +15,7 @@ export function useOpenFolder() {
     const exit = await openProject(trust ? { path, trust } : { path })
     if (Exit.isSuccess(exit) || Cause.hasInterruptsOnly(exit.cause)) return
     const error = Cause.squash(exit.cause)
-    if (isNotTrusted(error)) setFolderToTrust(path)
+    if (isNotTrusted(error)) setFolderToTrust({ path, folders: error.folders ?? [] })
     else setFailure({ path, failure: openProjectFailure(error) })
   }
   const openFolder = async () => {

@@ -282,6 +282,11 @@ export const migrations: readonly Migration[] = [
   },
   {
     version: 27,
+    // Null: the folder differs from the project's, as for every session before workspaces.
+    sql: "ALTER TABLE sessions ADD COLUMN in_worktree INTEGER",
+  },
+  {
+    version: 28,
     sql: `CREATE TABLE plugin_storage (
       plugin TEXT NOT NULL,
       key TEXT NOT NULL,

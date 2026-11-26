@@ -7,21 +7,24 @@ import { projectToTrustAtom } from "../atoms/project-to-trust.ts"
 import { useOpenFolder } from "../hooks/use-open-folder.ts"
 
 export function TrustProjectDialog() {
-  const [folder, setFolder] = useAtom(projectToTrustAtom)
+  const [project, setProject] = useAtom(projectToTrustAtom)
   const { trust } = useOpenFolder()
   // The dialog keeps its text while it fades out.
-  const shown = useRef(folder)
-  if (folder !== null) shown.current = folder
-  const path = shown.current ?? ""
-  const close = () => setFolder(null)
+  const shown = useRef(project)
+  if (project !== null) shown.current = project
+  const path = shown.current?.path ?? ""
+  const folders = shown.current?.folders ?? []
+  const workspace = folders.length > 0
+  const name = path.split("/").findLast((part) => part !== "") ?? path
+  const close = () => setProject(null)
   return (
     <Dialog
-      open={folder !== null}
+      open={project !== null}
       onOpenChange={(open) => {
         if (!open) close()
       }}
-      title={`Trust “${path.split("/").findLast((part) => part !== "") ?? path}”?`}
-      description="ivin runs git and the agent in this folder, and both run commands its own files can set up, such as git hooks and the agent's project settings. Trust it only if you know where it comes from."
+      title={workspace ? `Trust ${folders.length} folders of “${name}”?` : `Trust “${name}”?`}
+      description={`ivin runs git and the agent in ${workspace ? "these folders" : "this folder"}, and both run commands its own files can set up, such as git hooks and the agent's project settings. Trust ${workspace ? "them" : "it"} only if you know where ${workspace ? "they come" : "it comes"} from.`}
       actions={
         <>
           <Button variant="secondary" onClick={close}>
@@ -30,18 +33,18 @@ export function TrustProjectDialog() {
           <Button
             variant="primary"
             onClick={() => {
-              if (folder === null) return
+              if (project === null) return
               close()
-              trust(folder)
+              trust(project.path)
             }}
           >
-            Trust and open
+            {workspace ? "Trust" : "Trust and open"}
           </Button>
         </>
       }
     >
       <Text size="xs" tone="faint" mono preWrap>
-        {path}
+        {workspace ? folders.join("\n") : path}
       </Text>
     </Dialog>
   )

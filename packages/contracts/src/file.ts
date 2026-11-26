@@ -108,7 +108,13 @@ export const Change = Schema.Struct({
 export type Change = typeof Change.Type
 
 export const ChangeList = Schema.Union([
-  Schema.Struct({ kind: Schema.Literal("listed"), changes: Schema.Array(Change) }),
+  // `repositories`: in a working folder of several repositories, their folders' names, which
+  // each change's path starts with; absent in a repository's own folder.
+  Schema.Struct({
+    kind: Schema.Literal("listed"),
+    changes: Schema.Array(Change),
+    repositories: Schema.optionalKey(Schema.Array(Schema.String)),
+  }),
   Schema.Struct({ kind: Schema.Literal("not_repository") }),
 ])
 export type ChangeList = typeof ChangeList.Type

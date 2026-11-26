@@ -15,8 +15,8 @@ import type {
 import { activate } from "./ui.tsx"
 
 const projects = [
-  { path: "/shop", name: "shop", lastOpenedAt: testDateTime(0) },
-  { path: "/blog", name: "blog", lastOpenedAt: testDateTime(0) },
+  { path: "/shop", name: "shop", lastOpenedAt: testDateTime(0), folders: [], workspace: false },
+  { path: "/blog", name: "blog", lastOpenedAt: testDateTime(0), folders: [], workspace: false },
 ]
 
 const approval = (sessionId: string, command: string): TranscriptItem => ({

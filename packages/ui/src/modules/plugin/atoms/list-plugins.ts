@@ -13,7 +13,11 @@ export const listPluginsAtom = serverRuntime
         return client["plugin.list"]().pipe(
           Stream.scan(
             () => NONE,
-            (listed, plugin) => [...listed, plugin],
+            (listed, plugin) => {
+              // A reloaded plugin takes the place of its earlier entry, so the order of the others holds.
+              const at = listed.findIndex((earlier) => earlier.id === plugin.id)
+              return at === -1 ? [...listed, plugin] : listed.with(at, plugin)
+            },
           ),
         )
       }),

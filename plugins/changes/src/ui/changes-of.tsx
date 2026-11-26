@@ -17,7 +17,7 @@ import {
 } from "@ivin/plugin-api/ui"
 import { changeItems } from "../rules/change-items.ts"
 import type { Discarding } from "../rules/discarding.ts"
-import { AREA, COMMITTED, UNCOMMITTED } from "../rules/groups.ts"
+import { AREA, COMMITTED, UNCOMMITTED, isUncommitted, repositoryGroupId } from "../rules/groups.ts"
 import { listError } from "../rules/list-error.ts"
 import { FOLDER_DELETED, emptyMessages } from "../rules/messages.ts"
 import type { OnScreen } from "../rules/on-screen.ts"
@@ -26,6 +26,11 @@ import { ListingFailure } from "./listing-failure.tsx"
 
 interface OpenFailure extends ActionFailure {
   readonly retry: () => void
+}
+
+const groupOfPath = (listing: { repositories?: ReadonlyArray<string> }, path: string) => {
+  const repository = listing.repositories?.find((name) => path.startsWith(`${name}/`))
+  return repository === undefined ? null : repositoryGroupId(repository)
 }
 
 export function ChangesOf({ session, onScreen }: { session: Session; onScreen: OnScreen }) {
@@ -50,11 +55,15 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
   const askAll = () => {
     if (changes.length > 0) setDiscarding({ all: true, changes })
   }
+  const askRepository = (repository: string) => {
+    const own = changes.filter((change) => change.path.startsWith(`${repository}/`))
+    if (own.length > 0) setDiscarding({ all: true, changes: own })
+  }
   useEffect(() => {
     onScreen.current = {
       discardFocused: () => {
         const row = focusedRow.current
-        if (row?.groupId === UNCOMMITTED) askOne(row.id)
+        if (row !== null && isUncommitted(row.groupId)) askOne(row.id)
       },
       discardAll: askAll,
     }
@@ -65,27 +74,50 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
 
   const listed = committed.listing.kind === "listed" ? committed.listing : null
   const groups: ReadonlyArray<ChangeGroup> = [
-    ...(changes.length > 0
-      ? [
-          {
-            id: UNCOMMITTED,
-            heading: "Uncommitted",
-            label: "Uncommitted changes",
-            items: changeItems(changes).map((item) => {
-              const failure = discardFailures.get(item.id)
-              return failure === undefined ? item : { ...item, error: listError(failure) }
-            }),
-            onDiscard: askOne,
-            discardCommand: "changes.discard",
-            discardAll: {
-              label: "Discard all uncommitted changes",
-              onDiscard: askAll,
-              command: "changes.discardAll",
+    ...(listing.kind === "listed" && listing.repositories !== undefined
+      ? listing.repositories.flatMap((repository) => {
+          const own = changes.filter((change) => change.path.startsWith(`${repository}/`))
+          if (own.length === 0) return []
+          return [
+            {
+              id: repositoryGroupId(repository),
+              heading: repository,
+              label: `Uncommitted changes in ${repository}`,
+              items: changeItems(own).map((item) => {
+                const failure = discardFailures.get(item.id)
+                return failure === undefined ? item : { ...item, error: listError(failure) }
+              }),
+              onDiscard: askOne,
+              discardCommand: "changes.discard",
+              discardAll: {
+                label: `Discard all uncommitted changes in ${repository}`,
+                onDiscard: () => askRepository(repository),
+              },
+              ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
             },
-            ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
-          },
-        ]
-      : []),
+          ]
+        })
+      : changes.length > 0
+        ? [
+            {
+              id: UNCOMMITTED,
+              heading: "Uncommitted",
+              label: "Uncommitted changes",
+              items: changeItems(changes).map((item) => {
+                const failure = discardFailures.get(item.id)
+                return failure === undefined ? item : { ...item, error: listError(failure) }
+              }),
+              onDiscard: askOne,
+              discardCommand: "changes.discard",
+              discardAll: {
+                label: "Discard all uncommitted changes",
+                onDiscard: askAll,
+                command: "changes.discardAll",
+              },
+              ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
+            },
+          ]
+        : []),
     ...(listed !== null && listed.changes.length > 0
       ? [
           {
@@ -152,7 +184,10 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
               selected={
                 diffOnScreen !== null
                   ? {
-                      groupId: diffOnScreen.kind === "committed" ? COMMITTED : UNCOMMITTED,
+                      groupId:
+                        diffOnScreen.kind === "committed"
+                          ? COMMITTED
+                          : (groupOfPath(listing, diffOnScreen.path) ?? UNCOMMITTED),
                       id: diffOnScreen.path,
                     }
                   : null

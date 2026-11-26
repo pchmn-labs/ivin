@@ -9,6 +9,7 @@ import { DatabaseSync } from "node:sqlite"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { WorkingFolderRoot } from "../modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { Database } from "../shared/adapters/database.ts"
 import { runMigrations } from "../shared/adapters/migrations.ts"
@@ -33,6 +34,7 @@ interface ServerOptions {
   readonly settings?: ReadonlyArray<string | null>
   readonly keybindings?: ReadonlyArray<string | null>
   readonly imageFolder?: string
+  readonly workingFolderRoot?: string
   readonly services?: typeof layerServices
 }
 
@@ -44,6 +46,7 @@ export const serverLayer = ({
   settings = [],
   keybindings = [],
   imageFolder = mkdtempSync(join(tmpdir(), "ivin-images-")),
+  workingFolderRoot = mkdtempSync(join(tmpdir(), "ivin-worktrees-")),
   services = layerServices,
 }: ServerOptions = {}) =>
   handlers.pipe(
@@ -51,6 +54,7 @@ export const serverLayer = ({
     Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
     Layer.provideMerge(Layer.succeed(Database)(db)),
     Layer.provide(Layer.succeed(ImageFolder)({ path: imageFolder })),
+    Layer.provide(Layer.succeed(WorkingFolderRoot)({ path: workingFolderRoot })),
     Layer.provide(layerKeybindingsFileOf(keybindings)),
     Layer.provideMerge(layerSettingsFileOf(settings)),
     Layer.provide(layerScripted(turns, scripted)),

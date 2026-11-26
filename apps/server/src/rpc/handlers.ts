@@ -36,12 +36,17 @@ import { layerPluginBridge, PluginBridge } from "../modules/plugin/usecases/plug
 import { layerPluginServices } from "./plugin-services.ts"
 import { listPluginStatus } from "../modules/plugin/usecases/list-plugin-status.ts"
 import { listBuiltinPlugins } from "../modules/plugin/usecases/list-builtin-plugins.ts"
-import { listPlugins } from "../modules/plugin/usecases/list-plugins.ts"
+import { watchPlugins } from "../modules/plugin/usecases/watch-plugins.ts"
 import { layerServerHalves } from "../modules/plugin/usecases/server-halves.ts"
+import { checkPlugin } from "../modules/plugin/usecases/check-plugin.ts"
+import { createPlugin } from "../modules/plugin/usecases/create-plugin.ts"
 import { lockPlugin } from "../modules/plugin/usecases/lock-plugin.ts"
+import { layerPluginReloads } from "../modules/plugin/usecases/plugin-reloads.ts"
+import { reloadPlugin } from "../modules/plugin/usecases/reload-plugin.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
+import { layerFsWorkingFolders } from "../modules/worktree/adapters/fs-working-folders.ts"
 import { layerFsProjectTrust } from "../modules/project/adapters/fs-project-trust.ts"
 import { layerSqliteProjectStore } from "../modules/project/adapters/sqlite-project-store.ts"
 import { closeProject } from "../modules/project/usecases/close-project.ts"
@@ -121,6 +126,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     layerUnrestoredSubViewsDropped,
     layerServerHalves,
     layerPluginServices,
+    layerPluginReloads,
   ).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
     Layer.provideMerge(Layer.mergeAll(layerSessionTabs, layerSessionsWithTab)),
@@ -134,6 +140,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     Layer.provideMerge(
       Layer.mergeAll(
         layerGitCli,
+        layerFsWorkingFolders,
         layerFsFolderReader,
         layerFsFolderWatcher,
         layerFsFileReader,
@@ -186,7 +193,7 @@ export const handlers = Rpcs.toLayer(
       "cli.installInShell": () => installInShell,
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
-      "plugin.list": () => listPlugins,
+      "plugin.list": () => watchPlugins,
       "plugin.listBuiltin": () => listBuiltinPlugins,
       "plugin.reportFailure": ({ id, reason }) => reportPluginFailure(id, reason),
       "plugin.readLog": ({ id }) => readPluginLog(id),
@@ -198,6 +205,9 @@ export const handlers = Rpcs.toLayer(
         Effect.flatMap(PluginBridge, (bridge) =>
           SubscriptionRef.set(bridge.windowVisible, visible),
         ),
+      "plugin.reload": ({ id }) => reloadPlugin(id),
+      "plugin.check": ({ id }) => checkPlugin(id),
+      "plugin.create": ({ id }) => createPlugin(id),
       "setting.watch": () => watchSettings,
       "setting.get": ({ path }) => getSetting(path),
       "setting.set": ({ path, value }) => setSetting(path, value),

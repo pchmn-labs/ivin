@@ -5,6 +5,7 @@ import { SessionStore } from "../../session/usecases/session-store.ts"
 import { ChangeFeed } from "./change-feed.ts"
 import { limitFiles } from "../rules/file-list.ts"
 import { FolderReader } from "./folder-reader.ts"
+import { prefixed, repositoriesIn } from "./repositories.ts"
 import { gitFailed } from "./git-failed.ts"
 
 export const listFiles = (sessionId: string) =>
@@ -14,6 +15,18 @@ export const listFiles = (sessionId: string) =>
     const reader = yield* FolderReader
     const root = yield* reader.realPath(session.workingFolder)
     if (root === null) return yield* new WorkingFolderDeleted({ sessionId })
+    const repositories = yield* repositoriesIn(session, root)
+    if (repositories !== null) {
+      const feed = yield* ChangeFeed
+      const paths: string[] = []
+      for (const repository of repositories) {
+        const listed = yield* feed
+          .listFiles(repository.folder)
+          .pipe(Effect.mapError(gitFailed(sessionId)))
+        for (const path of listed ?? []) paths.push(prefixed(repository, path))
+      }
+      return limitFiles(paths, FILE_LIST_LIMIT)
+    }
     const tracked = yield* (yield* ChangeFeed)
       .listFiles(root)
       .pipe(Effect.mapError(gitFailed(sessionId)))

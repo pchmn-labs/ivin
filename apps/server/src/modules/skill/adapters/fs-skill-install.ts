@@ -110,17 +110,23 @@ export const installSkill = (
   }
 }
 
+// Each folder of `source` is a skill.
 export const layerFsSkillInstallation = (source: string) =>
   Layer.effect(SkillInstallation)(
     Effect.gen(function* () {
       const { skillsFolder } = yield* HarnessProvider
-      if (skillsFolder === null) return null
-      const { cause, ...install } = installSkill(source, skillsFolder)
-      if (install.status === "failed") {
-        yield* logError("skill install", cause)
-      } else {
-        yield* Effect.logInfo(`the ${install.name} skill at ${install.path}: ${install.status}`)
+      if (skillsFolder === null) return []
+      const installs: SkillInstall[] = []
+      for (const entry of readdirSync(source, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue
+        const { cause, ...install } = installSkill(join(source, entry.name), skillsFolder)
+        if (install.status === "failed") {
+          yield* logError("skill install", cause)
+        } else {
+          yield* Effect.logInfo(`the ${install.name} skill at ${install.path}: ${install.status}`)
+        }
+        installs.push(install)
       }
-      return install
+      return installs
     }),
   )
