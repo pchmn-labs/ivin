@@ -394,3 +394,54 @@ body {
   color: var(--iv-text-faint);
   font-size: var(--iv-text-xs);
 }
+
+.proto-wide {
+  width: 400px;
+}
+
+.proto-first-heading .proto-list > :first-child .proto-heading {
+  margin-top: 0;
+  padding-top: var(--iv-space-1);
+  border-top: 0;
+}
+
+.proto-tabs {
+  display: flex;
+  gap: var(--iv-space-1);
+  padding: var(--iv-space-1);
+  border-bottom: 1px solid var(--iv-border);
+}
+
+.proto-tab {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--iv-space-1);
+  height: 26px;
+  border: 0;
+  border-radius: var(--iv-radius-sm);
+  background: transparent;
+  color: var(--iv-text-muted);
+  font: inherit;
+  font-size: var(--iv-text-sm);
+  transition: background-color var(--iv-duration-fast) ease-out;
+}
+
+.proto-tab[data-active] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .proto-tab:not([data-active]):hover {
+    background: var(--iv-bg-hover);
+  }
+}
+
+.proto-tab-note {
+  margin: 0;
+  padding: var(--iv-space-2) var(--iv-space-3) 0;
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}

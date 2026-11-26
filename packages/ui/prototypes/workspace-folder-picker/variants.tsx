@@ -64,7 +64,7 @@ const Trigger = forwardRef<
   )
 })
 
-function Branch({ children }: { children: ReactNode }) {
+export function Branch({ children }: { children: ReactNode }) {
   if (children === null) return null
   return (
     <span className="proto-branch">
@@ -138,7 +138,7 @@ export function OneList({ choice, onChoose, started }: LocationProps) {
   )
 }
 
-function usePopup() {
+export function usePopup() {
   const [open, setOpen] = useState(false)
   const anchor = useRef<HTMLSpanElement>(null)
   const trigger = useRef<HTMLButtonElement>(null)
@@ -157,7 +157,7 @@ function usePopup() {
   return { open, setOpen, close, anchor, trigger }
 }
 
-interface Row {
+export interface Row {
   readonly key: string
   readonly icon: IconName
   readonly label: string
@@ -171,14 +171,16 @@ interface Row {
 }
 
 // A keyboard list: Up and Down move, Enter or Right acts, Left goes back, Escape closes.
-function List({
+export function List({
   rows,
   onBack,
+  onSide,
   onClose,
   onHighlight,
 }: {
   rows: ReadonlyArray<Row>
   onBack?: () => void
+  onSide?: (step: 1 | -1) => void
   onClose: () => void
   onHighlight?: (row: Row) => void
 }) {
@@ -209,6 +211,9 @@ function List({
     } else if ((event.key === "ArrowLeft" || event.key === "Backspace") && onBack) {
       event.preventDefault()
       onBack()
+    } else if ((event.key === "ArrowLeft" || event.key === "ArrowRight") && onSide) {
+      event.preventDefault()
+      onSide(event.key === "ArrowLeft" ? -1 : 1)
     } else if (event.key === "Escape") {
       event.preventDefault()
       onClose()
