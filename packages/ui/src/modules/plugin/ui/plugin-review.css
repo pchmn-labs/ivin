@@ -1,0 +1,73 @@
+.iv-plugin-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-3);
+  min-width: 0;
+}
+
+.iv-plugin-review__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-1);
+}
+
+.iv-plugin-review__files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--iv-text-muted);
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+}
+
+.iv-plugin-review__files li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--iv-space-2);
+  padding: 2px 0;
+  overflow-wrap: anywhere;
+}
+
+.iv-plugin-review__status[data-status="A"] {
+  color: var(--iv-git-added);
+}
+
+.iv-plugin-review__status[data-status="M"] {
+  color: var(--iv-git-modified);
+}
+
+.iv-plugin-review__status[data-status="D"] {
+  color: var(--iv-git-deleted);
+}
+
+.iv-plugin-review__diff {
+  max-height: 220px;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-md);
+  background: var(--iv-bg-card);
+  font-family: var(--iv-font-mono);
+  font-size: var(--iv-text-xs);
+  line-height: 18px;
+}
+
+.iv-plugin-review__line {
+  display: block;
+  min-width: max-content;
+  padding: 0 var(--iv-space-2);
+  white-space: pre;
+}
+
+.iv-plugin-review__line[data-kind="added"] {
+  background: var(--iv-diff-added);
+}
+
+.iv-plugin-review__line[data-kind="removed"] {
+  background: var(--iv-diff-deleted);
+}
+
+.iv-plugin-review__line[data-kind="file"],
+.iv-plugin-review__line[data-kind="hunk"] {
+  color: var(--iv-text-faint);
+}

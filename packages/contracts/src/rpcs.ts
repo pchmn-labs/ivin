@@ -39,6 +39,7 @@ const cliSocketTags = [
   "plugin.readLog",
   "plugin.reload",
   "plugin.run",
+  "plugin.setEnabled",
   "plugin.status",
   "server.doctor",
   "session.rename",

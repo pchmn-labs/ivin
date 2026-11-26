@@ -20,17 +20,29 @@ export interface PluginServerOptions {
   // The folder of the app's prebuilt plugins.
   readonly builtins?: string
   readonly turns?: readonly (readonly ScriptedElement[])[]
+  // Project folders to trust, as the user would by opening them.
+  readonly trusted?: ReadonlyArray<string>
+  readonly safe?: boolean
 }
 
 // A server whose plugin host runs the server halves of the plugins in `home`.
 export const withPluginServer = <A, E>(
   home: string,
   use: (client: Client) => Effect.Effect<A, E>,
-  { database = ":memory:", scripted, turns = [], builtins }: PluginServerOptions = {},
+  {
+    database = ":memory:",
+    scripted,
+    turns = [],
+    builtins,
+    trusted = [],
+    safe = false,
+  }: PluginServerOptions = {},
 ) => {
   const db = new DatabaseSync(database)
   Effect.runSync(runMigrations(db))
-  db.prepare("INSERT OR IGNORE INTO trusted_projects (path) VALUES ('/')").run()
+  for (const folder of ["/", ...trusted]) {
+    db.prepare("INSERT OR IGNORE INTO trusted_projects (path) VALUES (?)").run(folder)
+  }
   return Effect.runPromise(
     Effect.gen(function* () {
       yield* Effect.forkScoped(
@@ -46,7 +58,7 @@ export const withPluginServer = <A, E>(
     }).pipe(
       Effect.provide(
         serverLayer({ db, turns, ...(scripted === undefined ? {} : { scripted }) }).pipe(
-          Layer.provideMerge(layerFsUserPlugins(home)),
+          Layer.provideMerge(layerFsUserPlugins(home, undefined, undefined, { safe })),
           Layer.provideMerge(layerChildPluginHost(process.execPath, hostEntry)),
           Layer.provideMerge(
             builtins === undefined ? Layer.empty : layerFsBuiltinPlugins(builtins),

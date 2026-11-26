@@ -95,6 +95,7 @@ import { contractSession } from "../modules/session/rules/plugin-session.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
+import { reportPluginActivity, reportSettled } from "../modules/plugin/adapters/desktop-plugin.ts"
 import { useBuiltinPlugins } from "../modules/plugin/hooks/use-builtin-plugins.ts"
 import { importPluginBundle, type ImportBundle } from "../modules/plugin/adapters/plugin-bundle.ts"
 import { useUserPlugins } from "../modules/plugin/hooks/use-user-plugins.ts"
@@ -429,10 +430,26 @@ const host: UiHost = {
   components: hostComponents,
 }
 
+// Only a plugin the user can disable is reported: a freeze never turns off a built-in plugin.
+const activateReported = (reported: boolean, ...args: Parameters<typeof activatePlugin>) => {
+  if (!reported) return activatePlugin(...args)
+  const id = args[1].manifest.id
+  reportPluginActivity(id, "activating")
+  try {
+    return activatePlugin(...args)
+  } finally {
+    reportPluginActivity(id, "activated")
+  }
+}
+
+// A freeze keeps this timer from firing, so a launch whose plugins hang never counts as settled.
+const SETTLE_AFTER_MS = 3000
+
 export function PluginsProvider({
   plugins: given,
   importBundle = importPluginBundle,
   fallback = null,
+  settleAfterMs = SETTLE_AFTER_MS,
   children,
 }: {
   // The built-in plugins, when the window holds them itself rather than importing those the server lists.
@@ -440,6 +457,7 @@ export function PluginsProvider({
   importBundle?: ImportBundle
   // Shown until the built-in plugins are active, as when the server cannot start.
   fallback?: ReactNode
+  settleAfterMs?: number
   children: ReactNode
 }) {
   const registry = useContext(RegistryContext)
@@ -474,15 +492,27 @@ export function PluginsProvider({
             // Back in the same pass, so the replaced built-in plugin never leaves the screen.
             const builtIn = plugins.find((p) => p.manifest.id === plugin.manifest.id)
             if (builtIn !== undefined && !current.has(builtIn))
-              current.set(builtIn, activatePlugin(registry, builtIn, showPanel))
+              current.set(builtIn, activateReported(false, registry, builtIn, showPanel))
           }
         : undefined
-      const deactivate = activatePlugin(registry, plugin, showPanel, onFailure)
+      const deactivate = activateReported(
+        userPlugins.plugins.includes(plugin),
+        registry,
+        plugin,
+        showPanel,
+        onFailure,
+      )
       // Deactivating a failed plugin would remove its replaced built-in plugin's contributions, which share its id.
       if (!failed) current.set(plugin, deactivate)
     }
     if (builtins.ready) setActive(true)
   }, [registry, all, plugins, userPlugins.plugins, dropFailedPlugin, builtins.ready])
+  // The server streams user plugins with no end marker, so the window is settled once the plugins have stayed quiet for a while.
+  useEffect(() => {
+    if (!active) return
+    const timer = setTimeout(reportSettled, settleAfterMs)
+    return () => clearTimeout(timer)
+  }, [active, all, settleAfterMs])
   useEffect(
     () => () => {
       deactivations.current.forEach((deactivate) => deactivate())

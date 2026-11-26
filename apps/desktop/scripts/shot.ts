@@ -65,6 +65,21 @@ export const formatTotal = (cents: number, currency = "EUR") =>
   new Intl.NumberFormat("en", { style: "currency", currency }).format(cents / 100)
 `,
   )
+  mkdirSync(join(dir, ".ivin/plugins/pr-checks/src"), { recursive: true })
+  writeFileSync(
+    join(dir, ".ivin/plugins/pr-checks/package.json"),
+    JSON.stringify({
+      name: "ivin-plugin-pr-checks",
+      version: "0.1.0",
+      private: true,
+      type: "module",
+      ivin: { id: "pr-checks", name: "pr-checks", ui: "src/ui.tsx" },
+    }),
+  )
+  writeFileSync(
+    join(dir, ".ivin/plugins/pr-checks/src/ui.tsx"),
+    `import { defineUi } from "@ivin/plugin-api/ui"\nexport const activate = defineUi(() => {})\n`,
+  )
   git("add", ".")
   git("commit", "--quiet", "-m", "first")
   git("worktree", "add", "--quiet", "-b", "docs/adr", join(dir, ".worktrees", "docs-adr"))
@@ -124,6 +139,11 @@ try {
   }
 
   await shoot("new-session")
+  await window.getByRole("button", { name: "Review" }).click()
+  await window.getByText("Files").first().waitFor()
+  await shoot("project-plugin-sheet")
+  await window.getByRole("button", { name: "Trust this version" }).click()
+  await window.getByRole("button", { name: "Trust this version" }).waitFor({ state: "detached" })
   await window.getByRole("tab", { name: /^Changes/ }).click()
   await window.getByText(/^No changes since/).waitFor()
   await shoot("no-changes")

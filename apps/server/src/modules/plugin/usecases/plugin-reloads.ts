@@ -1,7 +1,14 @@
 import { Context, Effect, Layer, PubSub, type Scope, Stream } from "effect"
 
+const BUILTIN_PREFIX = "builtin\0"
+
+// The name a built-in plugin, which has no folder, goes by in a reload request.
+export const builtinKey = (id: string) => `${BUILTIN_PREFIX}${id}`
+export const builtinKeyId = (key: string) =>
+  key.startsWith(BUILTIN_PREFIX) ? key.slice(BUILTIN_PREFIX.length) : null
+
 export interface ReloadRequest {
-  // The name of a plugin's folder.
+  // The name of a plugin's folder, or `builtinKey(id)`.
   readonly folder: string
   // Swap the running half even when its compiled file is the one already running.
   readonly force: boolean

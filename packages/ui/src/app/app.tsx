@@ -26,6 +26,7 @@ import { StartSessionError } from "../modules/session/ui/start-session-error.tsx
 import { TabView } from "../modules/tab/ui/tab-view.tsx"
 import { tabTranscriptsAtom } from "../modules/transcript/atoms/tab-transcripts.ts"
 import { AreaFailureBoundary, MainAreaBoundary } from "./failure-boundary.tsx"
+import { StartupNotice } from "../modules/plugin/ui/startup-notice.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { Announcements } from "../modules/transcript/ui/announcements.tsx"
 import { MainTopBar } from "./main-top-bar.tsx"
@@ -135,6 +136,7 @@ export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}
             <main className="iv-app__main">
               <MainTopBar projectPath={null} controls={null} />
               {serverLost}
+              <StartupNotice />
               <OpenFolderError />
               <TrustProjectDialog />
               <KeybindingsFileProblem />
@@ -202,6 +204,7 @@ export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}
                 }
               />
               {serverLost}
+              <StartupNotice />
               <OpenFolderError />
               <TrustProjectDialog />
               <StartSessionError projectPath={projectPath} />

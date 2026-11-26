@@ -23,7 +23,7 @@ const packageOf = (specifier: string) =>
     .join("/")
 
 // Every file the bundle can depend on, in a stable order.
-const filesOf = async (folder: string): Promise<string[]> => {
+export const filesOf = async (folder: string): Promise<string[]> => {
   const entries = await readdir(folder, { withFileTypes: true, recursive: true })
   return entries
     .filter((entry) => entry.isFile())
@@ -34,8 +34,8 @@ const filesOf = async (folder: string): Promise<string[]> => {
     .sort()
 }
 
-export const hashOf = async (folder: string, entry: string, half: Half) => {
-  const hash = createHash("sha256").update(`${COMPILE_VERSION}\0${half}\0${entry}\0`)
+const hashFiles = async (folder: string, prefix: string) => {
+  const hash = createHash("sha256").update(prefix)
   for (const path of await filesOf(folder)) {
     hash
       .update(`${path}\0`)
@@ -44,6 +44,9 @@ export const hashOf = async (folder: string, entry: string, half: Half) => {
   }
   return hash.digest("hex")
 }
+
+export const hashOf = (folder: string, entry: string, half: Half) =>
+  hashFiles(folder, `${COMPILE_VERSION}\0${half}\0${entry}\0`)
 
 // Copied beside the server bundle by its build; the tests find it in node_modules.
 const shippedBinding = join(import.meta.dirname, "native", "rolldown-binding.node")
@@ -89,7 +92,14 @@ export const bundle = async (
           }
           // Rolldown's own output imports `node:module` for a Node target.
           if (half === "server" && isBuiltin(specifier)) return { id: specifier, external: true }
-          if (!isBare(specifier)) return null
+          if (!isBare(specifier)) {
+            if (!isUnder(importer, folder)) return null
+            const resolved = await this.resolve(specifier, importer, { skipSelf: true })
+            if (resolved !== null && !resolved.external && !isUnder(resolved.id, folder)) {
+              throw new Error(`It imports ${specifier}, which leads out of the plugin's folder.`)
+            }
+            return resolved
+          }
           const name = packageOf(specifier)
           if (PROVIDED_PACKAGES.includes(name)) {
             throw new Error(`It imports ${specifier}, which ivin does not provide to plugins.`)

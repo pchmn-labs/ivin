@@ -1,5 +1,5 @@
 import { Duration, Effect, Fiber, Stream } from "effect"
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test, vi } from "vitest"
@@ -10,13 +10,17 @@ vi.setConfig({ testTimeout: 10_000 })
 const tempFolder = () => mkdtempSync(join(tmpdir(), "ivin-changes-"))
 
 // Collects the names sent until `act` is done and the stream has been quiet for a moment.
-const changesDuring = async (folder: string, act: () => void | Promise<void>) => {
+const changesDuring = async (
+  folder: string,
+  act: () => void | Promise<void>,
+  watching: (folder: string) => Stream.Stream<string> = pluginFolderChanges,
+) => {
   // macOS reports the writes of the last moments before a watcher opens.
   await new Promise((resolve) => setTimeout(resolve, 800))
   return Effect.runPromise(
     Effect.gen(function* () {
       const names: string[] = []
-      const fiber = yield* pluginFolderChanges(folder).pipe(
+      const fiber = yield* watching(folder).pipe(
         Stream.runForEach((name) => Effect.sync(() => void names.push(name))),
         Effect.forkChild,
       )
@@ -79,4 +83,36 @@ test("a plugins folder that does not exist yet is created, so a plugin made late
 
   expect(names).toEqual(["new"])
   rmSync(folder, { recursive: true })
+})
+
+test("a project's plugins folder is never created, and is watched once it exists", async () => {
+  const project = tempFolder()
+  const plugins = join(project, ".ivin", "plugins")
+  const watch = (create: boolean) => (folder: string) => pluginFolderChanges(folder, create)
+
+  const missing = await changesDuring(plugins, () => undefined, watch(false))
+  expect(missing).toEqual([])
+  expect(existsSync(plugins)).toBe(false)
+
+  mkdirSync(join(plugins, "a"), { recursive: true })
+  const present = await changesDuring(
+    plugins,
+    () => writeFileSync(join(plugins, "a", "package.json"), "{}"),
+    watch(false),
+  )
+  expect(present).toEqual(["a"])
+})
+
+test("a project's plugins folder created after the watch began is watched, and its plugins announced", async () => {
+  const project = tempFolder()
+  const plugins = join(project, ".ivin", "plugins")
+
+  const names = await changesDuring(
+    plugins,
+    () => void mkdirSync(join(plugins, "a"), { recursive: true }),
+    (folder) => pluginFolderChanges(folder, false, Duration.millis(50)),
+  )
+
+  expect(names).toContain("a")
+  expect(existsSync(join(plugins, "a"))).toBe(true)
 })

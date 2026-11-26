@@ -12,6 +12,7 @@ import { socketPathOf, withServer } from "./connection.ts"
 import { doctor } from "./doctor.ts"
 import { link } from "./link.ts"
 import { pluginCheck } from "./plugin-check.ts"
+import { pluginDisable, pluginEnable } from "./plugin-set-enabled.ts"
 import { pluginList } from "./plugin-list.ts"
 import { pluginLock } from "./plugin-lock.ts"
 import { pluginLogs } from "./plugin-logs.ts"
@@ -33,6 +34,8 @@ const commands: readonly Command[] = [
   pluginLock,
   pluginLogs,
   pluginReload,
+  pluginDisable,
+  pluginEnable,
   pluginCheck,
   pluginNew,
   settingsGet,

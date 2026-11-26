@@ -1,6 +1,8 @@
 import type { UserPlugin } from "@ivin/contracts/plugin"
 import { Effect, Stream } from "effect"
 import { readManifest } from "../rules/manifest.ts"
+import { disabledPlugins } from "./plugin-switches.ts"
+import { pluginFolders } from "./project-plugins.ts"
 import { reportPluginFailure } from "./report-plugin-failure.ts"
 import { UserPlugins, type PluginFolder, type UserPluginsService } from "./user-plugins.ts"
 
@@ -13,7 +15,7 @@ export const loadUiHalf = (
   folder: PluginFolder,
 ): Effect.Effect<UserPlugin | null> => {
   const reading = readManifest(folder.manifest)
-  if (reading.kind === "invalid") return failed(folder.name, reading.reason)
+  if (reading.kind === "invalid") return failed(folder.label ?? folder.name, reading.reason)
   const { id, name, ui, views } = reading.manifest
   if (ui === null) return Effect.succeed(null)
   return plugins.compile({ id, path: folder.path, entry: ui, half: "ui" }).pipe(
@@ -25,12 +27,14 @@ export const loadUiHalf = (
 export const initialPlugins = (plugins: UserPluginsService) =>
   Stream.unwrap(
     Effect.gen(function* () {
-      const folders = yield* plugins.folders
+      const folders = yield* pluginFolders
+      const disabled = yield* disabledPlugins
       const folderOfId = new Map<string, string>()
       const loads = folders.map((folder): Effect.Effect<UserPlugin | null> => {
         const reading = readManifest(folder.manifest)
         if (reading.kind === "valid") {
           const { id } = reading.manifest
+          if (disabled.has(id)) return Effect.succeed(null)
           const holder = folderOfId.get(id)
           if (holder !== undefined) {
             return failed(id, `The folder ${holder} already holds a plugin with the id ${id}.`)

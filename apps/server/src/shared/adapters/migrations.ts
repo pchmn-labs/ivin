@@ -294,6 +294,29 @@ export const migrations: readonly Migration[] = [
       PRIMARY KEY (plugin, key)
     )`,
   },
+  {
+    version: 29,
+    sql: `CREATE TABLE project_plugin_trust (
+      project TEXT NOT NULL,
+      plugin TEXT NOT NULL,
+      hash TEXT NOT NULL,
+      permissions TEXT NOT NULL,
+      PRIMARY KEY (project, plugin)
+    );
+    CREATE TABLE project_plugin_full_trust (project TEXT PRIMARY KEY);
+    CREATE TABLE project_plugin_changes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      project TEXT NOT NULL,
+      plugin TEXT NOT NULL,
+      name TEXT NOT NULL,
+      hash TEXT NOT NULL,
+      at INTEGER NOT NULL,
+      is_new INTEGER NOT NULL,
+      files TEXT NOT NULL,
+      diff TEXT NOT NULL,
+      seen INTEGER NOT NULL DEFAULT 0
+    )`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>
