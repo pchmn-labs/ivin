@@ -55,8 +55,8 @@ const whereItems = (project: Project): WhereItem[] => {
         where: { kind: "new" },
         key: "new",
         icon: "plus",
-        label: "New worktrees",
-        description: `Branch ivin/9b1e4c07, made in ${REPOSITORIES.join(" and in ")}`,
+        label: "New worktree with all projects",
+        description: `${REPOSITORIES.join(" and ")} on one new branch, ivin/9b1e4c07`,
       },
       ...WORKING_FOLDERS.map((folder, i): WhereItem => ({
         where: { kind: "existing", path: folder.path },
@@ -103,7 +103,7 @@ const whereLabel = (pick: Pick): { icon: IconName; label: string } => {
       : { icon: "folder", label: "Its folder" }
   }
   if (where.kind === "new") {
-    return { icon: "worktree", label: project === "all" ? "New worktrees" : "New worktree" }
+    return { icon: "worktree", label: "New worktree" }
   }
   return { icon: "worktree", label: project === "all" ? "Worktrees" : "Worktree" }
 }
@@ -432,6 +432,9 @@ export function Columns({ started }: LocationProps) {
                         <Icon name={projectIcon(p)} size={14} />
                       </span>
                       <span className="iv-composer-menu__label">{projectLabel(p)}</span>
+                      <span className="iv-composer-menu__check">
+                        {p === project && <Icon name="check" size={14} label="Shown" />}
+                      </span>
                     </div>
                   </div>
                 ))}
