@@ -140,14 +140,11 @@ test("the transcript opens again where the user had scrolled it", async () => {
   server.seedItems("s1", fortyMessages())
   const screen = await render(switchableView(server, true))
   await expect.element(page.getByText("message 39", { exact: true })).toBeVisible()
-  // Virtuoso still pulls the view to the end while it measures the rows it opened with.
-  for (let frame = 0; frame < 2; frame++) await new Promise(requestAnimationFrame)
-  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -250 }))
-  scroller().scrollTop -= 250
-  // The browser would send it a frame later.
-  scroller().dispatchEvent(new Event("scroll"))
-  const scrolledTo = scroller().scrollTop
+  const end = scroller().scrollHeight - scroller().clientHeight
+  await page.getByTestId("transcript").wheel({ delta: { y: -250 } })
+  await expect.poll(() => scroller().scrollTop).toBeLessThan(end - 200)
   await expect.element(page.getByText("message 39", { exact: true })).not.toBeInTheDocument()
+  const scrolledTo = scroller().scrollTop
 
   await closeAndOpen(screen, server)
 

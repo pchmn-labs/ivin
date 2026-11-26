@@ -1,6 +1,5 @@
 import { RegistryContext } from "@effect/atom-react"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
-import { AtomRegistry } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
@@ -8,6 +7,7 @@ import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { type FakeServer, makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { makeRegistry } from "../../../core/test-registry.ts"
 import { deletedImageIdsAtom } from "../../transcript/atoms/delete-images.ts"
 import { SessionView } from "./session-view.tsx"
 import {
@@ -194,7 +194,7 @@ test("an image deleted from the settings while its transcript is loaded shows as
   server.openProject("/p")
   addSession(server, "s1", 3)
   seedTranscript(server)
-  const registry = AtomRegistry.make({ initialValues: [[serverClientLayerAtom, server.layer]] })
+  const registry = makeRegistry([[serverClientLayerAtom, server.layer]])
   await render(
     <RegistryContext.Provider value={registry}>
       <PluginsProvider plugins={builtinPlugins}>

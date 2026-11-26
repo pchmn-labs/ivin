@@ -4,6 +4,11 @@ import { AtomRegistry } from "effect/reactivity"
 import { makeFakeServer } from "./fake-server-client.ts"
 import { serverClientLayerAtom } from "./server-client.ts"
 
+// As `RegistryProvider` does: with the default, production React never shows the server's answers.
+export const makeRegistry = (
+  initialValues: NonNullable<Parameters<typeof AtomRegistry.make>[0]>["initialValues"],
+) => AtomRegistry.make({ scheduleTask, initialValues })
+
 // `project` is the path of a folder already open on the fake server.
 export const makeTestRegistry = (options: { readonly project?: string } = {}) => {
   const server = makeFakeServer(
@@ -17,10 +22,6 @@ export const makeTestRegistry = (options: { readonly project?: string } = {}) =>
           },
         },
   )
-  // As `RegistryProvider` does: with the default, production React never shows the server's answers.
-  const registry = AtomRegistry.make({
-    scheduleTask,
-    initialValues: [[serverClientLayerAtom, server.layer]],
-  })
+  const registry = makeRegistry([[serverClientLayerAtom, server.layer]])
   return { server, registry }
 }

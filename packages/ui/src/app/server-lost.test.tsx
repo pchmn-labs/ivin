@@ -1,12 +1,12 @@
-import { RegistryContext, scheduleTask } from "@effect/atom-react"
+import { RegistryContext } from "@effect/atom-react"
 import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { DateTime, Layer } from "effect"
-import { AtomRegistry } from "effect/reactivity"
 import { afterEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
+import { makeRegistry } from "../core/test-registry.ts"
 import { makeTestSession } from "../core/test-session.ts"
 import { serverStateAtom } from "../modules/server/atoms/server-state.ts"
 import { App } from "./app.tsx"
@@ -31,10 +31,7 @@ const mountApp = async ({ failVersion = false } = {}) => {
   server.openTab("s1")
   if (failVersion) server.failNextCall("server.getVersion")
   await page.viewport(1280, 800)
-  const registry = AtomRegistry.make({
-    scheduleTask,
-    initialValues: [[serverClientLayerAtom, server.layer]],
-  })
+  const registry = makeRegistry([[serverClientLayerAtom, server.layer]])
   await render(
     <RegistryContext.Provider value={registry}>
       <App plugins={builtinPlugins} />
@@ -141,12 +138,10 @@ test("a draft's text and images survive the server being lost and coming back", 
 test("a server that stopped before the built-in plugins loaded still shows its alert", async () => {
   const server = makeFakeServer()
   server.failCalls("plugin.listBuiltin")
-  const registry = AtomRegistry.make({
-    initialValues: [
-      [serverClientLayerAtom, server.layer],
-      [serverStateAtom, { kind: "restarting" }],
-    ],
-  })
+  const registry = makeRegistry([
+    [serverClientLayerAtom, server.layer],
+    [serverStateAtom, { kind: "restarting" }],
+  ])
   await render(
     <RegistryContext.Provider value={registry}>
       <App />
