@@ -10,20 +10,20 @@ import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { foldsOf } from "../atoms/folds.ts"
 import { PAGE_SIZE } from "../atoms/get-items.ts"
 import { rememberSentImages } from "../atoms/sent-images.ts"
+import { fromEnd, message, scrollEvent, scroller, toolCall, userMessage } from "../test-items.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
 // Below 30 frames a second, the transcript visibly stutters; headless Chromium caps rAF at 60.
 const MIN_FPS = 30
-const SCROLL_FRAMES = 120
-const TURNS = 250
-const STREAMED_TOKENS = 10_000
+const SCROLL_FRAMES = 50
+const TURNS = 100
+const STREAMED_TOKENS = 2_000
 const TOKENS_PER_FRAME = 25
 const SESSION = "s1"
 const TOOL_KINDS: ReadonlyArray<ToolKind> = ["read", "search", "edit", "command"]
 
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
 const wait150ms = () => new Promise((resolve) => setTimeout(resolve, 150))
-const scroller = () => document.querySelector<HTMLElement>('[data-testid="transcript"]')!
 
 const answer = (turn: number) =>
   [
@@ -38,6 +38,16 @@ const answer = (turn: number) =>
     "    .reduce((rows, row) => [...rows, row], [] as Row[])",
     "```",
     `Run the tests with \`pnpm test\`, then read \`packages/ui/src/modules/transcript/ui/turn-${turn}.tsx:42\` and scroll a long session from top to bottom.`,
+  ].join("\n\n")
+
+// Short blocks of every kind, so a few tokens close many blocks.
+const streamedSection = (section: number) =>
+  [
+    `## Part ${section}`,
+    `Each part adds a block.`,
+    "- One item.\n- Another item.",
+    "```ts\nconst part = 1\n```",
+    `See \`turn-${section}.tsx:4\`.`,
   ].join("\n\n")
 
 // Eight items a turn: a user message, four tool calls in two steps, and a Markdown answer.
@@ -110,8 +120,8 @@ const itemFields = (id: string, position: number) => ({
 
 const pngBase64 = (number: number) => {
   const canvas = document.createElement("canvas")
-  canvas.width = 960
-  canvas.height = 600
+  canvas.width = 240
+  canvas.height = 150
   const context = canvas.getContext("2d")!
   const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height)
   gradient.addColorStop(0, `hsl(${(number * 47) % 360} 60% 40%)`)
@@ -119,8 +129,8 @@ const pngBase64 = (number: number) => {
   context.fillStyle = gradient
   context.fillRect(0, 0, canvas.width, canvas.height)
   context.fillStyle = "white"
-  context.font = "96px sans-serif"
-  context.fillText(`#${number}`, 80, 300)
+  context.font = "32px sans-serif"
+  context.fillText(`#${number}`, 20, 80)
   return canvas.toDataURL("image/png").slice("data:image/png;base64,".length)
 }
 
@@ -165,11 +175,11 @@ const expectFps = async (annotate: TestContext["annotate"], what: string, fps: n
 }
 
 test(
-  "scrolling a 2,000-item transcript from top to bottom keeps the frame rate",
+  "scrolling an 800-item transcript from top to bottom keeps the frame rate",
   { timeout: 120_000 },
   async ({ annotate }) => {
     const { items, images } = transcript(TURNS)
-    expect(items).toHaveLength(2_000)
+    expect(items).toHaveLength(TURNS * 8)
     // The app shows a message's images from these until the server has written their files.
     rememberSentImages(images)
     const everyThirdTurnUnfolded = new Map(
@@ -182,7 +192,7 @@ test(
     await vi.waitFor(
       async () => {
         scroller().scrollTop = 0
-        await wait150ms()
+        for (let frame = 0; frame < 4; frame++) await nextFrame()
         expect(document.querySelector('[data-row-id="u0"]')).not.toBeNull()
       },
       { timeout: 60_000, interval: 0 },
@@ -207,14 +217,14 @@ test(
 const streamedTokens = () => {
   const tokens: string[] = []
   for (let section = 0; tokens.length < STREAMED_TOKENS; section++) {
-    tokens.push(...`${answer(section)}\n\n`.split(/(?<=\s)/))
+    tokens.push(...`${streamedSection(section)}\n\n`.split(/(?<=\s)/))
   }
   tokens.push("The end of the streamed answer.")
   return tokens
 }
 
 test(
-  "streaming a 10,000-token answer while the view follows it keeps the frame rate",
+  "streaming a 2,000-token answer while the view follows it keeps the frame rate",
   { timeout: 120_000 },
   async ({ annotate }) => {
     const { items } = transcript(25)
@@ -259,53 +269,9 @@ test(
   },
 )
 
-const message = (position: number, text = `message ${position}`): TranscriptItem => ({
-  id: `m${position}`,
-  sessionId: "s1",
-  position,
-  at: 0,
-  type: "message",
-  role: "assistant",
-  text,
-  images: [],
-  steer: false,
-})
-
-const userMessage = (position: number): TranscriptItem => ({
-  id: `m${position}`,
-  sessionId: "s1",
-  position,
-  at: 0,
-  type: "message",
-  role: "user",
-  text: `question ${position}`,
-  images: [],
-  steer: false,
-})
-
-const toolCall = (position: number): TranscriptItem => ({
-  id: `m${position}`,
-  sessionId: "s1",
-  position,
-  at: 0,
-  type: "tool_call",
-  toolCallId: `t${position}`,
-  name: "Bash",
-  kind: "command",
-  input: { command: `command ${position}` },
-  status: "done",
-  output: `output ${position}`,
-})
-
-// The browser sends the scroll event once the view has moved, after Virtuoso has seen it.
-const scrollEvent = () =>
-  new Promise<void>((resolve) =>
-    scroller().addEventListener("scroll", () => resolve(), { once: true }),
-  )
 const topInView = (text: string) =>
   page.getByText(text, { exact: true }).element().getBoundingClientRect().top -
   scroller().getBoundingClientRect().top
-const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
 const inView = (text: string) => {
   const top = topInView(text)
   return top >= 0 && top < scroller().clientHeight

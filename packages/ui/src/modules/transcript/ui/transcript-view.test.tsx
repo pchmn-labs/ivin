@@ -1,67 +1,22 @@
 import { RegistryContext, RegistryProvider, useAtomMount } from "@effect/atom-react"
-import { DateTime } from "effect"
 import type { AtomRegistry } from "effect/reactivity"
 import { useContext, useEffect } from "react"
 import { expect, test, vi } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { makeTestSession } from "../../../core/test-session.ts"
 import { PAGE_SIZE, transcriptOf } from "../atoms/get-items.ts"
 import { loadItemsBeforeAtom } from "../atoms/load-items-before.ts"
+import { fromEnd, message, scrollEvent, scroller, toolCall, userMessage } from "../test-items.ts"
 import { TranscriptView } from "./transcript-view.tsx"
 
-const message = (position: number, text = `message ${position}`): TranscriptItem => ({
-  id: `m${position}`,
-  sessionId: "s1",
-  position,
-  at: 0,
-  type: "message",
-  role: "assistant",
-  text,
-  images: [],
-  steer: false,
-})
-
-const userMessage = (position: number): TranscriptItem => ({
-  id: `m${position}`,
-  sessionId: "s1",
-  position,
-  at: 0,
-  type: "message",
-  role: "user",
-  text: `question ${position}`,
-  images: [],
-  steer: false,
-})
-
-const toolCall = (position: number): TranscriptItem => ({
-  id: `m${position}`,
-  sessionId: "s1",
-  position,
-  at: 0,
-  type: "tool_call",
-  toolCallId: `t${position}`,
-  name: "Bash",
-  kind: "command",
-  input: { command: `command ${position}` },
-  status: "done",
-  output: `output ${position}`,
-})
-
-const scroller = () => document.querySelector<HTMLElement>('[data-testid="transcript"]')!
 // The image files the transcript asks the window to load: one per <img> it has drawn.
 const loadedImages = () =>
   [...document.querySelectorAll<HTMLImageElement>("img")].map((image) => image.getAttribute("src"))
-// The browser sends the scroll event once the view has moved, after Virtuoso has seen it.
-const scrollEvent = () =>
-  new Promise<void>((resolve) =>
-    scroller().addEventListener("scroll", () => resolve(), { once: true }),
-  )
-const fromEnd = () => scroller().scrollHeight - scroller().clientHeight - scroller().scrollTop
 
 test("the transcript stays put when scrolled up and follows when at the bottom", async () => {
   const server = makeFakeServer()
@@ -69,32 +24,7 @@ test("the transcript stays put when scrolled up and follows when at the bottom",
     "s1",
     Array.from({ length: 40 }, (_, i) => message(i)),
   )
-  const at = DateTime.makeUnsafe(0)
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/p",
-    workingFolder: "/p",
-    inWorktree: false,
-    branch: "main",
-    started: false,
-    workingFolderDeleted: false,
-    title: "New session",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "idle",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set("s1", makeTestSession({ id: "s1", started: false, title: "New session" }))
 
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
@@ -373,25 +303,21 @@ const sendMessage = async (server: ReturnType<typeof makeFakeServer>) => {
   return screen
 }
 
-test("a transcript closed during a turn and opened again after it shows its rows, never an empty area", async () => {
-  const server = makeFakeServer()
-  const screen = await sendMessage(server)
+test.each([
+  ["short", message(41, "the answer"), "the answer"],
+  ["long", longAnswer(41), "line 29"],
+])(
+  "a %s answer that came while the transcript was closed opens at its end, never an empty area",
+  async (_, answer, text) => {
+    const server = makeFakeServer()
+    const screen = await sendMessage(server)
 
-  await closeAndOpen(screen, server, () => server.pushItem(message(41, "the answer")), true)
+    await closeAndOpen(screen, server, () => server.pushItem(answer), true)
 
-  await expect.element(page.getByText("the answer", { exact: true })).toBeVisible()
-  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
-})
-
-test("a long answer that came while the transcript was closed opens at its end", async () => {
-  const server = makeFakeServer()
-  const screen = await sendMessage(server)
-
-  await closeAndOpen(screen, server, () => server.pushItem(longAnswer(41)), true)
-
-  await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
-  await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
-})
+    await expect.element(page.getByText(text, { exact: true })).toBeVisible()
+    await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
+  },
+)
 
 test("a transcript closed after a turn ended with a long answer opens again at its end", async () => {
   const server = makeFakeServer()

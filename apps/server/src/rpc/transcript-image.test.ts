@@ -1,21 +1,12 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput, ImageData } from "@ivin/contracts/transcript"
-import { layerScripted, type ScriptedOptions, type ScriptedSend } from "@ivin/harness"
-import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
+import type { ScriptedOptions, ScriptedSend } from "@ivin/harness"
+import { Effect } from "effect"
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
+import type { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { newDatabase, withServer as withTestServer, type Client } from "./test-server.ts"
 
 const turn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: null },
@@ -36,16 +27,6 @@ const photo: ImageData = {
   base64: "/9j/4AAQSkZJRgABAQ==",
 }
 
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
 const newFolder = () => mkdtempSync(join(tmpdir(), "ivin-images-"))
 
 const withServer = <A, E>(
@@ -54,29 +35,12 @@ const withServer = <A, E>(
   use: (client: Client) => Effect.Effect<A, E>,
   options: ScriptedOptions = {},
   folder = newFolder(),
-) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: folder })),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([turn], { ...options, sent })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
+) => withTestServer(use, { db, turns: [turn], imageFolder: folder, scripted: { ...options, sent } })
 
 const endOfTranscript = (client: Client, sessionId: string) =>
   client["transcript.getItems"]({ sessionId, position: null, before: 100, after: 0 })
 
-test("a message with two images stores two files, references them, and hands them to the harness", async () => {
+test("a message with two images stores two files, references them without their bytes, and hands them to the harness", async () => {
   const db = newDatabase()
   const folder = newFolder()
   const sent: ScriptedSend[] = []
@@ -103,6 +67,7 @@ test("a message with two images stores two files, references them, and hands the
     { id: "i1", number: 1, media_type: "image/png" },
     { id: "i2", number: 2, media_type: "image/jpeg" },
   ])
+  expect(JSON.stringify(page)).not.toContain(screenshot.base64)
   expect(page.items[0]).toMatchObject({
     role: "user",
     text: "what is this? [Image #1] [Image #2]",
@@ -114,23 +79,6 @@ test("a message with two images stores two files, references them, and hands the
   expect(sent.map((s) => s.images)).toEqual([[screenshot, photo]])
   expect(readFileSync(join(folder, sessionId, "i1.png")).toString("base64")).toBe(screenshot.base64)
   expect(readFileSync(join(folder, sessionId, "i2.jpg")).toString("base64")).toBe(photo.base64)
-})
-
-test("a page of transcript items carries image references, not image bytes", async () => {
-  const page = await withServer(newDatabase(), [], (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.sendMessage"]({
-        sessionId: session.id,
-        messageId: "m1",
-        text: "look",
-        images: [screenshot],
-      })
-      return yield* endOfTranscript(client, session.id)
-    }),
-  )
-
-  expect(JSON.stringify(page)).not.toContain(screenshot.base64)
 })
 
 test("a message stored before images existed comes back with no images", async () => {
@@ -208,29 +156,41 @@ test("the session's images are listed in transcript order, and the session knows
   expect(session?.lastImageNumber).toBe(3)
 })
 
-test("deleting a session deletes its images", async () => {
+const DAY = 24 * 60 * 60 * 1000
+
+const sendIn = (client: Client, projectPath: string, image: ImageData) =>
+  Effect.gen(function* () {
+    const session = yield* client["session.create"]({ projectPath })
+    yield* client["session.sendMessage"]({
+      sessionId: session.id,
+      messageId: `m-${image.id}`,
+      text: `[Image #${image.number}]`,
+      images: [image],
+    })
+    return session.id
+  })
+
+test("deleting a session deletes its images, also when they were deleted before", async () => {
   const db = newDatabase()
   const folder = newFolder()
-  const sessionId = await withServer(
+  const sessionIds = await withServer(
     db,
     [],
     (client) =>
       Effect.gen(function* () {
-        const session = yield* client["session.create"]({ projectPath: "/p" })
-        yield* client["session.sendMessage"]({
-          sessionId: session.id,
-          messageId: "m1",
-          text: "[Image #1]",
-          images: [screenshot],
-        })
-        yield* client["session.delete"]({ sessionId: session.id })
-        return session.id
+        const kept = yield* sendIn(client, "/p", screenshot)
+        const deleted = yield* sendIn(client, "/q", photo)
+        db.prepare("UPDATE images SET sent_at = sent_at - ? WHERE id = 'i2'").run(31 * DAY)
+        yield* client["transcript.deleteImages"]({ olderThanDays: 30 })
+        yield* client["session.delete"]({ sessionId: kept })
+        yield* client["session.delete"]({ sessionId: deleted })
+        return [kept, deleted]
       }),
-    {},
+    { cycle: true },
     folder,
   )
 
-  expect(existsSync(join(folder, sessionId))).toBe(false)
+  expect(sessionIds.map((id) => existsSync(join(folder, id)))).toEqual([false, false])
   expect(db.prepare("SELECT COUNT(*) AS count FROM images").get()).toEqual({ count: 0 })
 })
 
@@ -269,42 +229,7 @@ test("an image whose id leaves the session's folder is refused and writes no fil
   expect(existsSync(join(folder, "escaped.png"))).toBe(false)
 })
 
-const DAY = 24 * 60 * 60 * 1000
-
-const sendIn = (client: Client, projectPath: string, image: ImageData) =>
-  Effect.gen(function* () {
-    const session = yield* client["session.create"]({ projectPath })
-    yield* client["session.sendMessage"]({
-      sessionId: session.id,
-      messageId: `m-${image.id}`,
-      text: `[Image #${image.number}]`,
-      images: [image],
-    })
-    return session.id
-  })
-
-test("the space reported is the size of the image files", async () => {
-  const db = newDatabase()
-  const folder = newFolder()
-  const { space, sessionId } = await withServer(
-    db,
-    [],
-    (client) =>
-      Effect.gen(function* () {
-        const sessionId = yield* sendIn(client, "/p", screenshot)
-        yield* sendIn(client, "/q", photo)
-        return { space: yield* client["transcript.getImageSpace"]({}), sessionId }
-      }),
-    { cycle: true },
-    folder,
-  )
-
-  const screenshotBytes = readFileSync(join(folder, sessionId, "i1.png")).byteLength
-  const photoBytes = Buffer.from(photo.base64, "base64").byteLength
-  expect(space).toEqual({ images: 2, bytes: screenshotBytes + photoBytes })
-})
-
-test("deleting the images older than N days removes exactly those files, and their transcripts still load", async () => {
+test("the space reported is the size of the image files; deleting the images older than N days removes exactly those files, and their transcripts still load", async () => {
   const db = newDatabase()
   const folder = newFolder()
   const result = await withServer(
@@ -315,11 +240,13 @@ test("deleting the images older than N days removes exactly those files, and the
         const oldSession = yield* sendIn(client, "/p", screenshot)
         const newSession = yield* sendIn(client, "/q", photo)
         db.prepare("UPDATE images SET sent_at = sent_at - ? WHERE id = 'i1'").run(31 * DAY)
+        const total = yield* client["transcript.getImageSpace"]({})
         const before = yield* client["transcript.getImageSpace"]({ olderThanDays: 30 })
         const freed = yield* client["transcript.deleteImages"]({ olderThanDays: 30 })
         return {
           oldSession,
           newSession,
+          total,
           before,
           freed,
           after: yield* client["transcript.getImageSpace"]({}),
@@ -333,6 +260,7 @@ test("deleting the images older than N days removes exactly those files, and the
 
   const screenshotBytes = Buffer.from(screenshot.base64, "base64").byteLength
   const photoBytes = Buffer.from(photo.base64, "base64").byteLength
+  expect(result.total).toEqual({ images: 2, bytes: screenshotBytes + photoBytes })
   expect(result.before).toEqual({ images: 1, bytes: screenshotBytes })
   expect(result.freed).toEqual({ images: 1, bytes: screenshotBytes, imageIds: ["i1"] })
   expect(result.after).toEqual({ images: 1, bytes: photoBytes })

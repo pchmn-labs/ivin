@@ -1,22 +1,11 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { layerScripted, type StartInput } from "@ivin/harness"
-import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
-import { execFileSync } from "node:child_process"
-import { existsSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import type { StartInput } from "@ivin/harness"
+import { Effect } from "effect"
+import { existsSync, readFileSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
-import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
+import { beforeEach, expect, test, vi } from "vitest"
+import { commit, git, useClonedProject } from "./git-fixture.ts"
+import { withServer as withTestServer, type Client } from "./test-server.ts"
 import { until } from "./test-waits.ts"
 
 // Real git: over 1 s when the suite runs other git tests beside it.
@@ -28,92 +17,45 @@ const turn: readonly HarnessOutput[] = [
   { type: "status", status: "idle", raw: null },
 ]
 
-const gitEnv = {
-  ...process.env,
-  GIT_AUTHOR_NAME: "ivin",
-  GIT_AUTHOR_EMAIL: "ivin@example.com",
-  GIT_COMMITTER_NAME: "ivin",
-  GIT_COMMITTER_EMAIL: "ivin@example.com",
-  GIT_CONFIG_GLOBAL: "/dev/null",
-}
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", args, { cwd, env: gitEnv, encoding: "utf8" }).trim()
-
-const commit = (repo: string, file: string) => {
-  writeFileSync(join(repo, file), file)
-  git(repo, "add", file)
-  git(repo, "commit", "--quiet", "-m", file)
-}
-
-let root: string
-let project: string
-let upstream: string
-
-// A project cloned from a bare origin, then origin moves ahead: the local main is behind.
-beforeEach(() => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-git-")))
-  const origin = join(root, "origin.git")
-  upstream = join(root, "upstream")
-  project = join(root, "project")
-  git(root, "init", "--quiet", "--bare", "-b", "main", origin)
-  git(root, "init", "--quiet", "-b", "main", upstream)
-  commit(upstream, "first.txt")
-  git(upstream, "remote", "add", "origin", origin)
-  git(upstream, "push", "--quiet", "origin", "main")
-  git(root, "clone", "--quiet", origin, project)
+// The local main is behind origin.
+const fixture = useClonedProject(({ upstream, project }) => {
   // The server's git runs without the test's environment, and a stash or a commit needs a name.
   git(project, "config", "user.name", "ivin")
   git(project, "config", "user.email", "ivin@example.com")
   commit(upstream, "ahead.txt")
   git(upstream, "push", "--quiet", "origin", "main")
 })
-
-afterEach(() => rmSync(root, { recursive: true, force: true }))
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
+let project = ""
+let upstream = ""
+beforeEach(() => {
+  project = fixture.project
+  upstream = fixture.upstream
+})
 
 const withServer = <A, E>(
   starts: StartInput[],
   use: (client: Client) => Effect.Effect<A, E>,
   turns: readonly (readonly HarnessOutput[])[] = [turn],
-) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted(turns, { starts })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-}
+) => withTestServer(use, { turns, scripted: { starts } })
 
 const statusOf = (client: Client) => client["worktree.checkoutStatus"]({ projectPath: project })
 
 const newSession = (client: Client) => client["session.create"]({ projectPath: project })
 
-test("on another branch, switching to the default branch checks it out level with origin", async () => {
+test("on another branch, switching to the default branch checks it out level with origin, and moves the branch of every session in the checkout", async () => {
   git(project, "checkout", "--quiet", "-b", "feature")
-  const { before, switched, after } = await withServer([], (client) =>
+  const { before, switched, after, sessions } = await withServer([], (client) =>
     Effect.gen(function* () {
       const before = yield* statusOf(client)
+      yield* newSession(client)
       const created = yield* newSession(client)
       const switched = yield* client["session.switchToDefaultBranch"]({ sessionId: created.id })
-      return { before, switched, after: yield* statusOf(client) }
+      return {
+        before,
+        switched,
+        after: yield* statusOf(client),
+        sessions: yield* client["session.list"]({ projectPath: project }),
+      }
     }),
   )
 
@@ -127,6 +69,7 @@ test("on another branch, switching to the default branch checks it out level wit
   expect(git(project, "branch", "--show-current")).toBe("main")
   expect(existsSync(join(project, "ahead.txt"))).toBe(true)
   expect(after).toMatchObject({ branch: "main", behind: 0 })
+  expect(sessions.map((s) => s.branch)).toEqual(["main", "main"])
 })
 
 test("a default branch held by another worktree is reported", async () => {
@@ -276,16 +219,6 @@ test("after the first message, the checkout is no longer switched", async () => 
   expect(git(project, "branch", "--show-current")).toBe("feature")
 })
 
-test("outside a git repository there is no checkout status", async () => {
-  const folder = join(root, "plain")
-  execFileSync("mkdir", [folder])
-  const status = await withServer([], (client) =>
-    client["worktree.checkoutStatus"]({ projectPath: folder }),
-  )
-
-  expect(status).toBeNull()
-})
-
 test("untracked files in the way of the switch are stashed when the user asks", async () => {
   git(project, "checkout", "--quiet", "-b", "feature")
   writeFileSync(join(project, "ahead.txt"), "mine")
@@ -307,20 +240,6 @@ test("untracked files in the way of the switch are stashed when the user asks", 
   expect(git(project, "rev-parse", "--abbrev-ref", "HEAD")).toBe("main")
   expect(git(project, "rev-parse", "HEAD")).toBe(git(project, "rev-parse", "origin/main"))
   expect(git(project, "stash", "list")).toContain("WIP before switching to main")
-})
-
-test("the switch updates the branch of every session in the checkout", async () => {
-  git(project, "checkout", "--quiet", "-b", "feature")
-  const sessions = await withServer([], (client) =>
-    Effect.gen(function* () {
-      yield* newSession(client)
-      const created = yield* newSession(client)
-      yield* client["session.switchToDefaultBranch"]({ sessionId: created.id })
-      return yield* client["session.list"]({ projectPath: project })
-    }),
-  )
-
-  expect(sessions.map((s) => s.branch)).toEqual(["main", "main"])
 })
 
 test("the checkout does not move while another session's agent works in it", async () => {

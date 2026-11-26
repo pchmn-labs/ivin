@@ -12,6 +12,14 @@ import {
 
 const text = (value: string): HarnessOutput => ({ type: "assistant_text", text: value, raw: null })
 
+const startS1 = (provider: HarnessProvider["Service"]) =>
+  provider.start({
+    sessionId: "s1",
+    cwd: "/p",
+    options: { model: "m", effort: "e", permissionMode: "p" },
+    providerSessionId: null,
+  })
+
 const run = <A, E>(
   turns: readonly (readonly ScriptedElement[])[],
   sent: ScriptedSend[],
@@ -27,12 +35,7 @@ test("each send replays the next turn on the events stream and records what was 
   const sent: ScriptedSend[] = []
   const events = await run([[text("one"), text("two")], [text("three")]], sent, (provider) =>
     Effect.gen(function* () {
-      const harness = yield* provider.start({
-        sessionId: "s1",
-        cwd: "/p",
-        options: { model: "m", effort: "e", permissionMode: "p" },
-        providerSessionId: null,
-      })
+      const harness = yield* startS1(provider)
       yield* harness.send({ id: "m1", text: "hello", images: [] })
       yield* harness.send({ id: "m2", text: "again", images: [] })
       return yield* Stream.runCollect(Stream.take(harness.events, 3))
@@ -53,12 +56,7 @@ test("each send replays the next turn on the events stream and records what was 
 test("sending with no turn left fails", async () => {
   const error = await run([], [], (provider) =>
     Effect.gen(function* () {
-      const harness = yield* provider.start({
-        sessionId: "s1",
-        cwd: "/p",
-        options: { model: "m", effort: "e", permissionMode: "p" },
-        providerSessionId: null,
-      })
+      const harness = yield* startS1(provider)
       return yield* Effect.flip(harness.send({ id: "m3", text: "hello", images: [] }))
     }),
   )
@@ -69,12 +67,7 @@ test("sending with no turn left fails", async () => {
 test("with cycle, the turns start over once they are used up", async () => {
   const events = await Effect.runPromise(
     Effect.gen(function* () {
-      const harness = yield* (yield* HarnessProvider).start({
-        sessionId: "s1",
-        cwd: "/p",
-        options: { model: "m", effort: "e", permissionMode: "p" },
-        providerSessionId: null,
-      })
+      const harness = yield* startS1(yield* HarnessProvider)
       yield* harness.send({ id: "m4", text: "a", images: [] })
       yield* harness.send({ id: "m5", text: "b", images: [] })
       return yield* Stream.runCollect(Stream.take(harness.events, 2))
@@ -97,12 +90,7 @@ test("a turn pauses after an approval request and resumes on each decision", asy
   const responded: RequestAnswer[] = []
   const events = await Effect.runPromise(
     Effect.gen(function* () {
-      const harness = yield* (yield* HarnessProvider).start({
-        sessionId: "s1",
-        cwd: "/p",
-        providerSessionId: null,
-        options: { model: "m", effort: "e", permissionMode: "p" },
-      })
+      const harness = yield* startS1(yield* HarnessProvider)
       yield* harness.send({ id: "m6", text: "go", images: [] })
       const first = yield* Stream.runCollect(Stream.take(harness.events, 2))
       yield* harness.respond({ requestId: "a", allow: true })
@@ -136,12 +124,7 @@ test("a turn pauses after a question request and resumes on its answers", async 
   const answers = [{ question: "Which?", choices: ["A"] }]
   const events = await Effect.runPromise(
     Effect.gen(function* () {
-      const harness = yield* (yield* HarnessProvider).start({
-        sessionId: "s1",
-        cwd: "/p",
-        providerSessionId: null,
-        options: { model: "m", effort: "e", permissionMode: "p" },
-      })
+      const harness = yield* startS1(yield* HarnessProvider)
       yield* harness.send({ id: "m8", text: "go", images: [] })
       const first = yield* Stream.runCollect(Stream.take(harness.events, 1))
       yield* harness.respond({ requestId: "q", answers })
@@ -176,12 +159,7 @@ test("a turn pauses after a question request and resumes on its answers", async 
 test("responding with no paused turn fails", async () => {
   const error = await run([[text("x")]], [], (provider) =>
     Effect.gen(function* () {
-      const harness = yield* provider.start({
-        sessionId: "s1",
-        cwd: "/p",
-        options: { model: "m", effort: "e", permissionMode: "p" },
-        providerSessionId: null,
-      })
+      const harness = yield* startS1(provider)
       yield* harness.send({ id: "m7", text: "go", images: [] })
       return yield* Effect.flip(harness.respond({ requestId: "a", allow: true }))
     }),
@@ -194,12 +172,7 @@ test("interrupt is recorded and offers an interruption then an idle status", asy
   const interrupted: string[] = []
   const events = await Effect.runPromise(
     Effect.gen(function* () {
-      const harness = yield* (yield* HarnessProvider).start({
-        sessionId: "s1",
-        cwd: "/p",
-        options: { model: "m", effort: "e", permissionMode: "p" },
-        providerSessionId: null,
-      })
+      const harness = yield* startS1(yield* HarnessProvider)
       yield* harness.interrupt
       return yield* Stream.runCollect(Stream.take(harness.events, 2))
     }).pipe(Effect.provide(layerScripted([], { interrupted })), Effect.scoped),
@@ -215,12 +188,7 @@ test("a scripted failure fails the events stream at that point, after the events
     [],
     (provider) =>
       Effect.gen(function* () {
-        const harness = yield* provider.start({
-          sessionId: "s1",
-          cwd: "/p",
-          options: { model: "m", effort: "e", permissionMode: "p" },
-          providerSessionId: null,
-        })
+        const harness = yield* startS1(provider)
         yield* harness.send({ id: "m8", text: "go", images: [] })
         const seen: string[] = []
         const error = yield* Stream.runForEach(harness.events, (e) =>
@@ -238,26 +206,14 @@ test("a start failure fails start, and closing the scope is reported", async () 
   await Effect.runPromise(
     Effect.gen(function* () {
       const provider = yield* HarnessProvider
-      yield* provider.start({
-        sessionId: "s1",
-        cwd: "/p",
-        options: { model: "m", effort: "e", permissionMode: "p" },
-        providerSessionId: null,
-      })
+      yield* startS1(provider)
     }).pipe(Effect.provide(layerScripted([], { closed })), Effect.scoped),
   )
   expect(closed).toEqual(["s1"])
 
   const error = await Effect.runPromise(
     Effect.gen(function* () {
-      return yield* Effect.flip(
-        (yield* HarnessProvider).start({
-          sessionId: "s1",
-          cwd: "/p",
-          options: { model: "m", effort: "e", permissionMode: "p" },
-          providerSessionId: null,
-        }),
-      )
+      return yield* Effect.flip(startS1(yield* HarnessProvider))
     }).pipe(Effect.provide(layerScripted([], { startFailure: "No agent" })), Effect.scoped),
   )
   expect(error.message).toBe("No agent")
@@ -267,14 +223,6 @@ const running: HarnessOutput = { type: "status", status: "running", raw: null }
 const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
 const asked = approval("r1")
 const read = (messageId: string): HarnessOutput => ({ type: "message_read", messageId })
-
-const startS1 = (provider: HarnessProvider["Service"]) =>
-  provider.start({
-    sessionId: "s1",
-    cwd: "/p",
-    options: { model: "m", effort: "e", permissionMode: "p" },
-    providerSessionId: null,
-  })
 
 test("a message sent mid-turn waits, and the turn reads it where the script says", async () => {
   const sent: ScriptedSend[] = []

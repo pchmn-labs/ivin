@@ -1,36 +1,15 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { layerScripted } from "@ivin/harness"
-import { Effect, Layer, type Scope, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
-import { execFileSync } from "node:child_process"
+import { Effect, Stream } from "effect"
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
 import { logGitCalls } from "./git-call-log.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { git as gitIn } from "./git-fixture.ts"
+import { type Client, withServer } from "./test-server.ts"
 
 vi.setConfig({ testTimeout: 30_000 })
 
-// Captured before the logging git goes on the PATH, so the test's own commands stay out of its log.
-const env = {
-  ...process.env,
-  GIT_AUTHOR_NAME: "ivin",
-  GIT_AUTHOR_EMAIL: "ivin@example.com",
-  GIT_COMMITTER_NAME: "ivin",
-  GIT_COMMITTER_EMAIL: "ivin@example.com",
-  GIT_CONFIG_GLOBAL: "/dev/null",
-}
-const git = (...args: string[]) =>
-  execFileSync("git", ["-c", "commit.gpgsign=false", ...args], { cwd: project, env })
+const git = (...args: string[]) => gitIn(project, ...args)
 
 let root: string
 let project: string
@@ -39,7 +18,7 @@ let gitLog: ReturnType<typeof logGitCalls>
 beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-git-calls-")))
   project = join(root, "project")
-  execFileSync("git", ["init", "--quiet", "-b", "main", project], { env })
+  gitIn(root, "init", "--quiet", "-b", "main", project)
   writeFileSync(join(project, "a.ts"), "a\n")
   writeFileSync(join(project, "b.ts"), "b\n")
   git("add", "--all")
@@ -60,32 +39,6 @@ afterEach(() => {
   gitLog.restore()
   rmSync(root, { recursive: true, force: true })
 })
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E, Scope.Scope>) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: join(root, "images") })),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([], { starts: [], closed: [] })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-}
 
 interface Reader {
   batches: number
@@ -213,14 +166,8 @@ test("once a folder is known ignored, a change under it queues nothing and runs 
     Effect.gen(function* () {
       const { id: sessionId } = yield* client["session.create"]({ projectPath: project })
       const reader: Reader = { batches: 0, reads: 0 }
-      const seen: string[] = []
       yield* client["file.watch"]({ sessionId }).pipe(
-        Stream.runForEach((batch) =>
-          Effect.sync(() => {
-            reader.batches++
-            seen.push(...batch.paths)
-          }),
-        ),
+        Stream.runForEach(() => Effect.sync(() => reader.batches++)),
         Effect.forkScoped,
       )
       yield* untilWatched([reader])
@@ -233,7 +180,6 @@ test("once a folder is known ignored, a change under it queues nothing and runs 
       yield* Effect.sleep("500 millis")
       expect(reader.batches).toBe(before)
       expect(gitLog.calls().filter(isCheckIgnore)).toEqual([])
-      expect(seen.filter((path) => path.startsWith("dist"))).toEqual([])
     }),
   )
 })

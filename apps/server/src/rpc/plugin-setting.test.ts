@@ -1,19 +1,9 @@
-import { layerScripted } from "@ivin/harness"
-import { Rpcs } from "@ivin/contracts/rpcs"
 import { Effect, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf, SettingsFile } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { layerDatabase } from "../shared/adapters/database.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { SettingsFile } from "../modules/setting/usecases/settings-file.ts"
 import { packageJson, tempDir, writePlugin } from "./plugin-test-server.ts"
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
+import { type Client, makeClient, serverLayer } from "./test-server.ts"
 
 const withPlugins = <A, E>(
   home: string,
@@ -26,16 +16,7 @@ const withPlugins = <A, E>(
       return yield* use(client, yield* SettingsFile)
     }).pipe(
       Effect.provide(
-        handlers.pipe(
-          Layer.provideMerge(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(layerDatabase(":memory:")),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: tempDir("images") })),
-          Layer.provide(layerScripted([])),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provideMerge(layerSettingsFileOf([settingsText])),
-          Layer.provide(layerFsUserPlugins(home)),
-        ),
+        serverLayer({ settings: [settingsText] }).pipe(Layer.provide(layerFsUserPlugins(home))),
       ),
       Effect.scoped,
     ),

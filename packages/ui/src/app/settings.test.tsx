@@ -173,7 +173,7 @@ const openAgents = async () => {
   await expect.element(page.getByRole("heading", { name: "Agents" })).toBeVisible()
 }
 
-test("the idle limit shows its value in minutes, and Enter saves a new one", async () => {
+test("the idle limit shows its value in minutes, Enter saves a new one, and 0 is accepted as the limit that never stops agents", async () => {
   await mountApp()
   await openAgents()
   await expect.element(idleLimit()).toHaveValue("10")
@@ -187,11 +187,6 @@ test("the idle limit shows its value in minutes, and Enter saves a new one", asy
   await userEvent.keyboard(`{${mod}>},{/${mod}}`)
   await sections().getByRole("button", { name: "Agents" }).click()
   await expect.element(idleLimit()).toHaveValue("30")
-})
-
-test("0 is accepted as the limit that never stops agents", async () => {
-  await mountApp()
-  await openAgents()
 
   await idleLimit().fill("0")
   await userEvent.keyboard("{Enter}")
@@ -284,27 +279,6 @@ test("Install links ivin into the shell and shows where, then offers to reinstal
   await expect.element(page.getByText(/is not on your shell's PATH/)).not.toBeInTheDocument()
 })
 
-test("a link in a folder off the shell's PATH says to add the folder", async () => {
-  const server = await mountApp()
-  server.shell.nextInstall = {
-    folder: "/Users/me/.local/bin",
-    path: "/Users/me/.local/bin/ivin",
-    onPath: false,
-  }
-  await openCommandLine()
-
-  await page.getByRole("button", { name: "Install" }).click()
-
-  await expect.element(page.getByText("/Users/me/.local/bin/ivin")).toBeVisible()
-  await expect
-    .element(
-      page.getByText(
-        "/Users/me/.local/bin is not on your shell's PATH: add it, then open a new terminal.",
-      ),
-    )
-    .toBeVisible()
-})
-
 test("with no folder writable, the page names each folder and its reason, and Retry installs", async () => {
   const server = await mountApp()
   const installed = server.shell.nextInstall
@@ -332,7 +306,7 @@ test("with no folder writable, the page names each folder and its reason, and Re
   await expect.element(page.getByText("/usr/local/bin/ivin")).toBeVisible()
 })
 
-test("an ivin that is not ivin's link is reported, not replaced", async () => {
+test("an ivin that is not ivin's link is reported, not replaced; a link in a folder off the shell's PATH says to add the folder", async () => {
   const server = await mountApp()
   server.shell.nextInstall = new ShellCommandNotOurs({ path: "/usr/local/bin/ivin" })
   await openCommandLine()
@@ -349,8 +323,23 @@ test("an ivin that is not ivin's link is reported, not replaced", async () => {
     )
     .toBeVisible()
   await expect.element(page.getByRole("button", { name: "Install" })).toBeVisible()
-})
 
+  server.shell.nextInstall = {
+    folder: "/Users/me/.local/bin",
+    path: "/Users/me/.local/bin/ivin",
+    onPath: false,
+  }
+  await page.getByRole("button", { name: "Install" }).click()
+
+  await expect.element(page.getByText("/Users/me/.local/bin/ivin")).toBeVisible()
+  await expect
+    .element(
+      page.getByText(
+        "/Users/me/.local/bin is not on your shell's PATH: add it, then open a new terminal.",
+      ),
+    )
+    .toBeVisible()
+})
 test("an install already in place shows when the section opens", async () => {
   const server = await mountApp()
   server.shell.installed = { folder: "/usr/local/bin", path: "/usr/local/bin/ivin", onPath: true }
@@ -507,16 +496,11 @@ const openImages = async () => {
   return server
 }
 
-test("the Images section shows the space the sent images take", async () => {
+test("the Images section shows the space the sent images take; deleting the images older than N days asks first with the space it frees, then shows the new size", async () => {
   await openImages()
-
   await expect.element(page.getByText("3.7 MB")).toBeVisible()
   await expect.element(page.getByText("2 images")).toBeVisible()
   await expect.element(page.getByText("1 image · 2.5 MB")).toBeVisible()
-})
-
-test("deleting the images older than N days asks first with the space it frees, then shows the new size", async () => {
-  await openImages()
 
   await page.getByRole("button", { name: "Delete…", exact: true }).click()
   const dialog = page.getByRole("dialog")
@@ -531,7 +515,7 @@ test("deleting the images older than N days asks first with the space it frees, 
   await expect.element(page.getByRole("button", { name: "Delete…", exact: true })).toBeDisabled()
 })
 
-test("a smaller number of days takes more images, and Cancel deletes nothing", async () => {
+test("a smaller number of days takes more images, Cancel deletes nothing, and a number of days that is not a whole number of 1 or more is refused next to the field", async () => {
   await openImages()
 
   await daysField().fill("1")
@@ -545,6 +529,10 @@ test("a smaller number of days takes more images, and Cancel deletes nothing", a
 
   await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
   await expect.element(page.getByText("3.7 MB", { exact: true })).toBeVisible()
+
+  await daysField().fill("0")
+  await expect.element(page.getByText("Enter a whole number of days, 1 or more.")).toBeVisible()
+  await expect.element(page.getByRole("button", { name: "Delete…", exact: true })).toBeDisabled()
 })
 
 test("Delete all asks first with the space it frees, then says no image is stored", async () => {
@@ -558,15 +546,6 @@ test("Delete all asks first with the space it frees, then says no image is store
 
   await expect.element(page.getByText("No image is stored.")).toBeVisible()
   await expect.element(page.getByRole("button", { name: "Delete all…" })).toBeDisabled()
-})
-
-test("a number of days that is not a whole number of 1 or more is refused next to the field", async () => {
-  await openImages()
-
-  await daysField().fill("0")
-
-  await expect.element(page.getByText("Enter a whole number of days, 1 or more.")).toBeVisible()
-  await expect.element(page.getByRole("button", { name: "Delete…", exact: true })).toBeDisabled()
 })
 
 test("a delete that fails says so under its row, and Retry deletes", async () => {

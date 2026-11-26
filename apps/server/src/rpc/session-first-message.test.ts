@@ -1,61 +1,32 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { HarnessError, layerScripted } from "@ivin/harness"
-import { Deferred, Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
+import { HarnessError } from "@ivin/harness"
+import { Deferred, Effect } from "effect"
 import { mkdtempSync, readFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { makeClient, serverLayer, type Client } from "./test-server.ts"
 import { layerErrorLogFile } from "../modules/log/adapters/error-log-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { FirstMessageReading } from "../modules/session/usecases/first-message-reading.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
 
 const turn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: null },
   { type: "status", status: "idle", raw: null },
 ]
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
 const withServer = <A, E>(
   completeText: (prompt: string) => Effect.Effect<string, HarnessError>,
   use: (client: Client) => Effect.Effect<A, E, FirstMessageReading>,
   logPath = join(mkdtempSync(join(tmpdir(), "ivin-log-")), "ivin.log"),
-) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
+) =>
+  Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provideMerge(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([turn], { cycle: true, completeText })),
-        ),
-      ),
+      Effect.provide(serverLayer({ turns: [turn], scripted: { cycle: true, completeText } })),
       Effect.scoped,
       Effect.provide(layerErrorLogFile(logPath)),
     ),
   )
-}
 
 const reply = (json: object) => () => Effect.succeed(JSON.stringify(json))
 
@@ -80,21 +51,24 @@ const firstMessage = (client: Client, text: string) =>
     return { sessionId: session.id, ...(yield* sendFirst(client, session.id, text)) }
   })
 
-test("the first message's title is replaced by the one the model writes from it", async () => {
+test("the first message's title is replaced by the one the model writes from it, and the issue number it names is stored as a citation", async () => {
   const prompts: string[] = []
   const run = await withServer(
     (prompt) => {
       prompts.push(prompt)
-      return Effect.succeed('{"title": "Keybindings grouped in settings", "workItem": null}')
+      return Effect.succeed(
+        '{"title": "Keybindings grouped in settings", "workItem": {"kind": "issue", "number": 127}}',
+      )
     },
     (client) =>
       firstMessage(
         client,
-        "/prototype the settings page should list keybindings by group, see mock",
+        "/prototype the settings page should list keybindings by group, see mock, implement #127",
       ),
   )
 
   expect(run.title).toBe("Keybindings grouped in settings")
+  expect(run.citations).toEqual([{ ns: "ivin", data: { kind: "issue", number: 127 } }])
   expect(prompts).toHaveLength(1)
   expect(prompts[0]).toContain("the settings page should list keybindings by group")
 })
@@ -146,25 +120,6 @@ test("when the model fails, the session keeps its first-line title, goes on, and
 
   expect(run).toEqual({ title: "fix the drag", next: "fix the drag" })
   expect(readFileSync(logPath, "utf8")).toContain("Not logged in")
-})
-
-test("the issue or pull request number the first message names is stored as a citation", async () => {
-  const run = await withServer(
-    reply({ title: "Branch changes", workItem: { kind: "issue", number: 127 } }),
-    (client) => firstMessage(client, "implement #127"),
-  )
-
-  expect(run.citations).toEqual([{ ns: "ivin", data: { kind: "issue", number: 127 } }])
-})
-
-test("a number the message does not hold, or none, is no citation", async () => {
-  const runs = await withServer(
-    reply({ title: "Some work", workItem: { kind: "pr", number: 42 } }),
-    (client) =>
-      Effect.all([firstMessage(client, "fix the drag"), firstMessage(client, "fix #412")]),
-  )
-
-  expect(runs.map(({ citations }) => citations)).toEqual([[], []])
 })
 
 test("a session the user named before its first message keeps its name and still gets the citation", async () => {

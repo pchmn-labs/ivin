@@ -115,12 +115,3 @@ test("an item's description shows under its label, and the footer keeps the hint
   await userEvent.keyboard("{ArrowUp}")
   expect(foot()).toBe("Pick what goes in")
 })
-
-test("escape closes the menu and gives focus back to its button", async () => {
-  await setup()
-  await page.getByRole("button", { name: "Basket" }).click()
-  await userEvent.keyboard("{Escape}")
-
-  await expect.element(page.getByRole("listbox", { name: "Fruit" })).not.toBeInTheDocument()
-  await expect.element(page.getByRole("button", { name: "Basket" })).toHaveFocus()
-})

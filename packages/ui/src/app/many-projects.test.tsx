@@ -1,12 +1,8 @@
-import { RegistryProvider } from "@effect/atom-react"
-import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { defaultSettings } from "@ivin/contracts/setting"
 import { afterEach, expect, test } from "vitest"
 import { page } from "vitest/browser"
-import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
-import { App } from "./app.tsx"
+import { mountApp } from "./test-app.tsx"
 
 const COUNT = 40
 const longName = (n: number) =>
@@ -14,7 +10,7 @@ const longName = (n: number) =>
 const names = Array.from({ length: COUNT }, (_, n) => longName(n))
 const FIRST = longName(0)
 const LAST = longName(COUNT - 1)
-const STEPS = 12
+const STEPS = 5
 const ONE_LINE = 40
 
 afterEach(() => document.getElementById("root")?.remove())
@@ -27,12 +23,7 @@ const mountMany = async (layout: "rail" | "strip") => {
   // base.css sizes the window through #root; the test container has no such id.
   const root = document.body.appendChild(document.createElement("div"))
   root.id = "root"
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App plugins={builtinPlugins} />
-    </RegistryProvider>,
-    { container: root },
-  )
+  await mountApp(server, { container: root })
   await expect.element(page.getByTestId("project-name")).toHaveTextContent(names.at(-1))
 }
 

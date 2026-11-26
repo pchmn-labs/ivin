@@ -1,32 +1,11 @@
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import type { Session } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import {
-  layerScripted,
-  type RequestAnswer,
-  type ScriptedElement,
-  type ScriptedOptions,
-} from "@ivin/harness"
-import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
-import { DatabaseSync } from "node:sqlite"
+import type { RequestAnswer, ScriptedElement, ScriptedOptions } from "@ivin/harness"
+import { Effect } from "effect"
+import type { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
-import { until } from "./test-waits.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { idle, running, said, itemsOf as items, sessionOf, untilSession } from "./test-scripts.ts"
+import { newDatabase, withServer as withTestServer, type Client } from "./test-server.ts"
 
-const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
-const running: HarnessOutput = { type: "status", status: "running", raw: null }
-const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
 const questions = [
   {
     question: "Which colour?",
@@ -63,54 +42,12 @@ const approval: HarnessOutput = {
   raw: null,
 }
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
-
 const withServer = <A, E>(
   db: DatabaseSync,
   turns: readonly (readonly ScriptedElement[])[],
   use: (client: Client) => Effect.Effect<A, E>,
   options: ScriptedOptions = {},
-) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerScripted(turns, { reportSession: true, ...options })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-
-const sessionOf = (client: Client, id: string) =>
-  client["session.list"]({ projectPath: "/p" }).pipe(
-    Effect.map((sessions) => sessions.find((s) => s.id === id)!),
-  )
-
-const untilSession = (client: Client, id: string, done: (session: Session) => boolean) =>
-  until(sessionOf(client, id), done)
-
-const items = (client: Client, sessionId: string) =>
-  client["transcript.getItems"]({ sessionId, position: null, before: 100, after: 100 }).pipe(
-    Effect.map((page) => page.items),
-  )
+) => withTestServer(use, { db, turns, scripted: { reportSession: true, ...options } })
 
 const questionItem = (client: Client, sessionId: string) =>
   items(client, sessionId).pipe(Effect.map((all) => all.find((item) => item.type === "question")))

@@ -1,13 +1,9 @@
-import { RegistryProvider } from "@effect/atom-react"
-import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
-import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
 import { makeTestSession } from "../core/test-session.ts"
-import { App } from "./app.tsx"
+import { mountApp as mountServer } from "./test-app.tsx"
 
 const mountApp = async () => {
   const server = makeFakeServer({
@@ -25,11 +21,7 @@ const mountApp = async () => {
     )
   }
   server.openTab("s1")
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App plugins={builtinPlugins} />
-    </RegistryProvider>,
-  )
+  await mountServer(server)
   await expect.element(page.getByText(/^Inactive sessions/)).toBeVisible()
   return server
 }
@@ -57,8 +49,13 @@ test("Archive all asks once, naming the running agent, then archives every inact
   expect(server.sessions.get("s1")?.archivedAt).toBeNull()
 })
 
-test("Delete all erases every inactive session, listing none when no agent runs", async () => {
+test("Delete all erases every inactive session, listing none when no agent runs; Cancel changes nothing", async () => {
   const server = await mountApp()
+
+  await pick("Delete all…")
+  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click()
+  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
+  for (const id of inactive) expect(server.sessions.has(id)).toBe(true)
 
   await pick("Delete all…")
   const dialog = page.getByRole("dialog")
@@ -69,16 +66,6 @@ test("Delete all erases every inactive session, listing none when no agent runs"
   await expect.element(page.getByText(/^Inactive sessions/)).not.toBeInTheDocument()
   for (const id of inactive) expect(server.sessions.has(id)).toBe(false)
   expect(server.sessions.has("s1")).toBe(true)
-})
-
-test("Cancel changes nothing", async () => {
-  const server = await mountApp()
-
-  await pick("Delete all…")
-  await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click()
-
-  await expect.element(page.getByRole("dialog")).not.toBeInTheDocument()
-  for (const id of inactive) expect(server.sessions.has(id)).toBe(true)
 })
 
 test("a session that fails stays under its error, and the others are archived anyway", async () => {

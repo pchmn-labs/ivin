@@ -1,13 +1,10 @@
-import { RegistryProvider } from "@effect/atom-react"
-import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { defaultSettings } from "@ivin/contracts/setting"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
-import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
-import { App } from "./app.tsx"
+import { makeTestSession } from "../core/test-session.ts"
+import { mountApp as mountServer } from "./test-app.tsx"
 
 const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 const rail = () => page.getByRole("navigation", { name: "Projects" })
@@ -19,46 +16,25 @@ const layout = (value: "rail" | "strip") => ({
 })
 
 const mountApp = async (options: { layout?: "rail" | "strip"; failVersion?: boolean } = {}) => {
-  const at = DateTime.makeUnsafe(0)
   const server = makeFakeServer({
-    project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: at },
+    project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/dev/other",
-    workingFolder: "/dev/other",
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "Other work",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "idle",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set(
+    "s1",
+    makeTestSession({
+      id: "s1",
+      title: "Other work",
+      projectPath: "/dev/other",
+      workingFolder: "/dev/other",
+    }),
+  )
   server.openProject("/dev/other")
   server.openTab("s1")
   server.openProject("/dev/ivin")
   if (options.layout !== undefined) server.setUserSettings(layout(options.layout))
   if (options.failVersion === true) server.failNextCall("server.getVersion")
   await page.viewport(1280, 800)
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App plugins={builtinPlugins} />
-    </RegistryProvider>,
-  )
+  await mountServer(server)
   await expect.element(projectName()).toHaveTextContent("ivin")
   return server
 }

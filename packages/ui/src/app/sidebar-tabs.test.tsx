@@ -1,60 +1,14 @@
-import { RegistryProvider } from "@effect/atom-react"
-import { builtinPlugins } from "../core/test-builtin-plugins.ts"
-import type { FolderEntry } from "@ivin/contracts/file"
-import { DateTime } from "effect"
 import { afterEach, beforeEach, expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
-import { render } from "vitest-browser-react"
-import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
-import { App } from "./app.tsx"
+import type { FakeServer } from "../core/fake-server-client.ts"
+import { folder, makeShopServer, mountApp, shopProject, shopWorktree } from "./test-app.tsx"
 
 const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
-const project = "/dev/shop"
-const worktree = "/dev/shop/.worktrees/fix-cart"
-
-const folder = (...names: string[]): ReadonlyArray<FolderEntry> =>
-  names.map((name) =>
-    name.endsWith("/")
-      ? { name: name.slice(0, -1), kind: "folder", ignored: false }
-      : { name, kind: "file", ignored: false },
-  )
+const project = shopProject
+const worktree = shopWorktree
 
 const makeServer = () => {
-  const server = makeFakeServer({
-    project: { path: project, name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
-  })
-  const at = DateTime.makeUnsafe(0)
-  for (const [id, title, workingFolder] of [
-    ["s1", "Checkout flow", project],
-    ["s2", "Fix the cart", worktree],
-  ] as const) {
-    server.sessions.set(id, {
-      id,
-      projectPath: project,
-      workingFolder,
-      inWorktree: workingFolder !== project,
-      branch: "main",
-      started: true,
-      workingFolderDeleted: false,
-      title,
-      harness: "claude",
-      model: "sonnet",
-      effort: "high",
-      permissionMode: "manual",
-      relaunchFailure: null,
-      pendingMessages: [],
-      unreadMessages: [],
-      backgroundTasks: [],
-      status: "idle",
-      statusChangedAt: at,
-      createdAt: at,
-      lastActivityAt: at,
-      archivedAt: null,
-      lastImageNumber: 0,
-      waitingFor: null,
-    })
-  }
+  const server = makeShopServer()
   server.folders.set(project, folder("src/", "package.json", "README.md"))
   server.folders.set(`${project}/src`, folder("lib/", "main.ts"))
   server.folders.set(`${project}/src/lib`, folder("cart.ts"))
@@ -64,12 +18,7 @@ const makeServer = () => {
   return server
 }
 
-const mount = (server: FakeServer) =>
-  render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App plugins={builtinPlugins} />
-    </RegistryProvider>,
-  )
+const mount = (server: FakeServer) => mountApp(server)
 
 const sidebarTab = (name: string) =>
   page.getByRole("tablist", { name: "Sidebar" }).getByRole("tab", { name })

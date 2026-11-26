@@ -1,17 +1,9 @@
-import { layerScripted, scriptedRunOptions } from "@ivin/harness"
-import { Effect, Layer } from "effect"
+import { scriptedRunOptions } from "@ivin/harness"
+import { Effect } from "effect"
 import { RpcTest } from "effect/rpc"
 import { expect, test } from "vitest"
 import { ServerRpcs } from "@ivin/contracts/server"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerDatabase } from "../shared/adapters/database.ts"
-import { handlers, layerServices } from "./handlers.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
+import { serverLayer } from "./test-server.ts"
 
 const makeClient = () => RpcTest.makeClient(ServerRpcs)
 type Client = Effect.Success<ReturnType<typeof makeClient>>
@@ -19,19 +11,7 @@ type Client = Effect.Success<ReturnType<typeof makeClient>>
 const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E>) =>
   makeClient().pipe(
     Effect.flatMap(use),
-    Effect.provide(
-      handlers.pipe(
-        Layer.provide(layerServices),
-        Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-        Layer.provide(layerDatabase(":memory:")),
-        Layer.provide(
-          Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-        ),
-        Layer.provide(layerKeybindingsFileOf([])),
-        Layer.provide(layerSettingsFileOf([])),
-        Layer.provide(layerScripted([])),
-      ),
-    ),
+    Effect.provide(serverLayer()),
     Effect.scoped,
     Effect.runPromise,
   )

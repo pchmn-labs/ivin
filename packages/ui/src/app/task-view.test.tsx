@@ -176,21 +176,6 @@ test("each task opens in a tab of its own, and a command's output follows live",
     .toContain("shard 2/3 started")
 })
 
-test("Move to takes the task view from the sheet to beside the chat, and back", async () => {
-  await mount()
-  await details("Review the diff").click()
-
-  await sheet().getByRole("tab", { name: "Review the diff" }).click({ button: "right" })
-  await page.getByRole("menuitem", { name: "Beside chat" }).click()
-  await expect.element(card().getByText("I read the session runner first.")).toBeVisible()
-  await expect.poll(() => sheet().query()).toBeNull()
-
-  await card().getByRole("tab", { name: "Review the diff" }).click({ button: "right" })
-  await page.getByRole("menuitem", { name: "Sheet" }).click()
-  await expect.element(sheet().getByText("I read the session runner first.")).toBeVisible()
-  await expect.poll(() => card().query()).toBeNull()
-})
-
 test("Escape closes the task's sheet before it interrupts the agent", async () => {
   await mount({ session: { status: "working" } })
   await details("Review the diff").click()

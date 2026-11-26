@@ -7,6 +7,7 @@ import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { makeTestSession } from "../../../core/test-session.ts"
 import { updateStateAtom } from "../atoms/update-state.ts"
 import { UpdateButton } from "./update-button.tsx"
 
@@ -33,33 +34,11 @@ const show = async (state: UpdateState | null, agents: ReadonlyArray<SessionStat
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
-  const at = DateTime.makeUnsafe(0)
   agents.forEach((status, index) =>
-    server.sessions.set(`s${index}`, {
-      id: `s${index}`,
-      projectPath: "/p",
-      workingFolder: "/p",
-      inWorktree: false,
-      branch: "main",
-      started: true,
-      workingFolderDeleted: false,
-      title: `Session ${index}`,
-      harness: "claude",
-      model: "sonnet",
-      effort: "high",
-      permissionMode: "manual",
-      relaunchFailure: null,
-      pendingMessages: [],
-      unreadMessages: [],
-      backgroundTasks: [],
-      status,
-      statusChangedAt: at,
-      createdAt: at,
-      lastActivityAt: at,
-      archivedAt: null,
-      lastImageNumber: 0,
-      waitingFor: null,
-    }),
+    server.sessions.set(
+      `s${index}`,
+      makeTestSession({ id: `s${index}`, title: `Session ${index}`, status }),
+    ),
   )
   await render(
     <RegistryProvider

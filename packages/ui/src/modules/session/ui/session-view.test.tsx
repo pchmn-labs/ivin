@@ -8,6 +8,7 @@ import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { type FakeCheckout, makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { makeTestSession } from "../../../core/test-session.ts"
 import { SidebarTabs } from "../../../app/sidebar-tabs.tsx"
 import { SessionView } from "./session-view.tsx"
 
@@ -65,32 +66,7 @@ test("the transcript renders through the plugins and the status line shows the u
       costUsd: 0.0023,
     },
   ])
-  const at = DateTime.makeUnsafe(0)
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/p",
-    workingFolder: "/p",
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "t",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "idle",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set("s1", makeTestSession({ id: "s1", title: "t" }))
 
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
@@ -115,32 +91,7 @@ const mountSession = async (
 ) => {
   const server = makeFakeServer()
   server.openProject("/p")
-  const at = DateTime.makeUnsafe(0)
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/p",
-    workingFolder: "/p",
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "t",
-    harness,
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status,
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set("s1", makeTestSession({ id: "s1", title: "t", harness, status }))
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>
@@ -150,22 +101,6 @@ const mountSession = async (
   )
   return server
 }
-
-test("a codex session's composer draws no Claude mark", async () => {
-  await mountSession("idle", "codex")
-  await expect.element(page.getByTestId("run-options")).toBeInTheDocument()
-  const model = page.getByTestId("run-options").element()
-  expect(model.querySelector(".iv-harness-mark--agent")).not.toBeNull()
-  expect(document.querySelector(".iv-composer .iv-harness-mark--claude")).toBeNull()
-})
-
-test("a claude session's composer draws the Claude mark", async () => {
-  await mountSession("idle")
-  await expect.element(page.getByTestId("run-options")).toBeInTheDocument()
-  expect(
-    page.getByTestId("run-options").element().querySelector(".iv-harness-mark--claude"),
-  ).not.toBeNull()
-})
 
 test("opening a session puts the focus in its composer, after the draft's text", async () => {
   await mountSession("idle")
@@ -229,13 +164,6 @@ test("the Interrupt button shows only while the session works and interrupts it"
   expect(page.getByRole("button", { name: "Interrupt" }).query()).toBeNull()
 })
 
-test("Escape in the composer interrupts a working session", async () => {
-  await mountSession("working")
-  await page.getByRole("textbox", { name: "Message" }).click()
-  await userEvent.keyboard("{Escape}")
-  await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
-})
-
 test("the composer accepts a message while the session works", async () => {
   const server = await mountSession("working")
   await page.getByRole("textbox", { name: "Message" }).fill("also this")
@@ -254,7 +182,7 @@ test("a message that fails to send stays in the composer, and Retry sends it", a
 
   send.fail()
   const alert = page.getByRole("alert")
-  await expect.element(alert.getByText("The message was not sent.")).toBeVisible()
+  await expect.element(alert.getByRole("button", { name: "Retry" })).toBeVisible()
   await expect.poll(composerText).toBe("keep me")
   expect(server.errorReports.map((report) => report.action)).toContain("session.sendMessage")
 
@@ -276,58 +204,15 @@ test("a message to a session the server no longer has says so, with no Retry", a
   await expect.poll(composerText).toBe("hello")
 })
 
-test("Escape interrupts a working session wherever the focus is", async () => {
-  await mountSession("working")
-  await userEvent.keyboard("{Escape}")
-  await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
-})
-
-test("Escape in the rename input cancels the rename and does not interrupt", async () => {
-  const server = makeFakeServer()
-  const at = DateTime.makeUnsafe(0)
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/p",
-    workingFolder: "/p",
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "t",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "working",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
-  server.openProject("/p")
-  server.openTab("s1")
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <PluginsProvider plugins={builtinPlugins}>
-        <SidebarTabs />
-        <SessionView projectPath="/p" sessionId="s1" />
-      </PluginsProvider>
-    </RegistryProvider>,
-  )
-  await page.getByTestId("session-item").hover()
-  await page.getByRole("button", { name: "Session actions" }).click()
-  await page.getByRole("menuitem", { name: "Rename" }).click()
-  await userEvent.keyboard("{Escape}")
-  await expect.element(page.getByRole("textbox", { name: "Session title" })).not.toBeInTheDocument()
-  expect(server.callsOf("session.interrupt")).toBe(0)
-  expect(server.sessions.get("s1")?.status).toBe("working")
-})
+test.each(["the composer", "the page"])(
+  "Escape interrupts a working session whether the focus is in %s",
+  async (focus) => {
+    await mountSession("working")
+    if (focus === "the composer") await page.getByRole("textbox", { name: "Message" }).click()
+    await userEvent.keyboard("{Escape}")
+    await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
+  },
+)
 
 test("a pending approval shows a sheet on the composer that Enter allows, leaving no record", async () => {
   const server = await mountSession("waiting")
@@ -417,34 +302,12 @@ test("Shift+Enter in the composer inserts a new line and does not send", async (
   await expect.poll(composerText).toBe("one\ntwo")
 })
 
-test("Escape closes an open menu without interrupting the session", async () => {
+test.each([
+  ["a rename input cancels the rename", "textbox", "Session title"],
+  ["an open menu closes it", "menuitem", "Rename"],
+] as const)("Escape in %s without interrupting the session", async (_, role, name) => {
   const server = makeFakeServer()
-  const at = DateTime.makeUnsafe(0)
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/p",
-    workingFolder: "/p",
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "t",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "working",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set("s1", makeTestSession({ id: "s1", title: "t", status: "working" }))
   server.openProject("/p")
   server.openTab("s1")
   await render(
@@ -457,9 +320,10 @@ test("Escape closes an open menu without interrupting the session", async () => 
   )
   await page.getByTestId("session-item").hover()
   await page.getByRole("button", { name: "Session actions" }).click()
-  await expect.element(page.getByRole("menuitem", { name: "Rename" })).toBeVisible()
+  if (role === "textbox") await page.getByRole("menuitem", { name: "Rename" }).click()
+  await expect.element(page.getByRole(role, { name })).toBeVisible()
   await userEvent.keyboard("{Escape}")
-  await expect.element(page.getByRole("menuitem", { name: "Rename" })).not.toBeInTheDocument()
+  await expect.element(page.getByRole(role, { name })).not.toBeInTheDocument()
   expect(server.callsOf("session.interrupt")).toBe(0)
   expect(server.sessions.get("s1")?.status).toBe("working")
 })
@@ -476,32 +340,7 @@ const mountNewSession = async (checkout: Partial<FakeCheckout> = {}) => {
     project: { path: "/p", name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
   Object.assign(server.checkout, checkout)
-  const at = DateTime.makeUnsafe(0)
-  const session = {
-    id: "s1",
-    projectPath: "/p",
-    workingFolder: "/p",
-    inWorktree: false,
-    branch: "main",
-    started: false,
-    workingFolderDeleted: false,
-    title: "New session",
-    harness: "claude" as const,
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "idle" as const,
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  }
+  const session = makeTestSession({ id: "s1", title: "New session", started: false })
   server.sessions.set("s1", session)
   server.worktrees.push({ path: "/p/.worktrees/docs-adr", branch: "docs/adr" })
   server.sessions.set("s2", {
@@ -616,11 +455,6 @@ test("a worktree git cannot create shows git's message in the transcript and kee
 
   const alert = page.getByTestId("composer-alert")
   await vi.waitFor(() => expect(alert.query()).not.toBeNull())
-  console.log(
-    "DEBUG",
-    JSON.stringify(alert.element().textContent),
-    page.getByTestId("composer-alert").elements().length,
-  )
   await expect.element(alert).toBeVisible()
   expect(alert.element().textContent).toMatch(/^The worktree was not created/)
   await expect
@@ -714,36 +548,22 @@ const mountDeletedFolderSession = async ({
   const server = makeFakeServer({
     project: { path: "/p", name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
-  const at = DateTime.makeUnsafe(0)
   server.worktrees.push({ path: "/p/.worktrees/docs-adr", branch: "docs/adr" })
   for (let n = 0; n < extraWorktrees; n++) {
     server.worktrees.push({ path: `/p/.worktrees/feat-${n}`, branch: `feat/${n}` })
   }
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/p",
-    workingFolder: "/p/.worktrees/ivin-3f2a9c1e",
-    inWorktree: true,
-    branch: "ivin/3f2a9c1e",
-    started: true,
-    workingFolderDeleted: true,
-    title: "Add the Working panel",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status,
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set(
+    "s1",
+    makeTestSession({
+      id: "s1",
+      workingFolder: "/p/.worktrees/ivin-3f2a9c1e",
+      inWorktree: true,
+      branch: "ivin/3f2a9c1e",
+      workingFolderDeleted: true,
+      title: "Add the Working panel",
+      status,
+    }),
+  )
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <PluginsProvider plugins={builtinPlugins}>

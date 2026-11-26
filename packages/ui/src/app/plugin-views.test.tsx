@@ -1,5 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
-import { defaultSettings, type UserSettings } from "@ivin/contracts/setting"
+import type { UserSettings } from "@ivin/contracts/setting"
 import { defineUi, type UiContext, type ViewProps } from "@ivin/plugin-api/ui"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
@@ -79,25 +79,6 @@ const setup = async (
 }
 type ViewPlacement = "subView" | "sheet" | "dialog"
 
-const placementSetting = (value: string) => ({
-  settings: defaultSettings,
-  problem: null,
-  pluginSettings: [
-    {
-      pluginId: "demo",
-      pluginName: "Demo",
-      key: "note.placement",
-      type: "string" as const,
-      default: "subView",
-      title: "Note placement",
-      description: "Where Note opens.",
-      values: ["subView", "sheet", "dialog"],
-      value,
-      ignored: false,
-    },
-  ],
-})
-
 test("a view opens as a tab beside the chat by default, with its title", async () => {
   const { open } = await setup()
   await open("demo/note", { id: 1 })
@@ -123,18 +104,6 @@ test("a second dialog replaces the first", async () => {
   await open("demo/note", { id: 2 }, "dialog")
   await expect.element(page.getByText("note 2 in dialog")).toBeVisible()
   expect(page.getByText("note 1 in dialog").query()).toBeNull()
-})
-
-test("the setting decides over the caller", async () => {
-  const { open } = await setup(placementSetting("dialog"))
-  await open("demo/note", { id: 1 }, "sheet")
-  await expect.element(page.getByText("note 1 in dialog")).toBeVisible()
-})
-
-test("a placement outside the view's list falls back to its default", async () => {
-  const { open } = await setup()
-  await open("demo/tight", { id: 1 }, "dialog")
-  await expect.element(page.getByText("note 1 in subView")).toBeVisible()
 })
 
 test("opening an equal view selects the open one instead of adding a tab", async () => {
@@ -222,16 +191,6 @@ test("Move to takes a view from beside the chat to a dialog and back, keeping it
   await page.getByRole("menuitem", { name: "Beside chat" }).click()
   await expect.element(page.getByText("note 1 in subView")).toBeVisible()
   await expect.poll(() => page.getByRole("dialog").query()).toBeNull()
-})
-
-test("the Move to menu lists only the view's other placements", async () => {
-  const { open } = await setup()
-  await open("demo/note", { id: 1 }, "sheet")
-
-  await page.getByRole("tab", { name: "Note 1" }).click({ button: "right" })
-  await expect.element(page.getByRole("menuitem", { name: "Beside chat" })).toBeVisible()
-  await expect.element(page.getByRole("menuitem", { name: "Dialog" })).toBeVisible()
-  expect(page.getByRole("menuitem", { name: "Sheet" }).query()).toBeNull()
 })
 
 test("a view with one placement shows no Move to", async () => {

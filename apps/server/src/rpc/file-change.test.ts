@@ -1,9 +1,5 @@
 import { DIFF_SIZE_LIMIT, type FileDiff } from "@ivin/contracts/file"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { layerScripted } from "@ivin/harness"
-import { Effect, Layer, type Scope } from "effect"
-import { RpcTest } from "effect/rpc"
-import { execFileSync } from "node:child_process"
+import { Effect } from "effect"
 import {
   existsSync,
   mkdirSync,
@@ -15,49 +11,23 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { git } from "./git-fixture.ts"
+import {
+  callIn,
+  changesIn,
+  commitAll,
+  committedChangesIn,
+  committedDiffIn,
+  write,
+} from "./test-file-repo.ts"
+import { withServer } from "./test-server.ts"
 
 // Real git: several commands per call, slower when the suite runs other git tests beside it.
 vi.setConfig({ testTimeout: 10_000 })
 
 let root: string
 let project: string
-
-const env = { ...process.env, GIT_CONFIG_GLOBAL: "/dev/null" }
-
-const write = (path: string, text = "") => {
-  mkdirSync(join(path, ".."), { recursive: true })
-  writeFileSync(path, text)
-}
-
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync(
-    "git",
-    [
-      "-c",
-      "user.name=ivin",
-      "-c",
-      "user.email=ivin@example.com",
-      "-c",
-      "commit.gpgsign=false",
-      ...args,
-    ],
-    { cwd, env },
-  )
-
-const commitAll = (cwd = project) => {
-  git(cwd, "add", "--all")
-  git(cwd, "commit", "--quiet", "-m", "commit")
-}
 
 beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-changes-")))
@@ -67,47 +37,6 @@ beforeEach(() => {
 })
 
 afterEach(() => rmSync(root, { recursive: true, force: true }))
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const withServer = <A, E>(use: (client: Client) => Effect.Effect<A, E, Scope.Scope>) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(Layer.succeed(ImageFolder)({ path: join(root, "images") })),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([], { starts: [], closed: [] })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-}
-
-// Runs `call` in a new session of `projectPath`, and the error's tag when it fails.
-const callIn = <A>(
-  projectPath: string,
-  call: (client: Client, sessionId: string) => Effect.Effect<A, { readonly _tag: string }>,
-) =>
-  withServer((client) =>
-    Effect.gen(function* () {
-      const { id } = yield* client["session.create"]({ projectPath })
-      return yield* call(client, id).pipe(Effect.catch((error) => Effect.succeed(error._tag)))
-    }),
-  )
-
-const changesIn = (projectPath: string) =>
-  callIn(projectPath, (client, sessionId) => client["file.listChanges"]({ sessionId }))
 
 const diffIn = (projectPath: string, path: string) =>
   callIn(projectPath, (client, sessionId) => client["file.readDiff"]({ sessionId, path }))
@@ -126,7 +55,7 @@ test("lists modified, added, deleted, renamed and untracked files with their lin
   write(join(project, "modified.ts"), "one\ntwo\nthree\n")
   write(join(project, "deleted.ts"), "a\nb\n")
   write(join(project, "old-name.ts"), "kept\nlines\nhere\n")
-  commitAll()
+  commitAll(project)
   write(join(project, "modified.ts"), "one\n2\nthree\nfour\n")
   rmSync(join(project, "deleted.ts"))
   mkdirSync(join(project, "src"))
@@ -171,7 +100,7 @@ test("lists the changes of a repository with no commit yet, and none when nothin
     ],
   })
 
-  commitAll()
+  commitAll(project)
   expect(await changesIn(project)).toEqual({ kind: "listed", changes: [] })
 })
 
@@ -179,7 +108,7 @@ test("lists only the changes inside a working folder below the repository root, 
   const inner = join(project, "apps/web")
   write(join(inner, "page.ts"), "a\n")
   write(join(project, "outside.ts"), "a\n")
-  commitAll()
+  commitAll(project)
   write(join(inner, "page.ts"), "b\n")
   write(join(project, "outside.ts"), "b\n")
   write(join(inner, "new.ts"), "n\n")
@@ -193,16 +122,18 @@ test("lists only the changes inside a working folder below the repository root, 
   })
 })
 
-test("says a working folder outside a git repository is not one, for the list and a diff", async () => {
+test("says a working folder outside a git repository is not one, for the list, a diff and the committed ones", async () => {
   const plain = join(root, "plain")
   write(join(plain, "a.ts"), "a\n")
   expect(await changesIn(plain)).toEqual({ kind: "not_repository" })
   expect(await diffIn(plain, "a.ts")).toEqual({ kind: "not_repository" })
+  expect(await committedChangesIn(plain)).toEqual({ kind: "not_repository" })
+  expect(await committedDiffIn(plain, "a.ts")).toEqual({ kind: "not_repository" })
 })
 
 test("fails with git's message when git cannot read the repository", async () => {
   write(join(project, "a.ts"), "a\n")
-  commitAll()
+  commitAll(project)
   writeFileSync(join(project, ".git/index"), "garbage")
 
   const failure = await withServer((client) =>
@@ -218,7 +149,7 @@ test("fails with git's message when git cannot read the repository", async () =>
 test("diffs a modified file in hunks, numbering each side and marking the changed part of a replaced line", async () => {
   const before = Array.from({ length: 20 }, (_, n) => `line ${n + 1}`)
   write(join(project, "a.ts"), `${before.join("\n")}\n`)
-  commitAll()
+  commitAll(project)
   const after = [...before]
   after[1] = "line 2 changed"
   after.splice(15, 1)
@@ -246,7 +177,7 @@ test("diffs a modified file in hunks, numbering each side and marking the change
 test("diffs an added, a deleted, a renamed and an untracked file", async () => {
   write(join(project, "deleted.ts"), "gone\n")
   write(join(project, "old.ts"), "one\ntwo\n")
-  commitAll()
+  commitAll(project)
   rmSync(join(project, "deleted.ts"))
   write(join(project, "added.ts"), "a\n")
   git(project, "add", "added.ts")
@@ -264,7 +195,7 @@ test("says a binary file is binary, a file with no change is unchanged, and a di
   write(join(project, "image.png"), "\0\x01\x02")
   write(join(project, "clean.ts"), "c\n")
   write(join(project, "big.txt"), "")
-  commitAll()
+  commitAll(project)
   write(join(project, "image.png"), "\0\x03\x04")
   write(
     join(project, "big.txt"),
@@ -288,7 +219,7 @@ test("listing and diffing changes runs none of the commands the repository's own
   const ran = join(root, "ran")
   write(join(project, "notes.txt"), "one\n")
   write(join(project, ".gitattributes"), "*.txt diff=shown\n")
-  commitAll()
+  commitAll(project)
   git(project, "config", "core.fsmonitor", `echo fsmonitor >> ${ran}`)
   git(project, "config", "diff.shown.textconv", `echo textconv >> ${ran}; cat`)
   write(join(project, "notes.txt"), "two\n")

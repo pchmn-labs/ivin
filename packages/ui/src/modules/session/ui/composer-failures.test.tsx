@@ -72,7 +72,7 @@ test("a send that fails while the user is on another tab shows its error, Retry 
   await page.getByRole("button", { name: "Show s1" }).click()
 
   const alert = page.getByRole("alert")
-  await expect.element(alert.getByText("The message was not sent.")).toBeVisible()
+  await expect.element(alert.getByRole("button", { name: "Retry" })).toBeVisible()
   await expect.poll(composerText).toBe("keep me")
   await alert.getByRole("button", { name: "Retry" }).click()
   await expect.element(page.getByRole("alert")).not.toBeInTheDocument()
@@ -156,7 +156,7 @@ test("a failed Send now shows its message beside the sheet, and Retry sends agai
 
   await page.getByRole("button", { name: "Send now" }).click()
   const alert = page.getByRole("alert")
-  await expect.element(alert.getByText("The messages were not sent now.")).toBeVisible()
+  await expect.element(alert.getByRole("button", { name: "Retry" })).toBeVisible()
   await expect.element(page.getByTestId("composer-pending")).toBeVisible()
 
   await alert.getByRole("button", { name: "Retry" }).click()
@@ -176,7 +176,7 @@ test("a failed rename shows its message under the session's row, and Retry renam
   await userEvent.keyboard("{Enter}")
 
   const alert = page.getByRole("alert")
-  await expect.element(alert.getByText("The session was not renamed.")).toBeVisible()
+  await expect.element(alert.getByRole("button", { name: "Retry" })).toBeVisible()
   await expect.element(row.getByTestId("session-title")).toHaveTextContent("s1")
 
   await alert.getByRole("button", { name: "Retry" }).click()

@@ -1,17 +1,15 @@
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
+import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { makeTestSession, testDateTime } from "../../../packages/ui/src/core/test-session.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
 import type {
   ApprovalItem,
   QuestionItem,
   Session,
-  SlotProps,
   TranscriptItem,
-  UiContext,
   UiHost,
 } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
@@ -45,26 +43,7 @@ const mountPanel = async (
     answerFails?: boolean
   } = {},
 ) => {
-  const added: Array<{ slot: string; component: ComponentType<never> }> = []
-  const ctx: UiContext = {
-    pluginId: "working",
-    slots: {
-      add: (slot, component) =>
-        void added.push({ slot, component: component as ComponentType<never> }),
-    },
-    commands: { register: () => undefined },
-    keybindings: { add: () => undefined },
-    editorExtensions: { add: () => undefined },
-    fileIcons: { add: () => undefined },
-    fileUrl: (path) => path,
-    views: { register: () => undefined, open: async () => undefined },
-    notify: () => undefined,
-    sidebar: { showPanel: () => undefined },
-  }
-  activate(ctx)
-  const Panel = added.find((a) => a.slot === "sidebar.bottom")!.component as ComponentType<
-    SlotProps["sidebar.bottom"]
-  >
+  const Panel = activatePlugin(activate, "working")("sidebar.bottom")
   const opened: string[] = []
   const answers: Array<{ sessionId: string; requestId: string; allow: boolean }> = []
   const host: UiHost = {

@@ -1,24 +1,14 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { WorkingFolderChoice } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { layerScripted, type ScriptedElement, type StartInput } from "@ivin/harness"
-import { Effect, Fiber, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
+import type { ScriptedElement, StartInput } from "@ivin/harness"
+import { Effect, Fiber, Stream } from "effect"
 import { execFileSync } from "node:child_process"
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { existsSync, rmSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
-import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { beforeEach, expect, test, vi } from "vitest"
+import { git, commit, useClonedProject } from "./git-fixture.ts"
+import { withServer as withTestServer, type Client } from "./test-server.ts"
 import { forkWatch, until } from "./test-waits.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 // Real git: over 1 s when the suite runs other git tests beside it.
 vi.setConfig({ testTimeout: 5000 })
@@ -29,77 +19,24 @@ const turn: readonly HarnessOutput[] = [
   { type: "status", status: "idle", raw: null },
 ]
 
-const gitEnv = {
-  ...process.env,
-  GIT_AUTHOR_NAME: "ivin",
-  GIT_AUTHOR_EMAIL: "ivin@example.com",
-  GIT_COMMITTER_NAME: "ivin",
-  GIT_COMMITTER_EMAIL: "ivin@example.com",
-  GIT_CONFIG_GLOBAL: "/dev/null",
-}
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", args, { cwd, env: gitEnv, encoding: "utf8" }).trim()
-
-const commit = (repo: string, file: string) => {
-  writeFileSync(join(repo, file), file)
-  git(repo, "add", file)
-  git(repo, "commit", "--quiet", "-m", file)
-}
-
-let root: string
-let project: string
-let upstream: string
-
-// A project cloned from a bare origin, then origin moves ahead: the local main is behind.
-beforeEach(() => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-git-")))
-  const origin = join(root, "origin.git")
-  upstream = join(root, "upstream")
-  project = join(root, "project")
-  git(root, "init", "--quiet", "--bare", "-b", "main", origin)
-  git(root, "init", "--quiet", "-b", "main", upstream)
-  commit(upstream, "first.txt")
-  git(upstream, "remote", "add", "origin", origin)
-  git(upstream, "push", "--quiet", "origin", "main")
-  git(root, "clone", "--quiet", origin, project)
+// The local main is behind origin.
+const fixture = useClonedProject(({ upstream }) => {
   commit(upstream, "ahead.txt")
   git(upstream, "push", "--quiet", "origin", "main")
 })
-
-afterEach(() => rmSync(root, { recursive: true, force: true }))
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
+let root = ""
+let project = ""
+beforeEach(() => {
+  root = fixture.root
+  project = fixture.project
+})
 
 const withServer = <A, E>(
   starts: StartInput[],
   use: (client: Client) => Effect.Effect<A, E>,
   turns: readonly (readonly ScriptedElement[])[] = [turn],
   closed: string[] = [],
-) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted(turns, { starts, closed, reportSession: true })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-}
+) => withTestServer(use, { turns, scripted: { starts, closed, reportSession: true } })
 
 const itemsOf = (client: Client, sessionId: string) =>
   client["transcript.getItems"]({ sessionId, position: null, before: 100, after: 0 }).pipe(
@@ -253,15 +190,19 @@ test("a folder that is not one of the project's worktrees is refused, and no run
   expect(starts).toEqual([])
 })
 
-test("a session outside a git repository has no branch, and its project no worktree", async () => {
+test("a session outside a git repository has no branch, and its project no worktree, checkout status or branch", async () => {
   const folder = join(root, "plain")
   execFileSync("mkdir", [folder])
-  const { created, worktrees, base } = await withServer([], (client) =>
+  const { created, worktrees, base, status, branches } = await withServer([], (client) =>
     Effect.gen(function* () {
       return {
         created: yield* client["session.create"]({ projectPath: folder }),
         worktrees: yield* client["worktree.list"]({ projectPath: folder }),
         base: yield* client["worktree.newBase"]({ projectPath: folder }),
+        status: yield* client["worktree.checkoutStatus"]({ projectPath: folder }),
+        branches: yield* client["worktree.listBranches"]({ projectPath: folder }).pipe(
+          Stream.runCollect,
+        ),
       }
     }),
   )
@@ -269,6 +210,8 @@ test("a session outside a git repository has no branch, and its project no workt
   expect(created).toMatchObject({ workingFolder: folder, branch: null, inWorktree: false })
   expect(worktrees).toEqual([])
   expect(base).toBeNull()
+  expect(status).toBeNull()
+  expect([...branches].every((list) => list.branches.length === 0)).toBe(true)
 })
 
 const sessionOf = (client: Client, sessionId: string) =>
@@ -476,23 +419,7 @@ test("a command that runs in a worktree that existed before the run moves the ch
   ])
 })
 
-test("a command that only lists the worktrees of the project moves nothing", async () => {
-  addWorktree("earlier")
-  const session = await withServer(
-    [],
-    (client) =>
-      Effect.gen(function* () {
-        const created = yield* client["session.create"]({ projectPath: project })
-        yield* send(client, created.id, "m1")
-        return yield* sessionOf(client, created.id)
-      }),
-    [toolTurn([{ name: "Bash", input: { command: "git worktree list" }, output: "ok" }])],
-  )
-
-  expect(session).toMatchObject({ workingFolder: project, inWorktree: false })
-})
-
-test("a file read in a worktree that existed before the run moves nothing", async () => {
+test("a command that only lists the worktrees, and a file read in one that existed before the run, move nothing", async () => {
   const path = addWorktree("earlier")
   const session = await withServer(
     [],
@@ -502,7 +429,12 @@ test("a file read in a worktree that existed before the run moves nothing", asyn
         yield* send(client, created.id, "m1")
         return yield* sessionOf(client, created.id)
       }),
-    [toolTurn([{ name: "Read", input: { file_path: join(path, "first.txt") }, output: "ok" }])],
+    [
+      toolTurn([
+        { name: "Bash", input: { command: "git worktree list" }, output: "ok" },
+        { name: "Read", input: { file_path: join(path, "first.txt") }, output: "ok" },
+      ]),
+    ],
   )
 
   expect(session).toMatchObject({ workingFolder: project, inWorktree: false })
@@ -556,19 +488,23 @@ const addWorktree = (name: string) => {
   return path
 }
 
-test("a worktree removed from outside marks its session when its tab opens", async () => {
-  const path = addWorktree("gone")
-  const session = await withServer([], (client) =>
-    Effect.gen(function* () {
-      const sessionId = yield* startInWorktree(client, path)
-      expect((yield* sessionOf(client, sessionId))?.workingFolderDeleted).toBe(false)
-      git(project, "worktree", "remove", "--force", path)
-      yield* client["tab.open"]({ sessionId })
-      return yield* sessionOf(client, sessionId)
-    }),
-  )
+test("a worktree removed from outside marks its session when its tab opens or its project's tabs are listed", async () => {
+  for (const trigger of ["tab.open", "tab.list"] as const) {
+    const path = addWorktree(`gone-${trigger.slice(4)}`)
+    const session = await withServer([], (client) =>
+      Effect.gen(function* () {
+        const sessionId = yield* startInWorktree(client, path)
+        yield* client["tab.open"]({ sessionId })
+        expect((yield* sessionOf(client, sessionId))?.workingFolderDeleted).toBe(false)
+        git(project, "worktree", "remove", "--force", path)
+        if (trigger === "tab.open") yield* client["tab.open"]({ sessionId })
+        else yield* client["tab.list"]({ projectPath: project })
+        return yield* sessionOf(client, sessionId)
+      }),
+    )
 
-  expect(session).toMatchObject({ workingFolderDeleted: true, workingFolder: path })
+    expect(session).toMatchObject({ workingFolderDeleted: true, workingFolder: path })
+  }
 })
 
 test("a session whose worktree folder was deleted refuses messages, and keeps its transcript", async () => {
@@ -661,26 +597,6 @@ test("picking an existing worktree moves the session there", async () => {
   })
 })
 
-test("picking a new worktree creates it from origin's default branch and moves the session there", async () => {
-  const { sessionId, picked, starts, items } = await pickAfterDeletion(() => ({
-    kind: "new_worktree",
-  }))
-
-  const path = join(project, ".worktrees", `ivin-${sessionId.slice(0, 8)}`)
-  expect(picked).toMatchObject({
-    workingFolder: path,
-    inWorktree: true,
-    branch: `ivin/${sessionId.slice(0, 8)}`,
-    workingFolderDeleted: false,
-  })
-  expect(existsSync(join(path, "ahead.txt"))).toBe(true)
-  expect(starts.at(-1)?.cwd).toBe(path)
-  expect(items.filter((i) => i.type === "working_folder").at(-1)).toMatchObject({
-    path,
-    cause: "pick",
-  })
-})
-
 test("picking a folder that is not one of the project's worktrees keeps the session marked", async () => {
   const path = addWorktree("gone")
   const { error, session } = await withServer([], (client) =>
@@ -704,7 +620,7 @@ test("picking a folder that is not one of the project's worktrees keeps the sess
 
 test("a session whose own new worktree was deleted gets another new worktree, on a branch of its own", async () => {
   const starts: StartInput[] = []
-  const { sessionId, picked, status } = await withServer(starts, (client) =>
+  const { sessionId, picked, status, items } = await withServer(starts, (client) =>
     Effect.gen(function* () {
       yield* client["project.open"]({ path: project })
       const created = yield* client["session.create"]({ projectPath: project })
@@ -719,29 +635,19 @@ test("a session whose own new worktree was deleted gets another new worktree, on
         sessionId: created.id,
         picked,
         status: (yield* sessionOf(client, created.id))?.status,
+        items: yield* itemsOf(client, created.id),
       }
     }),
   )
 
   const branch = `ivin/${sessionId.slice(0, 8)}-2`
   expect(picked).toMatchObject({ branch, inWorktree: true, workingFolderDeleted: false })
-  expect(existsSync(picked.workingFolder)).toBe(true)
+  expect(existsSync(join(picked.workingFolder, "ahead.txt"))).toBe(true)
+  expect(items.filter((i) => i.type === "working_folder").at(-1)).toMatchObject({
+    path: picked.workingFolder,
+    cause: "pick",
+  })
   expect(status).toBe("idle")
-})
-
-test("a session whose worktree was deleted while the server was down is marked when its project's tabs are listed", async () => {
-  const path = addWorktree("gone")
-  const session = await withServer([], (client) =>
-    Effect.gen(function* () {
-      const sessionId = yield* startInWorktree(client, path)
-      yield* client["tab.open"]({ sessionId })
-      git(project, "worktree", "remove", "--force", path)
-      yield* client["tab.list"]({ projectPath: project })
-      return yield* sessionOf(client, sessionId)
-    }),
-  )
-
-  expect(session?.workingFolderDeleted).toBe(true)
 })
 
 const approvalTurn = (command: string): ScriptedElement[] => [

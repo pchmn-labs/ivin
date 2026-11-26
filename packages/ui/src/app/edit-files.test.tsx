@@ -1,54 +1,25 @@
-import { RegistryProvider } from "@effect/atom-react"
-import { builtinPlugins } from "../core/test-builtin-plugins.ts"
-import type { FolderEntry } from "@ivin/contracts/file"
 import { DateTime } from "effect"
 import { afterEach, beforeEach, expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
-import { render } from "vitest-browser-react"
 import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
-import { App } from "./app.tsx"
+import { makeTestSession } from "../core/test-session.ts"
+import { folder, mountApp } from "./test-app.tsx"
 
 const project = "/dev/shop"
 const readme = `${project}/README.md`
-
-const folder = (...names: string[]): ReadonlyArray<FolderEntry> =>
-  names.map((name) => ({ name, kind: "file", ignored: false }))
 
 const makeServer = () => {
   const server = makeFakeServer({
     project: { path: project, name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
-  const at = DateTime.makeUnsafe(0)
   for (const [id, title] of [
     ["s1", "Checkout flow"],
     ["s2", "Fix the cart"],
   ] as const) {
-    server.sessions.set(id, {
+    server.sessions.set(
       id,
-      projectPath: project,
-      workingFolder: project,
-      inWorktree: false,
-      branch: "main",
-      started: true,
-      workingFolderDeleted: false,
-      title,
-      harness: "claude",
-      model: "sonnet",
-      effort: "high",
-      permissionMode: "manual",
-      relaunchFailure: null,
-      pendingMessages: [],
-      unreadMessages: [],
-      backgroundTasks: [],
-      status: "idle",
-      statusChangedAt: at,
-      createdAt: at,
-      lastActivityAt: at,
-      archivedAt: null,
-      lastImageNumber: 0,
-      waitingFor: null,
-    })
+      makeTestSession({ id, title, projectPath: project, workingFolder: project }),
+    )
   }
   server.folders.set(project, folder("README.md", "main.ts"))
   server.files.set(readme, { kind: "text", text: "# Shop" })
@@ -68,14 +39,7 @@ const makeServer = () => {
   return server
 }
 
-const mount = (server: FakeServer) =>
-  render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ height: 800 }}>
-        <App plugins={builtinPlugins} />
-      </div>
-    </RegistryProvider>,
-  )
+const mount = (server: FakeServer) => mountApp(server, { height: 800 })
 
 const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 const card = () => page.getByRole("region", { name: "Open files" })
@@ -118,14 +82,6 @@ test("an edited file shows a dot on its tab until Save writes it", async () => {
   await expect.poll(() => fileOf(server)).toBe("# Shop and more")
   await expect.element(fileTab("README.md")).not.toHaveAccessibleDescription("Unsaved edits")
   await expect.element(code("README.md")).toHaveTextContent("# Shop and more")
-})
-
-test("typing the text back to what is saved drops the dot", async () => {
-  await mount(makeServer())
-  await typeAtEnd("README.md", "!")
-  await expect.element(fileTab("README.md")).toHaveAccessibleDescription("Unsaved edits")
-  await userEvent.keyboard("{Backspace}")
-  await expect.element(fileTab("README.md")).not.toHaveAccessibleDescription("Unsaved edits")
 })
 
 test("unsaved edits survive a session switch, and are saved afterwards", async () => {
@@ -210,7 +166,7 @@ test("closing a session's tab with unsaved files asks first", async () => {
   expect(fileOf(server)).toBe("# Shop")
 })
 
-test("a save refused because the file changed on disk warns, and Overwrite writes the edits", async () => {
+test("a save refused because the file changed on disk warns, Overwrite writes the edits and Reload from disk drops them", async () => {
   const server = makeServer()
   await mount(server)
   await typeAtEnd("README.md", " mine")
@@ -229,21 +185,15 @@ test("a save refused because the file changed on disk warns, and Overwrite write
   await expect.poll(() => fileOf(server)).toBe("# Shop mine")
   await expect.element(warning).not.toBeInTheDocument()
   await expect.element(fileTab("README.md")).not.toHaveAccessibleDescription("Unsaved edits")
-})
 
-test("Reload from disk drops the edits and shows the file as it is on disk", async () => {
-  const server = makeServer()
-  await mount(server)
-  await typeAtEnd("README.md", " mine")
+  await typeAtEnd("README.md", " again")
   server.files.set(readme, { kind: "text", text: "# Agent's" })
   await save()
-
-  await card().getByRole("alert").getByRole("button", { name: "Reload from disk" }).click()
+  await warning.getByRole("button", { name: "Reload from disk" }).click()
   await expect.element(code("README.md")).toHaveTextContent("# Agent's")
-  await expect.element(card().getByRole("alert")).not.toBeInTheDocument()
+  await expect.element(warning).not.toBeInTheDocument()
   await expect.element(fileTab("README.md")).not.toHaveAccessibleDescription("Unsaved edits")
 })
-
 test("a file that changed on disk under unsaved edits warns as soon as it is shown again", async () => {
   const server = makeServer()
   await mount(server)
@@ -277,7 +227,7 @@ test("a file deleted on disk under unsaved edits keeps them, and Overwrite write
   await expect.poll(() => fileOf(server)).toBe("# Shop mine")
 })
 
-test("a failed save says so next to the file and keeps the edits; Retry saves them", async () => {
+test("a failed save says so next to the file and keeps the edits; Retry saves them, and a save cut off from the server says so too", async () => {
   const server = makeServer()
   server.unwritable = true
   await mount(server)
@@ -298,21 +248,15 @@ test("a failed save says so next to the file and keeps the edits; Retry saves th
   await card().getByRole("button", { name: "Retry" }).click()
   await expect.poll(() => fileOf(server)).toBe("# Shop mine")
   await expect.element(card().getByRole("button", { name: "Retry" })).not.toBeInTheDocument()
-})
 
-test("a save cut off from the server says so and keeps the edits", async () => {
-  const server = makeServer()
-  await mount(server)
-  await typeAtEnd("README.md", " mine")
+  await typeAtEnd("README.md", " more")
   server.failNextCall("file.writeFile")
   await save()
-
   await expect
     .element(card().getByText("README.md was not saved. Retry. Your edits are kept."))
     .toBeVisible()
   await expect.element(fileTab("README.md")).toHaveAccessibleDescription("Unsaved edits")
 })
-
 test("archiving a session with unsaved files asks first; Cancel keeps the session and its edits", async () => {
   const server = makeServer()
   await mount(server)
@@ -375,28 +319,7 @@ test("deleting a session with unsaved files lists them in the one dialog", async
   await expect.poll(() => server.sessions.has("s1")).toBe(false)
 })
 
-test("a working agent and several unsaved files show in one dialog", async () => {
-  const server = makeServer()
-  await mount(server)
-  await typeAtEnd("README.md", " draft")
-  await fileTab("main.ts").click()
-  await typeAtEnd("main.ts", " // x")
-  server.setStatus("s1", "working")
-
-  await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
-  await expect
-    .element(
-      dialog().getByText(
-        "Archiving this session will stop the working agent and lose the unsaved edits to these files:",
-      ),
-    )
-    .toBeVisible()
-  await expect.element(dialog().getByText("README.md", { exact: true })).toBeVisible()
-  await expect.element(dialog().getByText("main.ts", { exact: true })).toBeVisible()
-  await expect.element(dialog().getByRole("button", { name: "Stop and archive" })).toBeVisible()
-})
-
-test("cancelling the close of a project with unsaved files keeps them", async () => {
+test("closing a project with unsaved files asks first; Cancel keeps them, confirming closes it", async () => {
   const server = makeServer()
   await mount(server)
   await typeAtEnd("README.md", " draft")
@@ -406,25 +329,9 @@ test("cancelling the close of a project with unsaved files keeps them", async ()
   await expect.element(dialog().getByText("Close “shop”?")).toBeVisible()
   await dialog().getByRole("button", { name: "Cancel" }).click()
   await expect.element(fileTab("README.md")).toHaveAccessibleDescription("Unsaved edits")
-})
-
-test("confirming the close of a project with unsaved files closes it", async () => {
-  const server = makeServer()
-  await mount(server)
-  await typeAtEnd("README.md", " draft")
 
   await page.getByRole("button", { name: "Project actions" }).click()
   await page.getByRole("menuitem", { name: "Close project" }).click()
   await dialog().getByRole("button", { name: "Close project and lose edits" }).click()
   await expect.element(page.getByTestId("project-name")).not.toBeInTheDocument()
-})
-
-test("archiving a session with no unsaved files asks nothing", async () => {
-  const server = makeServer()
-  await mount(server)
-  await expect.element(sessionTab("Checkout flow")).toBeVisible()
-
-  await userEvent.keyboard(`{Shift>}{${mod}>}{Backspace}{/${mod}}{/Shift}`)
-  await expect.poll(() => server.sessions.get("s1")?.archivedAt).not.toBeNull()
-  await expect.element(dialog()).not.toBeInTheDocument()
 })

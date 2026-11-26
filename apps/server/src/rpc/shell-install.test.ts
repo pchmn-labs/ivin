@@ -1,19 +1,10 @@
 import { CliRpcs, type FolderRefusal } from "@ivin/contracts/cli"
-import { layerScripted } from "@ivin/harness"
 import { Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
 import { expect, test } from "vitest"
 import type { ShellFolder } from "../modules/cli/rules/shell-install-plan.ts"
 import { layerShellCommandOf } from "../modules/cli/usecases/shell-command.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { layerDatabase } from "../shared/adapters/database.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { serverLayer } from "./test-server.ts"
 
 const command = "/Users/me/Library/Application Support/ivin/bin/ivin"
 const system = "/usr/local/bin"
@@ -33,16 +24,7 @@ const withShell = <A, E>(
   makeClient().pipe(
     Effect.flatMap(use),
     Effect.provide(
-      handlers.pipe(
-        Layer.provide(layerServices),
-        Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-        Layer.provide(layerDatabase(":memory:")),
-        Layer.provide(
-          Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-        ),
-        Layer.provide(layerKeybindingsFileOf([])),
-        Layer.provide(layerSettingsFileOf([])),
-        Layer.provide(layerScripted([])),
+      serverLayer().pipe(
         Layer.provide(layerShellCommandOf({ command, shellPath: ["/usr/bin", system], ...shell })),
       ),
     ),

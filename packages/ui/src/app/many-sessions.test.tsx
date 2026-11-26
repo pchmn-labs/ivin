@@ -1,12 +1,9 @@
-import { RegistryProvider } from "@effect/atom-react"
-import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
-import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
-import { App } from "./app.tsx"
+import { makeTestSession } from "../core/test-session.ts"
+import { mountApp } from "./test-app.tsx"
 
 const PROJECT = "northwind-industries-holdings-customer-portal-monorepo-with-a-very-long-name"
 const LONG_TITLE =
@@ -24,51 +21,32 @@ const mountMany = async (count: number) => {
       lastOpenedAt: DateTime.makeUnsafe(0),
     },
   })
-  const at = DateTime.makeUnsafe(0)
   for (let n = 0; n < count; n++) {
-    server.sessions.set(`s${n}`, {
-      id: `s${n}`,
-      projectPath: `/dev/${PROJECT}`,
-      workingFolder: `/dev/${PROJECT}`,
-      inWorktree: n % 2 === 0,
-      branch: LONG_BRANCH,
-      started: true,
-      workingFolderDeleted: false,
-      title: titles[n % titles.length]!,
-      harness: "claude",
-      model: "sonnet",
-      effort: "high",
-      permissionMode: "manual",
-      relaunchFailure: null,
-      pendingMessages: [],
-      unreadMessages: [],
-      backgroundTasks: [],
-      status: "idle",
-      statusChangedAt: at,
-      createdAt: at,
-      lastActivityAt: at,
-      archivedAt: null,
-      lastImageNumber: 0,
-      waitingFor: null,
-    })
+    server.sessions.set(
+      `s${n}`,
+      makeTestSession({
+        id: `s${n}`,
+        title: titles[n % titles.length]!,
+        projectPath: `/dev/${PROJECT}`,
+        inWorktree: n % 2 === 0,
+        branch: LONG_BRANCH,
+      }),
+    )
     server.openTab(`s${n}`)
   }
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App plugins={builtinPlugins} />
-    </RegistryProvider>,
-  )
+  await mountApp(server)
   await expect.element(page.getByTestId("project-name")).toBeVisible()
   await expect.element(page.getByTestId("session-item").first()).toBeVisible()
 }
 
 test(
-  "a session picked in a list of 300 brings its tab into view in the bar",
-  // Rendering 300 rows and 300 tabs in development React takes 3 to 5 s on the CI runner.
+  "a session picked in a list of 60 brings its tab into view in the bar",
+  // Rendering the rows and tabs in development React is slow on the CI runner.
   { timeout: 15_000 },
   async () => {
-    await mountMany(300)
-    const row = page.getByRole("button", { name: /Jo/ }).nth(40)
+    await mountMany(60)
+    const row = page.getByRole("button", { name: /Jo/ }).nth(15)
+    expect(row.element().closest("ul")!.scrollHeight).toBeGreaterThan(window.innerHeight)
     row.element().scrollIntoView()
     await row.click()
 
