@@ -6,7 +6,12 @@ export const apiValues = (value: unknown): unknown => {
     if ("epochMilliseconds" in value && typeof value.epochMilliseconds === "number") {
       return { epochMilliseconds: value.epochMilliseconds }
     }
-    return Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, apiValues(entry)]))
+    // JSON has no undefined: a field left undefined, such as an event's `parentToolCallId`, would fail the host's schema.
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, entry]) => entry !== undefined)
+        .map(([key, entry]) => [key, apiValues(entry)]),
+    )
   }
   return value
 }

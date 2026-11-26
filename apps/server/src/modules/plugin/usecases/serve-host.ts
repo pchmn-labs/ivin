@@ -1,6 +1,6 @@
 import { AnnotationTarget } from "@ivin/contracts/annotation"
 import { CommandFailed, CommandNotFound, type HostCall } from "@ivin/contracts/plugin"
-import { Duration, Effect, Option, Queue, Schema, Stream } from "effect"
+import { Cause, Duration, Effect, Option, Queue, Schema, Stream } from "effect"
 import { apiValues } from "../rules/api-values.ts"
 import { settingChanges } from "../rules/plugin-setting-changes.ts"
 import { type Permissions, type PluginCall, verdictFor } from "../rules/permissions.ts"
@@ -293,6 +293,13 @@ export const serveHost = (
             ).pipe(
               Effect.catchTag("PluginHandlerFailed", ({ reason }) =>
                 reportPluginFailure(id, reason),
+              ),
+              // Any other failure would end this loop, and no plugin would hear of an event again.
+              Effect.catchCause((cause) =>
+                reportPluginFailure(
+                  id,
+                  `A ${event.kind} event could not reach it: ${Cause.pretty(cause)}`,
+                ),
               ),
             ),
           { discard: true },
