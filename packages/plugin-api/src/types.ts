@@ -195,7 +195,11 @@ export interface PrAnnotationData {
   readonly title?: string
   readonly state?: "open" | "draft" | "merged" | "closed"
   readonly checks?: "pending" | "passing" | "failing"
-  readonly checkCounts?: { readonly passed: number; readonly failed: number; readonly pending: number }
+  readonly checkCounts?: {
+    readonly passed: number
+    readonly failed: number
+    readonly pending: number
+  }
   readonly review?: "approved" | "changes_requested" | "review_required"
   readonly merge?: "ready" | "blocked" | "conflict"
   readonly activityAt?: string

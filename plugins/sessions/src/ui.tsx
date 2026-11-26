@@ -7,6 +7,7 @@ import {
   Menu,
   RelativeTime,
   SessionLocation,
+  SessionCardTrigger,
   SessionMark,
   Slot,
   Stack,
@@ -63,40 +64,47 @@ function SessionRow({ session, selected }: { session: Session; selected: boolean
 
   return (
     <Stack as="li">
-      <ListRow
-        data-testid="session-item"
-        selected={selected}
-        attention={session.status === "waiting"}
-        aria-current={selected}
-        onSelect={() => openTab(session.id)}
-        leading={
-          <span data-testid="session-status">
-            <SessionMark
-              status={session.status}
-              waitingFor={session.waitingFor}
-              harness={session.harness}
-              tasks={session.backgroundTasks}
+      <SessionCardTrigger session={session} place="row">
+        <ListRow
+          data-testid="session-item"
+          selected={selected}
+          attention={session.status === "waiting"}
+          aria-current={selected}
+          onSelect={() => openTab(session.id)}
+          leading={
+            <span data-testid="session-status">
+              <SessionMark
+                status={session.status}
+                waitingFor={session.waitingFor}
+                harness={session.harness}
+                tasks={session.backgroundTasks}
+              />
+            </span>
+          }
+          title={<span data-testid="session-title">{session.title}</span>}
+          {...(location.kind !== "folder" && {
+            subtitle: <SessionLocation location={location} compact />,
+          })}
+          meta={
+            <Stack direction="row" gap={2} align="center">
+              <Slot slot="session.badge" props={{ session }} />
+              <RelativeTime at={session.lastActivityAt} />
+            </Stack>
+          }
+          actions={
+            <Menu
+              align="end"
+              trigger={<IconButton icon="ellipsis" label="Session actions" size="sm" />}
+              items={[
+                { label: "Rename", icon: "pencil", onSelect: () => setDraft(session.title) },
+                "separator",
+                ...actions.items,
+              ]}
             />
-          </span>
-        }
-        title={<span data-testid="session-title">{session.title}</span>}
-        {...(location.kind !== "folder" && {
-          subtitle: <SessionLocation location={location} compact />,
-        })}
-        meta={<RelativeTime at={session.lastActivityAt} />}
-        actions={
-          <Menu
-            align="end"
-            trigger={<IconButton icon="ellipsis" label="Session actions" size="sm" />}
-            items={[
-              { label: "Rename", icon: "pencil", onSelect: () => setDraft(session.title) },
-              "separator",
-              ...actions.items,
-            ]}
-          />
-        }
-        {...(below && { below })}
-      />
+          }
+          {...(below && { below })}
+        />
+      </SessionCardTrigger>
     </Stack>
   )
 }

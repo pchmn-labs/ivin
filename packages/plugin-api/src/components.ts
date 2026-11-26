@@ -724,6 +724,11 @@ export interface SettingRowProps {
   readonly below?: ReactNode
 }
 
+// The list that holds a section's `SettingRow`s.
+export interface SettingListProps {
+  readonly children: ReactNode
+}
+
 export interface HostComponents {
   readonly Button: ComponentType<ButtonProps>
   readonly IconButton: ComponentType<IconButtonProps>
@@ -774,6 +779,7 @@ export interface HostComponents {
   readonly SessionCardTrigger: ComponentType<SessionCardTriggerProps>
   readonly Select: ComponentType<SelectProps>
   readonly SettingRow: ComponentType<SettingRowProps>
+  readonly SettingList: ComponentType<SettingListProps>
 }
 
 const hostComponent =
@@ -829,3 +835,4 @@ export const Pill = hostComponent((c) => c.Pill)
 export const SessionCardTrigger = hostComponent((c) => c.SessionCardTrigger)
 export const Select = hostComponent((c) => c.Select)
 export const SettingRow = hostComponent((c) => c.SettingRow)
+export const SettingList = hostComponent((c) => c.SettingList)

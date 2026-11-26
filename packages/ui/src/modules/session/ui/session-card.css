@@ -1,0 +1,61 @@
+.iv-session-card-trigger[data-place="tab"] {
+  display: flex;
+  flex: 0 1 auto;
+  width: var(--iv-tab-width);
+  min-width: var(--iv-tab-min-width);
+  height: var(--iv-tab-height);
+}
+
+.iv-session-card__positioner {
+  transition:
+    top var(--iv-duration-base) var(--iv-ease-out),
+    left var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.iv-session-card__positioner[data-instant] {
+  transition: none;
+}
+
+.iv-session-card {
+  box-sizing: border-box;
+  width: 340px;
+  padding: var(--iv-space-1);
+  overflow: hidden;
+  border: 1px solid var(--iv-border-strong);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-bg-raised);
+  box-shadow: var(--iv-shadow-overlay);
+  color: var(--iv-text);
+  font-size: var(--iv-text-sm);
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity var(--iv-duration-fast) var(--iv-ease-out),
+    transform var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-session-card[data-starting-style],
+.iv-session-card[data-ending-style] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+
+/* Hidden, not removed: the popup keeps its size for the next session whose sections show. */
+.iv-session-card:not(:has(.iv-session-card__sections:not(:empty, [data-previous] *))) {
+  visibility: hidden;
+}
+
+.iv-session-card__viewport {
+  position: relative;
+}
+
+/* The content swaps at once; the card's move and height carry the motion. */
+.iv-session-card__viewport [data-previous] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .iv-session-card__positioner,
+  .iv-session-card {
+    transition: none;
+  }
+}

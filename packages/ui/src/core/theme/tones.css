@@ -1,0 +1,39 @@
+[data-tone="accent"] {
+  --iv-tone: var(--iv-accent);
+}
+
+[data-tone="danger"] {
+  --iv-tone: var(--iv-danger);
+}
+
+[data-tone="muted"] {
+  --iv-tone: var(--iv-text-muted);
+}
+
+[data-tone="faint"] {
+  --iv-tone: var(--iv-text-faint);
+}
+
+[data-tone="hue-0"] {
+  --iv-tone: var(--iv-project-hue-0);
+}
+
+[data-tone="hue-1"] {
+  --iv-tone: var(--iv-project-hue-1);
+}
+
+[data-tone="hue-2"] {
+  --iv-tone: var(--iv-project-hue-2);
+}
+
+[data-tone="hue-3"] {
+  --iv-tone: var(--iv-project-hue-3);
+}
+
+[data-tone="hue-4"] {
+  --iv-tone: var(--iv-project-hue-4);
+}
+
+[data-tone="hue-5"] {
+  --iv-tone: var(--iv-project-hue-5);
+}

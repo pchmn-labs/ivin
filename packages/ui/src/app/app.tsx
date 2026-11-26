@@ -33,6 +33,7 @@ import { MainTopBar } from "./main-top-bar.tsx"
 import { ShellControls } from "./shell-controls.tsx"
 import { SidebarTabs } from "./sidebar-tabs.tsx"
 import { SESSIONS_TAB, showSidebarTab, sidebarOpenAtom } from "./sidebar.ts"
+import { SessionCards } from "../modules/session/ui/session-card.tsx"
 import { Slot } from "./slot-renderer.tsx"
 import { ResizeHandle } from "../core/components/resize-handle/resize-handle.tsx"
 import { restartServer } from "../modules/server/adapters/desktop-server.ts"
@@ -216,6 +217,7 @@ export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}
             <SessionActionDialog />
             <Announcements projectPath={projectPath} />
             <Slot slot="window.overlay" props={{}} />
+            <SessionCards />
           </div>
         )}
         {settingsOpen && (

@@ -26,10 +26,9 @@
 .iv-tab-bar__item {
   position: relative;
   display: flex;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   align-items: center;
-  width: var(--iv-tab-width);
-  min-width: var(--iv-tab-min-width);
+  min-width: 0;
   height: var(--iv-tab-height);
   border-radius: var(--iv-radius-tab);
   transition: background-color var(--iv-duration-fast) ease-out;
@@ -69,6 +68,18 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.iv-tab-bar__badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--iv-space-1);
+  margin-left: auto;
+}
+
+.iv-tab-bar__badge:empty {
+  display: none;
 }
 
 .iv-tab-bar__close {

@@ -111,4 +111,4 @@ export type ServerPlugin = (ctx: ServerContext) => void | Promise<void>
 
 export const defineServer = (activate: ServerPlugin): ServerPlugin => activate
 
-export type { Annotation, AnnotationTarget, Json, Session } from "./types.ts"
+export type { Annotation, AnnotationTarget, Json, PrAnnotationData, Session } from "./types.ts"

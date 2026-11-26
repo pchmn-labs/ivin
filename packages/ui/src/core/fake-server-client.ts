@@ -118,6 +118,8 @@ export interface FakeServer {
   ) => void
   // What `session.listAgentCommands` returns for every session; null for a harness without them.
   agentCommands: ReadonlyArray<AgentCommand> | null
+  // Makes `annotation.remove` fail with an error no contract names, as a lost connection does.
+  annotationRemovalFails: boolean
   // What `session.taskOutput` returns for a running command, by `<sessionId>/<taskId>`.
   readonly taskOutputs: Map<string, string>
   // `<sessionId>/<taskId>` of each task `session.stopTask` was called for.
@@ -1444,6 +1446,7 @@ export const makeFakeServer = (
       }),
     "annotation.remove": ({ id }: { id: string }) =>
       Effect.suspend(() => {
+        if (fake.annotationRemovalFails) return Effect.die(new Error("connection lost"))
         const annotation = annotations.get(id)
         if (!annotation) return Effect.fail(new AnnotationNotFound({ id }))
         removeAnnotation(annotation)
@@ -1658,6 +1661,7 @@ export const makeFakeServer = (
     files,
     unwritable: false,
     agentCommands: null,
+    annotationRemovalFails: false,
     holdNextRead: () => {
       let release!: () => void
       holdRead = new Promise<void>((resolve) => (release = resolve))
