@@ -99,7 +99,7 @@ export const PluginRpcs = RpcGroup.make(
     success: PluginStatus,
     error: PluginNotFound,
   }),
-  // One line per type error, `file(line,column): TSxxxx: message`; empty when the plugin type-checks.
+  // One line per type error, `file(line,column): error TSxxxx: message`; empty when the plugin type-checks.
   Rpc.make("plugin.check", {
     payload: { id: Schema.String },
     success: Schema.Array(Schema.String),

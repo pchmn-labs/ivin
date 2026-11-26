@@ -1,7 +1,6 @@
 import { PluginNotCreated } from "@ivin/contracts/plugin"
 import { Effect } from "effect"
-import { isPluginId } from "../rules/manifest.ts"
-import { readManifest } from "../rules/manifest.ts"
+import { isPluginId, readManifest } from "../rules/manifest.ts"
 import { UserPlugins } from "./user-plugins.ts"
 
 export const createPlugin = (id: string) =>

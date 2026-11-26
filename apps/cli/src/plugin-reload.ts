@@ -1,8 +1,7 @@
 import { Effect } from "effect"
-import type { Command } from "./command.ts"
+import { type Command, UsageError } from "./command.ts"
 import { Server } from "./connection.ts"
 import { pluginIdOf, pluginNotFound } from "./plugin-id.ts"
-import { UsageError } from "./command.ts"
 
 export const pluginReload: Command = {
   name: "plugin reload",

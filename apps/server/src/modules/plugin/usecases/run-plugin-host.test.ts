@@ -254,7 +254,7 @@ test("an idle host is replaced once enough versions have piled up, and the new o
             fixture.launches[1]?.length === 1,
         )
       }),
-    { ...timings, maxActivations: 2 },
+    { ...timings, maxActivations: 1 },
   )
   expect(fixture.logs.some((line) => /Disabled/.test(line))).toBe(false)
 })

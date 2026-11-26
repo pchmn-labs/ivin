@@ -1,14 +1,11 @@
 import { existsSync } from "node:fs"
 import { join } from "node:path"
 import { Worker } from "node:worker_threads"
-import { pluginTypePaths, typescriptFile } from "./plugin-types.ts"
+import { pluginTypePaths, typescriptFile, unpackedFolder } from "./plugin-types.ts"
 
 // The compiler runs in a worker, so a check never holds up the server's other requests.
 const workerFile = () => {
-  const bundled = join(
-    import.meta.dirname.replace(/app\.asar(?=[/\\])/, "app.asar.unpacked"),
-    "ts-check-worker.js",
-  )
+  const bundled = join(unpackedFolder, "ts-check-worker.js")
   return existsSync(bundled) ? bundled : join(import.meta.dirname, "ts-check-worker.ts")
 }
 

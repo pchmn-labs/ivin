@@ -4,10 +4,10 @@ import { dirname, join } from "node:path"
 import type { TypePaths } from "../rules/plugin-template.ts"
 
 // The desktop app ships the plugin API's sources and the packages they import beside the server bundle (`tsdown.config.ts`).
-const shipped = join(
-  import.meta.dirname.replace(/app\.asar(?=[/\\])/, "app.asar.unpacked"),
-  "plugin-types",
-)
+// Packaged, files that Node must read from disk sit unpacked beside the asar.
+export const unpackedFolder = import.meta.dirname.replace(/app\.asar(?=[/\\])/, "app.asar.unpacked")
+
+const shipped = join(unpackedFolder, "plugin-types")
 
 const apiSources = () =>
   existsSync(shipped)
@@ -37,11 +37,7 @@ export const pluginTypePaths = (): TypePaths => {
 
 // Run by the checker's worker: the compiler ships beside the server bundle, and a source checkout reads its own.
 export const typescriptFile = () => {
-  const bundled = join(
-    import.meta.dirname.replace(/app\.asar(?=[/\\])/, "app.asar.unpacked"),
-    "typescript",
-    "typescript.cjs",
-  )
+  const bundled = join(unpackedFolder, "typescript", "typescript.cjs")
   return existsSync(bundled)
     ? bundled
     : createRequire(import.meta.url).resolve("typescript-compiler-api")

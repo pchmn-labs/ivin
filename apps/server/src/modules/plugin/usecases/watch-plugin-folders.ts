@@ -1,5 +1,5 @@
 import { Effect, Stream } from "effect"
-import { requestReload } from "./reload-plugin.ts"
+import { requestReload } from "./request-reload.ts"
 import { UserPlugins } from "./user-plugins.ts"
 
 // Reloads a plugin each time its folder changes, until the scope closes.

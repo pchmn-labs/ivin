@@ -36,6 +36,8 @@ export const pluginFolderChanges = (pluginsFolder: string): Stream.Stream<string
             }).on("error", () => {
               watchers.get(name)?.close()
               watchers.delete(name)
+              // Opened again, so edits after the error are not missed.
+              watchFolder(name)
               changed(name)
             }),
           )

@@ -64,7 +64,6 @@ const heartbeat = (host: RunningPluginHost, timings: PluginHostTimings) =>
     }
   })
 
-// What a plugin's folder says about its server half now, as the runner's maps stand.
 interface Registry {
   readonly files: Map<string, string>
   readonly idOfFolder: Map<string, string>
@@ -127,7 +126,6 @@ const runOnce = (
     const activate = (half: ServerHalf) =>
       Effect.gen(function* () {
         yield* Ref.set(activating, half.id)
-        activations++
         const failure = yield* host.activate(half).pipe(
           Effect.as(null),
           Effect.catchTag("PluginActivateFailed", ({ reason }) => Effect.succeed(reason)),
@@ -153,6 +151,7 @@ const runOnce = (
           yield* states.set(change.drop, "none")
         }
         if (change.start !== null) {
+          activations++
           yield* host.deactivate(change.start.id)
           yield* activate(change.start)
         }
