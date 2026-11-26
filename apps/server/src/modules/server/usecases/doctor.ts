@@ -17,7 +17,7 @@ export const doctor = Effect.gen(function* () {
   const settingsFile = yield* SettingsFile
   const keybindingsFile = yield* KeybindingsFile
   const harness = yield* HarnessProvider
-  const skill = yield* SkillInstallation
+  const skills = yield* SkillInstallation
   const [settingsText, keybindingsText, program] = yield* Effect.all(
     [currentText(settingsFile.contents), currentText(keybindingsFile.contents), harness.program],
     { concurrency: "unbounded" },
@@ -37,7 +37,7 @@ export const doctor = Effect.gen(function* () {
       problem: readKeybindingsFile({ keybindings: [], problem: null }, keybindingsText).problem,
     },
     harness: { id: harness.id, program },
-    skill,
+    skills,
   }
   return diagnosis
 })

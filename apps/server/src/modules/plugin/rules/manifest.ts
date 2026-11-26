@@ -23,6 +23,8 @@ export type ManifestReading =
 
 const ID = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
+export const isPluginId = (id: string) => ID.test(id)
+
 const invalid = (reason: string): ManifestReading => ({ kind: "invalid", reason })
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

@@ -33,7 +33,8 @@ export const Diagnosis = Schema.Struct({
   }),
   // Null for a harness that runs no program.
   harness: Schema.Struct({ id: Harness, program: Schema.NullOr(HarnessProgram) }),
-  skill: Schema.NullOr(SkillInstall),
+  // Empty for a harness that takes no skills.
+  skills: Schema.Array(SkillInstall),
 })
 export type Diagnosis = typeof Diagnosis.Type
 

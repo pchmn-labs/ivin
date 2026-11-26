@@ -497,7 +497,7 @@ export const makeFakeServer = (
         settings: { path: "~/.ivin/settings.json", problem: userSettings.problem },
         keybindings: { path: "~/.ivin/keybindings.json", problem: userKeybindings.problem },
         harness: { id: harness, program: null },
-        skill: null,
+        skills: [],
       })),
     "log.writeError": (report: ErrorReport) => Effect.sync(() => void errorReports.push(report)),
     "plugin.list": () =>
@@ -517,6 +517,15 @@ export const makeFakeServer = (
     "plugin.readLog": ({ id }: { id: string }) =>
       Effect.sync(() => pluginFailures.filter((f) => f.id === id).map((f) => f.reason)),
     "plugin.status": () => Effect.succeed([]),
+    "plugin.reload": ({ id }) =>
+      userPlugins.some((plugin) => plugin.id === id)
+        ? Effect.succeed({ id, name: id, ui: "active" as const, server: "none" as const })
+        : Effect.fail(new PluginNotFound({ id })),
+    "plugin.check": ({ id }) =>
+      userPlugins.some((plugin) => plugin.id === id)
+        ? Effect.succeed([])
+        : Effect.fail(new PluginNotFound({ id })),
+    "plugin.create": ({ id }) => Effect.succeed(`~/.ivin/plugins/${id}`),
     "keybinding.watch": () =>
       Stream.unwrap(
         Effect.map(PubSub.subscribe(keybindingChanges), (subscription) =>

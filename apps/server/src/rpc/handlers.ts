@@ -32,9 +32,13 @@ import { writeFile } from "../modules/file/usecases/write-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
 import { listPluginStatus } from "../modules/plugin/usecases/list-plugin-status.ts"
-import { listPlugins } from "../modules/plugin/usecases/list-plugins.ts"
+import { watchPlugins } from "../modules/plugin/usecases/watch-plugins.ts"
 import { layerServerHalves } from "../modules/plugin/usecases/server-halves.ts"
+import { checkPlugin } from "../modules/plugin/usecases/check-plugin.ts"
+import { createPlugin } from "../modules/plugin/usecases/create-plugin.ts"
 import { lockPlugin } from "../modules/plugin/usecases/lock-plugin.ts"
+import { layerPluginReloads } from "../modules/plugin/usecases/plugin-reloads.ts"
+import { reloadPlugin } from "../modules/plugin/usecases/reload-plugin.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
@@ -117,6 +121,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     layerFirstMessageReading,
     layerUnrestoredSubViewsDropped,
     layerServerHalves,
+    layerPluginReloads,
   ).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
     Layer.provideMerge(Layer.mergeAll(layerSessionTabs, layerSessionsWithTab)),
@@ -181,11 +186,14 @@ export const handlers = Rpcs.toLayer(
       "cli.installInShell": () => installInShell,
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
-      "plugin.list": () => listPlugins,
+      "plugin.list": () => watchPlugins,
       "plugin.reportFailure": ({ id, reason }) => reportPluginFailure(id, reason),
       "plugin.readLog": ({ id }) => readPluginLog(id),
       "plugin.status": () => listPluginStatus,
       "plugin.lock": ({ id }) => lockPlugin(id),
+      "plugin.reload": ({ id }) => reloadPlugin(id),
+      "plugin.check": ({ id }) => checkPlugin(id),
+      "plugin.create": ({ id }) => createPlugin(id),
       "setting.watch": () => watchSettings,
       "setting.get": ({ path }) => getSetting(path),
       "setting.set": ({ path, value }) => setSetting(path, value),
