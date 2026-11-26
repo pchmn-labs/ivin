@@ -20,6 +20,8 @@ export const projectFoldersOf = (session: Session) =>
   Effect.gen(function* () {
     if (!awaitsWorkspaceFolder(session)) return null
     const folders = (yield* (yield* ProjectStore).folders(session.projectPath)) ?? []
+    // A project folder picked before the first message is the working folder already.
+    if (folders.includes(session.workingFolder)) return null
     const names = subfolderNames(folders)
     return folders.map((folder, index): Repository => ({ name: names[index]!, folder }))
   })

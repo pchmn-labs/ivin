@@ -20,14 +20,6 @@ test("before the first message, a new worktree has no branch yet", () => {
   })
 })
 
-test("before the first message, a workspace session is on a new worktree whatever the choice", () => {
-  expect(sessionLocation(notStarted, { kind: "checkout" }, [], true)).toEqual({
-    kind: "worktree",
-    label: "New worktree",
-    branch: null,
-  })
-})
-
 test("before the first message, an existing worktree shows its branch, or its folder when detached", () => {
   const worktrees = [{ path: "/p/.worktrees/adr", branch: "docs/adr" }]
   const chosen = (path: string) =>

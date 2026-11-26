@@ -463,7 +463,7 @@ test("one project folder offers a project's own choices: a new worktree, an exis
   git(webApp, "worktree", "add", "--quiet", older, "feat/older")
   git(apiApp, "branch", "feat/api")
   const starts: StartInput[] = []
-  const { created, reused, picked } = await withServer(starts, (client) =>
+  const { created, reused, picked, files } = await withServer(starts, (client) =>
     Effect.gen(function* () {
       yield* openTrusted(client)
       const first = yield* client["session.create"]({ projectPath: workspace })
@@ -475,12 +475,13 @@ test("one project folder offers a project's own choices: a new worktree, an exis
         sessionId: third.id,
         workingFolder: { kind: "checkout", path: apiApp },
       })
+      const files = yield* client["file.listFolder"]({ sessionId: third.id, path: "" })
       const picked = yield* client["session.pickBranch"]({
         sessionId: third.id,
         name: "feat/api",
         remote: false,
       })
-      return { created, reused, picked }
+      return { created, reused, picked, files }
     }),
   )
 
@@ -490,6 +491,7 @@ test("one project folder offers a project's own choices: a new worktree, an exis
   expect(reused).toMatchObject({ workingFolder: older, inWorktree: true, branch: "feat/older" })
   expect(picked).toMatchObject({ workingFolder: apiApp, inWorktree: false, branch: "feat/api" })
   expect(git(apiApp, "branch", "--show-current")).toBe("feat/api")
+  expect(files.map((entry) => entry.name)).toEqual(["first.txt"])
   expect(starts.map((s) => [s.cwd, s.extraDirectories])).toEqual([
     [created.workingFolder, [apiApp, notes]],
     [older, [apiApp, notes]],
