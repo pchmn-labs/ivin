@@ -56,7 +56,7 @@ const whereItems = (project: Project): WhereItem[] => {
         key: "new",
         icon: "plus",
         label: "New worktrees",
-        description: `A worktree of ${REPOSITORIES.join(" and ")} on one new branch`,
+        description: `Branch ivin/9b1e4c07, made in ${REPOSITORIES.join(" and in ")}`,
       },
       ...WORKING_FOLDERS.map((folder, i): WhereItem => ({
         where: { kind: "existing", path: folder.path },
@@ -290,6 +290,9 @@ export function TwoPickers({ started }: LocationProps) {
   )
 }
 
+// As in every composer menu, a list longer than this gets a search field.
+const SEARCH_FROM = 10
+
 const ALL_PROJECTS: Project[] = ["all", ...FOLDERS.map((f) => f.path)]
 
 function OneTrigger({
@@ -332,17 +335,37 @@ export function Columns({ started }: LocationProps) {
   const [column, setColumn] = useState<0 | 1>(1)
   const [active, setActive] = useState(0)
   const box = useRef<HTMLDivElement>(null)
-  const items = whereItems(project)
+  const [query, setQuery] = useState("")
+  const all = whereItems(project)
+  const searchable = all.length > SEARCH_FROM
+  const needle = query.trim().toLowerCase()
+  const items =
+    needle === ""
+      ? all
+      : all
+          .filter((item) => item.label.toLowerCase().includes(needle))
+          .map((item): WhereItem => ({ ...item, heading: undefined }))
+  const search = useRef<HTMLInputElement>(null)
+  const viewport = useRef<HTMLDivElement>(null)
   useEffect(() => box.current?.focus(), [popup.open])
+  useEffect(() => {
+    if (column === 1 && searchable) search.current?.focus()
+    else box.current?.focus()
+  }, [column, project, searchable])
+  useEffect(() => {
+    viewport.current?.querySelector("[data-highlighted]")?.scrollIntoView({ block: "nearest" })
+  }, [active, project, query])
   if (started) return <Started pick={pick} />
 
   const show = (p: Project) => {
+    setQuery("")
     setProject(p)
     setCursor(p)
     setActive(0)
     setColumn(1)
   }
   const open = () => {
+    setQuery("")
     setProject(pick.project)
     setCursor(pick.project)
     setColumn(1)
@@ -369,14 +392,14 @@ export function Columns({ started }: LocationProps) {
     } else if (event.key === "ArrowRight" && column === 0) {
       event.preventDefault()
       show(cursor)
-    } else if (event.key === "ArrowLeft" && column === 1) {
+    } else if (event.key === "ArrowLeft" && column === 1 && query === "") {
       event.preventDefault()
       setCursor(project)
       setColumn(0)
     } else if (event.key === "Enter") {
       event.preventDefault()
       if (column === 0) show(cursor)
-      else choose(items[active].where)
+      else if (items[active] !== undefined) choose(items[active].where)
     } else if (event.key === "Escape") {
       event.preventDefault()
       popup.close()
@@ -409,16 +432,34 @@ export function Columns({ started }: LocationProps) {
                         <Icon name={projectIcon(p)} size={14} />
                       </span>
                       <span className="iv-composer-menu__label">{projectLabel(p)}</span>
-                      <span className="iv-composer-menu__check">
-                        {p === pick.project && <Icon name="check" size={14} label="Chosen" />}
-                      </span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
             <div className="proto-column proto-column--detail">
-              <div className="iv-composer-menu__viewport">
+              {searchable && (
+                <div className="iv-composer-menu__search">
+                  <Icon name="search" size={14} />
+                  <input
+                    ref={search}
+                    className="iv-composer-menu__input"
+                    placeholder={`Find a worktree of ${projectLabel(project)}…`}
+                    value={query}
+                    onChange={(event) => {
+                      setQuery(event.target.value)
+                      setActive(0)
+                    }}
+                    onFocus={() => setColumn(1)}
+                  />
+                </div>
+              )}
+              <div className="iv-composer-menu__viewport proto-scroll" ref={viewport}>
+                {items.length === 0 && (
+                  <div className="iv-composer-menu__note">
+                    No worktree matches “{query.trim()}”.
+                  </div>
+                )}
                 {items.map((item, i) => (
                   <div key={item.key}>
                     {item.heading !== undefined && (

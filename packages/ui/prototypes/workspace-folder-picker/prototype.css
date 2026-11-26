@@ -514,3 +514,7 @@ body {
     background: var(--iv-bg-hover);
   }
 }
+
+.proto-scroll {
+  max-height: 296px;
+}

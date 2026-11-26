@@ -95,6 +95,27 @@ export const PROJECT_WORKTREES: Readonly<
       branch: "ivin/5d01aa3e",
       usedBy: "Search by SKU",
     },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/feat-webhooks", branch: "feat/webhooks" },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/fix-rate-headers", branch: "fix/rate-headers" },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/feat-bulk-import", branch: "feat/bulk-import" },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/ivin-0c4e7f12", branch: "ivin/0c4e7f12" },
+    {
+      path: "/Users/paul/Dev/shop/api/.worktrees/chore-deps-november",
+      branch: "chore/deps-november",
+    },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/feat-audit-log", branch: "feat/audit-log" },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/fix-null-currency", branch: "fix/null-currency" },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/ivin-71ab03de", branch: "ivin/71ab03de" },
+    {
+      path: "/Users/paul/Dev/shop/api/.worktrees/feat-graphql-orders",
+      branch: "feat/graphql-orders",
+    },
+    {
+      path: "/Users/paul/Dev/shop/api/.worktrees/fix-timezone-reports",
+      branch: "fix/timezone-reports",
+    },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/ivin-e2290b6a", branch: "ivin/e2290b6a" },
+    { path: "/Users/paul/Dev/shop/api/.worktrees/feat-refund-api", branch: "feat/refund-api" },
   ],
   "/Users/paul/Dev/shop/web": [
     { path: "/Users/paul/Dev/shop/web/.worktrees/feat-dark-mode-v2", branch: "feat/dark-mode-v2" },
