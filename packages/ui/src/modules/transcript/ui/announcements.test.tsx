@@ -45,6 +45,9 @@ const setup = async (options: { waiting?: boolean } = {}) => {
       <Announcements projectPath="/p" />
     </RegistryProvider>,
   )
+  await expect.element(tab("Clean the build")).toBeVisible()
+  await expect.element(tab("Fix the cart")).toBeVisible()
+  await expect.element(turnEnds()).toBeInTheDocument()
   return server
 }
 

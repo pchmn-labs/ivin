@@ -5,6 +5,8 @@ import { waitForTestFrame } from "./wait-for-test-frame.ts"
 
 export default defineConfig({
   optimizeDeps: { include: lazyDeps },
+  define: { "process.env.NODE_ENV": JSON.stringify("production") },
+  oxc: { jsx: { runtime: "automatic", development: false } },
   test: {
     name: "ui-browser",
     testTimeout: 5000,

@@ -23,5 +23,7 @@ test("the header shows the message with its Retry and action", async () => {
 
 test("the skeleton is hidden from assistive technology", async () => {
   const { container } = await render(<FailureSkeleton />)
-  expect(container.querySelector(".iv-failure__skeleton")?.getAttribute("aria-hidden")).toBe("true")
+  await expect
+    .poll(() => container.querySelector(".iv-failure__skeleton")?.getAttribute("aria-hidden"))
+    .toBe("true")
 })

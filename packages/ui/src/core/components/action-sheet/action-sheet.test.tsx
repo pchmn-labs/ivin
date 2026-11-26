@@ -42,6 +42,7 @@ test("the aside sits in the title row and the footer holds the key hints and the
     />,
   )
   const sheet = page.getByRole("group", { name: "The agent asks" })
+  await expect.element(sheet).toBeVisible()
   expect(sheet.element().querySelector(".iv-action-sheet__head")?.textContent).toContain(
     "Steps here",
   )

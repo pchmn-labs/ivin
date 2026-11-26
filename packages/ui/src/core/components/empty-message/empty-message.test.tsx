@@ -11,6 +11,7 @@ test("the message starts where a list section's label does", async () => {
       <EmptyMessage>No sessions yet.</EmptyMessage>
     </div>,
   )
+  await expect.element(page.getByText("No sessions yet.")).toBeVisible()
   const message = page.getByText("No sessions yet.").element()
   const label = page.getByText("Sessions", { exact: true }).element()
   const textStart = (element: Element) => {

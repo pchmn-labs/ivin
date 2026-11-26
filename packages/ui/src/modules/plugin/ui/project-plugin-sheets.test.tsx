@@ -77,6 +77,7 @@ test("a plugin whose permissions changed can only be trusted for this version", 
 
 test("a plugin that changed again before the user trusted it stays, with the new state and why", async () => {
   const server = await mount()
+  await expect.element(page.getByRole("button", { name: "Review" })).toBeVisible()
   server.projectPlugins[0] = {
     ...server.projectPlugins[0]!,
     plugins: [{ ...changed, hash: "newer", files: [{ path: "ui.tsx", status: "M" }] }],

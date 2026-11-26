@@ -74,6 +74,7 @@ test("a checkout git refuses shows git's message in the open picker", async () =
 test("keyboard only: open, filter, move, pick and Escape, with focus back on the branch button", async () => {
   await mount(40)
   const trigger = page.getByTestId("branch-picker")
+  await expect.element(trigger).toBeVisible()
   trigger.element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByRole("combobox", { name: "Switch branch" })).toHaveFocus()

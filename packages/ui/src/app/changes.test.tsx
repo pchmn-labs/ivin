@@ -414,6 +414,7 @@ test("Discard all with 40 changes keeps its buttons on screen and scrolls the li
 
 test("⌘Backspace in the list asks to discard every uncommitted change", async () => {
   await mount(makeServer())
+  await expect.element(committedRow("plan.md")).toBeVisible()
   ;(committedRow("plan.md").element() as HTMLElement).focus()
   await userEvent.keyboard("{Backspace}")
   await expect.element(discardDialog()).not.toBeInTheDocument()

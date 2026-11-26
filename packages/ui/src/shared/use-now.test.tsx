@@ -21,14 +21,15 @@ afterEach(() => {
 test("50 relative times run one timer, and none while the window is hidden", async () => {
   const setIntervalSpy = vi.spyOn(globalThis, "setInterval")
   const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval")
-  await render(
+  const screen = await render(
     <>
       {Array.from({ length: 50 }, (_, i) => (
         <Clock key={i} />
       ))}
     </>,
   )
-  expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+  await expect.element(screen.getByTestId("clock").first()).toBeInTheDocument()
+  await vi.waitFor(() => expect(setIntervalSpy).toHaveBeenCalledTimes(1))
   expect(vi.getTimerCount()).toBe(1)
 
   setHidden(true)
@@ -38,12 +39,13 @@ test("50 relative times run one timer, and none while the window is hidden", asy
 
 test("showing the window again updates the time at once and restarts the one timer", async () => {
   const screen = await render(<Clock />)
+  await expect.element(screen.getByTestId("clock")).toBeInTheDocument()
   const shown = () => Number(screen.getByTestId("clock").element().textContent)
   const before = shown()
   setHidden(true)
   vi.setSystemTime(before + 10 * 60_000)
   expect(shown()).toBe(before)
   setHidden(false)
-  await vi.waitFor(() => expect(shown()).toBe(before + 10 * 60_000))
+  await expect.element(screen.getByTestId("clock")).toHaveTextContent(String(before + 10 * 60_000))
   expect(vi.getTimerCount()).toBe(1)
 })

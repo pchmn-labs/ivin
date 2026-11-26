@@ -210,6 +210,9 @@ test("a file keeps its scroll position when another file or session comes and go
   await expect.element(code("main.ts").getByText("line 0", { exact: true })).toBeVisible()
 
   const scroller = () => document.querySelector<HTMLElement>(".iv-sub-view-card .cm-scroller")!
+  await expect
+    .poll(() => scroller().scrollHeight - scroller().clientHeight)
+    .toBeGreaterThanOrEqual(6000)
   scroller().scrollTop = 6000
   scroller().dispatchEvent(new Event("scroll"))
   await fileTab("README.md").click()

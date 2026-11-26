@@ -83,6 +83,7 @@ test("clicking Deny answers deny", async () => {
 
 test("Esc denies", async () => {
   const answer = await mount([approval(null)])
+  await expect.element(page.getByRole("radio", { name: "Allow" })).toBeVisible()
   page.getByRole("radio", { name: "Allow" }).element().focus()
   await userEvent.keyboard("{Escape}")
   expect(answer).toHaveBeenCalledExactlyOnceWith({ requestId: "r1", allow: false })

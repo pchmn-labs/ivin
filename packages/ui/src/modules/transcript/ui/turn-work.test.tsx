@@ -187,8 +187,8 @@ test("unfolding the last turn does not scroll the transcript", async () => {
     text(`a${t}`, `Answer ${t}`),
   ]).flat()
   await mount(turns, false, 300)
-  const scroller = document.querySelector<HTMLElement>('[data-testid="transcript"]')!
   await expect.element(page.getByText("Answer 5")).toBeVisible()
+  const scroller = document.querySelector<HTMLElement>('[data-testid="transcript"]')!
   await vi.waitFor(() => {
     scroller.scrollTop = scroller.scrollHeight
     expect(scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight).toBeLessThan(2)
@@ -213,8 +213,8 @@ test("a session of 200 turns of 30 calls scrolls without rendering the folded ca
     text(`a${t}`, `Answer ${t}`),
   ]).flat()
   await mount(turns, false, 400)
-  const scroller = document.querySelector<HTMLElement>('[data-testid="transcript"]')!
   await expect.element(page.getByText("Answer 199")).toBeVisible()
+  const scroller = document.querySelector<HTMLElement>('[data-testid="transcript"]')!
 
   const answers = () =>
     [...(scroller.textContent ?? "").matchAll(/Answer (\d+)/g)].map((match) => Number(match[1]))

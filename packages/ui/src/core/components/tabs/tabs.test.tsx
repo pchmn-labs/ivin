@@ -43,6 +43,7 @@ test("clicking a tab selects it and reports the change", async () => {
 
 test("ArrowRight and ArrowLeft move the selection", async () => {
   const onValueChange = await setup()
+  await expect.element(tab("Alpha")).toBeVisible()
   tab("Alpha").element().focus()
   await userEvent.keyboard("{ArrowRight}")
   await expect.element(tab("Beta")).toHaveAttribute("aria-selected", "true")

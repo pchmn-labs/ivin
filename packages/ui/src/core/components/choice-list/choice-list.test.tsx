@@ -152,12 +152,14 @@ test("on mount the list takes the focus from the empty composer, but not from a 
     )
   }
   const first = await render(<Harness draft="" />)
+  await expect.element(page.getByRole("textbox", { name: "Composer" })).toBeVisible()
   page.getByRole("textbox", { name: "Composer" }).element().focus()
   ;(page.getByRole("button", { name: "Show" }).element() as HTMLButtonElement).click()
   await expect.element(radio(/^Vitest/)).toHaveFocus()
   await first.unmount()
 
   await render(<Harness draft="half a thought" />)
+  await expect.element(page.getByRole("textbox", { name: "Composer" })).toBeVisible()
   page.getByRole("textbox", { name: "Composer" }).element().focus()
   ;(page.getByRole("button", { name: "Show" }).element() as HTMLButtonElement).click()
   await expect.element(radio(/^Vitest/)).toBeVisible()

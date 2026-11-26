@@ -26,6 +26,7 @@ const highlighted = () => document.querySelector('[role="menuitem"][data-highlig
 
 test("the keyboard opens the menu and arrows move the highlight", async () => {
   await setup()
+  await expect.element(trigger()).toBeVisible()
   trigger().element().focus()
   await userEvent.keyboard("{Enter}")
   await expect.element(page.getByRole("menu")).toBeVisible()
@@ -40,6 +41,7 @@ test("the keyboard opens the menu and arrows move the highlight", async () => {
 
 test("Enter on the highlighted item calls its onSelect and closes the menu", async () => {
   const { onRename } = await setup()
+  await expect.element(trigger()).toBeVisible()
   trigger().element().focus()
   await userEvent.keyboard("{ArrowDown}")
   await expect.element(page.getByRole("menu")).toBeVisible()
@@ -85,6 +87,7 @@ test("checked items are one choice with a check on the chosen one, under their h
   const chosen = page.getByRole("menuitemradio", { name: "Checkout" })
   await expect.element(chosen).toHaveAttribute("aria-checked", "true")
   const other = page.getByRole("menuitemradio", { name: /docs\/adr/ })
+  await expect.element(other).toBeVisible()
   expect(other.element().textContent).toBe("docs/adrWrite the ADR")
   await other.click()
   expect(onPick).toHaveBeenCalledOnce()
