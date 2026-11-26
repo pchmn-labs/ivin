@@ -228,6 +228,8 @@ export interface UiContext {
   }
   // A temporary notification in the session's chat, for what has no place of its own on screen.
   readonly notify: (notification: NotifyOptions) => void
+  // Made by the server, to a host the manifest's `permissions.fetch` declares; the window's own `fetch` reaches no other origin.
+  readonly fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>
   // A default keybinding, which the user's ~/.ivin/keybindings.json can change.
   readonly keybindings: {
     add: (keybinding: KeybindingOptions) => void

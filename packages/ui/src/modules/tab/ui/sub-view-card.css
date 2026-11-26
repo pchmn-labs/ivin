@@ -1,25 +1,20 @@
 .iv-sub-view-card {
   position: relative;
   display: flex;
-  flex: 0 1 var(--iv-sub-view-card-width, calc((100% - var(--iv-space-2)) * 1.15 / 2.15));
+  flex: 0 1 var(--iv-sub-view-card-width, calc(100% * 1.15 / 2.15));
   flex-direction: column;
   min-width: var(--iv-sub-view-card-min-width);
   min-height: 0;
-  margin: 0 var(--iv-space-2) var(--iv-space-2) 0;
   overflow: clip;
   overflow-clip-margin: border-box;
   isolation: isolate;
-  border: 1px solid var(--iv-border);
-  border-radius: var(--iv-radius-card);
+  border-left: 1px solid var(--iv-border);
   background: var(--iv-bg-card);
 }
 
 .iv-sub-view-card > .iv-resize-handle[data-edge="left"]::after {
-  top: var(--iv-radius-card);
-  bottom: var(--iv-radius-card);
   left: -1px;
   width: 1px;
-  border-radius: var(--iv-radius-pill);
 }
 
 .iv-sub-view-card__row {
@@ -27,11 +22,9 @@
   flex: none;
   align-items: center;
   gap: var(--iv-space-1);
-  height: var(--iv-space-9);
-  padding: 0 var(--iv-space-2) 0 var(--iv-space-1);
+  height: var(--iv-tab-row-height);
+  padding: 0 calc((var(--iv-tab-row-height) - var(--iv-tab-height)) / 2);
   border-bottom: 1px solid var(--iv-border);
-  /* The card clips at its border's outer edge, so a square row would paint over the rounded border. */
-  border-radius: calc(var(--iv-radius-card) - 1px) calc(var(--iv-radius-card) - 1px) 0 0;
 }
 
 .iv-sub-view-card[data-on-session] {
@@ -46,7 +39,7 @@
   display: flex;
   flex: 1;
   align-items: center;
-  gap: var(--iv-space-half);
+  gap: var(--iv-space-1);
   min-width: 0;
   height: 100%;
   overflow-x: auto;
@@ -62,11 +55,12 @@
 }
 
 .iv-sub-view-card__item {
+  position: relative;
   display: flex;
   flex: none;
   align-items: center;
-  height: var(--iv-sub-view-tab-height);
-  border-radius: var(--iv-radius-md);
+  height: var(--iv-tab-height);
+  border-radius: var(--iv-radius-tab);
   color: var(--iv-text-muted);
   transition:
     background-color var(--iv-duration-fast) ease-out,
@@ -88,9 +82,9 @@
   align-items: center;
   gap: var(--iv-space-2);
   height: 100%;
-  padding: 0 var(--iv-space-1) 0 var(--iv-space-3);
+  padding: 0 calc(var(--iv-tab-close-size) + var(--iv-space-2)) 0 var(--iv-tab-padding);
   border: 0;
-  border-radius: var(--iv-radius-md);
+  border-radius: var(--iv-radius-tab);
   background: transparent;
   color: inherit;
   font-size: var(--iv-text-sm);
@@ -101,7 +95,7 @@
 
 .iv-sub-view-card__tab--session {
   /* The mark draws 1px inside its box; its circle reads airier than text, so 2px more on the right. */
-  padding: 0 calc(var(--iv-space-3) + var(--iv-space-half)) 0 calc(var(--iv-space-3) - 1px);
+  padding: 0 calc(var(--iv-tab-padding) + var(--iv-space-half)) 0 calc(var(--iv-tab-padding) - 1px);
 }
 
 .iv-sub-view-card__tab:focus-visible,
@@ -138,17 +132,29 @@
 }
 
 .iv-sub-view-card__close {
+  position: absolute;
+  top: 50%;
+  right: var(--iv-space-1);
   display: inline-grid;
   place-items: center;
-  width: var(--iv-sub-view-close-size);
-  height: var(--iv-sub-view-close-size);
-  margin-right: var(--iv-space-1);
+  width: var(--iv-tab-close-size);
+  height: var(--iv-tab-close-size);
   padding: 0;
   border: 0;
   border-radius: var(--iv-radius-sm);
   background: transparent;
   color: var(--iv-text-faint);
+  opacity: 0;
+  pointer-events: none;
   cursor: pointer;
+  transform: translateY(-50%);
+  transition: opacity var(--iv-duration-fast) ease-out;
+}
+
+.iv-sub-view-card__item:is(:hover, [data-selected], [data-unsaved], :focus-within)
+  .iv-sub-view-card__close {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .iv-sub-view-card__close:hover {

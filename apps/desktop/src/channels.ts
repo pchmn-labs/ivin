@@ -13,5 +13,6 @@ export const GET_STARTUP_NOTICE = "ivin:startup-notice:get"
 export const PLUGIN_ACTIVITY = "ivin:plugin:activity"
 export const LAUNCH_SETTLED = "ivin:launch:settled"
 export const SHOW_IN_FOLDER = "ivin:show-in-folder"
+export const WINDOW_LAYOUT = "ivin:window:layout"
 
 export const DEV_BUILD_ARGUMENT = "--ivin-dev-build"

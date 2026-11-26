@@ -19,6 +19,7 @@ test("a 5,000-line output shows 2,000 lines and a note, and Copy still copies al
 test("a 2,000-line output, trailing newline included, shows whole with no note", async () => {
   const text = `${Array.from({ length: 2000 }, (_, i) => `line ${i + 1}`).join("\n")}\n`
   await render(<CodeBlock text={text} data-testid="out" />)
+  await expect.element(page.getByTestId("out")).toBeVisible()
   expect(page.getByTestId("out").element().textContent).toContain("line 2000")
   expect(document.body.textContent).not.toContain("Showing the first")
 })

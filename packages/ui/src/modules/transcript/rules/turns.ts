@@ -15,6 +15,10 @@ export type TranscriptRow =
       readonly answerIds: ReadonlyArray<string>
     }
 
+// A subagent's steps show in its task's sheet; the server's page leaves them out too.
+export const isSubagentStep = (item: TranscriptItem) =>
+  "parentToolCallId" in item && item.parentToolCallId !== undefined
+
 const isSteer = (item: TranscriptItem) =>
   item.type === "message" && item.role === "user" && item.steer
 const isWork = (item: TranscriptItem) =>
@@ -29,11 +33,11 @@ export const transcriptRows = (all: ReadonlyArray<TranscriptItem>): TranscriptRo
   const turns: TranscriptItem[][] = []
   // The agent's questions show in place of the tool call that asked them.
   const asked = new Set(all.flatMap((item) => (item.type === "question" ? [item.toolCallId] : [])))
-  // A task shows in the fold, and a subagent's steps in the task's sheet, not in the turns.
+  // A task shows in the fold, not in the turns.
   const items = all.filter(
     (item) =>
       item.type !== "task" &&
-      !("parentToolCallId" in item && item.parentToolCallId !== undefined) &&
+      !isSubagentStep(item) &&
       (item.type !== "tool_call" || !asked.has(item.toolCallId)),
   )
   for (const item of items) {

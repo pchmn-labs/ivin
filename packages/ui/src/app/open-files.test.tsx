@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import type { FakeServer } from "../core/fake-server-client.ts"
-import { folder, makeShopServer, mountApp, shopProject, shopWorktree } from "./test-app.tsx"
+import {
+  fileView,
+  folder,
+  makeShopServer,
+  mountApp,
+  seedSubViews,
+  shopProject,
+  shopWorktree,
+} from "./test-app.tsx"
 
 const project = shopProject
 const worktree = shopWorktree
@@ -42,7 +50,7 @@ beforeEach(async () => {
 })
 afterEach(() => localStorage.clear())
 
-test("a file opened from the tree shows beside the chat, in a tab of its own", async () => {
+test("files opened from the tree show beside the chat, each in a tab of its own; the last opened is selected, and a tab selects its file", async () => {
   const server = makeServer()
   await mount(server)
   await showFiles()
@@ -53,15 +61,9 @@ test("a file opened from the tree shows beside the chat, in a tab of its own", a
   expect(server.subViews.get("s1")?.subViews).toEqual([
     { view: "files/file", params: { path: "README.md" } },
   ])
-})
 
-test("several files stay open; the last opened is selected, and a tab selects its file", async () => {
-  await mount(makeServer())
-  await showFiles()
-  await item("README.md").click()
   await item("src").click()
   await item("main.ts").click()
-
   await expect.element(fileTab("main.ts")).toHaveAttribute("aria-selected", "true")
   await expect.element(code("main.ts")).toHaveTextContent('export const shop = "open"')
   await fileTab("README.md").click()
@@ -70,10 +72,9 @@ test("several files stay open; the last opened is selected, and a tab selects it
 })
 
 test("the arrow keys move between the open files", async () => {
-  await mount(makeServer())
-  await showFiles()
-  await item("README.md").click()
-  await item("logo.png").click()
+  const server = makeServer()
+  seedSubViews(server, ["README.md", "logo.png"].map(fileView))
+  await mount(server)
   await fileTab("logo.png").click()
 
   await userEvent.keyboard("{ArrowLeft}")
@@ -83,10 +84,9 @@ test("the arrow keys move between the open files", async () => {
 
 test("closing a file selects its neighbour, and closing the last one closes the card", async () => {
   const server = makeServer()
+  seedSubViews(server, ["README.md", "logo.png"].map(fileView))
   await mount(server)
-  await showFiles()
-  await item("README.md").click()
-  await item("logo.png").click()
+  await expect.element(fileTab("logo.png")).toHaveAttribute("aria-selected", "true")
 
   await page.getByRole("button", { name: "Close logo.png", includeHidden: true }).click()
   await expect.element(fileTab("logo.png")).not.toBeInTheDocument()
@@ -98,13 +98,13 @@ test("closing a file selects its neighbour, and closing the last one closes the 
 })
 
 test("a large file and a binary file say why they are not shown", async () => {
-  await mount(makeServer())
-  await showFiles()
-  await item("bundle.js").click()
+  const server = makeServer()
+  seedSubViews(server, ["bundle.js", "logo.png"].map(fileView), { selected: fileView("bundle.js") })
+  await mount(server)
   await expect
     .element(card().getByText("bundle.js is 3 MB, over the 2 MB ivin shows, so it is not shown."))
     .toBeVisible()
-  await item("logo.png").click()
+  await fileTab("logo.png").click()
   await expect
     .element(card().getByText("logo.png is a binary file, so it is not shown."))
     .toBeVisible()
@@ -112,9 +112,8 @@ test("a large file and a binary file say why they are not shown", async () => {
 
 test("a file that is gone says so in its place, and Retry reads it again", async () => {
   const server = makeServer()
+  seedSubViews(server, [fileView("gone.ts")])
   await mount(server)
-  await showFiles()
-  await item("gone.ts").click()
 
   await expect
     .element(card().getByText("gone.ts no longer exists. Retry once it is back."))
@@ -127,20 +126,18 @@ test("a file that is gone says so in its place, and Retry reads it again", async
 test("a file that cannot be read says to check its permissions", async () => {
   const server = makeServer()
   server.files.set(`${project}/gone.ts`, "unreadable")
+  seedSubViews(server, [fileView("gone.ts")])
   await mount(server)
-  await showFiles()
-  await item("gone.ts").click()
   await expect
     .element(card().getByText("gone.ts could not be read. Check its permissions, then retry."))
     .toBeVisible()
 })
 
 test("switching sessions and back keeps the open files and the selected one", async () => {
-  await mount(makeServer())
-  await showFiles()
-  await item("README.md").click()
-  await item("logo.png").click()
-  await fileTab("README.md").click()
+  const server = makeServer()
+  seedSubViews(server, ["README.md", "logo.png"].map(fileView), { selected: fileView("README.md") })
+  await mount(server)
+  await expect.element(code("README.md")).toHaveTextContent("# Shop")
 
   await sessionTab("Fix the cart").getByRole("tab").click()
   await expect.element(card()).not.toBeInTheDocument()
@@ -180,10 +177,10 @@ test("a file opened with Enter in the tree keeps the focus in the tree", async (
 const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 
 test("the Close file keybinding closes the selected file", async () => {
-  await mount(makeServer())
-  await showFiles()
-  await item("README.md").click()
-  await item("logo.png").click()
+  const server = makeServer()
+  seedSubViews(server, ["README.md", "logo.png"].map(fileView))
+  await mount(server)
+  await expect.element(fileTab("logo.png")).toHaveAttribute("aria-selected", "true")
 
   await userEvent.keyboard(`{${mod}>}{Shift>}w{/Shift}{/${mod}}`)
   await expect.element(fileTab("logo.png")).not.toBeInTheDocument()
@@ -192,9 +189,9 @@ test("the Close file keybinding closes the selected file", async () => {
 
 test("a close that fails keeps the file and says so, and Retry closes it", async () => {
   const server = makeServer()
+  seedSubViews(server, [fileView("README.md")])
   await mount(server)
-  await showFiles()
-  await item("README.md").click()
+  await expect.element(fileTab("README.md")).toBeVisible()
   server.failNextCall("tab.closeSubView")
 
   await page.getByRole("button", { name: "Close README.md", includeHidden: true }).click()
@@ -208,14 +205,14 @@ test("a file keeps its scroll position when another file or session comes and go
   const server = makeServer()
   const long = Array.from({ length: 2000 }, (_, n) => `line ${n}`).join("\n")
   server.files.set(`${project}/src/main.ts`, { kind: "text", text: long })
+  seedSubViews(server, ["README.md", "src/main.ts"].map(fileView))
   await mount(server)
-  await showFiles()
-  await item("README.md").click()
-  await item("src").click()
-  await item("main.ts").click()
   await expect.element(code("main.ts").getByText("line 0", { exact: true })).toBeVisible()
 
   const scroller = () => document.querySelector<HTMLElement>(".iv-sub-view-card .cm-scroller")!
+  await expect
+    .poll(() => scroller().scrollHeight - scroller().clientHeight)
+    .toBeGreaterThanOrEqual(6000)
   scroller().scrollTop = 6000
   scroller().dispatchEvent(new Event("scroll"))
   await fileTab("README.md").click()
@@ -425,16 +422,17 @@ test("a png, a jpg, a gif and an svg open as images, each with its size", async 
     version: "1",
   })
   server.files.set(`${project}/mark.svg`, { kind: "text", text: SVG })
+  seedSubViews(server, ["logo.png", "photo.jpg", "spin.gif", "mark.svg"].map(fileView), {
+    selected: fileView("logo.png"),
+  })
   await mount(server)
-  await showFiles()
-  await item("logo.png").click()
   await expect.element(image("logo.png")).toBeVisible()
   await expect.element(card().getByText(/^1 × 1 · \d+ B$/)).toBeVisible()
-  await item("photo.jpg").click()
+  await fileTab("photo.jpg").click()
   await expect.element(card().getByText(/^3 × 2 · /)).toBeVisible()
-  await item("spin.gif").click()
+  await fileTab("spin.gif").click()
   await expect.element(image("spin.gif")).toBeVisible()
-  await item("mark.svg").click()
+  await fileTab("mark.svg").click()
   await expect.element(card().getByText(/^4 × 4 · /)).toBeVisible()
 })
 
@@ -442,9 +440,8 @@ test("an svg switches to its source, editable, and back to the image", async () 
   const server = makeServer()
   server.folders.set(project, folder("mark.svg"))
   server.files.set(`${project}/mark.svg`, { kind: "text", text: SVG })
+  seedSubViews(server, [fileView("mark.svg")])
   await mount(server)
-  await showFiles()
-  await item("mark.svg").click()
   await expect.element(image("mark.svg")).toBeVisible()
   await card().getByRole("button", { name: "Source" }).click()
   await expect.poll(() => code("mark.svg").element().textContent).toContain("rect width")
@@ -469,13 +466,12 @@ test("an image over the limit, and one that does not decode, say so in place of 
     data: btoa("not a png"),
     version: "1",
   })
+  seedSubViews(server, ["demo.gif", "broken.png"].map(fileView), { selected: fileView("demo.gif") })
   await mount(server)
-  await showFiles()
-  await item("demo.gif").click()
   await expect
     .element(card().getByText("demo.gif is 48 MB, over the 10 MB ivin shows, so it is not shown."))
     .toBeVisible()
-  await item("broken.png").click()
+  await fileTab("broken.png").click()
   await expect
     .element(
       card().getByText(
@@ -495,9 +491,8 @@ test("an image changed on disk shows again", async () => {
     data: PNG,
     version: "1",
   })
+  seedSubViews(server, [fileView("logo.png")])
   await mount(server)
-  await showFiles()
-  await item("logo.png").click()
   await expect.element(card().getByText(/^1 × 1 · /)).toBeVisible()
   server.files.set(`${project}/logo.png`, {
     kind: "image",
@@ -514,9 +509,8 @@ const cardWidth = () => card().element().getBoundingClientRect().width
 
 test("the files card's left edge resizes it, keeps the chat's minimum width, and the size is kept", async () => {
   const server = makeServer()
+  seedSubViews(server, [fileView("README.md")])
   const first = await mount(server)
-  await showFiles()
-  await item("README.md").click()
   await expect.element(resizeHandle()).toBeInTheDocument()
   const start = cardWidth()
 
@@ -537,9 +531,9 @@ test("the files card's left edge resizes it, keeps the chat's minimum width, and
 })
 
 test("the files card in full width has no resize handle", async () => {
-  await mount(makeServer())
-  await showFiles()
-  await item("README.md").click()
-  await card().getByRole("button", { name: "Full width" }).click()
+  const server = makeServer()
+  seedSubViews(server, [fileView("README.md")], { fullWidth: true })
+  await mount(server)
+  await expect.element(card().getByRole("button", { name: "Beside chat" })).toBeVisible()
   await expect.element(resizeHandle()).not.toBeInTheDocument()
 })

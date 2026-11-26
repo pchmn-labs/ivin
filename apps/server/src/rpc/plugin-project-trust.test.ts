@@ -205,7 +205,7 @@ test("new permissions are asked even with full trust, and the trusted version ke
   expect(result.asked).toMatchObject({
     state: "changed",
     permissionsChanged: true,
-    permissions: ["exec: git"],
+    permissions: { harness: [], exec: ["git"], fetch: [] },
   })
   expect(result.running).toContain("v1")
 })

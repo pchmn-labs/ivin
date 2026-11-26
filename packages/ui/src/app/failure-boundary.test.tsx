@@ -47,6 +47,7 @@ test("Retry brings the window back with the atoms it held", async () => {
       <Content />
     </WindowFailureBoundary>,
   )
+  await expect.element(page.getByRole("alert")).toBeVisible()
   state.broken = false
   await page.getByRole("button", { name: "Retry" }).click()
   await expect.element(page.getByText("content with my draft")).toBeVisible()

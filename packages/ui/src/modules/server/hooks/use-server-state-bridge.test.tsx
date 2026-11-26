@@ -44,6 +44,8 @@ test("a restarted server gets a new client, and the connection shows the restart
     </RegistryProvider>,
   )
 
+  await expect.element(screen.getByText("connected / first client")).toBeVisible()
+
   emit({ kind: "restarting" })
   await expect.element(screen.getByText("restarting / first client")).toBeVisible()
 

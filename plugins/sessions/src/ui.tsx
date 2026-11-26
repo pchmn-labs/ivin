@@ -148,5 +148,5 @@ function SessionsPanel() {
 }
 
 export const activate = defineUi((ctx) => {
-  ctx.slots.add("sidebar.panel", SessionsPanel, { name: "panel", title: "Sessions", order: -1 })
+  ctx.slots.add("sidebar.panel", SessionsPanel, { name: "panel", title: "Sessions", order: -3 })
 })

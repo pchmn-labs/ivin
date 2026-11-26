@@ -7,66 +7,52 @@
 }
 
 .iv-tabs__list {
-  position: relative;
   display: flex;
-  anchor-scope: --iv-active-tab-name;
   flex: none;
-  gap: var(--iv-space-1);
-  padding: 0 var(--iv-space-2);
-  border-bottom: 1px solid var(--iv-border);
+  gap: var(--iv-space-half);
+  padding: var(--iv-space-1) var(--iv-space-2);
 }
 
 .iv-tabs__tab {
   display: inline-flex;
   align-items: center;
   gap: var(--iv-space-1);
-  height: 32px;
-  padding: 0 var(--iv-space-3);
+  height: var(--iv-control-sm);
+  padding: 0 var(--iv-space-2);
   border: 0;
+  border-radius: var(--iv-radius-md);
   background: transparent;
-  color: var(--iv-text-muted);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
   font-weight: var(--iv-weight-medium);
   cursor: default;
-  transition: color var(--iv-duration-fast) var(--iv-ease-out);
-}
-
-.iv-tabs__tab:hover {
-  color: var(--iv-text);
+  transition:
+    background-color var(--iv-duration-fast) ease-out,
+    color var(--iv-duration-fast) ease-out;
 }
 
 .iv-tabs__tab[data-active] {
+  background: var(--iv-bg-active);
   color: var(--iv-text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .iv-tabs__tab:not([data-active]):hover {
+    background: var(--iv-bg-hover);
+    color: var(--iv-text-muted);
+  }
+}
+
+.iv-tabs__tab:focus-visible {
+  outline: 2px solid var(--iv-focus-ring);
+  outline-offset: -2px;
 }
 
 .iv-tabs__name {
   display: inline-flex;
   align-items: center;
   gap: var(--iv-space-1);
-}
-
-.iv-tabs__tab[data-active] .iv-tabs__name {
-  anchor-name: --iv-active-tab-name;
-}
-
-.iv-tabs__indicator {
-  position: absolute;
-  position-anchor: --iv-active-tab-name;
-  /* Centred on the list's 1px hairline. */
-  bottom: -2px;
-  left: anchor(center);
-  z-index: 1;
-  width: var(--iv-space-4);
-  height: 3px;
-  border-radius: var(--iv-radius-pill);
-  background: var(--iv-accent);
-  translate: -50% 0;
-  transition: left var(--iv-duration-base) var(--iv-ease-in-out);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .iv-tabs__indicator {
-    transition: none;
-  }
 }
 
 .iv-tabs__badge {

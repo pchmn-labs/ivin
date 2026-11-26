@@ -18,7 +18,7 @@ A plugin lists in the `permissions` of its manifest (the `ivin` key of its `pack
 - `exec` and `fetch` accept `"*"` for any program and any host. The trust prompt spells it out ("Runs any program", "Connects to any host") and lists it first.
 - A manifest with no `permissions` declares none: the plugin's `ctx` refuses all three calls.
 
-The check sits in one place, keyed by the `ctx` member, so a member added later declares its permission there. The plugin host checks `harness` and `exec`; the server checks `fetch`, so a UI half cannot skip it. The UI half has no `fetch` permission: the renderer's Content Security Policy (`default-src 'self'`) refuses requests to other origins.
+The check sits in one place, keyed by the `ctx` member, so a member added later declares its permission there. The plugin host checks `harness` and `exec`; the server checks `fetch`, so a UI half cannot skip it. The UI half's `ctx.fetch` goes through the server under the same `fetch` permission; the window's own `fetch` reaches no other origin, because the renderer's Content Security Policy (`default-src 'self'`) refuses it.
 
 The permissions limit `ctx` only. A server half is Node code and can import `node:fs` or `node:net`: ivin says "Runs code on your machine with your rights" for a plugin with a server half, and never words a permission as a limit on the plugin's code. `ctx.commands.run` calls another plugin's command, which runs with that plugin's permissions.
 

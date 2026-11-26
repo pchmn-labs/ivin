@@ -36,8 +36,6 @@
 
 .iv-tab-bar__item[data-selected] {
   background: color-mix(in srgb, var(--iv-accent) 12%, var(--iv-bg-raised));
-  /* Inset: the tab list scrolls, which clips an outer ring at its left edge. */
-  box-shadow: inset 0 0 0 1px var(--iv-border-strong);
 }
 
 .iv-tab-bar__tab {
@@ -47,7 +45,7 @@
   width: 100%;
   min-width: 0;
   height: 100%;
-  padding: 0 var(--iv-tab-padding);
+  padding: 0 calc(var(--iv-tab-close-size) + var(--iv-space-2)) 0 var(--iv-tab-padding);
   border: 0;
   border-radius: var(--iv-radius-tab);
   background: transparent;
@@ -103,18 +101,13 @@
     background-color var(--iv-duration-fast) ease-out;
 }
 
-.iv-tab-bar__item:focus-within .iv-tab-bar__tab {
-  padding-right: calc(var(--iv-tab-close-size) + var(--iv-space-2));
-}
-
-.iv-tab-bar__item:focus-within .iv-tab-bar__close {
+.iv-tab-bar__item:is([data-selected], :focus-within) .iv-tab-bar__close {
   opacity: 1;
   pointer-events: auto;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .iv-tab-bar__item:hover .iv-tab-bar__tab {
-    padding-right: calc(var(--iv-tab-close-size) + var(--iv-space-2));
     color: var(--iv-text);
   }
 
@@ -149,4 +142,28 @@
 
 .iv-tab-bar__item[data-drop="after"]::before {
   right: calc((var(--iv-space-half) + var(--iv-line-bold)) / -2);
+}
+
+.iv-tab-bar[data-window-layout="plane"],
+.iv-tab-bar[data-window-layout="plane"] .iv-tab-bar__list {
+  align-items: stretch;
+  gap: 0;
+}
+
+.iv-tab-bar[data-window-layout="plane"] > .iv-button {
+  align-self: center;
+  margin-left: var(--iv-space-1);
+}
+
+.iv-tab-bar[data-window-layout="plane"] :is(.iv-tab-bar__item, .iv-tab-bar__tab) {
+  height: 100%;
+  border-radius: 0;
+}
+
+.iv-tab-bar[data-window-layout="plane"] .iv-tab-bar__item {
+  border-right: 1px solid var(--iv-border);
+}
+
+.iv-tab-bar[data-window-layout="plane"] .iv-tab-bar__item[data-selected] {
+  background: var(--iv-bg);
 }

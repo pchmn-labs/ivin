@@ -6,6 +6,8 @@ import type {
   SpawnPatch,
   TranscriptEvent,
 } from "@ivin/plugin-api/server"
+import type { PluginFetchResponse } from "@ivin/contracts/plugin-fetch"
+import { decodeFetchResponse, encodeFetchRequest } from "@ivin/state/plugin-fetch-wire"
 import { execFile, type ChildProcess } from "node:child_process"
 
 const EXEC_TIMEOUT = 30_000
@@ -36,6 +38,7 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
     (spawn: { readonly sessionId: string }) => SpawnPatch | Promise<SpawnPatch | void> | void
   > = []
   const children = new Set<ChildProcess>()
+  const stoppedWithPlugin = new WeakSet<ChildProcess>()
 
   const register = (disposer: () => void) => {
     disposers.push(disposer)
@@ -52,10 +55,7 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
   const subscribeOnce = (handlers: unknown[], method: string) => {
     if (handlers.length === 0) void announce(method)
   }
-  const permit = async (call: Json) => {
-    const missing = await callServer("permission.check", { call })
-    if (missing !== null) throw new Error(`Its manifest does not declare ${missing as string}.`)
-  }
+  const permit = async (call: Json) => void (await callServer("permission.check", { call }))
 
   const ctx: ServerContext = {
     signal: controller.signal,
@@ -126,7 +126,7 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
           },
           (error, stdout, stderr) => {
             children.delete(child)
-            if (error?.killed === true) {
+            if (error?.killed === true && !stoppedWithPlugin.has(child)) {
               reject(new Error(`${program} ran over its ${timeout} ms limit and was killed.`))
               return
             }
@@ -140,6 +140,11 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
         )
         children.add(child)
       })
+    },
+    fetch: async (input, init) => {
+      const request = (await encodeFetchRequest(input, init)) as unknown as Json
+      const answer = await callServer("fetch", { request })
+      return decodeFetchResponse(answer as unknown as PluginFetchResponse)
     },
     poll: (key, fn, { every }) => {
       polls.set(key, fn)
@@ -160,7 +165,8 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
           const subscribing = permit({ member: "harness.beforeSpawn" }).then(() =>
             callServer("beforeSpawn.subscribe", null),
           )
-          registering.push(subscribing)
+          // A refusal is in the plugin's log; the rest of `activate` still counts.
+          registering.push(subscribing.catch(() => undefined))
         }
         spawnHandlers.push(handler)
       },
@@ -168,7 +174,10 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
   }
 
   register(() => {
-    for (const child of children) child.kill("SIGKILL")
+    for (const child of children) {
+      stoppedWithPlugin.add(child)
+      child.kill("SIGKILL")
+    }
     children.clear()
   })
 

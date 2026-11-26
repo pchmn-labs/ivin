@@ -1,6 +1,7 @@
 import { useAtomValue } from "@effect/atom-react"
 import type { Session } from "@ivin/contracts/session"
 import { AsyncResult } from "effect/reactivity"
+import { useIsWorkspace } from "../../project/hooks/use-is-workspace.ts"
 import { worktreesOf } from "../../worktree/atoms/list-worktrees.ts"
 import { workingFolderChoiceOf } from "../atoms/working-folder-choice.ts"
 import { sessionLocation } from "../rules/session-location.ts"
@@ -12,5 +13,6 @@ export const useSessionLocation = (session: Session) => {
     session,
     choice,
     AsyncResult.getOrElse(worktrees, () => []),
+    useIsWorkspace(session.projectPath),
   )
 }

@@ -141,6 +141,7 @@ test("the head counts the sessions that need you only while the panel is folded"
 test("the groups' labels are for screen readers only", async () => {
   await mountPanel([session("runs", "Add search", "/shop", "working")], null)
 
+  await expect.element(group("Running").getByRole("heading")).toBeInTheDocument()
   const label = group("Running").getByRole("heading").element()
   expect(label.getBoundingClientRect().width).toBeLessThanOrEqual(1)
 })

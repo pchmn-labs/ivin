@@ -52,6 +52,7 @@ test("a running tool call shows a spinner, a failed one says so, a finished one 
   await mount({ ...tool("error", "boom"), id: "i1" })
   await expect.element(page.getByText("failed")).toBeVisible()
   await mount({ ...tool("done", "out"), id: "i2", name: "Bash", input: { command: "ls" } })
+  await expect.element(page.getByText("ls")).toBeVisible()
   expect(
     page.getByText("ls").element().closest("summary")?.querySelector('[data-testid="tool-status"]'),
   ).toBeNull()

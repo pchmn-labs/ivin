@@ -36,6 +36,8 @@ declare global {
       }) => void
       // The window rendered with every initial plugin active.
       readonly reportSettled: () => void
+      // Moves the macOS traffic lights onto the layout's top row.
+      readonly setWindowLayout: (layout: "panels" | "plane") => void
     }
   }
 }

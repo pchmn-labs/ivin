@@ -1,5 +1,6 @@
 import { DateTime, Effect, Layer, PubSub, type Schema, Stream } from "effect"
 import { RpcClient, RpcServer } from "effect/rpc"
+import { PluginFetchFailed } from "@ivin/contracts/plugin-fetch"
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { layerClientProtocolMessagePort } from "@ivin/state/rpc-client-protocol"
 import { layerProtocolMessagePort } from "@ivin/state/rpc-server-protocol"
@@ -86,6 +87,7 @@ import {
   withSubViewClosed,
   withSubViewOpen,
 } from "../modules/tab/rules/sub-views.ts"
+import { isSubagentStep } from "../modules/transcript/rules/turns.ts"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -504,7 +506,7 @@ export const makeFakeServer = (
     after: number
   }) =>
     Effect.sync(() => {
-      const items = itemsOf(sessionId)
+      const items = itemsOf(sessionId).filter((item) => !isSubagentStep(item))
       const anchor =
         position === null ? items.length : items.findIndex((i) => i.position >= position)
       const start = Math.max(0, anchor - before)
@@ -548,6 +550,7 @@ export const makeFakeServer = (
     "plugin.status": () => Effect.succeed([]),
     "plugin.run": ({ command }: { command: string }) =>
       Effect.fail(new CommandNotFound({ command })),
+    "plugin.fetch": () => Effect.fail(new PluginFetchFailed({ reason: "No network in tests." })),
     "plugin.setWindowVisible": () => Effect.void,
     "plugin.reload": ({ id }) =>
       userPlugins.some((plugin) => plugin.id === id)

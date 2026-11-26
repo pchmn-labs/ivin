@@ -73,12 +73,22 @@ export const formatTotal = (cents: number, currency = "EUR") =>
       version: "0.1.0",
       private: true,
       type: "module",
-      ivin: { id: "pr-checks", name: "pr-checks", ui: "src/ui.tsx" },
+      ivin: {
+        id: "pr-checks",
+        name: "pr-checks",
+        ui: "src/ui.tsx",
+        server: "src/server.ts",
+        permissions: { exec: ["gh"], fetch: ["api.github.com"] },
+      },
     }),
   )
   writeFileSync(
     join(dir, ".ivin/plugins/pr-checks/src/ui.tsx"),
     `import { defineUi } from "@ivin/plugin-api/ui"\nexport const activate = defineUi(() => {})\n`,
+  )
+  writeFileSync(
+    join(dir, ".ivin/plugins/pr-checks/src/server.ts"),
+    `import { defineServer } from "@ivin/plugin-api/server"\nexport const activate = defineServer(() => {})\n`,
   )
   git("add", ".")
   git("commit", "--quiet", "-m", "first")
@@ -588,6 +598,10 @@ try {
   await window.getByRole("textbox", { name: "Message" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("full-width-session")
+  await window.getByRole("button", { name: "Toggle sidebar" }).click()
+  await window.waitForTimeout(300)
+  await shoot("sidebar-hidden")
+  await window.getByRole("button", { name: "Toggle sidebar" }).click()
   await window.keyboard.press(process.platform === "darwin" ? "Meta+Comma" : "Control+Comma")
   await window.getByRole("navigation", { name: "Settings sections" }).waitFor()
   await window.waitForTimeout(300)
@@ -628,10 +642,29 @@ try {
   await window.getByRole("combobox", { name: "Projects" }).selectOption("strip")
   await window.waitForTimeout(300)
   await shoot("settings-sidebar")
+  await window
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Window" })
+    .click()
+  await window.getByRole("combobox", { name: "Layout" }).selectOption("plane")
+  await window.waitForTimeout(300)
+  await shoot("settings-window")
   await window.getByRole("button", { name: "Back to sessions" }).click()
   await window.getByRole("group", { name: "Projects" }).waitFor()
   await window.waitForTimeout(300)
-  await shoot("strip-layout")
+  await shoot("one-plane")
+  await window.getByRole("button", { name: "Toggle sidebar" }).click()
+  await window.waitForTimeout(300)
+  await shoot("one-plane-sidebar-hidden")
+  await window.getByRole("button", { name: "Toggle sidebar" }).click()
+  // The settings file outlives the run, so the next run starts on Two panels again.
+  await window.keyboard.press(process.platform === "darwin" ? "Meta+Comma" : "Control+Comma")
+  await window
+    .getByRole("navigation", { name: "Settings sections" })
+    .getByRole("button", { name: "Window" })
+    .click()
+  await window.getByRole("combobox", { name: "Layout" }).selectOption("panels")
+  await window.getByRole("button", { name: "Back to sessions" }).click()
   await sidebar.getByRole("tab", { name: "Files" }).click()
   await sidebar.getByRole("treeitem", { name: "list.tsx", exact: true }).waitFor()
   await window.waitForTimeout(300)
@@ -729,7 +762,12 @@ try {
   await window.getByRole("dialog").getByRole("button", { name: "Trust", exact: true }).click()
   await window.getByTestId("project-name").getByText("shop").waitFor()
   await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
-  // The picker has no worktree choice for a workspace yet, so the session stays on the checkouts.
+  // The folder also holds the origins, which Files must not show before the first message.
+  await sidebar.getByRole("tab", { name: "Files" }).click()
+  await sidebar.getByRole("treeitem", { name: "web" }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("files-workspace-before-first-message")
+  // Before its first message the session reads the checkouts.
   const webDir = join(workspaceDir, "web")
   writeFileSync(join(apiDir, "src/orders.ts"), "export const orders = []\n")
   gitIn(apiDir, "add", ".")

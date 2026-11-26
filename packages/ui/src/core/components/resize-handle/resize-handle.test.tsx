@@ -25,23 +25,25 @@ const width = () => page.getByTestId("panel").element().getBoundingClientRect().
 
 test("arrow keys resize within the bounds, and the size is kept for the next launch", async () => {
   const first = await render(<Panel />)
+  await expect.element(page.getByTestId("panel")).toBeVisible()
   expect(width()).toBe(200)
 
-  const handle = page.getByRole("separator", { name: "Resize the panel" }).element()
-  ;(handle as HTMLElement).focus()
+  const handle = page.getByRole("separator", { name: "Resize the panel" })
+  await expect.element(handle).toBeVisible()
+  ;(handle.element() as HTMLElement).focus()
   await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}")
-  expect(width()).toBe(240)
+  await expect.poll(width).toBe(240)
   await first.unmount()
 
   await render(<Panel />)
-  expect(width()).toBe(240)
+  await expect.poll(width).toBe(240)
 })
 
 test("a double-click goes back to the stylesheet's size", async () => {
   localStorage.setItem("ivin.size.test-panel", "232")
   await render(<Panel />)
-  expect(width()).toBe(232)
+  await expect.poll(width).toBe(232)
 
   await page.getByRole("separator", { name: "Resize the panel" }).dblClick()
-  expect(width()).toBe(200)
+  await expect.poll(width).toBe(200)
 })

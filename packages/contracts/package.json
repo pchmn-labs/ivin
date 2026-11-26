@@ -11,6 +11,7 @@
     "./keybinding": "./src/keybinding.ts",
     "./log": "./src/log.ts",
     "./plugin": "./src/plugin.ts",
+    "./plugin-fetch": "./src/plugin-fetch.ts",
     "./project": "./src/project.ts",
     "./rpcs": "./src/rpcs.ts",
     "./server": "./src/server.ts",

@@ -1,6 +1,5 @@
 import { RegistryContext } from "@effect/atom-react"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
-import { AtomRegistry } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
@@ -8,6 +7,7 @@ import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { type FakeServer, makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { makeRegistry } from "../../../core/test-registry.ts"
 import { deletedImageIdsAtom } from "../../transcript/atoms/delete-images.ts"
 import { SessionView } from "./session-view.tsx"
 import {
@@ -30,6 +30,7 @@ const drop = (files: ReadonlyArray<File>) => {
 
 test("dropped images each get a thumbnail and a marker, numbered after the session's last image", async () => {
   await mount({ lastImageNumber: 4 })
+  await expect.element(field()).toBeVisible()
   drop([png("a.png"), png("b.png")])
 
   await expect.poll(() => draftThumbnails().elements().length).toBe(2)
@@ -39,6 +40,7 @@ test("dropped images each get a thumbnail and a marker, numbered after the sessi
 
 test("a file that is not an image, or is too large, is refused with a message next to the composer", async () => {
   await mount()
+  await expect.element(field()).toBeVisible()
   paste([new File(["%PDF"], "spec.pdf", { type: "application/pdf" })])
   await expect
     .element(page.getByTestId("composer-alert"))
@@ -192,7 +194,7 @@ test("an image deleted from the settings while its transcript is loaded shows as
   server.openProject("/p")
   addSession(server, "s1", 3)
   seedTranscript(server)
-  const registry = AtomRegistry.make({ initialValues: [[serverClientLayerAtom, server.layer]] })
+  const registry = makeRegistry([[serverClientLayerAtom, server.layer]])
   await render(
     <RegistryContext.Provider value={registry}>
       <PluginsProvider plugins={builtinPlugins}>

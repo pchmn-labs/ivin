@@ -11,8 +11,7 @@
   display: flex;
   flex: 1;
   align-items: center;
-  justify-content: safe center;
-  gap: var(--iv-space-2);
+  gap: var(--iv-space-1);
   min-width: 0;
   padding: var(--iv-space-1);
   overflow-x: auto;
@@ -33,9 +32,11 @@
   border: 0;
   border-radius: var(--iv-radius-md);
   background: transparent;
+  opacity: 0.55;
   cursor: default;
   transition:
     background-color var(--iv-duration-fast) ease-out,
+    opacity var(--iv-duration-fast) ease-out,
     transform var(--iv-duration-press) var(--iv-ease-out);
 }
 
@@ -44,15 +45,18 @@
 }
 
 .iv-project-strip__project[aria-current="true"] {
-  background: var(--iv-bg-raised);
-  box-shadow:
-    0 0 0 1px var(--iv-border),
-    var(--iv-shadow-raised);
+  background: var(--iv-bg-active);
+  opacity: 1;
+}
+
+.iv-project-strip__project:focus-visible {
+  opacity: 1;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .iv-project-strip__project:not([aria-current="true"]):hover {
     background: var(--iv-bg-hover);
+    opacity: 1;
   }
 }
 

@@ -22,6 +22,7 @@ export const activate = defineUi((ctx) => {
     name: "panel",
     title: "Changes",
     badge: ChangesBadge,
+    order: -1,
   })
   ctx.commands.register("changes.show", {
     title: "Show changes",

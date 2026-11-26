@@ -49,6 +49,7 @@ export interface Settings {
   }
   readonly worktrees: { readonly removeOnTabClose: boolean }
   readonly files: { readonly folderIcons: boolean }
+  readonly window: { readonly layout: "panels" | "plane" }
   readonly sidebar: { readonly layout: "rail" | "strip" }
   readonly agents: { readonly stopWhenIdleMinutes: number }
   readonly updates: { readonly automaticCheck: boolean; readonly beta: boolean }

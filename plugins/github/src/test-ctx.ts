@@ -66,6 +66,7 @@ export const startPlugin = async (start: Start = {}) => {
 
   const ctx: ServerContext = {
     signal: new AbortController().signal,
+    fetch: () => Promise.reject(new Error("The github plugin reads GitHub through gh, not fetch.")),
     transcript: { onEvent: (handler) => void transcript.push(handler) },
     sessions: {
       onCreated: (handler) => void created.push(handler),

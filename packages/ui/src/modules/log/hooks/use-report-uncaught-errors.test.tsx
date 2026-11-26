@@ -1,4 +1,5 @@
-import { RegistryContext } from "@effect/atom-react"
+import { RegistryContext, useAtomValue } from "@effect/atom-react"
+import { useEffect, useState } from "react"
 import { expect, test, vi } from "vitest"
 import { render } from "vitest-browser-react"
 import type { UserPlugin } from "@ivin/contracts/plugin"
@@ -8,19 +9,21 @@ import { useReportUncaughtErrors } from "./use-report-uncaught-errors.ts"
 
 function Reporter() {
   useReportUncaughtErrors()
-  return null
+  const listed = useAtomValue(listPluginsAtom)
+  const [listening, setListening] = useState(false)
+  useEffect(() => setListening(true), [])
+  return <p>{listening && listed._tag === "Success" ? "reporting" : "starting"}</p>
 }
 
 const mount = async (plugins: ReadonlyArray<UserPlugin> = []) => {
   const { server, registry } = makeTestRegistry()
   server.userPlugins.push(...plugins)
-  await render(
+  const screen = await render(
     <RegistryContext.Provider value={registry}>
       <Reporter />
     </RegistryContext.Provider>,
   )
-  // The hook reads the plugin list as it arrives.
-  await vi.waitFor(() => expect(registry.get(listPluginsAtom)._tag).toBe("Success"))
+  await expect.element(screen.getByText("reporting")).toBeVisible()
   return server
 }
 

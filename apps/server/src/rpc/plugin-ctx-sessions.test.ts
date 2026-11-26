@@ -7,9 +7,9 @@ import { until } from "./test-waits.ts"
 // Each test starts the plugin host and compiles with Rolldown.
 vi.setConfig({ testTimeout: 60_000 })
 
-const serverPlugin = (home: string, id: string, server: string) =>
+const serverPlugin = (home: string, id: string, server: string, exec: string[] = []) =>
   writePlugin(home, id, {
-    "package.json": packageJson({ id, server: "src/server.ts" }),
+    "package.json": packageJson({ id, server: "src/server.ts", permissions: { exec } }),
     "src/server.ts": server,
   })
 
@@ -42,6 +42,7 @@ test("ctx.exec adds env for the run only, and kills a program that runs over its
     }
   })
 }`,
+    ["sh", "sleep"],
   )
   const { env, slow } = await withPluginServer(home, (client) =>
     Effect.gen(function* () {

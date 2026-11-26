@@ -86,6 +86,15 @@ const read = (text: string | null, defaults: Settings): Settings => {
     files: {
       folderIcons: booleanOf(file, "files", "folderIcons", defaults.files.folderIcons),
     },
+    window: {
+      layout: choiceOf(
+        file,
+        "window",
+        "layout",
+        Settings.fields.window.fields.layout.literals,
+        defaults.window.layout,
+      ),
+    },
     sidebar: {
       layout: choiceOf(
         file,

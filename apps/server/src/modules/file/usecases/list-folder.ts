@@ -1,11 +1,12 @@
 import { FolderNotListed, PathOutsideWorkingFolder } from "@ivin/contracts/file"
-import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
+import { SessionNotFound } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { sortEntries } from "../rules/folder-entries.ts"
 import { isWithin, relativeNames } from "../rules/folder-path.ts"
 import { FolderReader } from "./folder-reader.ts"
+import { folderOfNames, projectFoldersOf } from "./repositories.ts"
 
 export const listFolder = (sessionId: string, path: string) =>
   Effect.gen(function* () {
@@ -14,10 +15,15 @@ export const listFolder = (sessionId: string, path: string) =>
     const names = relativeNames(path)
     if (names === null) return yield* new PathOutsideWorkingFolder({ sessionId, path })
     const reader = yield* FolderReader
-    const root = yield* reader.realPath(session.workingFolder)
-    if (root === null) return yield* new WorkingFolderDeleted({ sessionId })
+    const projectFolders = yield* projectFoldersOf(session)
+    if (projectFolders !== null && names.length === 0) {
+      return projectFolders.map(({ name }) => ({ name, kind: "folder" as const, ignored: false }))
+    }
+    const resolved = yield* folderOfNames(session, names)
+    if (resolved === null) return yield* new FolderNotListed({ sessionId, path, reason: "missing" })
+    const { root } = resolved
     // Resolving the real path catches a symlink that points out of the working folder.
-    const folder = yield* reader.realPath([root, ...names].join("/"))
+    const folder = yield* reader.realPath([root, ...resolved.names].join("/"))
     if (folder === null) return yield* new FolderNotListed({ sessionId, path, reason: "missing" })
     if (!isWithin(root, folder)) return yield* new PathOutsideWorkingFolder({ sessionId, path })
     const entries = (yield* reader

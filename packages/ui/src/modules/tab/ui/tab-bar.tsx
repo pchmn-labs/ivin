@@ -8,6 +8,7 @@ import { useCommandHandler, useCommandHandlers } from "../../command/hooks/use-c
 import { unsavedPathsOf } from "../../file/atoms/file-edit.ts"
 import { fileName } from "../../file/rules/file-name.ts"
 import { settingsAtom } from "../../setting/atoms/settings.ts"
+import { useWindowLayout } from "../../setting/hooks/use-window-layout.ts"
 import { isAgentBusy } from "../../session/rules/is-running.ts"
 import { sessionsOf } from "../../session/atoms/list-sessions.ts"
 import { useStartSession } from "../../session/hooks/use-start-session.ts"
@@ -256,9 +257,10 @@ export function TabBar({ projectPath }: { projectPath: string }) {
   })
 
   const focusableId = selectedSessionId ?? tabs[0]?.sessionId
+  const windowLayout = useWindowLayout()
 
   return (
-    <div className="iv-tab-bar">
+    <div className="iv-tab-bar" data-window-layout={windowLayout}>
       <div
         className="iv-tab-bar__list"
         role="tablist"
