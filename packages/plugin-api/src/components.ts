@@ -183,8 +183,8 @@ export interface StackProps {
   readonly grow?: boolean
   // Horizontal padding, in grid steps: lines a row up with the rows of a Tree or a ListRow.
   readonly inset?: 1
-  // Padding on every side, in grid steps.
-  readonly padding?: 3
+  // Padding on every side, in grid steps: 2 lines content up with a ListRow's edge.
+  readonly padding?: 2 | 3
   readonly as?: "div" | "span" | "ul" | "li" | "section" | "nav"
   readonly "aria-label"?: string
   readonly "data-testid"?: string
