@@ -26,6 +26,7 @@ import {
   PR_VIEW_FIELDS,
   readPrView,
 } from "./rules/pr-status.ts"
+import { isRecord } from "./rules/is-record.ts"
 
 const SWEEP_EVERY = 60_000
 const CACHE_FOR = 5 * 60_000
@@ -42,9 +43,6 @@ interface Holder {
 }
 
 const sessionTarget = (sessionId: string): AnnotationTarget => ({ _tag: "session", sessionId })
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
 
 const urlOf = (annotation: Annotation): string | null => {
   const data = readPrData(annotation.data)

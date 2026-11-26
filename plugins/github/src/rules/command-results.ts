@@ -1,9 +1,7 @@
 import type { GhAccount } from "./auth-status.ts"
+import { isRecord } from "./is-record.ts"
 
 type Value = unknown
-
-const isRecord = (value: Value): value is Record<string, Value> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
 
 export type AccountsResult =
   | { readonly accounts: ReadonlyArray<GhAccount> }

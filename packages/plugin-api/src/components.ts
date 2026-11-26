@@ -667,7 +667,6 @@ export interface ComposerFrameProps {
   readonly children?: ReactNode
 }
 
-// A colour of the theme: the accent, red for failures, muted or faint text, or a project hue.
 export type Tone =
   | "accent"
   | "danger"
@@ -724,7 +723,6 @@ export interface SettingRowProps {
   readonly below?: ReactNode
 }
 
-// The list that holds a section's `SettingRow`s.
 export interface SettingListProps {
   readonly children: ReactNode
 }

@@ -22,7 +22,6 @@ const argumentsOf = (input: Input) => {
       ].join("\n"),
     })
   }
-  // The forge's plugin finds the branch's pull request; the user links the others.
   const relations: readonly string[] = forgeRelations[link.kind].filter((r) => r !== "branch")
   const relation = stringOf(input.values["as"])
   if (relation === null || !relations.includes(relation)) {

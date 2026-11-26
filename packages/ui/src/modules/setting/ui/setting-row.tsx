@@ -1,5 +1,4 @@
 import type { SettingListProps, SettingRowProps } from "@ivin/plugin-api/ui"
-import type { ReactNode } from "react"
 import { Text } from "../../../core/components/text/text.tsx"
 import "./settings-page.css"
 
@@ -11,7 +10,7 @@ export function SettingRow({
   descriptionId,
   control,
   below,
-}: SettingRowProps & { readonly descriptionId?: string; readonly below?: ReactNode }) {
+}: SettingRowProps & { readonly descriptionId?: string }) {
   return (
     <li className="iv-settings-page__setting">
       <div className="iv-settings-page__setting-text">

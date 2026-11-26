@@ -1,15 +1,13 @@
 import type { PrAnnotationData } from "@ivin/plugin-api/server"
 import { githubPrUrl } from "./github-url.ts"
 import { stateOf } from "./pr-status.ts"
+import { isRecord } from "./is-record.ts"
 
 export interface RepoInfo {
   readonly nameWithOwner: string
   readonly owner: string
   readonly defaultBranch: string | null
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
 
 export const readRepoView = (json: string): RepoInfo | null => {
   try {

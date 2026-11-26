@@ -1,4 +1,5 @@
 import type { PrAnnotationData } from "@ivin/plugin-api/server"
+import { isRecord } from "./is-record.ts"
 
 export const PR_VIEW_FIELDS =
   "state,isDraft,title,statusCheckRollup,reviewDecision,mergeable,mergeStateStatus,updatedAt"
@@ -19,9 +20,6 @@ const FAILED = new Set([
   "STARTUP_FAILURE",
   "ERROR",
 ])
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
 
 const text = (value: unknown): string => (typeof value === "string" ? value : "")
 

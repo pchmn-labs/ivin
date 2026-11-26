@@ -48,7 +48,7 @@
   position: relative;
 }
 
-/* The content swaps at once; the card's move and height carry the motion. */
+/* The content swaps at once; the card's move carries the motion. */
 .iv-session-card__viewport [data-previous] {
   display: none;
 }

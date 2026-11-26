@@ -170,7 +170,9 @@ const mergePill = (pr: Pr): PillSpec | undefined => {
 export const pillsOf = (pr: Pr): ReadonlyArray<PillSpec> => {
   if (!isLive(pr)) return []
   const checks = checksPill(pr)
-  const merge = pr.state === "open" ? mergePill(pr) : undefined
+  // A draft cannot merge yet, but a conflict is still work to do.
+  const merge =
+    pr.state === "open" ? mergePill(pr) : pr.merge === "conflict" ? mergePill(pr) : undefined
   return [checks, merge].filter((pill) => pill !== undefined)
 }
 

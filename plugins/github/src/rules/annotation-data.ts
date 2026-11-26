@@ -1,4 +1,5 @@
 import type { PrAnnotationData } from "@ivin/plugin-api/server"
+import { isRecord } from "./is-record.ts"
 
 const RANK: Record<PrAnnotationData["relation"], number> = {
   branch: 0,
@@ -26,9 +27,6 @@ const sorted = (value: unknown): unknown =>
 
 export const sameData = (a: unknown, b: unknown): boolean =>
   JSON.stringify(sorted(a)) === JSON.stringify(sorted(b))
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value)
 
 export const readPrData = (data: unknown): PrAnnotationData | null =>
   isRecord(data) && typeof data.url === "string" && typeof data.relation === "string"

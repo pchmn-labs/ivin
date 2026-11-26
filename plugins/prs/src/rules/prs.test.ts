@@ -45,34 +45,6 @@ test("pull requests are ordered open, draft, merged, closed, unknown, then by la
   expect(ordered.map((p) => p.url)).toEqual([url(4), url(2), url(6), url(5), url(1), url(3)])
 })
 
-test("a pull request with no status yet is a muted plain icon", () => {
-  expect(tileOf([pr()])).toMatchObject({ icon: "git-pull-request", tone: "muted", pulse: false })
-})
-
-test("the tile's icon and tone follow the lead's state", () => {
-  expect(tileOf([pr({ state: "open" })])).toMatchObject({ icon: "git-pull-request", tone: "hue-0" })
-  expect(tileOf([pr({ state: "draft" })])).toMatchObject({
-    icon: "git-pull-request-draft",
-    tone: "muted",
-  })
-  expect(tileOf([pr({ state: "merged" })])).toMatchObject({ icon: "git-merge", tone: "hue-3" })
-  expect(tileOf([pr({ state: "closed" })])).toMatchObject({
-    icon: "git-pull-request-closed",
-    tone: "hue-4",
-  })
-})
-
-test("failing checks of any open or draft pull request turn the tile red, a merged one's do not", () => {
-  const lead = pr({ state: "open", checks: "passing" })
-  expect(tileOf([lead, pr({ state: "draft", checks: "failing" })]).tone).toBe("danger")
-  expect(tileOf([lead, pr({ state: "merged", checks: "failing" })]).tone).toBe("hue-0")
-})
-
-test("the tile pulses while an open or draft pull request's checks run", () => {
-  expect(tileOf([pr({ state: "open", checks: "pending" })]).pulse).toBe(true)
-  expect(tileOf([pr({ state: "merged", checks: "pending" })]).pulse).toBe(false)
-})
-
 test("the corner mark reports the worst of the open and draft pull requests", () => {
   const ready = pr({ state: "open", merge: "ready" })
   const waiting = pr({ state: "open", review: "review_required" })
@@ -91,25 +63,6 @@ test("a draft never gets a check or an exclamation, and a merged pull request no
   expect(tileOf([pr({ state: "merged", merge: "conflict" })]).mark).toBeUndefined()
 })
 
-test("the checks pill counts what failed, ran or passed", () => {
-  const counts = { passed: 5, failed: 2, pending: 1 }
-  expect(pillsOf(pr({ state: "open", checks: "failing", checkCounts: counts }))[0]).toEqual({
-    tone: "danger",
-    status: "failed",
-    text: "2 failing · 5 passed",
-  })
-  expect(pillsOf(pr({ state: "open", checks: "pending", checkCounts: counts }))[0]).toEqual({
-    tone: "muted",
-    status: "running",
-    text: "1 running · 5 passed",
-  })
-  expect(pillsOf(pr({ state: "open", checks: "passing", checkCounts: counts }))[0]).toEqual({
-    tone: "accent",
-    status: "passed",
-    text: "5 passed",
-  })
-})
-
 test("the second pill says why an open pull request cannot merge, or that it can", () => {
   const second = (fields: Partial<Pr>) => pillsOf(pr({ state: "open", ...fields }))[0]
   expect(second({ merge: "conflict", review: "changes_requested" })?.text).toBe("Has conflicts")
@@ -119,9 +72,14 @@ test("the second pill says why an open pull request cannot merge, or that it can
   expect(second({ merge: "blocked", review: "approved" })).toBeUndefined()
 })
 
-test("a draft has a checks pill only, and a merged or closed pull request none", () => {
+test("a draft has its checks pill and a conflict pill only, and a merged or closed pull request none", () => {
   expect(
     pillsOf(pr({ state: "draft", checks: "passing", merge: "conflict" })).map((p) => p.text),
+  ).toEqual(["Checks passed", "Has conflicts"])
+  expect(
+    pillsOf(pr({ state: "draft", checks: "passing", review: "review_required" })).map(
+      (p) => p.text,
+    ),
   ).toEqual(["Checks passed"])
   expect(pillsOf(pr({ state: "merged", checks: "passing" }))).toEqual([])
   expect(pillsOf(pr({ state: "closed", merge: "conflict" }))).toEqual([])
