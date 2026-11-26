@@ -72,6 +72,7 @@ export function WorkspaceFolderPicker({
   const [placeQuery, setPlaceQuery] = useState("")
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<ActionFailure | null>(null)
+  const [lastPick, setLastPick] = useState<Place | null>(null)
   const id = useId()
   const body = useRef<HTMLDivElement>(null)
 
@@ -79,15 +80,8 @@ export function WorkspaceFolderPicker({
   const listed = useAtomValue(listAtom)
   const refreshList = useAtomRefresh(listAtom)
   const worktrees = AsyncResult.getOrElse(listed, () => [])
-  // A workspace has no one base: each repository starts from its own default branch.
-  const shownBase = AsyncResult.getOrElse(
-    useAtomValue(newWorktreeBaseOf(shown === "all" ? (folders[0] ?? "") : shown)),
-    () => null,
-  )
-  const base = AsyncResult.getOrElse(
-    useAtomValue(newWorktreeBaseOf(current === "all" ? (folders[0] ?? "") : current)),
-    () => null,
-  )
+  const shownBase = useProjectBase(shown, folders)
+  const base = useProjectBase(current, folders)
   const sessions = useAtomValue(sessionsOf(session.projectPath).items)
   const pick = useAtomSet(pickWorkingFolderAtom, { mode: "promiseExit" })
 
@@ -178,6 +172,7 @@ export function WorkspaceFolderPicker({
 
   const choose = async (place: Place) => {
     setFailure(null)
+    setLastPick(place)
     if (place.choose !== undefined) {
       setChoice(place.choose)
       setOpen(false)
@@ -220,6 +215,18 @@ export function WorkspaceFolderPicker({
     } else return
     event.preventDefault()
   }
+
+  // On opening, the keys start on the chosen place.
+  useEffect(() => {
+    if (open)
+      setActive(
+        Math.max(
+          0,
+          shownPlaces.findIndex((place) => place.checked),
+        ),
+      )
+    // Only on opening: later renders move the highlight with the keys.
+  }, [open])
 
   const onOpenChange = (next: boolean) => {
     setOpen(next)
@@ -409,7 +416,13 @@ export function WorkspaceFolderPicker({
                     {AsyncResult.isFailure(listed) && (
                       <ErrorMessage message={listWorktreesFailure} onRetry={refreshList} />
                     )}
-                    {failure !== null && <ErrorMessage message={failure.text} />}
+                    {failure !== null && (
+                      <ErrorMessage
+                        message={failure.text}
+                        {...(failure.retryable &&
+                          lastPick !== null && { onRetry: () => void choose(lastPick) })}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -459,3 +472,10 @@ export function WorkspaceBranch({
     </span>
   )
 }
+
+// All projects has no one base, each repository starting from its own default branch.
+const useProjectBase = (project: WorkspaceProject, folders: readonly string[]) =>
+  AsyncResult.getOrElse(
+    useAtomValue(newWorktreeBaseOf(project === "all" ? (folders[0] ?? "") : project)),
+    () => null,
+  )

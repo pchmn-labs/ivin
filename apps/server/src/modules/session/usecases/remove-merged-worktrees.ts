@@ -83,7 +83,7 @@ type SessionUses = ReturnType<typeof sessionUses>
 
 const removeMergedCheckoutWorktrees = (
   projectPath: string,
-  sessionUses: SessionUses,
+  uses: SessionUses,
   sweptFolder: string | null,
 ) =>
   Effect.gen(function* () {
@@ -93,7 +93,7 @@ const removeMergedCheckoutWorktrees = (
     const target = yield* newWorktreeBase(projectPath)
     if (target === null) return null
 
-    const sessions = yield* sessionUses
+    const sessions = yield* uses
     const candidates = removalCandidates(
       projectPath,
       yield* listWorktreesOrNone(projectPath),
@@ -107,7 +107,7 @@ const removeMergedCheckoutWorktrees = (
         const state = { clean, ...(yield* git.isMergedInto(path, target)) }
         if (!isRemovable(origin, state)) return
         // A tab may have reopened, or an agent started, while git answered.
-        if (isInUse(path, yield* sessionUses)) return
+        if (isInUse(path, yield* uses)) return
         yield* git.removeWorktree(projectPath, path)
       }).pipe(
         Effect.catch((error) =>
@@ -120,20 +120,20 @@ const removeMergedCheckoutWorktrees = (
 
 // The worktrees of one project folder a closed session was in, then the working folders. The project
 // folders are not swept: their `.worktrees/` may hold another project's sessions.
-const removeMergedWorkspaceWorktrees = (workspace: string, sessionUses: SessionUses) =>
+const removeMergedWorkspaceWorktrees = (workspace: string, uses: SessionUses) =>
   Effect.gen(function* () {
-    const closed = (yield* sessionUses).filter((s) => s.tabJustClosed && s.inWorktree)
+    const closed = (yield* uses).filter((s) => s.tabJustClosed && s.inWorktree)
     const folders = new Set<string>()
     for (const session of closed) {
       const folder = yield* sessionProjectFolder(session)
       if (folder !== null) folders.add(folder)
     }
-    for (const folder of folders) yield* removeMergedCheckoutWorktrees(folder, sessionUses, null)
-    return yield* removeMergedWorkingFolders(workspace, sessionUses)
+    for (const folder of folders) yield* removeMergedCheckoutWorktrees(folder, uses, null)
+    return yield* removeMergedWorkingFolders(workspace, uses)
   })
 
 // A working folder goes only once each of its worktrees could go, and it holds nothing else.
-const removeMergedWorkingFolders = (workspace: string, sessionUses: SessionUses) =>
+const removeMergedWorkingFolders = (workspace: string, uses: SessionUses) =>
   Effect.gen(function* () {
     const git = yield* Git
     const files = yield* WorkingFolders
@@ -161,7 +161,7 @@ const removeMergedWorkingFolders = (workspace: string, sessionUses: SessionUses)
       )
     }
 
-    const sessions = yield* sessionUses
+    const sessions = yield* uses
     const candidates = removalCandidates(
       workspace,
       folders.map((folder) => ({
@@ -186,7 +186,7 @@ const removeMergedWorkingFolders = (workspace: string, sessionUses: SessionUses)
           states.push({ clean, ...(yield* git.isMergedInto(worktree.path, target)) })
         }
         if (!isRemovable(origin, workingFolderState(states))) return
-        if (isInUse(path, yield* sessionUses)) return
+        if (isInUse(path, yield* uses)) return
         for (const worktree of folder.worktrees)
           yield* git.removeWorktree(worktree.repository, worktree.path)
         yield* files.remove(path)
