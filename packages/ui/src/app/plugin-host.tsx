@@ -432,11 +432,14 @@ const host: UiHost = {
 export function PluginsProvider({
   plugins: given,
   importBundle = importPluginBundle,
+  fallback = null,
   children,
 }: {
   // The built-in plugins, when the window holds them itself rather than importing those the server lists.
   plugins?: ReadonlyArray<UiPluginEntry>
   importBundle?: ImportBundle
+  // Shown until the built-in plugins are active, as when the server cannot start.
+  fallback?: ReactNode
   children: ReactNode
 }) {
   const registry = useContext(RegistryContext)
@@ -488,5 +491,5 @@ export function PluginsProvider({
     },
     [registry],
   )
-  return active ? <UiHostProvider host={host}>{children}</UiHostProvider> : null
+  return active ? <UiHostProvider host={host}>{children}</UiHostProvider> : fallback
 }

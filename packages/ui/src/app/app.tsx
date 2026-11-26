@@ -129,7 +129,7 @@ export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}
 
   return (
     <NotificationProvider>
-      <PluginsProvider {...(plugins !== undefined && { plugins })}>
+      <PluginsProvider {...(plugins !== undefined && { plugins })} fallback={serverLost || null}>
         {current === null || projectPath === null ? (
           <div className="iv-app iv-app--empty" hidden={settingsOpen}>
             <main className="iv-app__main">
