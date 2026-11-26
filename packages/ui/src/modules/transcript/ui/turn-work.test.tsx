@@ -7,6 +7,7 @@ import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
+import { PromptBubble } from "./turn-work.tsx"
 import { TranscriptView } from "./transcript-view.tsx"
 
 const items = (origin = 0) => {
@@ -529,4 +530,21 @@ test("a steer heads its own step in the running turn, above the agent's reply, a
   expect(steps.nth(1).element().textContent).toMatch(
     /^leave the e2e tests alone.*Understood, unit tests only/,
   )
+})
+
+test("a prompt longer than its fold shows a Show more link that opens it all", async () => {
+  const long = Array.from({ length: 12 }, (_, i) => `Line ${i + 1}`).join("\n")
+  await render(<PromptBubble prompt={long} />)
+
+  await page.getByRole("button", { name: "Show more" }).click()
+
+  await expect.element(page.getByRole("button", { name: "Show less" })).toBeVisible()
+  await expect.element(page.getByTestId("task-prompt")).not.toHaveAttribute("data-folded")
+})
+
+test("a short prompt has no Show more link", async () => {
+  await render(<PromptBubble prompt="Review it" />)
+
+  await expect.element(page.getByText("Review it")).toBeVisible()
+  await expect.element(page.getByRole("button", { name: "Show more" })).not.toBeInTheDocument()
 })

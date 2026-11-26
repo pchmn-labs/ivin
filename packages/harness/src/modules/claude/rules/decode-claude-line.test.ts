@@ -418,6 +418,7 @@ test("a background subagent's steps carry the call that started it, its notifica
     toolCallId: "toolu_01CBcuFGJ8gQnpufQ1P2aD3h",
     kind: "agent",
     description: "Count the files",
+    prompt: expect.stringContaining("report how many entries it listed"),
   })
   const steps = outputs.filter(
     (o) => "parentToolCallId" in o && o.parentToolCallId === "toolu_01CBcuFGJ8gQnpufQ1P2aD3h",
@@ -455,4 +456,24 @@ test("a task ending with an unknown status counts as failed, one stopped as stop
   expect(notification("killed")).toMatchObject([{ type: "task_ended", outcome: "stopped" }])
   expect(notification("failed")).toMatchObject([{ type: "task_ended", outcome: "failed" }])
   expect(notification("whatever")).toMatchObject([{ type: "task_ended", outcome: "failed" }])
+})
+
+test("a subagent's SubagentHandback call is its assistant message under the call that started it", () => {
+  const handback = (parent: string | null) =>
+    decodeClaudeLine(
+      JSON.stringify({
+        type: "assistant",
+        parent_tool_use_id: parent,
+        message: {
+          content: [
+            { type: "tool_use", id: "h1", name: "SubagentHandback", input: { message: "Done." } },
+          ],
+        },
+      }),
+    )
+
+  expect(handback("t1")).toMatchObject([
+    { type: "assistant_text", text: "Done.", parentToolCallId: "t1" },
+  ])
+  expect(handback(null)).toMatchObject([{ type: "tool_call", name: "SubagentHandback" }])
 })

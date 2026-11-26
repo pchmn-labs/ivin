@@ -330,6 +330,7 @@ export interface TaskItem extends ItemFields {
   readonly toolCallId: string
   readonly kind: "agent" | "command"
   readonly description: string
+  readonly prompt?: string | undefined
   readonly status: "running" | "completed" | "failed" | "stopped"
   readonly summary: string | null
   readonly output: string | null

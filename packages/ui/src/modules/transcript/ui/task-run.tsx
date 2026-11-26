@@ -9,7 +9,7 @@ import type { TaskItem } from "../rules/background-tasks.ts"
 import { foldsOf } from "../atoms/folds.ts"
 import { useTaskOutput } from "../hooks/use-task-output.ts"
 import { duration, earlierSteps, turnWork, type TurnWork as Work } from "../rules/turns.ts"
-import { EarlierStepsLine, ElapsedClock, StepView } from "./turn-work.tsx"
+import { EarlierStepsLine, ElapsedClock, PromptBubble, StepView } from "./turn-work.tsx"
 
 // A subagent's run drawn as the agent's own turn: its last steps in the fold, every step in the sheet.
 export function AgentRun({
@@ -35,6 +35,7 @@ export function AgentRun({
 
   return (
     <div className="iv-turn" data-testid="task-run" data-live={running || undefined}>
+      {!lastOnly && task.prompt !== undefined && <PromptBubble prompt={task.prompt} />}
       {!lastOnly && <RunLine task={task} work={work} />}
       {work.steps.length > 0 && (
         <div className="iv-turn__timeline">

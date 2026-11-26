@@ -287,6 +287,73 @@ const demoBackgroundTurn: readonly HarnessOutput[] = [
   { type: "status", status: "idle", raw: null },
 ]
 
+const reviewPrompt =
+  "Review the diff of the branch for conformance to the repo's documented coding standards.\n\nRead AGENTS.md and docs/conventions/ first. Report each hard violation with its file and line, and leave style nits out.\n\nDo not edit anything."
+
+const demoSubagentTurn: readonly HarnessOutput[] = [
+  { type: "status", status: "running", raw: null },
+  { type: "assistant_text", text: "I'll have a subagent review the branch.", raw: null },
+  {
+    type: "tool_call",
+    toolCallId: "demo-review",
+    name: "Agent",
+    input: { description: "Standards review of branch", prompt: reviewPrompt },
+    raw: null,
+  },
+  {
+    type: "task_started",
+    taskId: "demo-task-review",
+    toolCallId: "demo-review",
+    kind: "agent",
+    description: "Standards review of branch",
+    prompt: reviewPrompt,
+    raw: null,
+  },
+  {
+    type: "tool_result",
+    toolCallId: "demo-review",
+    output: "Started in the background.",
+    isError: false,
+    raw: null,
+  },
+  {
+    type: "assistant_text",
+    text: "Reading the conventions.",
+    parentToolCallId: "demo-review",
+    raw: null,
+  },
+  ...["AGENTS.md", "docs/conventions/README.md"].flatMap(
+    (file, i) =>
+      [
+        {
+          type: "tool_call",
+          toolCallId: `demo-review-read-${i}`,
+          name: "Read",
+          input: { file_path: file },
+          parentToolCallId: "demo-review",
+          raw: null,
+        },
+        {
+          type: "tool_result",
+          toolCallId: `demo-review-read-${i}`,
+          output: "…",
+          isError: false,
+          parentToolCallId: "demo-review",
+          raw: null,
+        },
+      ] as const,
+  ),
+  {
+    type: "assistant_text",
+    text: "I reviewed the branch without editing anything.\n\n**Hard violations**\n1. `DESIGN.md`: the component table has no row for Chips.\n2. `plugins/changes/src/rules/repository-filter.ts`: a comment restates the code below it.",
+    parentToolCallId: "demo-review",
+    raw: null,
+  },
+  { type: "assistant_text", text: "The review is done: two violations to fix.", raw: null },
+  { type: "usage", ...demoUsage, raw: null },
+  { type: "status", status: "idle", raw: null },
+]
+
 export const demoShotScript: readonly (readonly ScriptedElement[])[] = [
   demoTurn,
   demoWorkTurn,
@@ -294,6 +361,7 @@ export const demoShotScript: readonly (readonly ScriptedElement[])[] = [
   demoTypecheckTurn,
   demoSteerTurn,
   demoBackgroundTurn,
+  demoSubagentTurn,
 ]
 
 const skill = (

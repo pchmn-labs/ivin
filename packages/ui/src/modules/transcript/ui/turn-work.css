@@ -343,3 +343,43 @@
   border-left-width: 1px;
   border-bottom-left-radius: 3px;
 }
+
+.iv-turn__prompt {
+  display: block;
+  max-width: 85%;
+  margin-bottom: var(--iv-space-3);
+  padding: 10px var(--iv-space-3);
+  border-radius: var(--iv-radius-card) var(--iv-radius-card) var(--iv-radius-card)
+    var(--iv-radius-sm);
+  background: var(--iv-bg-subtle);
+  color: var(--iv-text-muted);
+  font-size: var(--iv-text-sm);
+  line-height: var(--iv-text-sm-lh);
+  overflow-wrap: anywhere;
+}
+
+.iv-turn__prompt-text {
+  white-space: pre-wrap;
+}
+
+.iv-turn__prompt-toggle {
+  display: block;
+  margin-top: var(--iv-space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--iv-text-faint);
+  font: inherit;
+  cursor: pointer;
+}
+
+.iv-turn__prompt-toggle:hover {
+  color: var(--iv-text);
+}
+
+.iv-turn__prompt[data-folded] .iv-turn__prompt-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

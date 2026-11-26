@@ -424,3 +424,9 @@ test("stopping the run ends each open task and fails the calls its subagent left
     { type: "task_ended", taskId: "k1", outcome: "stopped" },
   ])
 })
+
+test("a task keeps the prompt it started with", () => {
+  const items = derive(events({ ...taskStarted(), prompt: "Review it" }))
+
+  expect(items[0]).toMatchObject({ type: "task", prompt: "Review it" })
+})
