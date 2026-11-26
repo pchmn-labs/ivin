@@ -17,14 +17,6 @@ packages/ui/src/
     server-client.ts    the RPC client service
 ```
 
-| Layer | Test of membership |
-|---|---|
-| `rules/` | a test calls it with no mock and no `await` |
-| `atoms/` | a test reads it in an atom registry with a fake RPC client, no component mounted |
-| `hooks/` | a test needs a mounted component |
-| `adapters/` | a test needs the real browser API |
-| `ui/` | a test needs a renderer |
-
 - An atom reaches the server through the RPC client service in `core/`, never through `adapters/`.
 - A mutation atom is named for the server use case it calls: `atoms/rename-session.ts` for `usecases/rename-session.ts`.
 - A module has the server's name for the subject.
@@ -46,7 +38,6 @@ The rules of Styles and Colour fail `pnpm lint` in `packages/ui/src`, test files
 
 ## Tests
 
-- `rules/`: called directly.
 - `atoms/`: in an atom registry, with a fake RPC client.
 - `hooks/` and `ui/`: Vitest browser mode, with the same fake RPC client.
 - `*.perf.test.tsx`: the same, on the build the app ships (production React and the React Compiler, `vitest.perf.config.ts`), failing below a frame rate, or when one piece of work the app does for a key takes longer than a frame. A test whose result depends on how fast frames come, such as the transcript following its end or keeping its place while it scrolls, goes there too. They run one file at a time, after every other test.

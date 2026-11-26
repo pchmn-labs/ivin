@@ -27,18 +27,11 @@ A layer exists only when it holds a file. Create a folder with its first file.
 
 Code outside `packages/harness/src/modules/<provider>/` names no harness: no harness name in copy or identifiers, no provider flag, tool name or file format, no harness-specific branch. Copy says "the agent"; a harness's name and mark come from the session's harness, through the UI's one harness table (`packages/ui/src/modules/session/rules/harnesses.ts`), and the values of its run options from its provider, through `server.getHarness`. The exceptions are `apps/server/src/main.ts`, which picks the provider, and the migrations that gave existing sessions `claude`, then Claude's default effort and permission mode. The reason: [Principles](../architecture/README.md#principles), "No harness is special".
 
-## Enforced imports
+## Imports
 
-Checked by Oxlint, as `no-restricted-imports` overrides in `.oxlintrc.json` whose message cites ADR-0001:
+Oxlint rejects an import that crosses the layers the wrong way (`no-restricted-imports` in `.oxlintrc.json`). Between workspaces, a package imports only what its `package.json` declares, and nothing declares an app.
 
-- Files under `**/rules/**` import none of `effect` and its submodules except `effect/Schema`, `node:*`, `electron`, `react`, nor any `adapters/`, `usecases/`, `atoms/`, `hooks/` or `ui/`. Types from `contracts` come in through `import type`.
-- Files under `**/usecases/**` and `**/atoms/**` import none of `node:*`, `electron`, nor any `adapters/`.
-- Files under `**/atoms/**` import none of `react`, nor any `hooks/` or `ui/`.
-- Files under `plugins/**` import no package but `@ivin/plugin-api` and `react` (subpaths included), and no `node:*`.
-
-Between workspaces, a package imports only what its `package.json` declares, and nothing declares an app.
-
-Every other direction is a convention nothing checks: `ui/` reads `hooks/` and `atoms/`, `hooks/` read `atoms/`. In the server, modules import each other in one order: [server](server.md#module-order).
+Unchecked: `ui/` reads `hooks/` and `atoms/`, `hooks/` read `atoms/`. In the server, modules import each other in one order: [server](server.md#module-order).
 
 ## Files
 

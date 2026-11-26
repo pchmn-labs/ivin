@@ -16,12 +16,6 @@ apps/server/src/
   main.ts               adds the configured Layers (paths, the harness, the database) and starts the server
 ```
 
-| Layer | Test of membership |
-|---|---|
-| `rules/` | a test calls it with no Layer and no `await` |
-| `usecases/` | a test runs it with test Layers only |
-| `adapters/` | a test needs the real database, process, file or socket |
-
 - A use case takes its parameters first and its dependencies as services, and declares the port (an Effect service tag) it needs beside it in `usecases/`.
 - Time comes in as a parameter or through `Clock`, so a rule never reads the clock.
 
@@ -43,6 +37,5 @@ Modules on the same line import none of each other; a port between two of them h
 
 ## Tests
 
-- `rules/`: called directly.
-- Everything else: through the `rpc/` handlers, with an in-memory SQLite and the scripted `HarnessProvider` from `@ivin/harness`. No test spawns a real agent.
+- Everything but `rules/`: through the `rpc/` handlers, with an in-memory SQLite and the scripted `HarnessProvider` from `@ivin/harness`. No test spawns a real agent.
 - A test file that spawns real processes (`git`) sets its own timeout with `vi.setConfig({ testTimeout })`, of about ten times its slowest test's duration when run alone, since the parallel suite slows it down. The global default stays, so a slow test elsewhere still fails.
