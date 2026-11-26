@@ -38,3 +38,29 @@ export const knownTasks = (
     .map((task) => taskItemOf(sessionId, task)),
   ...loaded,
 ]
+
+type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
+
+const RUN_STATUS = { running: "running", done: "completed", error: "failed" } as const
+
+export const foregroundAgentRun = (
+  call: ToolCallItem,
+  tasks: ReadonlyArray<TaskItem>,
+): TaskItem | undefined => {
+  if (call.kind !== "agent") return undefined
+  if (tasks.some((task) => task.toolCallId === call.toolCallId)) return undefined
+  return {
+    id: call.id,
+    sessionId: call.sessionId,
+    position: call.position,
+    at: call.at,
+    type: "task",
+    taskId: call.toolCallId,
+    toolCallId: call.toolCallId,
+    kind: "agent",
+    description: call.name,
+    status: RUN_STATUS[call.status],
+    summary: null,
+    output: null,
+  }
+}

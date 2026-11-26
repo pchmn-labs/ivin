@@ -145,7 +145,7 @@ function TaskRow({ sessionId, task }: { sessionId: string; task: TaskItem }) {
       {open && (
         <div className="iv-task__peek">
           {task.kind === "agent" ? (
-            <AgentRun sessionId={sessionId} task={task} lastOnly />
+            <AgentRun sessionId={sessionId} task={task} preview />
           ) : (
             <CommandOutput sessionId={sessionId} task={task} tail={ROW_PREVIEW_LINES} />
           )}

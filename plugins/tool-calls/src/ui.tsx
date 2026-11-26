@@ -1,5 +1,17 @@
-import { lazy } from "react"
-import { CodeBlock, Disclosure, FilePath, Icon, Stack, Text, defineUi } from "@ivin/plugin-api/ui"
+import { lazy, type ReactNode } from "react"
+import {
+  Button,
+  CodeBlock,
+  Disclosure,
+  FilePath,
+  Icon,
+  Stack,
+  TaskRun,
+  Text,
+  defineUi,
+  useOpenView,
+  useTask,
+} from "@ivin/plugin-api/ui"
 import type { SlotProps, ToolCallItem } from "@ivin/plugin-api/ui"
 import { taskIcon, taskTitle } from "./rules/task-params.ts"
 import { filePathArgument, mainArgument, prettyInput } from "./rules/tool-output.ts"
@@ -9,10 +21,12 @@ function ToolHeader({
   item,
   main,
   sessionId,
+  action,
 }: {
   item: ToolCallItem
   main: string | null
   sessionId: string
+  action?: ReactNode
 }) {
   const path = filePathArgument(item.name, item.input)
   return (
@@ -24,6 +38,7 @@ function ToolHeader({
           {path === null ? (main ?? "") : <FilePath sessionId={sessionId} path={path} />}
         </Text>
       </Stack>
+      {action}
       {item.status === "running" && (
         <Text size="sm" tone="muted" data-testid="tool-status">
           <Icon name="loader" size={12} label="running" />
@@ -38,7 +53,46 @@ function ToolHeader({
   )
 }
 
-function ToolCall({ item, sessionId }: SlotProps["transcript.toolCall"]) {
+function AgentCall({ item, sessionId }: SlotProps["transcript.toolCall"]) {
+  const run = useTask(sessionId, item.toolCallId)
+  const openView = useOpenView()
+  if (run === undefined) return <PlainToolCall item={item} sessionId={sessionId} />
+  const main = mainArgument(item.name, item.input)
+  const details = (
+    <Button
+      variant="ghost"
+      size="sm"
+      data-testid="agent-details"
+      onClick={() =>
+        void openView(sessionId, "tool-calls/task", {
+          taskId: run.taskId,
+          kind: run.kind,
+          description: main ?? item.name,
+        })
+      }
+    >
+      Details
+    </Button>
+  )
+  return (
+    <Disclosure
+      variant="row"
+      data-testid="tool-output"
+      summary={<ToolHeader item={item} main={main} sessionId={sessionId} action={details} />}
+    >
+      <Stack gap={2}>
+        <TaskRun sessionId={sessionId} taskId={run.taskId} preview />
+        {item.output ? <CodeBlock text={item.output} /> : null}
+      </Stack>
+    </Disclosure>
+  )
+}
+
+function ToolCall(props: SlotProps["transcript.toolCall"]) {
+  return props.item.kind === "agent" ? <AgentCall {...props} /> : <PlainToolCall {...props} />
+}
+
+function PlainToolCall({ item, sessionId }: SlotProps["transcript.toolCall"]) {
   const main = mainArgument(item.name, item.input)
   const showInput = main === null && item.input !== undefined
   const header = <ToolHeader item={item} main={main} sessionId={sessionId} />

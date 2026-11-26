@@ -250,7 +250,8 @@ export interface UiHost {
   ) => Promise<ActionFailure | undefined>
   // The diff the session's tab has selected beside its chat as a sub-view, or null.
   readonly useDiffOnScreen: (sessionId: string) => DiffOnScreen | null
-  // A background task of the session, running or ended; undefined once the session no longer knows it.
+  // A background task of the session, running or ended, or a subagent the turn waits for, whose
+  // taskId is its call's toolCallId; undefined once the session no longer knows it.
   readonly useTask: (sessionId: string, taskId: string) => TaskItem | undefined
   // A command task's output so far, read again every second while it runs.
   readonly useTaskOutput: (sessionId: string, taskId: string) => string

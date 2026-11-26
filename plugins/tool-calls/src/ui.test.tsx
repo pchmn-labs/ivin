@@ -4,16 +4,18 @@ import { render } from "vitest-browser-react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
 import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type { ToolCallItem } from "@ivin/plugin-api/ui"
+import type { TaskItem, ToolCallItem, UiHost } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
-const mount = async (item: ToolCallItem) => {
+const mount = async (item: ToolCallItem, overrides: Partial<UiHost> = {}) => {
   const ToolCall = activatePlugin(activate, "tool-calls")("transcript.toolCall")
-  const host = {
+  const host: UiHost = {
     ...testUiHost,
+    ...overrides,
     components: {
       ...testUiHost.components,
       FilePath: ({ path }: { path: string }) => <a href={path}>{path}</a>,
+      TaskRun: ({ taskId, preview }) => <p>{`run ${taskId}${preview ? " preview" : ""}`}</p>,
     },
   }
   await render(
@@ -89,4 +91,45 @@ test("the file a tool reads or writes is a link to it on the row", async () => {
   await expect.element(page.getByRole("link", { name: "/a.ts" })).toBeVisible()
   await mount({ ...tool("done", "out"), id: "i1", name: "Bash", input: { command: "ls" } })
   await expect.element(page.getByRole("link", { name: "ls" })).not.toBeInTheDocument()
+})
+
+test("a subagent the turn waited for shows its run under its row, and Details opens the whole run", async () => {
+  const opened: unknown[] = []
+  const run: TaskItem = {
+    id: "i3",
+    sessionId: "s1",
+    position: 0,
+    at: 0,
+    type: "task",
+    taskId: "t0",
+    toolCallId: "t0",
+    kind: "agent",
+    description: "Review the branch",
+    status: "completed",
+    summary: null,
+    output: null,
+  }
+  await mount(
+    {
+      ...tool("done", ""),
+      id: "i3",
+      name: "Agent",
+      kind: "agent",
+      input: { description: "Review the branch", prompt: "Review it" },
+    },
+    {
+      useTask: () => run,
+      useOpenView: () => async (_sessionId, view, params) => void opened.push({ view, params }),
+    },
+  )
+  await page.getByTestId("agent-details").click()
+  await expect.element(page.getByText("run t0 preview")).not.toBeInTheDocument()
+  expect(opened).toEqual([
+    {
+      view: "tool-calls/task",
+      params: { taskId: "t0", kind: "agent", description: "Review the branch" },
+    },
+  ])
+  await page.getByText("Review the branch").click()
+  await expect.element(page.getByText("run t0 preview")).toBeVisible()
 })

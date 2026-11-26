@@ -152,6 +152,31 @@ test("tool result content given as blocks becomes one string", () => {
   ])
 })
 
+test("an agent call's result that only points to its subagent's report has no output", () => {
+  const line = JSON.stringify({
+    type: "user",
+    message: {
+      role: "user",
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: "t1",
+          content: [
+            {
+              type: "text",
+              text: 'This agent\'s report was delivered to you as a message from "a1" (its SubagentHandback call). Read it there; it is not repeated here.',
+            },
+          ],
+        },
+      ],
+    },
+  })
+
+  expect(decodeClaudeLine(line)).toMatchObject([
+    { type: "tool_result", toolCallId: "t1", output: "" },
+  ])
+})
+
 test("an API error stores one error event, not the synthetic assistant text", () => {
   const outputs = fixture("api-error")
 
