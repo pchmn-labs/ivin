@@ -18,7 +18,7 @@ A failed check stores a plain message in `error` next to the last known fields (
 
 ## Commands and accounts
 
-`github.accounts`, `github.projectAccount`, `github.setProjectAccount`, run from the UI half with `useRunServerCommand`. A project's account is the repo's local git config `ivin.githubUser`. With one set, every `gh` call for the project's sessions runs with `GH_TOKEN` from `gh auth token --user <login>` (cached 5 minutes), and `harness.beforeSpawn` gives the agent the same `GH_TOKEN`.
+`github.accounts`, `github.projectAccount`, `github.setProjectAccount`, run from the UI half with `useRunServerCommand`. A project's account is kept in the plugin's storage under the project's path; one set earlier in the repo's local git config `ivin.githubUser` is still read. With one set, every `gh` call for the project's sessions runs with `GH_TOKEN` from `gh auth token --user <login>` (cached 5 minutes), and `harness.beforeSpawn` gives the agent the same `GH_TOKEN`.
 
 ## Tests
 

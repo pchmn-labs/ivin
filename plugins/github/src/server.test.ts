@@ -376,8 +376,8 @@ test("a citation that fails to resolve is tried again at the next sweep", async 
 test("an account chosen for a project gives gh its token and the agent too", async () => {
   const plugin = await startPlugin({
     sessions: [makeSession("s1", { branch: "feat/x" })],
+    storage: { "account:/shop": { login: "alice" } },
     replies: [
-      ["git -C /shop config --local ivin.githubUser", "alice\n"],
       ["gh auth token --hostname github.com --user alice", "tok-alice\n"],
       REPO,
       ["gh pr list", listed()],
@@ -407,49 +407,26 @@ test("with no account chosen, gh runs as it is and the agent's environment is le
   expect(await plugin.beforeSpawn("unknown")).toBeUndefined()
 })
 
-test("setting a project's account writes the repo's local git config and the next call uses it", async () => {
+test("setting a project's account keeps it in the plugin's storage, also for a .code-workspace", async () => {
+  const workspace = "/dev/shop.code-workspace"
   const plugin = await startPlugin({
-    sessions: [makeSession("s1")],
-    replies: [
-      ["git", { exitCode: 0 }],
-      ["gh auth token --hostname github.com --user bob", "tok-bob\n"],
-    ],
+    sessions: [makeSession("s1", { projectPath: workspace })],
+    replies: [["gh auth token --hostname github.com --user bob", "tok-bob\n"]],
   })
-  await plugin.runCommand("github.setProjectAccount", { projectPath: "/shop", login: "bob" })
-  expect(plugin.calls.at(-1)).toMatchObject({
-    program: "git",
-    args: ["-C", "/shop", "config", "--local", "ivin.githubUser", "bob"],
-  })
+  await plugin.runCommand("github.setProjectAccount", { projectPath: workspace, login: "bob" })
+  expect(plugin.storage.get(`account:${workspace}`)).toEqual({ login: "bob" })
+  expect(plugin.calls.filter((c) => c.program === "git")).toEqual([])
   expect(await plugin.beforeSpawn("s1")).toEqual({ env: { GH_TOKEN: "tok-bob" } })
   expect(
-    await plugin.runCommand("github.setProjectAccount", { projectPath: "/shop", login: null }),
+    await plugin.runCommand("github.setProjectAccount", { projectPath: workspace, login: null }),
   ).toEqual({ login: null })
-  expect(plugin.calls.at(-1)?.args).toEqual([
-    "-C",
-    "/shop",
-    "config",
-    "--local",
-    "--unset",
-    "ivin.githubUser",
-  ])
   expect(await plugin.beforeSpawn("s1")).toBeUndefined()
-})
-
-test("unsetting an account that was never set is not a failure, a failing git is", async () => {
-  const plugin = await startPlugin({ replies: [["git", { exitCode: 5 }]] })
   await expect(
-    plugin.runCommand("github.setProjectAccount", { projectPath: "/shop", login: null }),
-  ).resolves.toEqual({ login: null })
-  plugin.reply("git", { exitCode: 128, stderr: "fatal: not a git repository" })
-  await expect(
-    plugin.runCommand("github.setProjectAccount", { projectPath: "/shop", login: "bob" }),
-  ).rejects.toThrow("not a git repository")
-  await expect(
-    plugin.runCommand("github.setProjectAccount", { projectPath: "/shop", login: "--evil" }),
+    plugin.runCommand("github.setProjectAccount", { projectPath: workspace, login: "--evil" }),
   ).rejects.toThrow()
 })
 
-test("the project's account is read from its local git config", async () => {
+test("an account chosen back when it was kept in the repo's git config is still read", async () => {
   const plugin = await startPlugin({
     replies: [["git -C /shop config --local ivin.githubUser", "alice\n"]],
   })
@@ -457,6 +434,10 @@ test("the project's account is read from its local git config", async () => {
     login: "alice",
   })
   expect(await plugin.runCommand("github.projectAccount", { projectPath: "/blog" })).toEqual({
+    login: null,
+  })
+  await plugin.runCommand("github.setProjectAccount", { projectPath: "/shop", login: null })
+  expect(await plugin.runCommand("github.projectAccount", { projectPath: "/shop" })).toEqual({
     login: null,
   })
 })
