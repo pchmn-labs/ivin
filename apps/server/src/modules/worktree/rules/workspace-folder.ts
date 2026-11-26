@@ -1,7 +1,7 @@
 const nameOf = (folder: string) => folder.slice(folder.lastIndexOf("/") + 1)
 
 // Where a session that stays on the checkouts starts: the first folder, with the others as extra
-// directories. Never the folders' common parent, where the agent could reach folders outside them.
+// directories.
 export const checkoutStart = (folders: readonly string[]) => {
   const [first] = folders
   if (first === undefined) return null

@@ -6,14 +6,12 @@ A project opened from a `.code-workspace` has several project folders, each its 
 
 - **One main project folder, the others given to the agent as extra directories**: rejected. The main folder is arbitrary, and the other folders get no branch or worktree of their own in the session, so a change made there lands on their checkout.
 - **Worktrees next to the `.code-workspace` file, or in each project folder's `.worktrees/`**: rejected. The folders can be anywhere on disk, and the session's worktrees would be scattered.
-
 - **The project folders' common parent as the default start, the worktrees on request**: rejected. When the folders share a parent, it holds other folders too, which the Files tab showed and the agent could change.
 
 ## Consequences
 
 - Before the first message, the session has no folder to show: the Files tab shows the project folders themselves, one top-level folder each.
-- A workspace with no git repository has no worktree to make: its session starts in the first project folder, with the others as extra directories.
-
+- A workspace with no git repository has no worktree to make: its session starts in the first project folder, with the others as extra directories, the one case where the option rejected above still applies.
 - The working folder is not a git repository: branches, worktrees and changes are read per repository, never for the working folder itself.
 - The trust check must accept the working folder, which is neither under a trusted project folder nor a worktree git lists for one.
 - A repository that refers to a sibling by relative path can break inside the working folder.

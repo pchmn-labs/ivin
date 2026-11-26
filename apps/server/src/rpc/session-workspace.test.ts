@@ -205,23 +205,26 @@ test("a first message on the checkout choice still creates the working folder", 
   expect(sent).toMatchObject({ inWorktree: true, branch: `ivin/${sent.id.slice(0, 8)}` })
 })
 
-test("a workspace with no repository starts in its first folder, the others being extra directories", async () => {
+test("a workspace with no repository is no repository in Changes, and starts in its first folder with the others as extra directories", async () => {
   const other = join(root, "other")
   mkdirSync(other)
   writeFileSync(workspace, JSON.stringify({ folders: [{ path: "docs/notes" }, { path: "other" }] }))
   const starts: StartInput[] = []
-  const sent = await withServer(starts, (client) =>
+  const { changes, sent } = await withServer(starts, (client) =>
     Effect.gen(function* () {
       yield* openTrusted(client)
       const created = yield* client["session.create"]({ projectPath: workspace })
-      return yield* client["session.sendMessage"]({
+      const changes = yield* client["file.listChanges"]({ sessionId: created.id })
+      const sent = yield* client["session.sendMessage"]({
         sessionId: created.id,
         messageId: "m1",
         text: "go",
       })
+      return { changes, sent }
     }),
   )
 
+  expect(changes).toEqual({ kind: "not_repository" })
   expect(sent).toMatchObject({ workingFolder: notes, inWorktree: false })
   expect(starts.map((s) => [s.cwd, s.extraDirectories])).toEqual([[notes, [other]]])
 })

@@ -39,7 +39,6 @@ export const listFiles = (sessionId: string) =>
     return limitFiles(yield* filesIn(sessionId, root), FILE_LIST_LIMIT)
   })
 
-// Git's files, or outside a repository every file up to the limit.
 const filesIn = (sessionId: string, folder: string) =>
   Effect.gen(function* () {
     const tracked = yield* (yield* ChangeFeed)

@@ -89,7 +89,6 @@ export const moveToExistingWorktree = (session: Session, path: string, cause: Ca
     yield* moveTo(session, { ...worktree, inWorktree: true }, cause, true)
   })
 
-// A workspace with no repository has no worktree to make: its session stays on the checkouts.
 export const moveToWorkspaceStart = (session: Session) =>
   Effect.gen(function* () {
     const git = yield* Git

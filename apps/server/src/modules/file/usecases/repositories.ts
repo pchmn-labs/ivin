@@ -16,8 +16,6 @@ export interface Repository {
 
 const nameOf = (folder: string) => folder.slice(folder.lastIndexOf("/") + 1)
 
-// Before its working folder exists, a workspace session shows each project folder as a top-level
-// folder, named as its worktree will be. Null for any other session.
 export const projectFoldersOf = (session: Session) =>
   Effect.gen(function* () {
     if (!awaitsWorkspaceFolder(session)) return null
@@ -26,8 +24,7 @@ export const projectFoldersOf = (session: Session) =>
     return folders.map((folder, index): Repository => ({ name: names[index]!, folder }))
   })
 
-// The real folder a relative path's `names` are read under, and the names left inside it. Null
-// when the first name is no project folder of a session that shows them.
+// Null when the first name is no project folder of a session that shows them.
 export const folderOfNames = (session: Session, names: ReadonlyArray<string>) =>
   Effect.gen(function* () {
     const reader = yield* FolderReader
@@ -43,8 +40,7 @@ export const folderOfNames = (session: Session, names: ReadonlyArray<string>) =>
   })
 
 // The repositories of a working folder that is none itself, as on a workspace: the subfolders of
-// a folder of worktrees, the project folders, or those in the common parent an older session started
-// in. Null for any other session.
+// a folder of worktrees, or the project folders. Null for any other session.
 export const repositoriesIn = (session: Session, root: string) =>
   Effect.gen(function* () {
     if (!isWorkspaceFile(session.projectPath)) return null
@@ -58,6 +54,7 @@ export const repositoriesIn = (session: Session, root: string) =>
       return found
     }
     if ((yield* git.gitDir(root)) !== null) return null
+    // A session started in the project folders' common parent before ADR-0018's default keeps it.
     const candidates = session.inWorktree
       ? (yield* (yield* FolderReader).readEntries(root).pipe(Effect.orElseSucceed(() => [])))
           .filter((entry) => entry.kind === "folder")
