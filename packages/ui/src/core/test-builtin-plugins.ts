@@ -4,6 +4,8 @@ import composerPackage from "../../../../plugins/composer/package.json"
 import * as composer from "../../../../plugins/composer/src/ui.tsx"
 import changesPackage from "../../../../plugins/changes/package.json"
 import * as changes from "../../../../plugins/changes/src/ui.tsx"
+import githubPackage from "../../../../plugins/github/package.json"
+import * as github from "../../../../plugins/github/src/ui.tsx"
 import fileIconsPackage from "../../../../plugins/file-icons/package.json"
 import * as fileIcons from "../../../../plugins/file-icons/src/ui.tsx"
 import filesPackage from "../../../../plugins/files/package.json"
@@ -14,6 +16,8 @@ import messagesPackage from "../../../../plugins/messages/package.json"
 import * as messages from "../../../../plugins/messages/src/ui.tsx"
 import sessionsPackage from "../../../../plugins/sessions/package.json"
 import * as sessions from "../../../../plugins/sessions/src/ui.tsx"
+import prsPackage from "../../../../plugins/prs/package.json"
+import * as prs from "../../../../plugins/prs/src/ui.tsx"
 import questionsPackage from "../../../../plugins/questions/package.json"
 import * as questions from "../../../../plugins/questions/src/ui.tsx"
 import toolCallsPackage from "../../../../plugins/tool-calls/package.json"
@@ -37,6 +41,8 @@ export const builtinPlugins: ReadonlyArray<UiPluginEntry> = [
     activate: changes.activate,
   },
   { manifest: composerPackage.ivin, activate: composer.activate },
+  { manifest: githubPackage.ivin, activate: github.activate },
+  { manifest: prsPackage.ivin, activate: prs.activate },
   { manifest: inactiveSessionsPackage.ivin, activate: inactiveSessions.activate },
   { manifest: messagesPackage.ivin, activate: messages.activate },
   { manifest: questionsPackage.ivin, activate: questions.activate },
