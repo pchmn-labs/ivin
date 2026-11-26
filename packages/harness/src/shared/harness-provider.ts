@@ -15,6 +15,8 @@ export interface StartInput {
   readonly extraDirectories: readonly string[]
   readonly options: RunOptions
   readonly providerSessionId: string | null
+  // Added to the agent's process environment.
+  readonly env?: Readonly<Record<string, string>>
 }
 
 export interface UserMessage {

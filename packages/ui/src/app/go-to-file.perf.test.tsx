@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import type { FolderEntry } from "@ivin/contracts/file"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
@@ -59,7 +60,7 @@ test("typing 8 keys in Go to file over 50,000 paths while changes arrive ranks e
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <div style={{ height: 800 }}>
-        <App />
+        <App plugins={builtinPlugins} />
       </div>
     </RegistryProvider>,
   )

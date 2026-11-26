@@ -1,5 +1,12 @@
-import type { HostLog, PluginActivateFailed } from "@ivin/contracts/plugin"
-import type { Effect, Scope, Stream } from "effect"
+import type {
+  HostCall,
+  HostDispatch,
+  HostLog,
+  HostReply,
+  PluginActivateFailed,
+  PluginHandlerFailed,
+} from "@ivin/contracts/plugin"
+import type { Effect, Schema, Scope, Stream } from "effect"
 import { Context, Data } from "effect"
 
 export class PluginHostNotStarted extends Data.TaggedError("PluginHostNotStarted")<{
@@ -15,6 +22,10 @@ export interface RunningPluginHost {
   // Never answers while a plugin blocks the host.
   readonly ping: Effect.Effect<void>
   readonly logs: Stream.Stream<HostLog>
+  // The `ctx` calls the plugins' halves make, until the process is gone.
+  readonly calls: Stream.Stream<HostCall>
+  readonly reply: (reply: HostReply) => Effect.Effect<void>
+  readonly dispatch: (dispatch: HostDispatch) => Effect.Effect<Schema.Json, PluginHandlerFailed>
   // Ends with a reason when the process is gone.
   readonly exited: Effect.Effect<string>
 }

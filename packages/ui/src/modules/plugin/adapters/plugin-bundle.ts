@@ -12,7 +12,8 @@ const hostModules: Record<Exclude<HostModule, "@ivin/plugin-api/editor">, unknow
   "@ivin/plugin-api/ui": pluginApiUi,
 }
 
-export type ImportBundle = (bundle: string) => Promise<Record<string, unknown>>
+// `builtin` bundles come with the app, the others from the user's plugin cache.
+export type ImportBundle = (bundle: string, builtin: boolean) => Promise<Record<string, unknown>>
 
 // CodeMirror stays out of the startup chunk until a plugin bundle or an editor needs it.
 export const exposeHostModules = async () => {
@@ -23,8 +24,8 @@ export const exposeHostModules = async () => {
   Object.assign(globalThis, { [HOST_MODULES_GLOBAL]: modules })
 }
 
-// Served by the desktop app from ivin's plugin cache.
-export const importPluginBundle: ImportBundle = async (bundle) => {
+// Served by the desktop app.
+export const importPluginBundle: ImportBundle = async (bundle, builtin) => {
   await exposeHostModules()
-  return import(/* @vite-ignore */ pluginBundleUrl(bundle))
+  return import(/* @vite-ignore */ pluginBundleUrl(bundle, builtin))
 }

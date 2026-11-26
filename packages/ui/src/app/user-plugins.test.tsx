@@ -49,7 +49,7 @@ const textPlugin = (id: string, text: string): UiPluginEntry => ({
 })
 
 const renderWith = async (
-  builtins: ReadonlyArray<UiPluginEntry>,
+  builtins: ReadonlyArray<UiPluginEntry> | undefined,
   importBundle: ImportBundle,
   setUp: (server: ReturnType<typeof makeTestRegistry>["server"]) => void,
 ) => {
@@ -57,7 +57,10 @@ const renderWith = async (
   setUp(server)
   await render(
     <RegistryContext.Provider value={registry}>
-      <PluginsProvider plugins={builtins} importBundle={importBundle}>
+      <PluginsProvider
+        {...(builtins !== undefined && { plugins: builtins })}
+        importBundle={importBundle}
+      >
         <Slot slot="sidebar.section" props={{}} />
       </PluginsProvider>
     </RegistryContext.Provider>,
@@ -80,6 +83,33 @@ test("a user plugin's bundle renders with the app's React, and its command retur
   const handler = registry.get(commandHandlersAtom).find((h) => h.commandId === "counter.answer")
   expect(handler).toBeDefined()
   expect(handler?.run()).toBe(42)
+})
+
+test("a built-in plugin the server lists loads from its bundle, and a user plugin with its id replaces it", async () => {
+  const imported: Array<[string, boolean]> = []
+  const sources = { "b.js": textBundle("from the app"), "u.js": textBundle("from the user") }
+  const importBundle: ImportBundle = (bundle, builtin) => {
+    imported.push([bundle, builtin])
+    return importFromSource(sources)(bundle, builtin)
+  }
+  await renderWith(undefined, importBundle, (server) => {
+    server.builtinPlugins.push(
+      { _tag: "compiled", id: "notes", name: "Notes", bundle: "b.js", views: [] },
+      { _tag: "compiled", id: "other", name: "Other", bundle: "b.js", views: [] },
+    )
+    server.userPlugins.push({
+      _tag: "compiled",
+      id: "notes",
+      name: "Notes",
+      bundle: "u.js",
+      views: [],
+    })
+  })
+
+  await expect.element(page.getByText("from the user")).toBeVisible()
+  await expect.element(page.getByText("from the app")).toBeVisible()
+  expect(imported).toContainEqual(["b.js", true])
+  expect(imported).toContainEqual(["u.js", false])
 })
 
 test("a user plugin replaces the built-in plugin with its id", async () => {

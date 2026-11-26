@@ -5,6 +5,7 @@ import { render } from "vitest-browser-react"
 import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
 import { makeTestSession } from "../core/test-session.ts"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { App } from "./app.tsx"
 
 // A trailing `/` makes a folder, a leading `!` an entry git ignores.
@@ -24,10 +25,10 @@ export const mountApp = (
   render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       {height === undefined ? (
-        <App />
+        <App plugins={builtinPlugins} />
       ) : (
         <div ref={(element) => element?.style.setProperty("height", `${height}px`)}>
-          <App />
+          <App plugins={builtinPlugins} />
         </div>
       )}
     </RegistryProvider>,

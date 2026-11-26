@@ -1,3 +1,5 @@
+import type { UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
+import { useReportWindowVisible } from "../modules/plugin/hooks/use-report-window-visible.ts"
 import {
   RegistryContext,
   useAtom,
@@ -25,7 +27,6 @@ import { TabView } from "../modules/tab/ui/tab-view.tsx"
 import { tabTranscriptsAtom } from "../modules/transcript/atoms/tab-transcripts.ts"
 import { AreaFailureBoundary, MainAreaBoundary } from "./failure-boundary.tsx"
 import { PluginsProvider } from "./plugin-host.tsx"
-import { builtinPlugins } from "./builtin-plugins.ts"
 import { Announcements } from "../modules/transcript/ui/announcements.tsx"
 import { MainTopBar } from "./main-top-bar.tsx"
 import { ShellControls } from "./shell-controls.tsx"
@@ -60,7 +61,8 @@ const CARD_MAX = 480
 const BOTTOM_MIN = 96
 const BOTTOM_MAX_SHARE = 0.7
 
-export function App() {
+// `plugins` replaces the built-in plugins the server lists, for a test that has no bundles to import.
+export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}) {
   const connection = useAtomValue(connectionAtom)
   const { layout } = useAtomValue(settingsAtom).sidebar
   const current = useAtomValue(selectedProjectAtom)
@@ -72,6 +74,7 @@ export function App() {
   useRecordSessionVisits()
   useAtomMount(tabTranscriptsAtom)
   useReportUncaughtErrors()
+  useReportWindowVisible()
   useCommandHandler("sidebar.toggle", toggleSidebar, projectPath !== null)
   const { step } = useStepProject()
   useCommandHandler("project.next", () => step(1), projectPath !== null)
@@ -126,7 +129,7 @@ export function App() {
 
   return (
     <NotificationProvider>
-      <PluginsProvider plugins={builtinPlugins}>
+      <PluginsProvider {...(plugins !== undefined && { plugins })} fallback={serverLost || null}>
         {current === null || projectPath === null ? (
           <div className="iv-app iv-app--empty" hidden={settingsOpen}>
             <main className="iv-app__main">

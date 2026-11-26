@@ -1,7 +1,7 @@
 import { RegistryProvider } from "@effect/atom-react"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import { builtinPlugins } from "../../../app/builtin-plugins.ts"
+import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
 import { type FakeServer, makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"

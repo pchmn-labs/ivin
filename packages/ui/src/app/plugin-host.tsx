@@ -95,6 +95,7 @@ import { contractSession } from "../modules/session/rules/plugin-session.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
+import { useBuiltinPlugins } from "../modules/plugin/hooks/use-builtin-plugins.ts"
 import { importPluginBundle, type ImportBundle } from "../modules/plugin/adapters/plugin-bundle.ts"
 import { useUserPlugins } from "../modules/plugin/hooks/use-user-plugins.ts"
 import { useKeyboardHandler } from "../modules/keybinding/hooks/use-keyboard-handler.ts"
@@ -429,16 +430,22 @@ const host: UiHost = {
 }
 
 export function PluginsProvider({
-  plugins,
+  plugins: given,
   importBundle = importPluginBundle,
+  fallback = null,
   children,
 }: {
-  plugins: ReadonlyArray<UiPluginEntry>
+  // The built-in plugins, when the window holds them itself rather than importing those the server lists.
+  plugins?: ReadonlyArray<UiPluginEntry>
   importBundle?: ImportBundle
+  // Shown until the built-in plugins are active, as when the server cannot start.
+  fallback?: ReactNode
   children: ReactNode
 }) {
   const registry = useContext(RegistryContext)
   useKeyboardHandler()
+  const builtins = useBuiltinPlugins(importBundle, given === undefined)
+  const plugins = given ?? builtins.plugins
   const userPlugins = useUserPlugins(importBundle)
   // A user plugin replaces the built-in plugin with its id.
   const all = useMemo(() => {
@@ -474,8 +481,8 @@ export function PluginsProvider({
       // Deactivating a failed plugin would remove its replaced built-in plugin's contributions, which share its id.
       if (!failed) current.set(plugin, deactivate)
     }
-    setActive(true)
-  }, [registry, all, plugins, userPlugins.plugins, dropFailedPlugin])
+    if (builtins.ready) setActive(true)
+  }, [registry, all, plugins, userPlugins.plugins, dropFailedPlugin, builtins.ready])
   useEffect(
     () => () => {
       deactivations.current.forEach((deactivate) => deactivate())
@@ -484,5 +491,5 @@ export function PluginsProvider({
     },
     [registry],
   )
-  return active ? <UiHostProvider host={host}>{children}</UiHostProvider> : null
+  return active ? <UiHostProvider host={host}>{children}</UiHostProvider> : fallback
 }

@@ -2,6 +2,7 @@ import { PluginActivateFailed, type HostLog } from "@ivin/contracts/plugin"
 import { Deferred, Duration, Effect, Fiber, Layer, Queue, Stream } from "effect"
 import { expect, test } from "vitest"
 import { PluginHost, type RunningPluginHost } from "./plugin-host.ts"
+import { layerPluginStubs } from "./plugin-stubs.ts"
 import { runPluginHost } from "./run-plugin-host.ts"
 import { layerPluginReloads, PluginReloads } from "./plugin-reloads.ts"
 import { layerServerHalves, ServerHalves } from "./server-halves.ts"
@@ -69,6 +70,9 @@ const setup = (behaviours: Record<string, Behaviour>) => {
         deactivate: (id) => Effect.sync(() => void events.push(`deactivate ${id}`)),
         ping: Effect.suspend(() => (blocked ? Effect.never : Effect.void)),
         logs: Stream.fromQueue(out),
+        calls: Stream.empty,
+        reply: () => Effect.void,
+        dispatch: () => Effect.succeed(null),
         exited: Deferred.await(exited),
       }
       return host
@@ -96,6 +100,7 @@ const run = <A>(
       Effect.provide(
         Layer.mergeAll(
           layerServerHalves,
+          layerPluginStubs,
           layerPluginReloads,
           Layer.succeed(UserPlugins)(fixture.userPlugins),
           Layer.succeed(PluginHost)(fixture.launcher),

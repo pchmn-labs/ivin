@@ -28,7 +28,12 @@ import {
 } from "@ivin/contracts/file"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
-import { PluginNotFound, type PluginFailure, type UserPlugin } from "@ivin/contracts/plugin"
+import {
+  CommandNotFound,
+  PluginNotFound,
+  type PluginFailure,
+  type UserPlugin,
+} from "@ivin/contracts/plugin"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type {
   AgentCommand,
@@ -86,6 +91,7 @@ export interface FakeServer {
   readonly sessions: Map<string, Session>
   readonly errorReports: Array<ErrorReport>
   readonly userPlugins: Array<UserPlugin>
+  readonly builtinPlugins: Array<UserPlugin>
   // Streams one more plugin to `plugin.list`, as the server does once its dependencies install.
   readonly addUserPlugin: (plugin: UserPlugin) => void
   readonly pluginFailures: Array<PluginFailure>
@@ -300,6 +306,7 @@ export const makeFakeServer = (
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
   const userPlugins: Array<UserPlugin> = []
+  const builtinPlugins: Array<UserPlugin> = []
   const laterPlugins = Effect.runSync(PubSub.unbounded<UserPlugin>())
   const pluginFailures: Array<PluginFailure> = []
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
@@ -508,6 +515,7 @@ export const makeFakeServer = (
           ),
         ),
       ),
+    "plugin.listBuiltin": () => Effect.sync(() => [...builtinPlugins]),
     "plugin.reportFailure": (failure: PluginFailure) =>
       Effect.sync(() => void pluginFailures.push(failure)),
     "plugin.lock": ({ id }) =>
@@ -517,6 +525,9 @@ export const makeFakeServer = (
     "plugin.readLog": ({ id }: { id: string }) =>
       Effect.sync(() => pluginFailures.filter((f) => f.id === id).map((f) => f.reason)),
     "plugin.status": () => Effect.succeed([]),
+    "plugin.run": ({ command }: { command: string }) =>
+      Effect.fail(new CommandNotFound({ command })),
+    "plugin.setWindowVisible": () => Effect.void,
     "plugin.reload": ({ id }) =>
       userPlugins.some((plugin) => plugin.id === id)
         ? Effect.succeed({ id, name: id, ui: "active" as const, server: "none" as const })
@@ -1480,6 +1491,7 @@ export const makeFakeServer = (
     sessions,
     errorReports,
     userPlugins,
+    builtinPlugins,
     addUserPlugin: (plugin) => void Effect.runSync(PubSub.publish(laterPlugins, plugin)),
     pluginFailures,
     sentMessages,

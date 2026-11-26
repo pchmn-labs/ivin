@@ -1,4 +1,5 @@
 import { RegistryContext, RegistryProvider } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { useContext, useEffect } from "react"
 import type { AtomRegistry } from "effect/reactivity"
 import { ShellCommandNotOurs, ShellFoldersRefused } from "@ivin/contracts/cli"
@@ -36,7 +37,7 @@ const mountApp = async () => {
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <CaptureRegistry />
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
   )
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")

@@ -1,2 +1,2 @@
-export const pluginBundleUrl = (bundle: string) =>
-  `ivin-plugin-bundle://cache/${encodeURIComponent(bundle)}`
+export const pluginBundleUrl = (bundle: string, builtin: boolean) =>
+  `ivin-plugin-bundle://${builtin ? "builtin" : "cache"}/${encodeURIComponent(bundle)}`

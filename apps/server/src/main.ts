@@ -24,6 +24,7 @@ import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybind
 import { layerChildPluginHost } from "./modules/plugin/adapters/child-plugin-host.ts"
 import { watchPluginFolders } from "./modules/plugin/usecases/watch-plugin-folders.ts"
 import { runPluginHost } from "./modules/plugin/usecases/run-plugin-host.ts"
+import { layerFsBuiltinPlugins } from "./modules/plugin/adapters/fs-builtin-plugins.ts"
 import { layerFsUserPlugins } from "./modules/plugin/adapters/fs-user-plugins.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
 import { SettingDefaults } from "./modules/setting/usecases/setting-defaults.ts"
@@ -65,6 +66,7 @@ const {
     "cli-command": cliCommandPath,
     "plugin-host": pluginHostPath,
     "plugin-host-runtime": pluginHostRuntime,
+    "builtin-plugins": builtinPluginsPath,
   },
 } = parseArgs({
   options: {
@@ -78,6 +80,7 @@ const {
     "cli-command": { type: "string" },
     "plugin-host": { type: "string" },
     "plugin-host-runtime": { type: "string" },
+    "builtin-plugins": { type: "string" },
   },
   strict: false,
 })
@@ -188,6 +191,9 @@ const startup = Effect.gen(function* () {
             pnpmFolder,
             typeof pluginToolsPath === "string" ? pluginToolsPath : undefined,
           ),
+          typeof builtinPluginsPath === "string"
+            ? layerFsBuiltinPlugins(builtinPluginsPath)
+            : Layer.empty,
           layerShellCommand,
           layerPluginHost,
         ),

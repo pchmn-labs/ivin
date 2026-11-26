@@ -1,3 +1,4 @@
+import type { PluginBridge } from "../../plugin/usecases/plugin-bridge.ts"
 import { ProjectNotTrusted } from "@ivin/contracts/project"
 import {
   ApprovalNotOpen,
@@ -89,6 +90,7 @@ export const layerSessionRunsWith = (
         | TranscriptStore
         | ItemFeed
         | Git
+        | PluginBridge
         | ProjectStore
         | ProjectTrust
       >()

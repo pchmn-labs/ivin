@@ -1,6 +1,7 @@
 import type { Session } from "@ivin/contracts/session"
 import { HarnessProvider } from "@ivin/harness"
 import { DateTime, Effect } from "effect"
+import { PluginBridge } from "../../plugin/usecases/plugin-bridge.ts"
 import { newSessionRunOptions } from "../rules/run-options.ts"
 import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
 import { ProjectStore } from "../../project/usecases/project-store.ts"
@@ -44,5 +45,9 @@ export const createSession = (projectPath: string) =>
       lastImageNumber: 0,
     }
     yield* store.insert(session)
+    yield* (yield* PluginBridge).publish(
+      "sessionCreated",
+      Effect.succeed({ kind: "sessionCreated", session }),
+    )
     return session
   })

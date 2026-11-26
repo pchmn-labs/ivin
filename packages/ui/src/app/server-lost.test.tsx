@@ -1,4 +1,5 @@
 import { RegistryContext } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { DateTime, Layer } from "effect"
 import { AtomRegistry } from "effect/reactivity"
 import { afterEach, expect, test, vi } from "vitest"
@@ -33,7 +34,7 @@ const mountApp = async ({ failVersion = false } = {}) => {
   const registry = AtomRegistry.make({ initialValues: [[serverClientLayerAtom, server.layer]] })
   await render(
     <RegistryContext.Provider value={registry}>
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryContext.Provider>,
   )
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
@@ -132,4 +133,22 @@ test("a draft's text and images survive the server being lost and coming back", 
   await expect.element(field()).toHaveTextContent("look #1 please")
   await expect.element(thumbnail).toHaveAccessibleName("View image #1")
   expect(field().element()).toBe(composer)
+})
+
+test("a server that stopped before the built-in plugins loaded still shows its alert", async () => {
+  const server = makeFakeServer()
+  server.failCalls("plugin.listBuiltin")
+  const registry = AtomRegistry.make({
+    initialValues: [
+      [serverClientLayerAtom, server.layer],
+      [serverStateAtom, { kind: "restarting" }],
+    ],
+  })
+  await render(
+    <RegistryContext.Provider value={registry}>
+      <App />
+    </RegistryContext.Provider>,
+  )
+
+  await expect.element(alert()).toHaveTextContent("ivin's server stopped. Restarting it…")
 })

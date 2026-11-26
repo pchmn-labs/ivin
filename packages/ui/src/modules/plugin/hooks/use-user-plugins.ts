@@ -36,7 +36,7 @@ export function useUserPlugins(importBundle: ImportBundle) {
     ): Promise<UiPluginEntry | null> => {
       let reason: string
       try {
-        const { activate } = await importBundle(bundle)
+        const { activate } = await importBundle(bundle, false)
         if (typeof activate === "function")
           return { manifest: { id, views }, activate: activate as UiPlugin }
         reason = "Its UI half exports no activate function."
