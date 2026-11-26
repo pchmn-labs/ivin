@@ -70,8 +70,9 @@ const spawnClaude = (
   cwd: string,
   options: RunOptions,
   providerSessionId: string | null,
+  extraDirectories: readonly string[],
 ) => {
-  const child = spawn("claude", claudeArgs(options, providerSessionId), {
+  const child = spawn("claude", claudeArgs(options, providerSessionId, extraDirectories), {
     cwd,
     env: { ...process.env, IVIN_SESSION_ID: sessionId },
     stdio: ["pipe", "pipe", "pipe"],
@@ -157,7 +158,7 @@ export const layerClaudeWith = (
       readTaskOutput: (path) => Effect.promise(() => readTail(path).catch(() => "")),
       toolActivity,
       toolKind,
-      start: ({ sessionId, cwd, options, providerSessionId }) =>
+      start: ({ sessionId, cwd, extraDirectories, options, providerSessionId }) =>
         Effect.gen(function* () {
           // spawn reports a missing cwd as ENOENT, the same as a missing binary.
           if (!existsSync(cwd)) {
@@ -167,7 +168,9 @@ export const layerClaudeWith = (
           }
           let stoppedByIvin = false
           const { child, lines, exited, started, stderr } = yield* Effect.acquireRelease(
-            Effect.sync(() => spawnClaude(sessionId, cwd, options, providerSessionId)),
+            Effect.sync(() =>
+              spawnClaude(sessionId, cwd, options, providerSessionId, extraDirectories),
+            ),
             ({ child, exited }) =>
               Effect.gen(function* () {
                 stoppedByIvin = true

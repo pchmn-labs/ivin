@@ -23,6 +23,7 @@ interface SessionRow {
   id: string
   project_path: string
   working_folder: string
+  in_worktree: number | null
   branch: string | null
   started: number
   working_folder_deleted: number
@@ -70,7 +71,8 @@ const toSession = (row: SessionRow, report: Report): Session => ({
   id: row.id,
   projectPath: row.project_path,
   workingFolder: row.working_folder,
-  inWorktree: row.working_folder !== row.project_path,
+  inWorktree:
+    row.in_worktree === null ? row.working_folder !== row.project_path : row.in_worktree === 1,
   branch: row.branch,
   started: row.started === 1,
   workingFolderDeleted: row.working_folder_deleted === 1,
@@ -92,7 +94,7 @@ const toSession = (row: SessionRow, report: Report): Session => ({
   lastImageNumber: row.last_image_number,
 })
 
-const columns = `id, project_path, working_folder, working_folder_deleted, branch, title, harness, model,
+const columns = `id, project_path, working_folder, in_worktree, working_folder_deleted, branch, title, harness, model,
   effort, permission_mode, relaunch_failure, pending_messages, unread_messages, status,
   waiting_for, background_tasks, status_changed_at, created_at, last_activity_at, archived_at, EXISTS (
     SELECT 1 FROM transcript_events e WHERE e.session_id = sessions.id AND e.type = 'user_message'
@@ -121,14 +123,15 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
       insert: (session) =>
         Effect.sync(() => {
           db.prepare(
-            `INSERT INTO sessions (id, project_path, working_folder, branch, title, harness, model,
+            `INSERT INTO sessions (id, project_path, working_folder, in_worktree, branch, title, harness, model,
                effort, permission_mode, run_options_at, status, status_changed_at, created_at,
                last_activity_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           ).run(
             session.id,
             session.projectPath,
             session.workingFolder,
+            Number(session.inWorktree),
             session.branch,
             session.title,
             session.harness,
@@ -270,12 +273,12 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
         Effect.sync(() => {
           db.prepare("UPDATE sessions SET unread_messages = '[]' WHERE id = ?").run(id)
         }),
-      setWorkingFolder: (id, workingFolder, branch) =>
+      setWorkingFolder: (id, workingFolder, branch, inWorktree) =>
         Effect.sync(() => {
           db.prepare(
-            `UPDATE sessions SET working_folder = ?, branch = ?, working_folder_deleted = 0
-             WHERE id = ?`,
-          ).run(workingFolder, branch, id)
+            `UPDATE sessions SET working_folder = ?, branch = ?, in_worktree = ?,
+             working_folder_deleted = 0 WHERE id = ?`,
+          ).run(workingFolder, branch, inWorktree === undefined ? null : Number(inWorktree), id)
         }),
       markWorkingFolderDeleted: (id) =>
         Effect.sync(() => {

@@ -13,3 +13,9 @@ test("a folder in no trusted project is told apart from other failures", () => {
   expect(isNotTrusted({ _tag: "ProjectNotOpen", path: "/a" })).toBe(false)
   expect(isNotTrusted(new Error("boom"))).toBe(false)
 })
+
+test("an unreadable workspace file is told apart from a folder that was not opened", () => {
+  expect(
+    openProjectFailure({ _tag: "WorkspaceUnreadable", path: "/a.code-workspace" }).text,
+  ).toMatch(/workspace file/)
+})

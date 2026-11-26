@@ -24,9 +24,12 @@ export interface ViewProps<P extends ViewParams = ViewParams> {
 }
 
 export interface Project {
+  // The folder, or the `.code-workspace` file.
   readonly path: string
   readonly name: string
   readonly lastOpenedAt: UtcDateTime
+  readonly folders: readonly string[]
+  readonly workspace: boolean
 }
 
 export interface OpenProjects {

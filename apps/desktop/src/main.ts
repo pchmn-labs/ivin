@@ -164,7 +164,14 @@ ipcMain.on(RPC_PORT_REQUEST, (event, id: unknown) => {
 
 ipcMain.handle(PICK_FOLDER, async (event) => {
   const window = BrowserWindow.fromWebContents(event.sender)
-  const options = { properties: ["openDirectory" as const] }
+  // Only macOS picks a folder or a file in one dialog; elsewhere it would lose the folders.
+  const options =
+    process.platform === "darwin"
+      ? {
+          properties: ["openDirectory" as const, "openFile" as const],
+          filters: [{ name: "Workspace", extensions: ["code-workspace"] }],
+        }
+      : { properties: ["openDirectory" as const] }
   const result = await (window
     ? dialog.showOpenDialog(window, options)
     : dialog.showOpenDialog(options))

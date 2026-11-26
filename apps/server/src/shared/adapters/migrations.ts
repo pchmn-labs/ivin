@@ -280,6 +280,11 @@ export const migrations: readonly Migration[] = [
       0
     )`,
   },
+  {
+    version: 27,
+    // Null: the folder differs from the project's, as for every session before workspaces.
+    sql: "ALTER TABLE sessions ADD COLUMN in_worktree INTEGER",
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

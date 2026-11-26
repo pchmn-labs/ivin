@@ -12,6 +12,7 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 import { SessionFeed } from "../modules/session/usecases/session-feed.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
 import { ItemFeed } from "../modules/transcript/usecases/item-feed.ts"
+import { WorkingFolderRoot } from "../modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { watchItems } from "../modules/transcript/usecases/watch-items.ts"
 import { Database } from "../shared/adapters/database.ts"
@@ -47,6 +48,11 @@ const withServices = <A>(use: (db: DatabaseSync) => Effect.Effect<A, unknown, un
           Layer.provideMerge(Layer.succeed(Database)(db)),
           Layer.provide(
             Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+          ),
+          Layer.provide(
+            Layer.succeed(WorkingFolderRoot)({
+              path: mkdtempSync(join(tmpdir(), "ivin-worktrees-")),
+            }),
           ),
           Layer.provide(layerSettingsFileOf([])),
           Layer.provideMerge(layerScripted([])),

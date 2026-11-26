@@ -43,6 +43,7 @@ export const sendMessage = (
           sessionId,
           found.workingFolder,
           yield* git.currentBranch(found.workingFolder),
+          found.inWorktree,
         )
       }
     }

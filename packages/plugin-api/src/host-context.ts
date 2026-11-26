@@ -52,10 +52,15 @@ export type FileListing =
   | { readonly kind: "deleted" }
   | { readonly kind: "failed"; readonly failure: ActionFailure }
 
-// `deleted`: the session's working folder no longer exists.
+// `deleted`: the session's working folder no longer exists. `repositories`: in a working folder of
+// several repositories, their names, which each change's path starts with.
 export type ChangeListing =
   | { readonly kind: "loading" }
-  | { readonly kind: "listed"; readonly changes: ReadonlyArray<Change> }
+  | {
+      readonly kind: "listed"
+      readonly changes: ReadonlyArray<Change>
+      readonly repositories?: ReadonlyArray<string>
+    }
   | { readonly kind: "not_repository" }
   | { readonly kind: "deleted" }
   | {

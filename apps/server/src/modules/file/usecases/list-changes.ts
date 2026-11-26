@@ -1,4 +1,4 @@
-import type { ChangeList } from "@ivin/contracts/file"
+import type { Change, ChangeList } from "@ivin/contracts/file"
 import { SessionNotFound, WorkingFolderDeleted } from "@ivin/contracts/session"
 import { Effect } from "effect"
 import { SessionStore } from "../../session/usecases/session-store.ts"
@@ -6,6 +6,7 @@ import { Git } from "../../worktree/usecases/git.ts"
 import { ChangeFeed } from "./change-feed.ts"
 import { FolderReader } from "./folder-reader.ts"
 import { gitFailed } from "./git-failed.ts"
+import { prefixChange, sessionRoot } from "./repositories.ts"
 
 export const rootOf = (sessionId: string) =>
   Effect.gen(function* () {
@@ -37,6 +38,25 @@ export const changesOf = (sessionId: string) =>
   })
 
 export const listChanges = (sessionId: string) =>
+  Effect.gen(function* () {
+    const { repositories } = yield* sessionRoot(sessionId)
+    if (repositories === null) return yield* listRepositoryChanges(sessionId)
+    const feed = yield* ChangeFeed
+    const changes: Change[] = []
+    for (const repository of repositories) {
+      const listing = yield* feed
+        .listChanges(repository.folder)
+        .pipe(Effect.mapError(gitFailed(sessionId)))
+      for (const change of listing?.changes ?? []) changes.push(prefixChange(repository, change))
+    }
+    return {
+      kind: "listed",
+      changes,
+      repositories: repositories.map((repository) => repository.name),
+    } satisfies ChangeList
+  })
+
+const listRepositoryChanges = (sessionId: string) =>
   sharedChangesOf(sessionId).pipe(
     Effect.map(({ listing }): ChangeList =>
       listing === null ? { kind: "not_repository" } : { kind: "listed", changes: listing.changes },

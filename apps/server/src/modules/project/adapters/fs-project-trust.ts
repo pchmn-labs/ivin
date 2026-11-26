@@ -1,9 +1,10 @@
 import { Effect, Layer } from "effect"
-import { readFileSync, realpathSync, statSync } from "node:fs"
+import { readdirSync, readFileSync, realpathSync, statSync } from "node:fs"
 import { basename, dirname, join, resolve } from "node:path"
 import { isInTrustedProject } from "../rules/trusted-project.ts"
 import { ProjectTrust } from "../usecases/project-trust.ts"
 import { ProjectStore } from "../usecases/project-store.ts"
+import { WorkingFolderRoot } from "../usecases/working-folder-root.ts"
 
 const realPath = (path: string) => {
   try {
@@ -41,18 +42,48 @@ const checkoutOf = (folder: string): string | null => {
   }
 }
 
+// The working folder of a session on a workspace, `<root>/<workspace>/<branch>`, that `folder` is
+// or is inside; null elsewhere.
+const workingFolderOf = (root: string, folder: string): string | null => {
+  const base = root.endsWith("/") ? root : `${root}/`
+  if (!folder.startsWith(base)) return null
+  const [workspace, branch] = folder.slice(base.length).split("/")
+  return workspace && branch ? join(root, workspace, branch) : null
+}
+
+const repositoriesIn = (workingFolder: string): string[] => {
+  try {
+    return readdirSync(workingFolder, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => join(workingFolder, entry.name))
+  } catch {
+    return []
+  }
+}
+
 export const layerFsProjectTrust = Layer.effect(ProjectTrust)(
   Effect.gen(function* () {
     const store = yield* ProjectStore
+    const root = realPath((yield* WorkingFolderRoot).path)
     return {
       isTrusted: (folder) =>
         store.trustedProjects.pipe(
           Effect.map((trusted) => {
             const real = realPath(folder)
-            return isInTrustedProject(trusted.map(realPath), {
-              folder: real,
-              checkout: checkoutOf(real),
-            })
+            const trustedReal = trusted.map(realPath)
+            const place = { folder: real, checkout: checkoutOf(real) }
+            if (isInTrustedProject(trustedReal, place)) return true
+            // A working folder holds worktrees only; one of a trusted repository vouches for it.
+            const working = workingFolderOf(root, real)
+            return (
+              working !== null &&
+              repositoriesIn(working).some((repository) =>
+                isInTrustedProject(trustedReal, {
+                  folder: repository,
+                  checkout: checkoutOf(repository),
+                }),
+              )
+            )
           }),
         ),
       trust: (folder) => store.trust(realPath(folder)),

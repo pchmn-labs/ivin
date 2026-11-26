@@ -8,6 +8,8 @@ import { Effect } from "effect"
 import { type CommitRange, Git } from "../../worktree/usecases/git.ts"
 import { parseDiff } from "../rules/diff.ts"
 import { relativeNames } from "../rules/folder-path.ts"
+import { ChangeFeed } from "./change-feed.ts"
+import { repositoryOfPath, sessionRoot } from "./repositories.ts"
 import { gitFailed } from "./git-failed.ts"
 import { sharedChangesOf } from "./list-changes.ts"
 
@@ -34,6 +36,19 @@ export const readDiff = (sessionId: string, path: string) =>
   Effect.gen(function* () {
     if (relativeNames(path) === null)
       return yield* new PathOutsideWorkingFolder({ sessionId, path })
+    const { repositories } = yield* sessionRoot(sessionId)
+    if (repositories !== null) {
+      const inside = repositoryOfPath(repositories, relativeNames(path)!.join("/"))
+      if (inside === null) return { kind: "unchanged" } satisfies FileDiff
+      const listing = yield* (yield* ChangeFeed)
+        .listChanges(inside.repository.folder)
+        .pipe(Effect.mapError(gitFailed(sessionId)))
+      if (listing === null) return { kind: "not_repository" } satisfies FileDiff
+      return yield* diffAmong(sessionId, inside.path, {
+        root: inside.repository.folder,
+        ...listing,
+      })
+    }
     const { root, listing } = yield* sharedChangesOf(sessionId)
     if (listing === null) return { kind: "not_repository" } satisfies FileDiff
     return yield* diffAmong(sessionId, path, { root, ...listing })

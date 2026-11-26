@@ -141,6 +141,8 @@ export interface FakeServer {
   readonly holdNextReorder: () => { readonly release: () => void; readonly fail: () => void }
   // Folders `project.open` refuses until a call carries the user's trust.
   readonly untrustedProjects: Set<string>
+  // The untrusted folders `project.open` reports for a workspace file in `untrustedProjects`.
+  readonly workspaceFolders: Map<string, ReadonlyArray<string>>
   // Opens a project, or a session's tab, as the server would.
   readonly openProject: (path: string) => void
   readonly openTab: (sessionId: string) => void
@@ -261,14 +263,17 @@ const fakeNameOf = (option: RunOption, value: string) =>
 
 export const makeFakeServer = (
   options: {
-    readonly project?: Project
+    readonly project?: Pick<Project, "path" | "name" | "lastOpenedAt"> &
+      Partial<Pick<Project, "folders" | "workspace">>
     readonly harness?: Harness
     readonly runOptions?: HarnessRunOptions
   } = {},
 ): FakeServer => {
   const harness = options.harness ?? "claude"
   const runOptions = options.runOptions ?? fakeRunOptions
-  let projects: Array<Project> = options.project ? [options.project] : []
+  let projects: Array<Project> = options.project
+    ? [{ folders: [options.project.path], workspace: false, ...options.project }]
+    : []
   let selectedPath: string | null = options.project?.path ?? null
   let tabs: Array<{ sessionId: string; projectPath: string }> = []
   const selectedTab = new Map<string, string | null>()
@@ -350,6 +355,7 @@ export const makeFakeServer = (
   const failing = new Set<string>()
   const failingUntilRecovered = new Set<string>()
   const untrustedProjects = new Set<string>()
+  const workspaceFolders = new Map<string, ReadonlyArray<string>>()
   const holding = new Map<string, Promise<boolean>>()
   const sentMessages: Array<FakeServer["sentMessages"][number]> = []
   const pickedFolders: Array<WorkingFolderChoice> = []
@@ -586,11 +592,20 @@ export const makeFakeServer = (
     "project.open": ({ path, trust }: { path: string; trust?: boolean }) =>
       Effect.gen(function* () {
         if (untrustedProjects.has(path)) {
-          if (!trust) return yield* new ProjectNotTrusted({ path })
+          if (!trust) {
+            const folders = workspaceFolders.get(path)
+            return yield* new ProjectNotTrusted(folders ? { path, folders } : { path })
+          }
           untrustedProjects.delete(path)
         }
         if (!projects.some((p) => p.path === path)) {
-          projects.push({ path, name: path.split("/").at(-1)!, lastOpenedAt: tick() })
+          projects.push({
+            path,
+            name: path.split("/").at(-1)!,
+            lastOpenedAt: tick(),
+            folders: [path],
+            workspace: false,
+          })
         }
         selectedPath = path
         return openProjects()
@@ -1527,6 +1542,7 @@ export const makeFakeServer = (
     failCalls: (rpc) => void failingUntilRecovered.add(rpc),
     recoverCalls: (rpc) => void failingUntilRecovered.delete(rpc),
     untrustedProjects,
+    workspaceFolders,
     callsOf: (rpc) => calls.get(rpc) ?? 0,
     holdNextCall: (rpc) => {
       let settle!: (ok: boolean) => void

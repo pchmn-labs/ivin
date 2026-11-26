@@ -1,5 +1,6 @@
 import type { Session } from "@ivin/contracts/session"
 import { Effect } from "effect"
+import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
 import { CurrentSettings } from "../../setting/usecases/current-settings.ts"
 import { isInUse, isRemovable, removalCandidates } from "../../worktree/rules/worktree-removal.ts"
 import { Git } from "../../worktree/usecases/git.ts"
@@ -19,6 +20,8 @@ export const removeMergedWorktrees = (
   deletedSessions: readonly Session[] = [],
 ) =>
   Effect.gen(function* () {
+    // The worktrees of a workspace session are not cleaned up yet.
+    if (isWorkspaceFile(projectPath)) return
     const { worktrees } = yield* (yield* CurrentSettings).get
     if (!worktrees.removeOnTabClose) return
     const git = yield* Git
