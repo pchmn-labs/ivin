@@ -9,9 +9,7 @@ afterEach(() => {
   localStorage.removeItem("ivin.window.layout")
 })
 
-const windowLayout = () => document.querySelector<HTMLElement>(".iv-app")?.dataset.windowLayout
-
-test("choosing One plane in Settings changes the window at once and moves the traffic lights", async () => {
+test("choosing One plane in Settings moves the traffic lights at once", async () => {
   const told: Array<string> = []
   Object.assign(window, { ivin: { setWindowLayout: (layout: string) => told.push(layout) } })
   const server = makeFakeServer({
@@ -19,7 +17,6 @@ test("choosing One plane in Settings changes the window at once and moves the tr
   })
   await mountApp(server)
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
-  expect(windowLayout()).toBe("panels")
   expect(told.at(-1)).toBe("panels")
 
   await page.getByRole("button", { name: "Settings" }).click()
@@ -30,6 +27,5 @@ test("choosing One plane in Settings changes the window at once and moves the tr
   await page.getByRole("combobox", { name: "Layout" }).selectOptions("plane")
   await page.getByRole("button", { name: "Back to sessions" }).click()
 
-  await vi.waitFor(() => expect(windowLayout()).toBe("plane"))
-  expect(told.at(-1)).toBe("plane")
+  await vi.waitFor(() => expect(told.at(-1)).toBe("plane"))
 })

@@ -24,6 +24,8 @@ export const activate = defineUi((ctx) => {
   ctx.slots.add("sidebar.panel", () => <FilesPanel state={state} />, {
     name: "panel",
     title: "Files",
+    // Before Changes, and both before the panels of plugins that set no order.
+    order: -2,
   })
   ctx.slots.add("window.overlay", () => <GoToFileHost state={state} />, { name: "goToFile" })
   ctx.commands.register("files.show", {

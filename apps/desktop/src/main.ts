@@ -51,6 +51,7 @@ import { PLUGIN_BUNDLE_SCHEME, pluginBundleFile } from "./plugin-bundle-protocol
 import { mergeDisabledPlugins, pluginsToBlame, type PluginActivity } from "./plugin-blame.ts"
 import { createRestartPolicy } from "./restart-policy.ts"
 import { automaticCheckFrom, betaFrom } from "./update-settings.ts"
+import { TRAFFIC_LIGHTS, isWindowLayout, windowLayoutFrom } from "./window-layout.ts"
 import { createUpdater, startSwap } from "./updater.ts"
 
 // A dev build keeps its own data, so it never shares a database with the installed app.
@@ -192,12 +193,6 @@ const reloadWithout = (window: BrowserWindow) => {
   window.webContents.reload()
 }
 
-// Centred on the top row of the window's layout, 15pt in from the sidebar's left edge.
-const TRAFFIC_LIGHTS = {
-  panels: { x: 21, y: 19 },
-  plane: { x: 15, y: 13 },
-} as const
-
 const createWindow = async () => {
   const window = new BrowserWindow({
     width: 960,
@@ -205,7 +200,7 @@ const createWindow = async () => {
     show: false,
     ...(process.platform === "darwin" && {
       titleBarStyle: "hiddenInset" as const,
-      trafficLightPosition: TRAFFIC_LIGHTS.panels,
+      trafficLightPosition: TRAFFIC_LIGHTS[windowLayoutFrom(readSettings())],
     }),
     webPreferences: {
       preload: join(import.meta.dirname, "preload.cjs"),
@@ -261,7 +256,7 @@ ipcMain.on(PLUGIN_ACTIVITY, (_event, value: { id?: unknown; phase?: unknown }) =
   if (activity.length > 500) activity.splice(0, activity.length - 500)
 })
 ipcMain.on(WINDOW_LAYOUT, (event, layout: unknown) => {
-  if (process.platform !== "darwin" || (layout !== "panels" && layout !== "plane")) return
+  if (process.platform !== "darwin" || !isWindowLayout(layout)) return
   BrowserWindow.fromWebContents(event.sender)?.setWindowButtonPosition(TRAFFIC_LIGHTS[layout])
 })
 ipcMain.on(LAUNCH_SETTLED, () => {

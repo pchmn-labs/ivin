@@ -48,8 +48,7 @@ import { useUpdateCommands } from "../modules/update/hooks/use-update-commands.t
 import { SettingsButton } from "../modules/setting/ui/settings-button.tsx"
 import { SettingsNav } from "../modules/setting/ui/settings-nav.tsx"
 import { settingsAtom } from "../modules/setting/atoms/settings.ts"
-import { useWindowLayout } from "../modules/setting/hooks/use-window-layout.ts"
-import { placeWindowButtons, storeWindowLayout } from "../modules/setting/adapters/window-layout.ts"
+import { useApplyWindowLayout } from "../modules/setting/hooks/use-window-layout.ts"
 import "./app.css"
 
 const UpdateButton = lazy(() =>
@@ -68,17 +67,13 @@ const BOTTOM_MAX_SHARE = 0.7
 export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}) {
   const connection = useAtomValue(connectionAtom)
   const { layout } = useAtomValue(settingsAtom).sidebar
-  const windowLayout = useWindowLayout()
+  const windowLayout = useApplyWindowLayout()
   const current = useAtomValue(selectedProjectAtom)
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom)
   const registry = useContext(RegistryContext)
   const projectPath = current?.path ?? null
 
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [setSidebarOpen])
-  useEffect(() => {
-    placeWindowButtons(windowLayout)
-    storeWindowLayout(windowLayout)
-  }, [windowLayout])
   useRecordSessionVisits()
   useAtomMount(tabTranscriptsAtom)
   useReportUncaughtErrors()

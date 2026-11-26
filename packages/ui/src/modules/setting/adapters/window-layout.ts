@@ -1,13 +1,14 @@
 import "../../../core/desktop-bridge.ts"
-import type { Settings } from "@ivin/contracts/setting"
+import { Settings } from "@ivin/contracts/setting"
 
 type WindowLayout = Settings["window"]["layout"]
 
 const KEY = "ivin.window.layout"
+const LAYOUTS: ReadonlyArray<string | null> = Settings.fields.window.fields.layout.literals
 
 export const readStoredWindowLayout = (): WindowLayout | null => {
   const stored = localStorage.getItem(KEY)
-  return stored === "panels" || stored === "plane" ? stored : null
+  return LAYOUTS.includes(stored) ? (stored as WindowLayout) : null
 }
 
 export const storeWindowLayout = (layout: WindowLayout): void => localStorage.setItem(KEY, layout)
