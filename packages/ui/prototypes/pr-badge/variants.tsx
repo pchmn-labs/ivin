@@ -152,7 +152,7 @@ function Tile({ prs }: { prs: ReadonlyArray<Pr> }) {
       <Svg name={STATE_ICON[lead.state]} size={13} />
       {verdict && (
         <span className="t-check-corner" data-ci={verdict}>
-          <Svg name={verdict === "passed" ? "check" : verdict === "failed" ? "xBold" : "clock"} size={verdict === "review" ? 6 : 5} />
+          <Svg name={verdict === "passed" ? "check" : verdict === "failed" ? "xBold" : "exclamation"} size={verdict === "review" ? 6 : 5} />
         </span>
       )}
     </span>

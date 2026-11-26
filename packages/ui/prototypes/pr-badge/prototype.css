@@ -1261,3 +1261,52 @@ body {
     transition: none;
   }
 }
+
+/* Round 9: the content slides the way the pointer went */
+
+.proto-viewport[data-activation-direction~="down"] {
+  --slide-y: 8px;
+}
+
+.proto-viewport[data-activation-direction~="up"] {
+  --slide-y: -8px;
+}
+
+.proto-viewport[data-activation-direction~="right"] {
+  --slide-x: 12px;
+}
+
+.proto-viewport[data-activation-direction~="left"] {
+  --slide-x: -12px;
+}
+
+.proto-viewport [data-previous] {
+  top: 0;
+  left: 0;
+  transition:
+    opacity var(--iv-duration-fast) var(--iv-ease-out),
+    transform var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.proto-viewport [data-previous][data-ending-style] {
+  opacity: 0;
+  transform: translate(calc(var(--slide-x, 0px) * -1), calc(var(--slide-y, 0px) * -1));
+}
+
+.proto-viewport [data-current] {
+  transition:
+    opacity var(--iv-duration-base) var(--iv-ease-out),
+    transform var(--iv-duration-base) var(--iv-ease-out);
+}
+
+.proto-viewport [data-current][data-starting-style] {
+  opacity: 0;
+  transform: translate(var(--slide-x, 0px), var(--slide-y, 0px));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proto-viewport [data-previous][data-ending-style],
+  .proto-viewport [data-current][data-starting-style] {
+    transform: none;
+  }
+}
