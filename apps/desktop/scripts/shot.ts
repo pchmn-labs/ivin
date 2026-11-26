@@ -88,7 +88,20 @@ export const formatTotal = (cents: number, currency = "EUR") =>
   )
   writeFileSync(
     join(dir, ".ivin/plugins/pr-checks/src/server.ts"),
-    `import { defineServer } from "@ivin/plugin-api/server"\nexport const activate = defineServer(() => {})\n`,
+    `import { defineServer } from "@ivin/plugin-api/server"
+const url = "https://github.com/o/r/pull/12"
+export const activate = defineServer((ctx) => {
+  ctx.sessions.onChanged(async (session) => {
+    if (!session.title.startsWith("How many files are there?")) return
+    const target = { _tag: "session", sessionId: session.id } as const
+    if ((await ctx.annotations.list(target, "pr")).length > 0) return
+    await ctx.annotations.add(target, {
+      kind: "pr",
+      data: { url, relation: "created", title: "Count the files", state: "open", checks: "passing" },
+    })
+  })
+})
+`,
   )
   git("add", ".")
   git("commit", "--quiet", "-m", "first")
@@ -321,7 +334,15 @@ try {
   await window.getByTestId("working-question").waitFor()
   await window.waitForTimeout(300)
   await shoot("working-panel-question")
-  await window.getByTestId("tab").filter({ hasText: "How many files are there?" }).click()
+  const prTab = window.getByTestId("tab").filter({ hasText: "How many files are there?" })
+  await prTab.locator(".iv-status-tile").waitFor()
+  // Off the tabs, so none shows its close button.
+  await window.mouse.move(0, 400)
+  await shoot("tab-pr-badge")
+  await prTab.hover()
+  await window.waitForTimeout(200)
+  await shoot("tab-pr-badge-hover")
+  await prTab.click()
   await window.getByTestId("question-sheet").waitFor()
   await window.waitForTimeout(300)
   await window.keyboard.press("1")
