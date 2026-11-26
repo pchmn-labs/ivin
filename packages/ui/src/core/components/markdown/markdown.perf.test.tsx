@@ -26,15 +26,13 @@ test(
     await expect.element(page.getByText("Here is the code:")).toBeVisible()
 
     const frames = CODE_LINES / LINES_PER_FRAME
-    const measuredFrames = Math.floor(frames / 3)
-    let start = await nextFrame()
+    const start = await nextFrame()
     let last = start
     for (let frame = 1; frame <= frames; frame++) {
       await screen.rerender(<Stream lines={frame * LINES_PER_FRAME} />)
       last = await nextFrame()
-      if (frame === frames - measuredFrames) start = last
     }
-    const fps = (measuredFrames * 1000) / (last - start)
+    const fps = (frames * 1000) / (last - start)
 
     await annotate(`streaming a code block: ${fps.toFixed(1)} fps`)
     expect(fps, `streaming a code block ran at ${fps.toFixed(1)} fps`).toBeGreaterThanOrEqual(
