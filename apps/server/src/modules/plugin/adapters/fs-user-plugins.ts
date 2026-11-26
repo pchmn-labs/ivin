@@ -20,7 +20,17 @@ import {
   writeFile,
 } from "node:fs/promises"
 import { dirname, join, relative, resolve, sep } from "node:path"
-import { PluginNotCompiled, UserPlugins, type PluginFolder } from "../usecases/user-plugins.ts"
+import { pluginTemplate } from "../rules/plugin-template.ts"
+import {
+  PluginNotChecked,
+  PluginNotCompiled,
+  PluginNotMade,
+  UserPlugins,
+  type PluginFolder,
+} from "../usecases/user-plugins.ts"
+import { pluginFolderChanges } from "./plugin-folder-changes.ts"
+import { pluginTypePaths } from "./plugin-types.ts"
+import { checkTypes } from "./ts-check.ts"
 import { makePluginDependencies, type Installed } from "./plugin-dependencies.ts"
 import { installedPnpmFolder } from "./pnpm.ts"
 
@@ -193,7 +203,28 @@ export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string) => {
       }
       return folders
     }),
+    changes: pluginFolderChanges(pluginsFolder),
     bundlePath: (name) => join(cacheFolder, name),
+    check: (path) =>
+      Effect.tryPromise({
+        try: async () => checkTypes(await realpath(path)),
+        catch: (error) => new PluginNotChecked({ reason: messageOf(error) }),
+      }),
+    create: (id) =>
+      Effect.tryPromise({
+        try: async () => {
+          const folder = join(pluginsFolder, id)
+          await mkdir(pluginsFolder, { recursive: true, mode: 0o700 })
+          // Fails when the folder exists, so two creations never write into each other.
+          await mkdir(folder)
+          for (const [file, text] of Object.entries(pluginTemplate(id, pluginTypePaths()))) {
+            await mkdir(dirname(join(folder, file)), { recursive: true })
+            await writeFile(join(folder, file), text)
+          }
+          return folder
+        },
+        catch: (error) => new PluginNotMade({ reason: messageOf(error) }),
+      }),
     compile: ({ id, path, entry, half }) =>
       Effect.tryPromise({
         try: async () => {

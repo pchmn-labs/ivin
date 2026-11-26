@@ -54,14 +54,14 @@ export interface CliServerOptions {
   readonly ivinHome?: string
   readonly keybindings?: string | null
   readonly version?: string
-  readonly skill?: SkillInstall | null
+  readonly skills?: ReadonlyArray<SkillInstall>
 }
 
 const layerCliServer = ({
   settings = null,
   keybindings = null,
   ivinHome,
-  skill = null,
+  skills = [],
 }: CliServerOptions) =>
   layerServices.pipe(
     Layer.provideMerge(
@@ -71,7 +71,7 @@ const layerCliServer = ({
         layerScripted([]),
         ivinHome === undefined ? layerSettingsFileOf([settings]) : layerFsSettingsFile(ivinHome),
         layerKeybindingsFileOf([keybindings]),
-        Layer.succeed(SkillInstallation)(skill),
+        Layer.succeed(SkillInstallation)(skills),
         ivinHome === undefined ? Layer.empty : layerFsUserPlugins(ivinHome),
       ),
     ),

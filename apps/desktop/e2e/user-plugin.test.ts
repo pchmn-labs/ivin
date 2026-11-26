@@ -133,7 +133,35 @@ export const activate = defineServer(() => { console.log("talker is active") })
       "Disabled for blocking",
     )
     // The window and its sessions kept running.
-    await expect(window.getByRole("textbox").first()).toBeVisible()
+    await expect(window.getByRole("textbox", { name: "Message" })).toBeVisible()
+  } finally {
+    await app.close()
+  }
+})
+
+test("editing a plugin's UI half updates the window without a reload, and ivin plugin new and check work from the packaged app", async () => {
+  const userDataDir = makeTempDir("user-data")
+  const app = await launchPackagedApp(userDataDir)
+  try {
+    const window = await startSession(app)
+    const created = await runIvin(userDataDir, ["plugin", "new", "demo"])
+    expect(created.code).toBe(0)
+    await expect(window.getByText("The demo plugin is running.")).toBeVisible()
+    const checked = await runIvin(userDataDir, ["plugin", "check", "demo"])
+    expect(checked.output).toContain("has no type error")
+    expect(checked.code).toBe(0)
+
+    const draft = window.getByRole("textbox", { name: "Message" })
+    await draft.fill("a draft that must survive")
+    writeFileSync(
+      join(userDataDir, ".ivin/plugins/demo/src/ui.tsx"),
+      (await readFile(join(userDataDir, ".ivin/plugins/demo/src/ui.tsx"), "utf8")).replace(
+        "is running.",
+        "was edited.",
+      ),
+    )
+    await expect(window.getByText("The demo plugin was edited.")).toBeVisible()
+    await expect(draft).toHaveValue("a draft that must survive")
   } finally {
     await app.close()
   }

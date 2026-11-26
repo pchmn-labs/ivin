@@ -33,8 +33,11 @@ type AnyRpc = RpcGroup.Rpcs<typeof Rpcs>
 // A new `ivin` command adds the RPCs it calls here.
 const cliSocketTags = [
   "annotation.add",
+  "plugin.check",
+  "plugin.create",
   "plugin.lock",
   "plugin.readLog",
+  "plugin.reload",
   "plugin.status",
   "server.doctor",
   "session.rename",

@@ -1,9 +1,16 @@
 import { layerScripted } from "@ivin/harness"
 import { HOST_MODULES_GLOBAL, type UserPlugin } from "@ivin/contracts/plugin"
 import { Rpcs } from "@ivin/contracts/rpcs"
-import { Effect, Layer, Stream } from "effect"
+import { Effect, Layer, type Scope, Stream } from "effect"
 import { RpcTest } from "effect/rpc"
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -11,6 +18,8 @@ import * as React from "react"
 import * as jsxRuntime from "react/jsx-runtime"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
 import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
+import { readManifest } from "../modules/plugin/rules/manifest.ts"
+import type { PluginReloads } from "../modules/plugin/usecases/plugin-reloads.ts"
 import { ServerInfo } from "../modules/server/usecases/server-info.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
@@ -22,29 +31,44 @@ export type Client = Effect.Success<ReturnType<typeof makeClient>>
 
 export const tempDir = (prefix: string) => mkdtempSync(join(tmpdir(), `ivin-${prefix}-`))
 
-export const withServer = <A, E>(home: string, use: (client: Client) => Effect.Effect<A, E>) =>
+export const withServer = <A, E>(
+  home: string,
+  use: (client: Client) => Effect.Effect<A, E, PluginReloads | Scope.Scope>,
+) =>
   Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
       Effect.provide(
         handlers.pipe(
-          Layer.provide(layerServices),
+          // Merged, so a test can run a use case on the instances the handlers use.
+          Layer.provideMerge(layerServices),
           Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
           Layer.provide(layerDatabase(":memory:")),
           Layer.provide(Layer.succeed(ImageFolder)({ path: tempDir("images") })),
           Layer.provide(layerScripted([])),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerFsUserPlugins(home)),
+          Layer.provideMerge(layerFsUserPlugins(home)),
         ),
       ),
       Effect.scoped,
     ),
   )
 
+// plugin.list stays open for reloads, so the helper stops after the plugins the folders hold.
+const listedCount = (home: string) =>
+  (existsSync(join(home, "plugins")) ? readdirSync(join(home, "plugins")) : []).filter((name) => {
+    const manifest = existsSync(join(home, "plugins", name, "package.json"))
+      ? readFileSync(join(home, "plugins", name, "package.json"), "utf8")
+      : null
+    const reading = readManifest(manifest)
+    return reading.kind === "invalid" || reading.manifest.ui !== null
+  }).length
+
 export const listPlugins = (home: string) =>
   withServer(home, (client) =>
     client["plugin.list"]().pipe(
+      Stream.take(listedCount(home)),
       Stream.runCollect,
       Effect.map((plugins) => [...plugins]),
     ),

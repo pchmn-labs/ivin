@@ -5,6 +5,7 @@ import { dirname, join } from "node:path"
 import { expect, test, vi } from "vitest"
 import { PluginHost } from "../usecases/plugin-host.ts"
 import { runPluginHost } from "../usecases/run-plugin-host.ts"
+import { layerPluginReloads, PluginReloads } from "../usecases/plugin-reloads.ts"
 import { layerServerHalves, ServerHalves } from "../usecases/server-halves.ts"
 import { UserPlugins } from "../usecases/user-plugins.ts"
 import { layerChildPluginHost } from "./child-plugin-host.ts"
@@ -34,26 +35,34 @@ const withHost = <A>(
   use: (services: {
     readonly halves: ServerHalves["Service"]
     readonly logOf: (id: string) => Effect.Effect<ReadonlyArray<string>>
+    readonly reload: (folder: string) => Effect.Effect<void>
   }) => Effect.Effect<A>,
 ) =>
   Effect.runPromise(
     Effect.gen(function* () {
       const halves = yield* ServerHalves
       const plugins = yield* UserPlugins
+      const reloads = yield* PluginReloads
       const fiber = yield* Effect.forkChild(
         runPluginHost({
           heartbeatEvery: Duration.millis(50),
           heartbeatTimeout: Duration.millis(500),
           restartDelay: Duration.millis(10),
+          maxActivations: 50,
         }),
       )
-      const result = yield* use({ halves, logOf: (id) => plugins!.readLog(id) })
+      const result = yield* use({
+        halves,
+        logOf: (id) => plugins!.readLog(id),
+        reload: (folder) => reloads.request(folder),
+      })
       yield* Fiber.interrupt(fiber)
       return result
     }).pipe(
       Effect.provide(
         Layer.mergeAll(
           layerServerHalves,
+          layerPluginReloads,
           layerFsUserPlugins(ivinHome),
           layerChildPluginHost(process.execPath, hostEntry),
         ),
@@ -169,4 +178,29 @@ test("deactivating a plugin aborts its ctx.signal", async () => {
     ),
   )
   expect(logged).toEqual([{ id: "stops", line: "signal aborted" }])
+})
+
+test("a reload swaps the running server half: the old one's ctx.signal aborts, then the new activate runs", async () => {
+  const ivinHome = home()
+  const server = (version: string) => `export const activate = (ctx) => {
+  console.log("${version} started")
+  ctx.signal.addEventListener("abort", () => console.log("${version} stopped"))
+}`
+  writePlugin(ivinHome, "swapped", server("v1"))
+  const lines = await withHost(ivinHome, ({ halves, logOf, reload }) =>
+    Effect.gen(function* () {
+      yield* until(
+        Effect.map(logOf("swapped"), (log) => log.some((line) => line.includes("v1 started"))),
+      )
+      writePlugin(ivinHome, "swapped", server("v2"))
+      yield* reload("swapped")
+      yield* until(
+        Effect.map(logOf("swapped"), (log) => log.some((line) => line.includes("v2 started"))),
+      )
+      expect(yield* halves.get("swapped")).toBe("active")
+      return yield* logOf("swapped")
+    }),
+  )
+  const order = lines.map((line) => /v\d (started|stopped)/.exec(line)?.[0])
+  expect(order).toEqual(["v1 started", "v1 stopped", "v2 started"])
 })

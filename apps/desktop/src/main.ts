@@ -69,9 +69,9 @@ const cliEntry = app.isPackaged
 const pnpmFolder = app.isPackaged
   ? join(process.resourcesPath, "pnpm")
   : join(import.meta.dirname, "../../server/dist/pnpm")
-const skillFolder = app.isPackaged
-  ? join(process.resourcesPath, "skills/ivin-customize")
-  : join(import.meta.dirname, "../../server/skills/ivin-customize")
+const skillsFolder = app.isPackaged
+  ? join(process.resourcesPath, "skills")
+  : join(import.meta.dirname, "../../server/skills")
 const rendererEntry = app.isPackaged
   ? join(app.getAppPath(), "renderer/index.html")
   : join(import.meta.dirname, "../../../packages/ui/dist/index.html")
@@ -328,8 +328,8 @@ void app.whenReady().then(() => {
     ivinHome,
     "--images",
     imageFolder,
-    "--skill",
-    skillFolder,
+    "--skills",
+    skillsFolder,
     "--pnpm",
     pnpmFolder,
     "--cli-command",

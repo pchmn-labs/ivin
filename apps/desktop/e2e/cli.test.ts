@@ -80,6 +80,9 @@ test("the first launch installs the ivin-customize skill into Claude, and the ne
     expect(readFileSync(join(skillFolder, "SKILL.md"), "utf8")).toContain("name: ivin-customize")
     const doctor = await runIvin(userDataDir, ["doctor"])
     expect(doctor.output).toContain(`✓ Installed the ivin-customize skill at ${skillFolder}`)
+    const pluginSkillFolder = join(claudeConfigDir(userDataDir), "skills/ivin-plugin")
+    expect(readFileSync(join(pluginSkillFolder, "SKILL.md"), "utf8")).toContain("name: ivin-plugin")
+    expect(doctor.output).toContain(`✓ Installed the ivin-plugin skill at ${pluginSkillFolder}`)
   } finally {
     await app.close()
   }

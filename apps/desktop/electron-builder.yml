@@ -30,6 +30,9 @@ asarUnpack:
   - server/webp-worker.js
   - server/webp_enc*.js
   - server/wasm/**
+  - server/ts-check-worker.js
+  - server/typescript/**
+  - server/plugin-types/**
   - server/native/**
 extraMetadata:
   main: main.js

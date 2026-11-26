@@ -22,6 +22,7 @@ import { agentPath } from "./modules/cli/rules/agent-path.ts"
 import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
 import { layerChildPluginHost } from "./modules/plugin/adapters/child-plugin-host.ts"
+import { watchPluginFolders } from "./modules/plugin/usecases/watch-plugin-folders.ts"
 import { runPluginHost } from "./modules/plugin/usecases/run-plugin-host.ts"
 import { layerFsUserPlugins } from "./modules/plugin/adapters/fs-user-plugins.ts"
 import { layerFsSettingsFile } from "./modules/setting/adapters/fs-settings-file.ts"
@@ -57,7 +58,7 @@ const {
     log: logPath,
     home: homePath,
     images: imagesPath,
-    skill: skillPath,
+    skills: skillsPath,
     pnpm: pnpmPath,
     "cli-command": cliCommandPath,
     "plugin-host": pluginHostPath,
@@ -69,7 +70,7 @@ const {
     log: { type: "string" },
     home: { type: "string" },
     images: { type: "string" },
-    skill: { type: "string" },
+    skills: { type: "string" },
     pnpm: { type: "string" },
     "cli-command": { type: "string" },
     "plugin-host": { type: "string" },
@@ -90,8 +91,8 @@ if (typeof homePath !== "string") fail("Missing --home <path>, the folder of the
 const ivinHome = homePath as string
 if (typeof imagesPath !== "string") fail("Missing --images <path>, the folder of the sent images")
 const imageFolder = imagesPath as string
-if (typeof skillPath !== "string") fail("Missing --skill <path>, the folder of ivin's skill")
-const skillFolder = skillPath as string
+if (typeof skillsPath !== "string") fail("Missing --skills <path>, the folder of ivin's skills")
+const skillsSource = skillsPath as string
 if (typeof pnpmPath !== "string") fail("Missing --pnpm <path>, the folder of the pnpm ivin ships")
 const pnpmFolder = pnpmPath as string
 const loginShell = process.env["SHELL"] || "/bin/zsh"
@@ -167,7 +168,7 @@ const startup = Effect.gen(function* () {
   if (harnessId === "claude") yield* Effect.forkScoped(adoptLoginShellPath)
   else yield* Deferred.succeed(loginShellFolders, null)
   const context = yield* Layer.build(
-    Layer.mergeAll(layerServices, layerFsSkillInstallation(skillFolder)).pipe(
+    Layer.mergeAll(layerServices, layerFsSkillInstallation(skillsSource)).pipe(
       Layer.provideMerge(
         Layer.mergeAll(
           layerDatabase(path),
@@ -189,6 +190,12 @@ const startup = Effect.gen(function* () {
     runPluginHost().pipe(
       Effect.provide(context),
       Effect.catchCause((cause) => Effect.logError("the plugin host runner stopped", cause)),
+    ),
+  )
+  yield* Effect.forkScoped(
+    watchPluginFolders.pipe(
+      Effect.provide(context),
+      Effect.catchCause((cause) => Effect.logError("the plugin folders watcher stopped", cause)),
     ),
   )
   serve = (port) => {

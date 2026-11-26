@@ -68,8 +68,19 @@ export type PluginStatus = typeof PluginStatus.Type
 export const HostLog = Schema.Struct({ id: Schema.String, line: Schema.String })
 export type HostLog = typeof HostLog.Type
 
+// The reason is the check's own message: a plugin whose tsconfig.json cannot be read.
+export class PluginCheckFailed extends Schema.TaggedError<PluginCheckFailed>()(
+  "PluginCheckFailed",
+  { reason: Schema.String },
+) {}
+
+export class PluginNotCreated extends Schema.TaggedError<PluginNotCreated>()("PluginNotCreated", {
+  reason: Schema.String,
+}) {}
+
 export const PluginRpcs = RpcGroup.make(
   // Each plugin as soon as it is compiled or failed: one whose dependencies install comes last.
+  // The stream stays open: a plugin whose files change, or that `plugin.reload` names, comes again with its new bundle, which replaces the earlier entry with its id.
   Rpc.make("plugin.list", { success: UserPlugin, stream: true }),
   Rpc.make("plugin.reportFailure", { payload: PluginFailure }),
   // Oldest first; empty when the plugin never failed.
@@ -81,6 +92,24 @@ export const PluginRpcs = RpcGroup.make(
   Rpc.make("plugin.lock", {
     payload: { id: Schema.String },
     error: Schema.Union([PluginNotFound, PluginNotLocked]),
+  }),
+  // Compiles both halves again and swaps the running ones; the status is what the plugin reached.
+  Rpc.make("plugin.reload", {
+    payload: { id: Schema.String },
+    success: PluginStatus,
+    error: PluginNotFound,
+  }),
+  // One line per type error, `file(line,column): TSxxxx: message`; empty when the plugin type-checks.
+  Rpc.make("plugin.check", {
+    payload: { id: Schema.String },
+    success: Schema.Array(Schema.String),
+    error: Schema.Union([PluginNotFound, PluginCheckFailed]),
+  }),
+  // The path of the new plugin's folder.
+  Rpc.make("plugin.create", {
+    payload: { id: Schema.String },
+    success: Schema.String,
+    error: PluginNotCreated,
   }),
 )
 export class PluginActivateFailed extends Schema.TaggedError<PluginActivateFailed>()(

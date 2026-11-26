@@ -75,7 +75,7 @@ _Avoid_: prompt, survey
 Typed, namespaced metadata attached to a session or a project, written by plugins, the CLI or the agent.
 
 **Skill**:
-A folder of instructions an agent reads when its task calls for it, in the harness's user skills folder. ivin ships its own, `ivin-customize`, and installs it there; a skill of the same name that ivin did not write is left as it is.
+A folder of instructions an agent reads when its task calls for it, in the harness's user skills folder. ivin ships its own, `ivin-customize` and `ivin-plugin`, and installs them there; a skill of the same name that ivin did not write is left as it is.
 
 **Agent command**:
 A skill or a command of the harness itself that the user runs by starting a message with `/name`, such as `/compact`; the harness runs it, ivin only lists them in the composer. Each says whether it is a skill and where it comes from: the project, the user, a plugin or the harness.
