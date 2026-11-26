@@ -39,8 +39,77 @@ export const UserPlugin = Schema.Union([
     views: Schema.Array(ViewDeclaration),
   }),
   Schema.TaggedStruct("failed", { id: Schema.String, reason: Schema.String }),
+  // The plugin is gone from the window: disabled, deleted, or no longer trusted.
+  Schema.TaggedStruct("removed", { id: Schema.String }),
 ])
 export type UserPlugin = typeof UserPlugin.Type
+
+// A file of a project plugin against the version the user trusted; every file of a plugin never trusted is `A`.
+export const PluginFileChange = Schema.Struct({
+  path: Schema.String,
+  status: Schema.Literals(["A", "M", "D"]),
+})
+export type PluginFileChange = typeof PluginFileChange.Type
+
+export const ProjectPluginState = Schema.Literals(["new", "changed", "trusted"])
+export type ProjectPluginState = typeof ProjectPluginState.Type
+
+// A plugin found in a trusted project's `.ivin/plugins/`.
+export const ProjectPlugin = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  // `new`: never trusted, not running. `changed`: the trusted version runs, the files on disk wait for trust. `trusted`: the files on disk run.
+  state: ProjectPluginState,
+  // The hash of the files on disk, to hand back to `plugin.trust`.
+  hash: Schema.String,
+  files: Schema.Array(PluginFileChange),
+  // Unified diff of the changed text files against the trusted version; empty for a new plugin.
+  diff: Schema.String,
+  // The manifest's permissions differ from the trusted version's: full trust does not cover this change.
+  permissionsChanged: Schema.Boolean,
+  // The permissions the manifest declares, as written.
+  permissions: Schema.Array(Schema.String),
+})
+export type ProjectPlugin = typeof ProjectPlugin.Type
+
+// A change that ran without a question because the project has full trust.
+export const ProjectPluginChange = Schema.Struct({
+  id: Schema.String,
+  name: Schema.String,
+  hash: Schema.String,
+  // Epoch milliseconds.
+  at: Schema.Number,
+  isNew: Schema.Boolean,
+  files: Schema.Array(PluginFileChange),
+  diff: Schema.String,
+  seen: Schema.Boolean,
+})
+export type ProjectPluginChange = typeof ProjectPluginChange.Type
+
+export const ProjectPlugins = Schema.Struct({
+  // The project's folder.
+  project: Schema.String,
+  projectName: Schema.String,
+  fullTrust: Schema.Boolean,
+  plugins: Schema.Array(ProjectPlugin),
+  changes: Schema.Array(ProjectPluginChange),
+})
+export type ProjectPlugins = typeof ProjectPlugins.Type
+
+// The content on disk is no longer the one the caller saw: read the state again.
+export class PluginContentChanged extends Schema.TaggedError<PluginContentChanged>()(
+  "PluginContentChanged",
+  { id: Schema.String },
+) {}
+
+// Why the window starts with plugins off, shown once by the window.
+export const StartupNotice = Schema.Union([
+  Schema.TaggedStruct("safeForced", {}),
+  Schema.TaggedStruct("safeAfterCrash", {}),
+  // `plugins`: ids the window was reloaded without after it stopped answering.
+  Schema.TaggedStruct("reloadedWithout", { plugins: Schema.Array(Schema.String) }),
+])
+export type StartupNotice = typeof StartupNotice.Type
 
 export const PluginFailure = Schema.Struct({ id: Schema.String, reason: Schema.String })
 export type PluginFailure = typeof PluginFailure.Type
@@ -100,6 +169,21 @@ export const PluginRpcs = RpcGroup.make(
     success: Schema.Array(Schema.String),
   }),
   Rpc.make("plugin.status", { success: Schema.Array(PluginStatus) }),
+  // Turns a plugin off or on, also for the window and server half that run; kept across relaunches.
+  Rpc.make("plugin.setEnabled", {
+    payload: { id: Schema.String, enabled: Schema.Boolean },
+    error: PluginNotFound,
+  }),
+  // The plugins of every trusted project, again on each change; empty list when no project ships one.
+  Rpc.make("plugin.projectPlugins", { success: Schema.Array(ProjectPlugins), stream: true }),
+  Rpc.make("plugin.trust", {
+    payload: { project: Schema.String, id: Schema.String, hash: Schema.String },
+    error: Schema.Union([PluginNotFound, PluginContentChanged]),
+  }),
+  Rpc.make("plugin.setFullTrust", {
+    payload: { project: Schema.String, enabled: Schema.Boolean },
+  }),
+  Rpc.make("plugin.markChangesSeen", { payload: { project: Schema.String } }),
   Rpc.make("plugin.lock", {
     payload: { id: Schema.String },
     error: Schema.Union([PluginNotFound, PluginNotLocked]),
