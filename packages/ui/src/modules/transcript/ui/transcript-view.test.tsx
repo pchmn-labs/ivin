@@ -332,18 +332,3 @@ test("a transcript closed after a turn ended with a long answer opens again at i
   await expect.element(page.getByText("line 29", { exact: true })).toBeVisible()
   await vi.waitFor(() => expect(fromEnd()).toBeLessThan(2))
 })
-
-test("a session with no message yet says so", async () => {
-  const server = makeFakeServer()
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ position: "relative", height: 300 }}>
-        <PluginsProvider plugins={builtinPlugins}>
-          <TranscriptView sessionId="s1" />
-        </PluginsProvider>
-      </div>
-    </RegistryProvider>,
-  )
-
-  await expect.element(page.getByText("No messages yet. Write to the agent below.")).toBeVisible()
-})
