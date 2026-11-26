@@ -445,3 +445,56 @@ body {
   color: var(--iv-text-faint);
   font-size: var(--iv-text-xs);
 }
+
+.proto-sep {
+  color: var(--iv-text-faint);
+}
+
+.proto-branch-trigger {
+  margin-left: 0;
+}
+
+.proto-column--projects {
+  flex: 0.8;
+}
+
+.proto-columns:focus {
+  outline: none;
+}
+
+.iv-composer-menu__item[data-dim] {
+  background: var(--iv-bg-hover);
+}
+
+.proto-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--iv-space-1);
+  padding: var(--iv-space-2) var(--iv-space-2) 0;
+}
+
+.proto-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  height: 22px;
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-md);
+  background: transparent;
+  color: var(--iv-text-muted);
+  font: inherit;
+  font-size: var(--iv-text-sm);
+  transition: background-color var(--iv-duration-fast) ease-out;
+}
+
+.proto-chip[data-active] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .proto-chip:not([data-active]):hover {
+    background: var(--iv-bg-hover);
+  }
+}

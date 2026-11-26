@@ -7,16 +7,16 @@ import "./picker.css"
 import "./prototype.css"
 import { Harness } from "./harness.tsx"
 import { Scene } from "./scene.tsx"
-import { ByScope, ProjectsFirst, ScopeTabs } from "./riff.tsx"
+import { Columns, ProjectChips, TwoPickers } from "./riff2.tsx"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Harness
       position="top"
       variants={[
-        { name: "By scope", Component: () => <Scene Location={ByScope} /> },
-        { name: "Scope tabs", Component: () => <Scene Location={ScopeTabs} /> },
-        { name: "Projects first", Component: () => <Scene Location={ProjectsFirst} /> },
+        { name: "Two pickers", Component: () => <Scene Location={TwoPickers} /> },
+        { name: "Columns", Component: () => <Scene Location={Columns} /> },
+        { name: "Project chips", Component: () => <Scene Location={ProjectChips} /> },
       ]}
     />
   </StrictMode>,
