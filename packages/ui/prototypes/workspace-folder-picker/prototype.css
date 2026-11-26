@@ -518,3 +518,16 @@ body {
 .proto-scroll {
   max-height: 296px;
 }
+
+.proto-column--projects {
+  display: flex;
+  flex-direction: column;
+}
+
+.proto-foot {
+  margin-top: auto;
+  padding: var(--iv-space-1) var(--iv-space-3);
+  border-top: 1px solid var(--iv-border);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}

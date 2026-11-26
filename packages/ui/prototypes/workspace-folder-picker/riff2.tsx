@@ -4,6 +4,7 @@ import {
   type ComposerMenuGroup,
 } from "../../src/core/components/composer-menu/composer-menu.tsx"
 import { Icon, type IconName } from "../../src/core/components/icon/icon.tsx"
+import { KeyHints } from "../../src/core/components/key-hints/key-hints.tsx"
 import {
   BASE,
   FOLDERS,
@@ -55,8 +56,8 @@ const whereItems = (project: Project): WhereItem[] => {
         where: { kind: "new" },
         key: "new",
         icon: "plus",
-        label: "New worktree with all projects",
-        description: `${REPOSITORIES.join(" and ")} on one new branch, ivin/9b1e4c07`,
+        label: "New worktrees",
+        description: "One folder with a worktree of each project, all on one new branch",
       },
       ...WORKING_FOLDERS.map((folder, i): WhereItem => ({
         where: { kind: "existing", path: folder.path },
@@ -82,7 +83,13 @@ const whereItems = (project: Project): WhereItem[] => {
   }
   return [
     { where: { kind: "checkout" }, key: "checkout", icon: "folder", label: "Current checkout" },
-    { where: { kind: "new" }, key: "new", icon: "plus", label: "New worktree" },
+    {
+      where: { kind: "new" },
+      key: "new",
+      icon: "plus",
+      label: "New worktree",
+      description: `New branch from ${BASE}, under .worktrees/`,
+    },
     ...(PROJECT_WORKTREES[project] ?? []).map((worktree, i): WhereItem => ({
       where: { kind: "existing", path: worktree.path },
       key: worktree.path,
@@ -103,7 +110,7 @@ const whereLabel = (pick: Pick): { icon: IconName; label: string } => {
       : { icon: "folder", label: "Its folder" }
   }
   if (where.kind === "new") {
-    return { icon: "worktree", label: "New worktree" }
+    return { icon: "worktree", label: project === "all" ? "New worktrees" : "New worktree" }
   }
   return { icon: "worktree", label: project === "all" ? "Worktrees" : "Worktree" }
 }
@@ -439,6 +446,15 @@ export function Columns({ started }: LocationProps) {
                   </div>
                 ))}
               </div>
+              <div className="proto-foot">
+                <KeyHints
+                  hints={[
+                    { key: "↑↓ ←→", label: "Move" },
+                    { key: "↵", label: "Pick" },
+                    { key: "Esc", label: "Close" },
+                  ]}
+                />
+              </div>
             </div>
             <div className="proto-column proto-column--detail">
               {searchable && (
@@ -500,7 +516,6 @@ export function Columns({ started }: LocationProps) {
                   </div>
                 ))}
               </div>
-              <div className="proto-footer">← → between columns · ↩ to pick · esc to close</div>
             </div>
           </div>
         )}
