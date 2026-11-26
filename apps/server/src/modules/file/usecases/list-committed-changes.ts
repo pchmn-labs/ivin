@@ -3,6 +3,7 @@ import { Context, Effect, Layer } from "effect"
 import { type CommitRange, Git, type Tips } from "../../worktree/usecases/git.ts"
 import { gitFailed } from "./git-failed.ts"
 import { rootOf } from "./list-changes.ts"
+import { prefixChange, sessionRoot } from "./repositories.ts"
 
 type Unlisted = Exclude<CommittedChangeList, { kind: "listed" }>
 
@@ -72,9 +73,8 @@ const listBetween = (sessionId: string, root: string, head: string) =>
     return { kind: "listed", root, base, ...listing } as const
   })
 
-export const committedChangesOf = (sessionId: string) =>
+export const committedChangesIn = (sessionId: string, root: string) =>
   Effect.gen(function* () {
-    const root = yield* rootOf(sessionId)
     const tips = yield* (yield* Git).tips(root)
     if (tips === null) return yield* listBetween(sessionId, root, "HEAD")
     const cache = yield* CommittedListings
@@ -87,7 +87,10 @@ export const committedChangesOf = (sessionId: string) =>
     return listing
   })
 
-export const listCommittedChanges = (sessionId: string) =>
+export const committedChangesOf = (sessionId: string) =>
+  rootOf(sessionId).pipe(Effect.flatMap((root) => committedChangesIn(sessionId, root)))
+
+const listRepositoryCommittedChanges = (sessionId: string) =>
   committedChangesOf(sessionId).pipe(
     Effect.map((listing): CommittedChangeList =>
       listing.kind === "listed"
@@ -95,3 +98,29 @@ export const listCommittedChanges = (sessionId: string) =>
         : listing,
     ),
   )
+
+export const listCommittedChanges = (sessionId: string) =>
+  Effect.gen(function* () {
+    const { repositories } = yield* sessionRoot(sessionId)
+    if (repositories === null) return yield* listRepositoryCommittedChanges(sessionId)
+    const listings = []
+    for (const repository of repositories) {
+      listings.push({
+        repository,
+        listing: yield* committedChangesIn(sessionId, repository.folder),
+      })
+    }
+    const listed = listings.flatMap(({ repository, listing }) =>
+      listing.kind === "listed" ? [{ repository, listing }] : [],
+    )
+    if (listed.length === 0) return listings[0]?.listing ?? ({ kind: "not_repository" } as const)
+    return {
+      kind: "listed",
+      base: [...new Set(listed.map(({ listing }) => listing.base))].join(" and "),
+      changes: listed
+        .flatMap(({ repository, listing }) =>
+          listing.changes.map((change) => prefixChange(repository, change)),
+        )
+        .sort((a, b) => a.path.localeCompare(b.path)),
+    } satisfies CommittedChangeList
+  })

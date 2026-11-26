@@ -1,0 +1,37 @@
+.iv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--iv-space-1);
+  padding: 0 var(--iv-space-2);
+}
+
+.iv-chips__option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  height: 22px;
+  padding: 0 var(--iv-space-2);
+  border: 0;
+  border-radius: var(--iv-radius-md);
+  background: transparent;
+  color: var(--iv-text-muted);
+  font: inherit;
+  font-size: var(--iv-text-xs);
+  transition:
+    background-color var(--iv-duration-fast) var(--iv-ease-out),
+    color var(--iv-duration-fast) var(--iv-ease-out);
+}
+
+.iv-chips__option:hover {
+  background: var(--iv-bg-hover);
+}
+
+.iv-chips__option[data-pressed] {
+  background: var(--iv-bg-active);
+  color: var(--iv-text);
+}
+
+.iv-chips__count {
+  color: var(--iv-text-faint);
+  font-variant-numeric: tabular-nums;
+}

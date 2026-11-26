@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
   ChangeList,
+  Chips,
   EmptyMessage,
   ErrorMessage,
   Stack,
@@ -11,16 +12,19 @@ import {
   useOpenDiff,
   type ActionFailure,
   type ChangeGroup,
+  type Change,
   type ChangeListRow,
+  type CommittedChangeListing,
   type DiscardFailure,
   type Session,
 } from "@ivin/plugin-api/ui"
 import { changeItems } from "../rules/change-items.ts"
 import type { Discarding } from "../rules/discarding.ts"
-import { AREA, COMMITTED, UNCOMMITTED, isUncommitted, repositoryGroupId } from "../rules/groups.ts"
+import { AREA, COMMITTED, UNCOMMITTED } from "../rules/groups.ts"
 import { listError } from "../rules/list-error.ts"
 import { FOLDER_DELETED, emptyMessages } from "../rules/messages.ts"
 import type { OnScreen } from "../rules/on-screen.ts"
+import { ALL, inRepository, repositoryChips } from "../rules/repository-filter.ts"
 import { DiscardDialog } from "./discard-dialog.tsx"
 import { ListingFailure } from "./listing-failure.tsx"
 
@@ -28,10 +32,10 @@ interface OpenFailure extends ActionFailure {
   readonly retry: () => void
 }
 
-const groupOfPath = (listing: { repositories?: ReadonlyArray<string> }, path: string) => {
-  const repository = listing.repositories?.find((name) => path.startsWith(`${name}/`))
-  return repository === undefined ? null : repositoryGroupId(repository)
-}
+const filtered = (
+  listing: CommittedChangeListing,
+  changes: ReadonlyArray<Change>,
+): CommittedChangeListing => (listing.kind === "listed" ? { ...listing, changes } : listing)
 
 export function ChangesOf({ session, onScreen }: { session: Session; onScreen: OnScreen }) {
   const { listing, retry } = useChanges(session.id, "working")
@@ -46,7 +50,20 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
   )
   const [discardAllFailure, setDiscardAllFailure] = useState<DiscardFailure | null>(null)
   const focusedRow = useRef<ChangeListRow | null>(null)
-  const changes = useMemo(() => (listing.kind === "listed" ? listing.changes : []), [listing])
+  const [pickedRepository, setPickedRepository] = useState("")
+  const allChanges = useMemo(() => (listing.kind === "listed" ? listing.changes : []), [listing])
+  const listed = committed.listing.kind === "listed" ? committed.listing : null
+  const repositories = listing.kind === "listed" ? listing.repositories : undefined
+  const { chips, picked } = repositoryChips(
+    repositories ?? [],
+    [...allChanges, ...(listed?.changes ?? [])],
+    pickedRepository,
+  )
+  const changes = useMemo(() => inRepository(allChanges, picked), [allChanges, picked])
+  const committedChanges = useMemo(
+    () => inRepository(listed?.changes ?? [], picked),
+    [listed, picked],
+  )
 
   const askOne = (path: string) => {
     const change = changes.find((candidate) => candidate.path === path)
@@ -55,15 +72,11 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
   const askAll = () => {
     if (changes.length > 0) setDiscarding({ all: true, changes })
   }
-  const askRepository = (repository: string) => {
-    const own = changes.filter((change) => change.path.startsWith(`${repository}/`))
-    if (own.length > 0) setDiscarding({ all: true, changes: own })
-  }
   useEffect(() => {
     onScreen.current = {
       discardFocused: () => {
         const row = focusedRow.current
-        if (row !== null && isUncommitted(row.groupId)) askOne(row.id)
+        if (row?.groupId === UNCOMMITTED) askOne(row.id)
       },
       discardAll: askAll,
     }
@@ -72,60 +85,39 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
     }
   })
 
-  const listed = committed.listing.kind === "listed" ? committed.listing : null
   const groups: ReadonlyArray<ChangeGroup> = [
-    ...(listing.kind === "listed" && listing.repositories !== undefined
-      ? listing.repositories.flatMap((repository) => {
-          const own = changes.filter((change) => change.path.startsWith(`${repository}/`))
-          if (own.length === 0) return []
-          return [
-            {
-              id: repositoryGroupId(repository),
-              heading: repository,
-              label: `Uncommitted changes in ${repository}`,
-              items: changeItems(own).map((item) => {
-                const failure = discardFailures.get(item.id)
-                return failure === undefined ? item : { ...item, error: listError(failure) }
-              }),
-              onDiscard: askOne,
-              discardCommand: "changes.discard",
-              discardAll: {
-                label: `Discard all uncommitted changes in ${repository}`,
-                onDiscard: () => askRepository(repository),
-              },
-              ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
+    ...(changes.length > 0
+      ? [
+          {
+            id: UNCOMMITTED,
+            heading: "Uncommitted",
+            label: "Uncommitted changes",
+            items: changeItems(changes).map((item) => {
+              const failure = discardFailures.get(item.id)
+              return failure === undefined ? item : { ...item, error: listError(failure) }
+            }),
+            onDiscard: askOne,
+            discardCommand: "changes.discard",
+            discardAll: {
+              label:
+                picked === ALL
+                  ? "Discard all uncommitted changes"
+                  : `Discard all uncommitted changes in ${picked}`,
+              onDiscard: askAll,
+              command: "changes.discardAll",
             },
-          ]
-        })
-      : changes.length > 0
-        ? [
-            {
-              id: UNCOMMITTED,
-              heading: "Uncommitted",
-              label: "Uncommitted changes",
-              items: changeItems(changes).map((item) => {
-                const failure = discardFailures.get(item.id)
-                return failure === undefined ? item : { ...item, error: listError(failure) }
-              }),
-              onDiscard: askOne,
-              discardCommand: "changes.discard",
-              discardAll: {
-                label: "Discard all uncommitted changes",
-                onDiscard: askAll,
-                command: "changes.discardAll",
-              },
-              ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
-            },
-          ]
-        : []),
-    ...(listed !== null && listed.changes.length > 0
+            ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
+          },
+        ]
+      : []),
+    ...(listed !== null && committedChanges.length > 0
       ? [
           {
             id: COMMITTED,
             heading: "Committed",
             label: "Committed changes",
             title: `Since the branch left ${listed.base}`,
-            items: changeItems(listed.changes),
+            items: changeItems(committedChanges),
           },
         ]
       : []),
@@ -166,13 +158,21 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
     case "failed":
       return <ListingFailure listing={listing} retry={retry} />
     case "listed": {
-      const empty = emptyMessages(changes.length, committed.listing)
+      const empty = emptyMessages(changes.length, filtered(committed.listing, committedChanges))
       return (
         <Stack direction="column" gap={3}>
           {openFailure !== null && (
             <ErrorMessage
               message={openFailure.text}
               {...(openFailure.retryable && { onRetry: openFailure.retry })}
+            />
+          )}
+          {chips.length > 0 && (
+            <Chips
+              label="Repository"
+              options={chips}
+              value={picked}
+              onChange={setPickedRepository}
             />
           )}
           {empty.uncommitted !== null && <EmptyMessage>{empty.uncommitted}</EmptyMessage>}
@@ -184,10 +184,7 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
               selected={
                 diffOnScreen !== null
                   ? {
-                      groupId:
-                        diffOnScreen.kind === "committed"
-                          ? COMMITTED
-                          : (groupOfPath(listing, diffOnScreen.path) ?? UNCOMMITTED),
+                      groupId: diffOnScreen.kind === "committed" ? COMMITTED : UNCOMMITTED,
                       id: diffOnScreen.path,
                     }
                   : null

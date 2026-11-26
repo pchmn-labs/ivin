@@ -1,6 +1,13 @@
 import { _electron as electron, type Locator } from "@playwright/test"
 import { execFileSync } from "node:child_process"
-import { appendFileSync, copyFileSync, mkdirSync, rmSync, writeFileSync } from "node:fs"
+import {
+  appendFileSync,
+  copyFileSync,
+  mkdirSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import { basename, dirname, join, relative } from "node:path"
 import { fileURLToPath } from "node:url"
 import { makeTempDir } from "../e2e/launch-app.ts"
@@ -658,6 +665,54 @@ try {
   await window.waitForTimeout(300)
   await shoot("branch-picker-git-failure")
   await window.keyboard.press("Escape")
+  // A workspace of two repositories with changes in both, for the trust dialog and the Changes chips.
+  const workspaceDir = realpathSync(makeTempDir("workspace"))
+  const gitIn = (dir: string, ...args: string[]) =>
+    execFileSync("git", args, { cwd: dir, env: gitEnv, encoding: "utf8" }).trim()
+  const workspaceRepo = (name: string) => {
+    const dir = join(workspaceDir, name)
+    mkdirSync(join(dir, "src"), { recursive: true })
+    writeFileSync(join(dir, "src/index.ts"), "export {}\n")
+    gitIn(dir, "init", "--quiet", "-b", "main")
+    gitIn(dir, "add", ".")
+    gitIn(dir, "commit", "--quiet", "-m", "first")
+    gitIn(workspaceDir, "init", "--quiet", "--bare", `${dir}.origin.git`)
+    gitIn(dir, "remote", "add", "origin", `${dir}.origin.git`)
+    gitIn(dir, "push", "--quiet", "origin", "main")
+    gitIn(dir, "remote", "set-head", "origin", "main")
+    return dir
+  }
+  const apiDir = workspaceRepo("api")
+  workspaceRepo("web")
+  const workspaceFile = join(workspaceDir, "shop.code-workspace")
+  writeFileSync(workspaceFile, JSON.stringify({ folders: [{ path: "api" }, { path: "web" }] }))
+  await app.evaluate(({ dialog }, path) => {
+    dialog.showOpenDialog = () => Promise.resolve({ canceled: false, filePaths: [path] })
+  }, workspaceFile)
+  await window.getByRole("button", { name: "my-project, switch project" }).click()
+  await window.getByRole("menuitem", { name: "Open folder…" }).click()
+  await window.getByRole("dialog").getByRole("button", { name: "Trust", exact: true }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("trust-workspace")
+  await window.getByRole("dialog").getByRole("button", { name: "Trust", exact: true }).click()
+  await window.getByTestId("project-name").getByText("shop").waitFor()
+  await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
+  // The picker has no worktree choice for a workspace yet, so the session stays on the checkouts.
+  const webDir = join(workspaceDir, "web")
+  writeFileSync(join(apiDir, "src/orders.ts"), "export const orders = []\n")
+  gitIn(apiDir, "add", ".")
+  gitIn(apiDir, "commit", "--quiet", "-m", "orders")
+  writeFileSync(join(apiDir, "src/index.ts"), "export * from './orders.ts'\n")
+  writeFileSync(join(webDir, "src/index.ts"), "export const page = 'orders'\n")
+  writeFileSync(join(webDir, "src/status.ts"), "export const status = 'paid'\n")
+  await sidebar.getByRole("tab", { name: /^Changes/ }).click()
+  await sidebar.getByRole("button", { name: /^web \d/ }).waitFor()
+  await window.waitForTimeout(300)
+  await shoot("changes-workspace")
+  await sidebar.getByRole("button", { name: /^web \d/ }).click()
+  await window.waitForTimeout(300)
+  await shoot("changes-workspace-filtered")
+  await sidebar.getByRole("tab", { name: /^Sessions/ }).click()
   const mod = process.platform === "darwin" ? "Meta" : "Control"
   await window.keyboard.press(`${mod}+T`)
   await window
