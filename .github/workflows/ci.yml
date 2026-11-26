@@ -22,31 +22,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
-      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6
-        with:
-          cache: true
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
-        with:
-          node-version-file: .node-version
-      - run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/test-setup
       - run: pnpm lint
       - run: pnpm format:check
       - run: pnpm typecheck
-      - id: playwright
-        run: echo "version=$(pnpm --filter @ivin/ui exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
-      - id: browsers
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
-      - if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @ivin/ui exec playwright install --with-deps chromium
-      - if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm --filter @ivin/ui exec playwright install-deps chromium
       - if: github.event_name == 'pull_request'
-        run: pnpm vp test run --changed origin/${{ github.base_ref }}
+        run: pnpm vp test run --changed origin/${{ github.base_ref }} --project node --project ui-browser
       - if: github.event_name != 'pull_request'
-        run: pnpm test
+        run: pnpm vp test run --project node --project ui-browser
+
+  frame-rates:
+    name: UI frame rates
+    # Not on a pull request: a shared runner's frame rate varies too much to block a merge.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: ./.github/actions/test-setup
+      - run: pnpm vp test run --project ui-perf
 
   e2e-linux:
     name: Packaged app on linux
