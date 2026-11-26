@@ -441,6 +441,8 @@ test("closing the tabs removes a working folder whose worktrees are all merged, 
       commit(join(merged.workingFolder, "app"), "api.txt")
       git(join(merged.workingFolder, "app"), "push", "--quiet", "origin", "HEAD:main")
       commit(join(unmerged.workingFolder, "app"), "api.txt")
+      // The first push moved main: the same commit made in another second has another hash.
+      git(join(unmerged.workingFolder, "app"), "pull", "--quiet", "--rebase", "origin", "main")
       git(join(unmerged.workingFolder, "app"), "push", "--quiet", "origin", "HEAD:main")
       commit(join(unmerged.workingFolder, "app-2"), "web.txt")
       for (const session of [merged, unmerged])
@@ -454,7 +456,6 @@ test("closing the tabs removes a working folder whose worktrees are all merged, 
   expect(existsSync(unmerged.workingFolder)).toBe(true)
   expect(git(apiApp, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2)
   expect(git(webApp, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2)
-  // Four fetches and some forty git commands, slow while the whole suite runs.
 }, 20_000)
 
 test("one project folder offers a project's own choices: a new worktree, an existing worktree, another branch", async () => {
