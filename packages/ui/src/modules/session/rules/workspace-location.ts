@@ -42,7 +42,10 @@ export const workspaceLocation = (
   const pending =
     !session.started &&
     (choice.kind === "new_worktree" || (!session.inWorktree && project === "all"))
-  if (pending) return { kind: "worktree", label: `${name} / New worktree`, branch: null }
+  if (pending) {
+    const what = project === "all" ? "New worktrees" : "New worktree"
+    return { kind: "worktree", label: `${name} / ${what}`, branch: null }
+  }
   if (!session.inWorktree) {
     return session.branch === null
       ? { kind: "folder", label: name, branch: null }

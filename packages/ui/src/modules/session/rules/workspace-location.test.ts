@@ -13,7 +13,7 @@ const fresh = {
 test("a new session is on a new worktree with all projects until it picks another place", () => {
   expect(workspaceLocation(fresh, { kind: "checkout" }, folders, [])).toEqual({
     kind: "worktree",
-    label: "All projects / New worktree",
+    label: "All projects / New worktrees",
     branch: null,
   })
   expect(workspaceLocation(fresh, { kind: "new_worktree", folder: "/w/web" }, folders, [])).toEqual(

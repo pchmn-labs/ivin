@@ -768,7 +768,7 @@ try {
   await window.waitForTimeout(300)
   await shoot("files-workspace-before-first-message")
   await window.getByTestId("working-folder-picker").click()
-  await window.getByRole("option", { name: "New worktree with all projects" }).waitFor()
+  await window.getByRole("option", { name: "New worktrees" }).waitFor()
   await window.waitForTimeout(300)
   await shoot("working-folder-workspace")
   await window.getByRole("option", { name: "api", exact: true }).click()

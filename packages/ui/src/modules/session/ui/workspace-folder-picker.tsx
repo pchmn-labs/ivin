@@ -120,7 +120,7 @@ export function WorkspaceFolderPicker({
             key: "new",
             choose: { kind: "new_worktree" },
             icon: "plus",
-            label: "New worktree with all projects",
+            label: "New worktrees",
             description: "One folder with a worktree of each project, all on one new branch",
             checked: newHere,
           },
