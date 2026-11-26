@@ -1,5 +1,17 @@
 import { lazy } from "react"
-import { CodeBlock, Disclosure, FilePath, Icon, Stack, Text, defineUi } from "@ivin/plugin-api/ui"
+import {
+  Button,
+  CodeBlock,
+  Disclosure,
+  FilePath,
+  Icon,
+  Stack,
+  TaskRun,
+  Text,
+  defineUi,
+  useOpenView,
+  useTask,
+} from "@ivin/plugin-api/ui"
 import type { SlotProps, ToolCallItem } from "@ivin/plugin-api/ui"
 import { taskIcon, taskTitle } from "./rules/task-params.ts"
 import { filePathArgument, mainArgument, prettyInput } from "./rules/tool-output.ts"
@@ -38,7 +50,43 @@ function ToolHeader({
   )
 }
 
-function ToolCall({ item, sessionId }: SlotProps["transcript.toolCall"]) {
+// The run replaces the call's output, which only says where the subagent's report went.
+function AgentCall({ item, sessionId }: SlotProps["transcript.toolCall"]) {
+  const run = useTask(sessionId, item.toolCallId)
+  const openView = useOpenView()
+  if (run === undefined) return <PlainToolCall item={item} sessionId={sessionId} />
+  const openDetails = () =>
+    void openView(sessionId, "tool-calls/task", {
+      taskId: run.taskId,
+      kind: run.kind,
+      description: run.description,
+    })
+  return (
+    <Disclosure
+      variant="row"
+      data-testid="tool-output"
+      summary={
+        <ToolHeader item={item} main={mainArgument(item.name, item.input)} sessionId={sessionId} />
+      }
+      actions={
+        <Button variant="ghost" size="sm" data-testid="agent-details" onClick={openDetails}>
+          Details
+        </Button>
+      }
+    >
+      <Stack gap={2}>
+        <TaskRun sessionId={sessionId} taskId={run.taskId} preview />
+        {item.status === "error" && item.output !== null && <CodeBlock text={item.output} />}
+      </Stack>
+    </Disclosure>
+  )
+}
+
+function ToolCall(props: SlotProps["transcript.toolCall"]) {
+  return props.item.kind === "agent" ? <AgentCall {...props} /> : <PlainToolCall {...props} />
+}
+
+function PlainToolCall({ item, sessionId }: SlotProps["transcript.toolCall"]) {
   const main = mainArgument(item.name, item.input)
   const showInput = main === null && item.input !== undefined
   const header = <ToolHeader item={item} main={main} sessionId={sessionId} />

@@ -1,6 +1,6 @@
 import type { BackgroundTask } from "@ivin/contracts/session"
 import { expect, test } from "vitest"
-import { knownTasks, runningTasks, type TaskItem } from "./background-tasks.ts"
+import { foregroundAgentRun, knownTasks, runningTasks, type TaskItem } from "./background-tasks.ts"
 
 const listed = (taskId: string): BackgroundTask => ({
   taskId,
@@ -41,4 +41,43 @@ test("the known tasks are the loaded ones and the running ones outside the loade
     "k1",
     "k2",
   ])
+})
+
+const agentCall = (input: Record<string, unknown>, status: "running" | "done" | "error" = "done") =>
+  ({
+    id: "c1",
+    sessionId: "s1",
+    position: 3,
+    at: 10,
+    type: "tool_call",
+    toolCallId: "t1",
+    name: "Agent",
+    kind: "agent",
+    input,
+    status,
+    output: null,
+  }) as const
+
+test("a subagent the turn waits for is a task keyed by its call's id", () => {
+  expect(
+    foregroundAgentRun(agentCall({ description: "Review", prompt: "Look at it" }, "error"), []),
+  ).toMatchObject({
+    taskId: "t1",
+    toolCallId: "t1",
+    kind: "agent",
+    description: "Review",
+    prompt: "Look at it",
+    status: "failed",
+    at: 10,
+  })
+})
+
+test("a subagent started in the background is not a run of its call", () => {
+  expect(foregroundAgentRun(agentCall({ run_in_background: true }), [])).toBeUndefined()
+  const task = { ...loaded("k1"), toolCallId: "t1" }
+  expect(foregroundAgentRun(agentCall({}), [task])).toBeUndefined()
+})
+
+test("a call of another tool is no run", () => {
+  expect(foregroundAgentRun({ ...agentCall({}), kind: "command" }, [])).toBeUndefined()
 })

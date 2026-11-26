@@ -69,10 +69,10 @@ export function AgentRun({
   )
 }
 
-export function HostTaskRun({ sessionId, taskId }: TaskRunProps) {
+export function HostTaskRun({ sessionId, taskId, preview = false }: TaskRunProps) {
   const task = useAtomValue(taskOf(sessionId)(taskId))
   if (task === undefined || task.kind !== "agent") return null
-  return <AgentRun sessionId={sessionId} task={task} lastOnly={false} />
+  return <AgentRun sessionId={sessionId} task={task} lastOnly={preview} />
 }
 
 function RunLine({ task, work }: { task: TaskItem; work: Work }) {

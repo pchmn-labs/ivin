@@ -639,10 +639,11 @@ export interface DiffViewProps {
   readonly onOpenFile: () => void
 }
 
-// A subagent task's whole run, drawn as the agent's turn and followed live.
+// A subagent task's whole run, drawn as the agent's turn and followed live; `preview` draws its last steps.
 export interface TaskRunProps {
   readonly sessionId: string
   readonly taskId: string
+  readonly preview?: boolean
 }
 
 // The composer's column: an alert, the sheets above the field, the field, then the status line.

@@ -1,7 +1,7 @@
 import { Effect } from "effect"
 import { Atom, AsyncResult } from "effect/reactivity"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
-import { knownTasks, type TaskItem } from "../rules/background-tasks.ts"
+import { foregroundAgentRun, knownTasks, type TaskItem } from "../rules/background-tasks.ts"
 import { strongFamily } from "@ivin/state/strong-family"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 import { openSessionsAtom } from "../../session/atoms/open-sessions.ts"
@@ -24,9 +24,13 @@ export const taskOf = strongFamily((sessionId: string) =>
     Atom.readable((get) => {
       const background =
         get(openSessionsAtom).find((session) => session.id === sessionId)?.backgroundTasks ?? []
-      return knownTasks(sessionId, background, get(tasksOf(sessionId))).find(
-        (task) => task.taskId === taskId,
+      const tasks = get(tasksOf(sessionId))
+      const task = knownTasks(sessionId, background, tasks).find((t) => t.taskId === taskId)
+      if (task !== undefined) return task
+      const call = get(transcriptOf(sessionId).list.items).find(
+        (item) => item.type === "tool_call" && item.toolCallId === taskId,
       )
+      return call?.type === "tool_call" ? foregroundAgentRun(call, tasks) : undefined
     }),
   ),
 )
@@ -54,7 +58,7 @@ export const taskShownOf = strongFamily((sessionId: string) =>
 const isStepOf = (toolCallId: string) => (item: TranscriptItem) =>
   "parentToolCallId" in item && item.parentToolCallId === toolCallId
 
-// A background subagent's whole run: what the server stored, then the steps that follow live.
+// A subagent's whole run: what the server stored, then the steps that follow live.
 export const taskStepsOf = strongFamily((sessionId: string) =>
   strongFamily((toolCallId: string) => {
     const stored = serverRuntime.atom(
