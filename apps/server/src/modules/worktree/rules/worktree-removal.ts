@@ -26,12 +26,13 @@ const isInside = (folder: string, path: string) => folder === path || folder.sta
 export const isInUse = (path: string, sessions: readonly SessionUse[]) =>
   sessions.some((session) => session.inUse && isInside(session.workingFolder, path))
 
-// Skips the checkout even when `worktrees` lists it; sweeps the worktrees under `sweptFolder`.
+// Skips the checkout even when `worktrees` lists it; sweeps the worktrees under `sweptFolder`, none
+// when it is null.
 export const removalCandidates = (
   projectPath: string,
   worktrees: readonly { readonly path: string; readonly branch: string | null }[],
   sessions: readonly SessionUse[],
-  sweptFolder = `${projectPath}/.worktrees`,
+  sweptFolder: string | null = `${projectPath}/.worktrees`,
 ): RemovalCandidate[] => {
   const candidates = new Map<string, RemovalCandidate>()
   // A detached HEAD's commits may be reachable from nothing else.
@@ -47,7 +48,7 @@ export const removalCandidates = (
     if (removable.has(path)) candidates.set(path, { path, origin: "closedSession" })
   }
   for (const path of removable) {
-    if (!candidates.has(path) && isInside(path, sweptFolder)) {
+    if (!candidates.has(path) && sweptFolder !== null && isInside(path, sweptFolder)) {
       candidates.set(path, { path, origin: "sweep" })
     }
   }

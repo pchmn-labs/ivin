@@ -7,7 +7,10 @@ import { ProjectStore } from "../../project/usecases/project-store.ts"
 import { checkoutStart } from "../../worktree/rules/workspace-folder.ts"
 import { createWorktree } from "../../worktree/usecases/create-worktree.ts"
 import { Git } from "../../worktree/usecases/git.ts"
-import { listWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
+import {
+  listCheckoutWorktreesOrNone,
+  listWorktreesOrNone,
+} from "../../worktree/usecases/list-worktrees.ts"
 import { SessionFeed } from "./session-feed.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
@@ -42,8 +45,19 @@ const moveTo = (
     })
   })
 
-export const moveToNewWorktree = (session: Session, cause: Cause) =>
+const projectFolder = (session: Session, folder: string) =>
   Effect.gen(function* () {
+    const folders = (yield* (yield* ProjectStore).folders(session.projectPath)) ?? []
+    if (folders.includes(folder)) return folder
+    return yield* new WorktreeNotCreated({ sessionId: session.id, reason: "not_a_project_folder" })
+  })
+
+// On a workspace, `folder` makes a worktree of that project folder alone.
+export const moveToNewWorktree = (session: Session, cause: Cause, folder?: string) =>
+  Effect.gen(function* () {
+    const workspace = isWorkspaceFile(session.projectPath)
+    const repository =
+      workspace && folder !== undefined ? yield* projectFolder(session, folder) : null
     const store = yield* SessionStore
     const feed = yield* SessionFeed
     const runs = yield* SessionRuns
@@ -54,11 +68,14 @@ export const moveToNewWorktree = (session: Session, cause: Cause) =>
       )
 
     yield* setStatus("preparing_worktree")
-    const create = isWorkspaceFile(session.projectPath)
-      ? createWorkspaceWorkingFolder(session.projectPath, session.id).pipe(
-          Effect.map((made) => ({ ...made, worktreesIgnored: true })),
-        )
-      : createWorktree(session.projectPath, session.id)
+    const create =
+      repository !== null
+        ? createWorktree(repository, session.id)
+        : workspace
+          ? createWorkspaceWorkingFolder(session.projectPath, session.id).pipe(
+              Effect.map((made) => ({ ...made, worktreesIgnored: true })),
+            )
+          : createWorktree(session.projectPath, session.id)
     const created = yield* create.pipe(
       Effect.tapError((error) =>
         // Git's own output goes to the transcript as written, like a harness error.
@@ -81,7 +98,14 @@ export const moveToNewWorktree = (session: Session, cause: Cause) =>
 
 export const moveToExistingWorktree = (session: Session, path: string, cause: Cause) =>
   Effect.gen(function* () {
-    const worktree = (yield* listWorktreesOrNone(session.projectPath)).find((w) => w.path === path)
+    let worktree = (yield* listWorktreesOrNone(session.projectPath)).find((w) => w.path === path)
+    if (!worktree && isWorkspaceFile(session.projectPath)) {
+      const git = yield* Git
+      for (const folder of (yield* (yield* ProjectStore).folders(session.projectPath)) ?? []) {
+        if ((yield* git.gitDir(folder)) === null) continue
+        worktree ??= (yield* listCheckoutWorktreesOrNone(folder)).find((w) => w.path === path)
+      }
+    }
     if (!worktree) {
       return yield* new WorktreeNotCreated({ sessionId: session.id, reason: "not_a_worktree" })
     }
@@ -123,13 +147,10 @@ export const moveToCheckout = (session: Session, cause: Cause, folder?: string) 
     let path = session.projectPath
     if (isWorkspaceFile(session.projectPath)) {
       const folders = (yield* (yield* ProjectStore).folders(session.projectPath)) ?? []
-      if (folder !== undefined && !folders.includes(folder)) {
-        return yield* new WorktreeNotCreated({
-          sessionId: session.id,
-          reason: "not_a_project_folder",
-        })
-      }
-      path = folder ?? checkoutStart(folders)?.cwd ?? path
+      path =
+        folder !== undefined
+          ? yield* projectFolder(session, folder)
+          : (checkoutStart(folders)?.cwd ?? path)
     }
     const branch = yield* (yield* Git).currentBranch(path)
     yield* moveTo(session, { path, inWorktree: false, branch }, cause, true)

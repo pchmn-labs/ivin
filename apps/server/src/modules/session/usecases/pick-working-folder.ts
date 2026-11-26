@@ -14,7 +14,8 @@ export const pickWorkingFolder = (sessionId: string, workingFolder: WorkingFolde
     if (isBusy(session)) return yield* new SessionWorking({ sessionId })
     // An agent process keeps the cwd it started in.
     yield* (yield* SessionRuns).stop(sessionId)
-    if (workingFolder.kind === "new_worktree") yield* moveToNewWorktree(session, "pick")
+    if (workingFolder.kind === "new_worktree")
+      yield* moveToNewWorktree(session, "pick", workingFolder.folder)
     else if (workingFolder.kind === "existing_worktree")
       yield* moveToExistingWorktree(session, workingFolder.path, "pick")
     else yield* moveToCheckout(session, "pick", workingFolder.path)

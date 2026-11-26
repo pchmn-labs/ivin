@@ -21,6 +21,7 @@ import { OriginFetch } from "../../worktree/usecases/origin-fetch.ts"
 import { WorkingFolders } from "../../worktree/usecases/working-folders.ts"
 import { checkWorkingFolders } from "./check-working-folder.ts"
 import { SessionRuns } from "./session-runs.ts"
+import { sessionProjectFolder } from "./session-project-folder.ts"
 import { SessionStore } from "./session-store.ts"
 import { SessionTabs } from "./session-tabs.ts"
 
@@ -68,8 +69,8 @@ export const removeMergedWorktrees = (
     if (!worktrees.removeOnTabClose) return
     const uses = sessionUses(projectPath, closedSessionIds, deletedSessions)
     const sessions = isWorkspaceFile(projectPath)
-      ? yield* removeMergedWorkingFolders(projectPath, uses)
-      : yield* removeMergedCheckoutWorktrees(projectPath, uses)
+      ? yield* removeMergedWorkspaceWorktrees(projectPath, uses)
+      : yield* removeMergedCheckoutWorktrees(projectPath, uses, `${projectPath}/.worktrees`)
     if (sessions === null) return
     const deleted = new Set(deletedSessions.map((session) => session.id))
     yield* checkWorkingFolders(
@@ -80,7 +81,11 @@ export const removeMergedWorktrees = (
 
 type SessionUses = ReturnType<typeof sessionUses>
 
-const removeMergedCheckoutWorktrees = (projectPath: string, sessionUses: SessionUses) =>
+const removeMergedCheckoutWorktrees = (
+  projectPath: string,
+  sessionUses: SessionUses,
+  sweptFolder: string | null,
+) =>
   Effect.gen(function* () {
     const git = yield* Git
     if (!(yield* git.hasRemote(projectPath, "origin"))) return null
@@ -93,6 +98,7 @@ const removeMergedCheckoutWorktrees = (projectPath: string, sessionUses: Session
       projectPath,
       yield* listWorktreesOrNone(projectPath),
       sessions,
+      sweptFolder,
     )
 
     yield* Effect.forEach(candidates, ({ path, origin }) =>
@@ -110,6 +116,20 @@ const removeMergedCheckoutWorktrees = (projectPath: string, sessionUses: Session
       ),
     )
     return sessions
+  })
+
+// The worktrees of one project folder a closed session was in, then the working folders. The project
+// folders are not swept: their `.worktrees/` may hold another project's sessions.
+const removeMergedWorkspaceWorktrees = (workspace: string, sessionUses: SessionUses) =>
+  Effect.gen(function* () {
+    const closed = (yield* sessionUses).filter((s) => s.tabJustClosed && s.inWorktree)
+    const folders = new Set<string>()
+    for (const session of closed) {
+      const folder = yield* sessionProjectFolder(session)
+      if (folder !== null) folders.add(folder)
+    }
+    for (const folder of folders) yield* removeMergedCheckoutWorktrees(folder, sessionUses, null)
+    return yield* removeMergedWorkingFolders(workspace, sessionUses)
   })
 
 // A working folder goes only once each of its worktrees could go, and it holds nothing else.

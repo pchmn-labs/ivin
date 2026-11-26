@@ -1,3 +1,4 @@
+import type { WorkingFolderChoice } from "@ivin/contracts/session"
 import type { StartInput } from "@ivin/harness"
 import { Effect } from "effect"
 import {
@@ -336,14 +337,7 @@ const withOrigins = () => {
   }
 }
 
-const sendFirst = (
-  client: Client,
-  sessionId: string,
-  workingFolder?:
-    | { kind: "new_worktree" }
-    | { kind: "checkout"; path: string }
-    | { kind: "existing_worktree"; path: string },
-) =>
+const sendFirst = (client: Client, sessionId: string, workingFolder?: WorkingFolderChoice) =>
   client["session.sendMessage"]({
     sessionId,
     messageId: crypto.randomUUID(),
@@ -461,6 +455,71 @@ test("closing the tabs removes a working folder whose worktrees are all merged, 
   expect(git(apiApp, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2)
   expect(git(webApp, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2)
   // Four fetches and some forty git commands, slow while the whole suite runs.
+}, 20_000)
+
+test("one project folder offers a project's own choices: a new worktree, an existing worktree, another branch", async () => {
+  git(webApp, "branch", "feat/older")
+  const older = join(root, "web-older")
+  git(webApp, "worktree", "add", "--quiet", older, "feat/older")
+  git(apiApp, "branch", "feat/api")
+  const starts: StartInput[] = []
+  const { created, reused, picked } = await withServer(starts, (client) =>
+    Effect.gen(function* () {
+      yield* openTrusted(client)
+      const first = yield* client["session.create"]({ projectPath: workspace })
+      const created = yield* sendFirst(client, first.id, { kind: "new_worktree", folder: webApp })
+      const second = yield* client["session.create"]({ projectPath: workspace })
+      const reused = yield* sendFirst(client, second.id, { kind: "existing_worktree", path: older })
+      const third = yield* client["session.create"]({ projectPath: workspace })
+      yield* client["session.pickWorkingFolder"]({
+        sessionId: third.id,
+        workingFolder: { kind: "checkout", path: apiApp },
+      })
+      const picked = yield* client["session.pickBranch"]({
+        sessionId: third.id,
+        name: "feat/api",
+        remote: false,
+      })
+      return { created, reused, picked }
+    }),
+  )
+
+  expect(created).toMatchObject({ inWorktree: true, branch: `ivin/${created.id.slice(0, 8)}` })
+  expect(created.workingFolder.startsWith(`${webApp}/.worktrees/`)).toBe(true)
+  expect(existsSync(join(worktrees, "ivin"))).toBe(false)
+  expect(reused).toMatchObject({ workingFolder: older, inWorktree: true, branch: "feat/older" })
+  expect(picked).toMatchObject({ workingFolder: apiApp, inWorktree: false, branch: "feat/api" })
+  expect(git(apiApp, "branch", "--show-current")).toBe("feat/api")
+  expect(starts.map((s) => [s.cwd, s.extraDirectories])).toEqual([
+    [created.workingFolder, [apiApp, notes]],
+    [older, [apiApp, notes]],
+  ])
+})
+
+test("closing the tab removes the merged worktree of one project folder, and leaves that folder's other worktrees", async () => {
+  withOrigins()
+  const other = join(webApp, ".worktrees", "other")
+  git(webApp, "worktree", "add", "--quiet", "-b", "other", other)
+  // Merged and clean: a single-folder project's cleanup would sweep it.
+  commit(other, "other.txt")
+  git(other, "push", "--quiet", "origin", "HEAD:main")
+  const { session } = await withServer([], (client) =>
+    Effect.gen(function* () {
+      yield* openTrusted(client)
+      const created = yield* client["session.create"]({ projectPath: workspace })
+      yield* client["tab.open"]({ sessionId: created.id })
+      const session = yield* sendFirst(client, created.id, { kind: "new_worktree", folder: webApp })
+      commit(session.workingFolder, "web.txt")
+      git(session.workingFolder, "pull", "--quiet", "--rebase", "origin", "main")
+      git(session.workingFolder, "push", "--quiet", "origin", "HEAD:main")
+      yield* client["tab.close"]({ sessionId: session.id })
+      yield* (yield* WorktreeCleanup).settled
+      return { session }
+    }),
+  )
+
+  expect(existsSync(session.workingFolder)).toBe(false)
+  expect(existsSync(other)).toBe(true)
 }, 20_000)
 
 const folderName = (path: string) => path.slice(path.lastIndexOf("/") + 1)

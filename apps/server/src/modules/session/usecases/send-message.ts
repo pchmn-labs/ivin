@@ -40,7 +40,7 @@ export const sendMessage = (
     if (found.unreadMessages.length > 0) yield* store.clearUnreadMessages(sessionId)
     if (!found.started) {
       if (workingFolder?.kind === "new_worktree") {
-        yield* moveToNewWorktree(found, "creation")
+        yield* moveToNewWorktree(found, "creation", workingFolder.folder)
       } else if (workingFolder?.kind === "existing_worktree") {
         yield* moveToExistingWorktree(found, workingFolder.path, "choice")
       } else if (workingFolder?.kind === "checkout" && workingFolder.path !== undefined) {

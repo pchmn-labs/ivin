@@ -161,7 +161,11 @@ export class WorkingFolderDeleted extends Schema.TaggedError<WorkingFolderDelete
 export const WorkingFolderChoice = Schema.Union([
   // `path`: one of a workspace's project folders; without it, a workspace gets new worktrees.
   Schema.Struct({ kind: Schema.Literal("checkout"), path: Schema.optionalKey(Schema.String) }),
-  Schema.Struct({ kind: Schema.Literal("new_worktree") }),
+  // `folder`: on a workspace, a worktree of that project folder alone, instead of new worktrees.
+  Schema.Struct({
+    kind: Schema.Literal("new_worktree"),
+    folder: Schema.optionalKey(Schema.String),
+  }),
   Schema.Struct({ kind: Schema.Literal("existing_worktree"), path: Schema.String }),
 ])
 export type WorkingFolderChoice = typeof WorkingFolderChoice.Type
