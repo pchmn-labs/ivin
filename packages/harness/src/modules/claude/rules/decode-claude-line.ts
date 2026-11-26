@@ -153,6 +153,9 @@ const fromAssistant = (line: unknown, parent: string | null): HarnessOutput[] =>
 
 const INTERRUPTION_TEXT = "[Request interrupted by user"
 
+// The result of a call whose subagent reported through SubagentHandback only points to that report.
+const HANDBACK_POINTER = "(its SubagentHandback call)"
+
 // The result of a call that started a background task says where the task writes its output.
 const TASK_OUTPUT_FILE = /(\/\S*\/tasks\/([^/\s]+)\.output)/
 
@@ -172,7 +175,7 @@ const fromUser = (line: unknown, parent: string | null): HarnessOutput[] => {
         {
           type: "tool_result",
           toolCallId: block.tool_use_id,
-          output,
+          output: output.includes(HANDBACK_POINTER) ? "" : output,
           isError: block.is_error ?? false,
           ...(parent ? { parentToolCallId: parent } : {}),
           raw: block,

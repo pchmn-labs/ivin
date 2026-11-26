@@ -1,6 +1,8 @@
 import { Effect } from "effect"
 import { Atom, AsyncResult } from "effect/reactivity"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
+
+type ToolCallItem = Extract<TranscriptItem, { type: "tool_call" }>
 import { foregroundAgentRun, knownTasks, type TaskItem } from "../rules/background-tasks.ts"
 import { strongFamily } from "@ivin/state/strong-family"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
@@ -28,9 +30,9 @@ export const taskOf = strongFamily((sessionId: string) =>
       const task = knownTasks(sessionId, background, tasks).find((t) => t.taskId === taskId)
       if (task !== undefined) return task
       const call = get(transcriptOf(sessionId).list.items).find(
-        (item) => item.type === "tool_call" && item.toolCallId === taskId,
+        (item): item is ToolCallItem => item.type === "tool_call" && item.toolCallId === taskId,
       )
-      return call?.type === "tool_call" ? foregroundAgentRun(call, tasks) : undefined
+      return call === undefined ? undefined : foregroundAgentRun(call, tasks)
     }),
   ),
 )

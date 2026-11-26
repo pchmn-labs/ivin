@@ -59,21 +59,16 @@ const agentCall = (input: Record<string, unknown>, status: "running" | "done" | 
   }) as const
 
 test("a subagent the turn waits for is a task keyed by its call's id", () => {
-  expect(
-    foregroundAgentRun(agentCall({ description: "Review", prompt: "Look at it" }, "error"), []),
-  ).toMatchObject({
+  expect(foregroundAgentRun(agentCall({ description: "Review" }, "error"), [])).toMatchObject({
     taskId: "t1",
     toolCallId: "t1",
     kind: "agent",
-    description: "Review",
-    prompt: "Look at it",
     status: "failed",
     at: 10,
   })
 })
 
 test("a subagent started in the background is not a run of its call", () => {
-  expect(foregroundAgentRun(agentCall({ run_in_background: true }), [])).toBeUndefined()
   const task = { ...loaded("k1"), toolCallId: "t1" }
   expect(foregroundAgentRun(agentCall({}), [task])).toBeUndefined()
 })

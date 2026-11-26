@@ -15,28 +15,28 @@ import { EarlierStepsLine, ElapsedClock, PromptBubble, StepView } from "./turn-w
 export function AgentRun({
   sessionId,
   task,
-  lastOnly,
+  preview,
 }: {
   sessionId: string
   task: TaskItem
-  lastOnly: boolean
+  preview: boolean
 }) {
   const steps = useAtomValue(taskStepsOf(sessionId)(task.toolCallId))
   const work = useMemo(() => turnWork(task.id, steps, steps), [task.id, steps])
   const running = task.status === "running"
   // The preview and the sheet draw the same steps, each with its own folds.
   const [folds, setFolds] = useAtom(foldsOf(sessionId))
-  const scope = lastOnly ? "peek" : "sheet"
+  const scope = preview ? "peek" : "sheet"
   const toggle = (key: string, open: boolean) => setFolds(new Map(folds).set(key, !open))
-  const earlier = lastOnly ? earlierSteps(work, true) : []
+  const earlier = preview ? earlierSteps(work, true) : []
   const earlierKey = `${scope}:${task.id}:earlier`
   const earlierOpen = folds.get(earlierKey) ?? false
   const firstShown = earlierOpen ? 0 : earlier.length
 
   return (
     <div className="iv-turn" data-testid="task-run" data-live={running || undefined}>
-      {!lastOnly && task.prompt !== undefined && <PromptBubble prompt={task.prompt} />}
-      {!lastOnly && <RunLine task={task} work={work} />}
+      {!preview && task.prompt !== undefined && <PromptBubble prompt={task.prompt} />}
+      {!preview && <RunLine task={task} work={work} />}
       {work.steps.length > 0 && (
         <div className="iv-turn__timeline">
           {earlier.length > 0 && (
@@ -50,7 +50,7 @@ export function AgentRun({
             const index = firstShown + shownIndex
             const current = running && index === work.steps.length - 1
             const stepKey = `${scope}:${step.id}`
-            const open = folds.get(stepKey) ?? (lastOnly ? current : true)
+            const open = folds.get(stepKey) ?? (preview ? current : true)
             return (
               <StepView
                 key={step.id}
@@ -72,7 +72,7 @@ export function AgentRun({
 export function HostTaskRun({ sessionId, taskId, preview = false }: TaskRunProps) {
   const task = useAtomValue(taskOf(sessionId)(taskId))
   if (task === undefined || task.kind !== "agent") return null
-  return <AgentRun sessionId={sessionId} task={task} lastOnly={preview} />
+  return <AgentRun sessionId={sessionId} task={task} preview={preview} />
 }
 
 function RunLine({ task, work }: { task: TaskItem; work: Work }) {

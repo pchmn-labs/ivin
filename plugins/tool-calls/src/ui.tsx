@@ -1,4 +1,4 @@
-import { lazy } from "react"
+import { lazy, type ReactNode } from "react"
 import {
   Button,
   CodeBlock,
@@ -21,10 +21,12 @@ function ToolHeader({
   item,
   main,
   sessionId,
+  action,
 }: {
   item: ToolCallItem
   main: string | null
   sessionId: string
+  action?: ReactNode
 }) {
   const path = filePathArgument(item.name, item.input)
   return (
@@ -36,6 +38,7 @@ function ToolHeader({
           {path === null ? (main ?? "") : <FilePath sessionId={sessionId} path={path} />}
         </Text>
       </Stack>
+      {action}
       {item.status === "running" && (
         <Text size="sm" tone="muted" data-testid="tool-status">
           <Icon name="loader" size={12} label="running" />
@@ -50,33 +53,36 @@ function ToolHeader({
   )
 }
 
-// The run replaces the call's output, which only says where the subagent's report went.
 function AgentCall({ item, sessionId }: SlotProps["transcript.toolCall"]) {
   const run = useTask(sessionId, item.toolCallId)
   const openView = useOpenView()
   if (run === undefined) return <PlainToolCall item={item} sessionId={sessionId} />
-  const openDetails = () =>
-    void openView(sessionId, "tool-calls/task", {
-      taskId: run.taskId,
-      kind: run.kind,
-      description: run.description,
-    })
+  const main = mainArgument(item.name, item.input)
+  const details = (
+    <Button
+      variant="ghost"
+      size="sm"
+      data-testid="agent-details"
+      onClick={() =>
+        void openView(sessionId, "tool-calls/task", {
+          taskId: run.taskId,
+          kind: run.kind,
+          description: main ?? item.name,
+        })
+      }
+    >
+      Details
+    </Button>
+  )
   return (
     <Disclosure
       variant="row"
       data-testid="tool-output"
-      summary={
-        <ToolHeader item={item} main={mainArgument(item.name, item.input)} sessionId={sessionId} />
-      }
-      actions={
-        <Button variant="ghost" size="sm" data-testid="agent-details" onClick={openDetails}>
-          Details
-        </Button>
-      }
+      summary={<ToolHeader item={item} main={main} sessionId={sessionId} action={details} />}
     >
       <Stack gap={2}>
         <TaskRun sessionId={sessionId} taskId={run.taskId} preview />
-        {item.status === "error" && item.output !== null && <CodeBlock text={item.output} />}
+        {item.output ? <CodeBlock text={item.output} /> : null}
       </Stack>
     </Disclosure>
   )

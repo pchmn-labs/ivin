@@ -111,7 +111,7 @@ test("a subagent the turn waited for shows its run under its row, and Details op
   }
   await mount(
     {
-      ...tool("done", "This agent's report was delivered to you as a message"),
+      ...tool("done", ""),
       id: "i3",
       name: "Agent",
       kind: "agent",
@@ -122,14 +122,14 @@ test("a subagent the turn waited for shows its run under its row, and Details op
       useOpenView: () => async (_sessionId, view, params) => void opened.push({ view, params }),
     },
   )
-  await page.getByText("Review the branch").click()
-  await expect.element(page.getByText("run t0 preview")).toBeVisible()
-  await expect.element(page.getByText("This agent's report")).not.toBeInTheDocument()
   await page.getByTestId("agent-details").click()
+  await expect.element(page.getByText("run t0 preview")).not.toBeInTheDocument()
   expect(opened).toEqual([
     {
       view: "tool-calls/task",
       params: { taskId: "t0", kind: "agent", description: "Review the branch" },
     },
   ])
+  await page.getByText("Review the branch").click()
+  await expect.element(page.getByText("run t0 preview")).toBeVisible()
 })
