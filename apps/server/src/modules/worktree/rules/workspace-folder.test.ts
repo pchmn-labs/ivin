@@ -12,6 +12,7 @@ test("folders sharing a parent start in it; others in the first, with the rest a
     cwd: "/a/api",
     extraDirectories: ["/b/web", "/c/db"],
   })
+  expect(checkoutStart(["/w/api"])).toEqual({ cwd: "/w/api", extraDirectories: [] })
   expect(checkoutStart([])).toBeNull()
 })
 

@@ -17,6 +17,7 @@ import {
   rowDecoder,
   type Report,
 } from "../../../shared/adapters/row-decoding.ts"
+import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
 import { SessionStore } from "../usecases/session-store.ts"
 
 interface SessionRow {
@@ -131,7 +132,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
             session.id,
             session.projectPath,
             session.workingFolder,
-            Number(session.inWorktree),
+            isWorkspaceFile(session.projectPath) ? Number(session.inWorktree) : null,
             session.branch,
             session.title,
             session.harness,
@@ -276,7 +277,7 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
       setWorkingFolder: (id, workingFolder, branch, inWorktree) =>
         Effect.sync(() => {
           db.prepare(
-            `UPDATE sessions SET working_folder = ?, branch = ?, in_worktree = ?,
+            `UPDATE sessions SET working_folder = ?, branch = ?, in_worktree = CASE WHEN project_path LIKE '%.code-workspace' THEN COALESCE(?, in_worktree) END,
              working_folder_deleted = 0 WHERE id = ?`,
           ).run(workingFolder, branch, inWorktree === undefined ? null : Number(inWorktree), id)
         }),

@@ -62,12 +62,13 @@ export const createWorkspaceWorkingFolder = (workspace: string, sessionId: strin
         yield* git.removeWorktree(done.repository, done.path).pipe(Effect.ignore)
       yield* files.remove(path)
     })
-    for (const [index, repository] of repositories.entries()) {
-      const worktree = `${path}/${names[index]}`
-      yield* git
-        .createWorktree(repository, { path: worktree, branch, base: bases[index]! })
-        .pipe(Effect.tapError(() => undo))
-      created.push({ repository, path: worktree })
-    }
+    // Also on interruption and on a defect, not only on a git error.
+    yield* Effect.gen(function* () {
+      for (const [index, repository] of repositories.entries()) {
+        const worktree = `${path}/${names[index]}`
+        yield* git.createWorktree(repository, { path: worktree, branch, base: bases[index]! })
+        created.push({ repository, path: worktree })
+      }
+    }).pipe(Effect.onError(() => undo))
     return { path, branch }
   })

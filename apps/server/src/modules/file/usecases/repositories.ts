@@ -57,7 +57,6 @@ export const prefixStatus = (repository: Repository, entry: GitStatusEntry): Git
   path: prefixed(repository, entry.path),
 })
 
-// The repository a path of the working folder is in, and the path inside it.
 export const repositoryOfPath = (repositories: readonly Repository[], path: string) => {
   const slash = path.indexOf("/")
   if (slash === -1) return null

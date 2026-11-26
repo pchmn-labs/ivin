@@ -42,8 +42,7 @@ const checkoutOf = (folder: string): string | null => {
   }
 }
 
-// The working folder of a session on a workspace, `<root>/<workspace>/<branch>`, that `folder` is
-// or is inside; null elsewhere.
+// Mirrors `workingFolderPath` in the worktree rules.
 const workingFolderOf = (root: string, folder: string): string | null => {
   const base = root.endsWith("/") ? root : `${root}/`
   if (!folder.startsWith(base)) return null
@@ -51,7 +50,7 @@ const workingFolderOf = (root: string, folder: string): string | null => {
   return workspace && branch ? join(root, workspace, branch) : null
 }
 
-const repositoriesIn = (workingFolder: string): string[] => {
+const subfoldersOf = (workingFolder: string): string[] => {
   try {
     return readdirSync(workingFolder, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
@@ -64,7 +63,7 @@ const repositoriesIn = (workingFolder: string): string[] => {
 export const layerFsProjectTrust = Layer.effect(ProjectTrust)(
   Effect.gen(function* () {
     const store = yield* ProjectStore
-    const root = realPath((yield* WorkingFolderRoot).path)
+    const workingFolderRoot = (yield* WorkingFolderRoot).path
     return {
       isTrusted: (folder) =>
         store.trustedProjects.pipe(
@@ -73,15 +72,15 @@ export const layerFsProjectTrust = Layer.effect(ProjectTrust)(
             const trustedReal = trusted.map(realPath)
             const place = { folder: real, checkout: checkoutOf(real) }
             if (isInTrustedProject(trustedReal, place)) return true
-            // A working folder holds worktrees only; one of a trusted repository vouches for it.
-            const working = workingFolderOf(root, real)
+            // A working folder's own folder is trusted when each of its worktrees is of a trusted repository.
+            const working = workingFolderOf(realPath(workingFolderRoot), real)
+            if (working === null) return false
+            const worktrees = subfoldersOf(working).filter((sub) => checkoutOf(sub) !== null)
             return (
-              working !== null &&
-              repositoriesIn(working).some((repository) =>
-                isInTrustedProject(trustedReal, {
-                  folder: repository,
-                  checkout: checkoutOf(repository),
-                }),
+              worktrees.length > 0 &&
+              real === working &&
+              worktrees.every((sub) =>
+                isInTrustedProject(trustedReal, { folder: sub, checkout: checkoutOf(sub) }),
               )
             )
           }),

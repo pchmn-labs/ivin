@@ -5,9 +5,7 @@ import { ProjectStore } from "../../project/usecases/project-store.ts"
 import { checkoutStart } from "../../worktree/rules/workspace-folder.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 
-// What the agent may use besides its working folder: of a workspace, the folders that are not in
-// the working folder (the others than the first when on the checkouts, the non-repositories in a
-// working folder of worktrees), at their real paths.
+// Workspace folders outside the working folder: all but the start on the checkouts, else the non-repositories.
 export const extraDirectoriesOf = (session: Session) =>
   Effect.gen(function* () {
     if (!isWorkspaceFile(session.projectPath)) return []

@@ -6,6 +6,7 @@ const nameOf = (folder: string) => folder.slice(folder.lastIndexOf("/") + 1)
 export const checkoutStart = (folders: readonly string[]) => {
   const [first] = folders
   if (first === undefined) return null
+  if (folders.length === 1) return { cwd: first, extraDirectories: [] as string[] }
   const parent = parentOf(first)
   if (folders.every((folder) => parentOf(folder) === parent)) {
     return { cwd: parent, extraDirectories: [] as string[] }

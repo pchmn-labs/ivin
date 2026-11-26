@@ -34,11 +34,11 @@ export const diffAmong = (
 
 export const readDiff = (sessionId: string, path: string) =>
   Effect.gen(function* () {
-    if (relativeNames(path) === null)
-      return yield* new PathOutsideWorkingFolder({ sessionId, path })
+    const names = relativeNames(path)
+    if (names === null) return yield* new PathOutsideWorkingFolder({ sessionId, path })
     const { repositories } = yield* sessionRoot(sessionId)
     if (repositories !== null) {
-      const inside = repositoryOfPath(repositories, relativeNames(path)!.join("/"))
+      const inside = repositoryOfPath(repositories, names.join("/"))
       if (inside === null) return { kind: "unchanged" } satisfies FileDiff
       const listing = yield* (yield* ChangeFeed)
         .listChanges(inside.repository.folder)

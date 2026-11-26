@@ -93,6 +93,7 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
                 label: `Discard all uncommitted changes in ${repository}`,
                 onDiscard: () => askRepository(repository),
               },
+              ...(discardAllFailure !== null && { error: listError(discardAllFailure) }),
             },
           ]
         })
