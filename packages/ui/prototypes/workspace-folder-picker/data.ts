@@ -70,7 +70,8 @@ export const branchesLabel = (folder: WorkingFolder) =>
   folder.branch ?? folder.repositories.map((r) => `${r.name} ${r.branch}`).join(" · ")
 
 // A project folder chosen alone works like a project of its own.
-export type Project = "all" | string
+// "all", or the path of one project folder.
+export type Project = string
 
 export type Where =
   | { readonly kind: "new" }

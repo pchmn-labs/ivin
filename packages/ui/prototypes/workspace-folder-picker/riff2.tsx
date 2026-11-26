@@ -115,7 +115,7 @@ const branchOf = (pick: Pick): ReactNode => {
     const label =
       project === "all"
         ? branchesLabel(workingFolderOf(where.path))
-        : PROJECT_WORKTREES[project]!.find((w) => w.path === where.path)!.branch
+        : PROJECT_WORKTREES[project].find((w) => w.path === where.path)!.branch
     return <span className="proto-mono">{label}</span>
   }
   return null
@@ -356,7 +356,7 @@ export function Columns({ started }: LocationProps) {
       event.preventDefault()
       const next = (index + (event.key === "ArrowDown" ? 1 : -1) + rows) % rows
       if (column === 0) {
-        setProject(ALL_PROJECTS[next]!)
+        setProject(ALL_PROJECTS[next])
         setActive(0)
       } else setActive(next)
     } else if (event.key === "ArrowRight" && column === 0) {
@@ -368,7 +368,7 @@ export function Columns({ started }: LocationProps) {
     } else if (event.key === "Enter") {
       event.preventDefault()
       if (column === 0) setColumn(1)
-      else choose(items[active]!.where)
+      else choose(items[active].where)
     } else if (event.key === "Escape") {
       event.preventDefault()
       popup.close()
@@ -488,7 +488,7 @@ export function ProjectChips({ started }: LocationProps) {
   const step = (by: 1 | -1) =>
     setProject(
       (p) =>
-        ALL_PROJECTS[(ALL_PROJECTS.indexOf(p) + by + ALL_PROJECTS.length) % ALL_PROJECTS.length]!,
+        ALL_PROJECTS[(ALL_PROJECTS.indexOf(p) + by + ALL_PROJECTS.length) % ALL_PROJECTS.length],
     )
   return (
     <span className="proto-location">
