@@ -503,7 +503,9 @@ export const makeFakeServer = (
     after: number
   }) =>
     Effect.sync(() => {
-      const items = itemsOf(sessionId)
+      const items = itemsOf(sessionId).filter(
+        (item) => !("parentToolCallId" in item) || item.parentToolCallId === undefined,
+      )
       const anchor =
         position === null ? items.length : items.findIndex((i) => i.position >= position)
       const start = Math.max(0, anchor - before)

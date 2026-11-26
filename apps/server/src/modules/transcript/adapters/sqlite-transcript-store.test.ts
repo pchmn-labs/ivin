@@ -60,6 +60,16 @@ test("a small transcript comes back whole with nothing before or after", () => {
   expect(page).toMatchObject({ hasBefore: false, hasAfter: false })
 })
 
+test("a page leaves out a subagent's steps, which load with its task", () => {
+  const steps = itemsAt([1, 3, 5, 7]).map((item, i) =>
+    i % 2 === 0 ? item : { ...item, id: `step${i}`, parentToolCallId: "agent" },
+  )
+  const page = pageOf(steps, null, 1, 0)
+
+  expect(ids(page)).toEqual(["i2"])
+  expect(page).toMatchObject({ hasBefore: true, hasAfter: false })
+})
+
 test("an empty transcript gives an empty page", () => {
   expect(pageOf([], null, 5, 5)).toEqual({ items: [], hasBefore: false, hasAfter: false })
 })

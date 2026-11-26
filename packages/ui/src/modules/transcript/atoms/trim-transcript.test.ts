@@ -1,3 +1,5 @@
+import { Effect } from "effect"
+import { AtomRegistry } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
@@ -59,4 +61,22 @@ test("trimming a transcript that holds one page changes nothing", async () => {
   await Promise.resolve()
   expect(ids()).toHaveLength(PAGE_SIZE)
   expect(registry.get(transcript.paging).hasBefore).toBe(false)
+})
+
+test("trimming keeps the last page of the main agent's items, however many subagent steps follow them", async () => {
+  const { registry, transcript, ids } = await setup(PAGE_SIZE * 2)
+  registry.set(loadItemsBeforeAtom, "s1")
+  await vi.waitFor(() => expect(ids()).toHaveLength(PAGE_SIZE * 2))
+  const steps = Array.from({ length: PAGE_SIZE }, (_, i) => ({
+    ...message(PAGE_SIZE * 2 + i),
+    id: `step${i}`,
+    parentToolCallId: "agent",
+  }))
+  await Effect.runPromise(
+    transcript.list.upsert(steps).pipe(Effect.provideService(AtomRegistry.AtomRegistry, registry)),
+  )
+
+  registry.set(trimTranscriptAtom, "s1")
+  await vi.waitFor(() => expect(ids()).toHaveLength(PAGE_SIZE * 2))
+  expect(ids()[0]).toBe(`m${PAGE_SIZE}`)
 })
