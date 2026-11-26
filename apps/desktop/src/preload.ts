@@ -16,6 +16,7 @@ import {
   SERVER_STATE,
   SHOW_IN_FOLDER,
   UPDATE_STATE,
+  WINDOW_LAYOUT,
 } from "./channels.ts"
 
 // The page cannot reach ipcRenderer, and a MessagePort cannot cross contextBridge: relay by window messages.
@@ -47,6 +48,7 @@ contextBridge.exposeInMainWorld("ivin", {
   reportPluginActivity: (event: { id: string; phase: "activating" | "activated" }): void =>
     ipcRenderer.send(PLUGIN_ACTIVITY, event),
   reportSettled: (): void => ipcRenderer.send(LAUNCH_SETTLED),
+  setWindowLayout: (layout: "panels" | "plane"): void => ipcRenderer.send(WINDOW_LAYOUT, layout),
   getUpdateState: (): Promise<unknown> => ipcRenderer.invoke(GET_UPDATE_STATE),
   checkForUpdates: (): Promise<unknown> => ipcRenderer.invoke(CHECK_FOR_UPDATES),
   restartToUpdate: (): Promise<void> => ipcRenderer.invoke(RESTART_TO_UPDATE),

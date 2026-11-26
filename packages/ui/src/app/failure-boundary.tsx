@@ -3,6 +3,7 @@ import { Component, useContext, type ReactNode } from "react"
 import { FailureHeader, FailureSkeleton } from "../core/components/failure-state/failure-state.tsx"
 import { writeErrorAtom } from "../modules/log/atoms/write-error.ts"
 import { errorReport } from "../modules/log/rules/error-report.ts"
+import { useWindowLayout } from "../modules/setting/hooks/use-window-layout.ts"
 import { tabsOf } from "../modules/tab/atoms/list-tabs.ts"
 import "./failure-boundary.css"
 
@@ -14,7 +15,8 @@ const MESSAGES: Record<Scope, string> = {
 }
 
 function Failed({ scope, onRetry }: { scope: Scope; onRetry: () => void }) {
-  return (
+  const windowLayout = useWindowLayout()
+  const failure = (
     <div className="iv-failure" data-scope={scope}>
       <FailureHeader
         message={MESSAGES[scope]}
@@ -24,6 +26,12 @@ function Failed({ scope, onRetry }: { scope: Scope; onRetry: () => void }) {
         })}
       />
       <FailureSkeleton />
+    </div>
+  )
+  if (scope === "area") return failure
+  return (
+    <div className="iv-failure-window" data-window-layout={windowLayout}>
+      {failure}
     </div>
   )
 }

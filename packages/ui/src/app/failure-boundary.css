@@ -3,14 +3,21 @@
   flex: 1;
   flex-direction: column;
   min-height: 0;
-  margin: 0 var(--iv-space-2) var(--iv-space-2) 0;
   overflow: hidden;
-  border: 1px solid var(--iv-border);
-  border-radius: var(--iv-radius-card);
   background: var(--iv-bg);
 }
 
-.iv-failure[data-scope="window"] {
+.iv-failure-window {
+  display: flex;
   height: 100%;
-  margin: var(--iv-space-2);
+}
+
+.iv-failure-window[data-window-layout="panels"] {
+  padding: var(--iv-window-gap);
+  background: var(--iv-bg-window);
+}
+
+.iv-failure-window[data-window-layout="panels"] > .iv-failure {
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-card);
 }

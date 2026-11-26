@@ -2,7 +2,7 @@
   display: flex;
   flex: none;
   align-items: center;
-  height: var(--iv-space-9);
+  height: var(--iv-tab-row-height);
   padding: 0 var(--iv-space-2) 0 var(--iv-space-3);
   border-bottom: 1px solid var(--iv-border);
   background: var(--iv-bg-card);

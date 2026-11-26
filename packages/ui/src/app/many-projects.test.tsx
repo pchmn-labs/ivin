@@ -1,6 +1,6 @@
 import { defaultSettings } from "@ivin/contracts/setting"
 import { afterEach, expect, test } from "vitest"
-import { page } from "vitest/browser"
+import { page, userEvent } from "vitest/browser"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { mountApp } from "./test-app.tsx"
 
@@ -12,6 +12,7 @@ const FIRST = longName(0)
 const LAST = longName(COUNT - 1)
 const STEPS = 5
 const ONE_LINE = 40
+const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 
 afterEach(() => document.getElementById("root")?.remove())
 
@@ -74,7 +75,7 @@ test("in the rail, the button to open a folder can be reached after the last pro
     .toBe(true)
 })
 
-test("in the strip, many projects scroll sideways, and the selected one stays in view when stepping", async () => {
+test("in the strip, many projects scroll sideways, and the selected one stays in view when stepping by key", async () => {
   await mountMany("strip")
   const row = page.getByRole("group", { name: "Projects" })
   await expect.element(row).toBeVisible()
@@ -83,8 +84,9 @@ test("in the strip, many projects scroll sideways, and the selected one stays in
 
   await expect.poll(() => selectedInView(row.element())).toBe(true)
 
-  const previous = page.getByRole("button", { name: "Previous project" })
-  for (let step = 0; step < STEPS; step++) await previous.click()
+  for (let step = 0; step < STEPS; step++) {
+    await userEvent.keyboard(`{Control>}{${mod}>}[[{/${mod}}{/Control}`)
+  }
   await expect.element(page.getByTestId("project-name")).toHaveTextContent(names.at(-1 - STEPS))
   await expect.poll(() => selectedInView(row.element())).toBe(true)
 })

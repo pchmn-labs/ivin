@@ -39,8 +39,8 @@
 .iv-project-select__name {
   min-width: 0;
   overflow: hidden;
-  font-size: var(--iv-text-lg);
-  line-height: var(--iv-text-lg-lh);
+  font-size: var(--iv-text-md);
+  line-height: var(--iv-text-md-lh);
   font-weight: var(--iv-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;

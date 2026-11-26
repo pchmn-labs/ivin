@@ -34,6 +34,7 @@ import {
   SERVER_STATE,
   SHOW_IN_FOLDER,
   UPDATE_STATE,
+  WINDOW_LAYOUT,
 } from "./channels.ts"
 import { writeCliCommand } from "./cli-command.ts"
 import {
@@ -191,15 +192,20 @@ const reloadWithout = (window: BrowserWindow) => {
   window.webContents.reload()
 }
 
+// Centred on the top row of the window's layout, 15pt in from the sidebar's left edge.
+const TRAFFIC_LIGHTS = {
+  panels: { x: 21, y: 19 },
+  plane: { x: 15, y: 13 },
+} as const
+
 const createWindow = async () => {
   const window = new BrowserWindow({
     width: 960,
     height: 640,
     show: false,
-    // The sidebar card holds the traffic lights: inset 15pt from its corner, centred on its top row.
     ...(process.platform === "darwin" && {
       titleBarStyle: "hiddenInset" as const,
-      trafficLightPosition: { x: 23, y: 21 },
+      trafficLightPosition: TRAFFIC_LIGHTS.panels,
     }),
     webPreferences: {
       preload: join(import.meta.dirname, "preload.cjs"),
@@ -253,6 +259,10 @@ ipcMain.on(PLUGIN_ACTIVITY, (_event, value: { id?: unknown; phase?: unknown }) =
   if (value.phase !== "activating" && value.phase !== "activated") return
   activity.push({ at: Date.now(), id: value.id, phase: value.phase })
   if (activity.length > 500) activity.splice(0, activity.length - 500)
+})
+ipcMain.on(WINDOW_LAYOUT, (event, layout: unknown) => {
+  if (process.platform !== "darwin" || (layout !== "panels" && layout !== "plane")) return
+  BrowserWindow.fromWebContents(event.sender)?.setWindowButtonPosition(TRAFFIC_LIGHTS[layout])
 })
 ipcMain.on(LAUNCH_SETTLED, () => {
   if (!launchRecord.settled) saveLaunchRecord({ settled: true })

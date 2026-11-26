@@ -22,6 +22,8 @@ export const activate = defineUi((ctx) => {
     name: "panel",
     title: "Changes",
     badge: ChangesBadge,
+    // After Files, whichever plugin loads first.
+    order: 1,
   })
   ctx.commands.register("changes.show", {
     title: "Show changes",

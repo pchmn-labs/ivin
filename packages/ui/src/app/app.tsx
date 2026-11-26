@@ -48,6 +48,8 @@ import { useUpdateCommands } from "../modules/update/hooks/use-update-commands.t
 import { SettingsButton } from "../modules/setting/ui/settings-button.tsx"
 import { SettingsNav } from "../modules/setting/ui/settings-nav.tsx"
 import { settingsAtom } from "../modules/setting/atoms/settings.ts"
+import { useWindowLayout } from "../modules/setting/hooks/use-window-layout.ts"
+import { placeWindowButtons, storeWindowLayout } from "../modules/setting/adapters/window-layout.ts"
 import "./app.css"
 
 const UpdateButton = lazy(() =>
@@ -66,12 +68,17 @@ const BOTTOM_MAX_SHARE = 0.7
 export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}) {
   const connection = useAtomValue(connectionAtom)
   const { layout } = useAtomValue(settingsAtom).sidebar
+  const windowLayout = useWindowLayout()
   const current = useAtomValue(selectedProjectAtom)
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom)
   const registry = useContext(RegistryContext)
   const projectPath = current?.path ?? null
 
   const toggleSidebar = useCallback(() => setSidebarOpen((open) => !open), [setSidebarOpen])
+  useEffect(() => {
+    placeWindowButtons(windowLayout)
+    storeWindowLayout(windowLayout)
+  }, [windowLayout])
   useRecordSessionVisits()
   useAtomMount(tabTranscriptsAtom)
   useReportUncaughtErrors()
@@ -132,7 +139,11 @@ export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}
     <NotificationProvider>
       <PluginsProvider {...(plugins !== undefined && { plugins })} fallback={serverLost || null}>
         {current === null || projectPath === null ? (
-          <div className="iv-app iv-app--empty" hidden={settingsOpen}>
+          <div
+            className="iv-app iv-app--empty"
+            data-window-layout={windowLayout}
+            hidden={settingsOpen}
+          >
             <main className="iv-app__main">
               <MainTopBar projectPath={null} controls={null} />
               {serverLost}
@@ -146,6 +157,7 @@ export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}
         ) : (
           <div
             className="iv-app"
+            data-window-layout={windowLayout}
             data-sidebar={sidebarOpen ? "open" : "closed"}
             hidden={settingsOpen}
           >
@@ -220,7 +232,12 @@ export function App({ plugins }: { plugins?: ReadonlyArray<UiPluginEntry> } = {}
         )}
         {settingsOpen && (
           // Focusable, so a click on the page keeps the keyboard in its area.
-          <div className="iv-app" data-keybinding-area="settings" tabIndex={-1}>
+          <div
+            className="iv-app"
+            data-window-layout={windowLayout}
+            data-keybinding-area="settings"
+            tabIndex={-1}
+          >
             <aside className="iv-app__card" aria-label="Settings">
               <div className="iv-app__card-top" />
               <SettingsNav onClose={closeSettings} />

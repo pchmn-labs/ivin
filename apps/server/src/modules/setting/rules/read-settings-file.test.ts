@@ -6,7 +6,7 @@ const initial = { settings: defaultSettings, problem: null }
 const readWithDefaults = (previous: UserSettings, text: string | null) =>
   readSettingsFile(previous, text, defaultSettings)
 
-test("a missing or empty file holds the default settings: every switch on, the rail layout", () => {
+test("a missing or empty file holds the default settings: every switch on, two panels and the strip", () => {
   expect(readWithDefaults(initial, null)).toEqual(initial)
   expect(readWithDefaults(initial, " \n")).toEqual(initial)
 })
@@ -17,7 +17,8 @@ test("a setting in the file replaces its default, and one left out falls back to
       tabs: { stopAgentOnClose: false, newTabPosition: "afterCurrent" as const },
       worktrees: { removeOnTabClose: false },
       files: { folderIcons: false },
-      sidebar: { layout: "strip" as const },
+      window: { layout: "plane" as const },
+      sidebar: { layout: "rail" as const },
       agents: { stopWhenIdleMinutes: 0 },
       updates: { automaticCheck: true, beta: false },
     },
@@ -27,7 +28,8 @@ test("a setting in the file replaces its default, and one left out falls back to
     // keep agents running
     "tabs": { "stopAgentOnClose": false, "newTabPosition": "afterCurrent" },
     "files": { "folderIcons": false },
-    "sidebar": { "layout": "strip" },
+    "window": { "layout": "plane" },
+    "sidebar": { "layout": "rail" },
     "agents": { "stopWhenIdleMinutes": 0 },
     "editor": { "fontSize": 13 },
   }`
@@ -36,7 +38,8 @@ test("a setting in the file replaces its default, and one left out falls back to
       tabs: { stopAgentOnClose: false, newTabPosition: "afterCurrent" as const },
       worktrees: { removeOnTabClose: true },
       files: { folderIcons: false },
-      sidebar: { layout: "strip" },
+      window: { layout: "plane" },
+      sidebar: { layout: "rail" },
       agents: { stopWhenIdleMinutes: 0 },
       updates: { automaticCheck: true, beta: false },
     },
@@ -64,6 +67,10 @@ test("an invalid file keeps the previous settings and names its problem", () => 
   expect(readWithDefaults(previous, `{ "files": { "folderIcons": 1 } }`).problem).toEqual({
     reason: "invalidSetting",
     setting: "files.folderIcons",
+  })
+  expect(readWithDefaults(previous, `{ "window": { "layout": "floating" } }`).problem).toEqual({
+    reason: "invalidSetting",
+    setting: "window.layout",
   })
   expect(readWithDefaults(previous, `{ "sidebar": { "layout": "column" } }`).problem).toEqual({
     reason: "invalidSetting",
