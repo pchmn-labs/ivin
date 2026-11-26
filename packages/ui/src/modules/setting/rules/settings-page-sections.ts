@@ -52,6 +52,8 @@ const pluginSetting = (setting: PluginSetting): PageSetting => ({
 export const settingsPageSections = (
   pluginSettings: ReadonlyArray<PluginSetting>,
   pluginsWithOwnSection: ReadonlyArray<string>,
+  // The plugins' names by id; a plugin left out is named by its id.
+  pluginNames: ReadonlyMap<string, string> = new Map(),
 ): ReadonlyArray<PageSection> => {
   const plugins = new Map<string, { name: string; settings: PluginSetting[] }>()
   for (const setting of pluginSettings) {
@@ -60,7 +62,7 @@ export const settingsPageSections = (
     plugins.set(setting.pluginId, plugin)
   }
   for (const id of pluginsWithOwnSection) {
-    if (!plugins.has(id)) plugins.set(id, { name: id, settings: [] })
+    if (!plugins.has(id)) plugins.set(id, { name: pluginNames.get(id) ?? id, settings: [] })
   }
   return [
     ...settingSections.filter((section) => section.key !== "updates"),
