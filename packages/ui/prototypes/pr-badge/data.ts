@@ -259,14 +259,13 @@ export type Health = "conflict" | "failed" | "running" | "blocked" | "ready" | "
 
 export const healthOf = (pr: Pr): Health => {
   if (pr.state !== "open" && pr.state !== "draft") return "none"
-  if (pr.conflict) return "conflict"
-  const ci = ciOf(pr.checks)
-  if (ci === "failed") return "failed"
-  if (ci === "running") return "running"
-  if (pr.state === "draft") return ci === "passed" ? "ready" : "blocked"
-  if (pr.review !== "approved") return "blocked"
+  if (pr.conflict || pr.checks.some((c) => c.result === "failed")) return "failed"
+  if (pr.state === "draft" || pr.review !== "approved") return "blocked"
   return "ready"
 }
+
+export const isRunning = (prs: ReadonlyArray<Pr>) =>
+  prs.some((pr) => (pr.state === "open" || pr.state === "draft") && pr.checks.some((c) => c.result === "running"))
 
 const HEALTH_ORDER: Record<Health, number> = { conflict: 0, failed: 1, running: 2, blocked: 3, ready: 4, none: 5 }
 export const worstHealth = (prs: ReadonlyArray<Pr>): Health =>

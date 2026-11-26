@@ -1054,3 +1054,19 @@ body {
 .iv-tab-bar__item[data-selected] .h-pencil {
   --ground: color-mix(in srgb, var(--iv-accent) 12%, var(--iv-bg-raised));
 }
+
+/* Round 4: running pulses on the settled colour */
+
+.h-tile[data-health="running"] {
+  animation: none;
+}
+
+.h-tile[data-running] {
+  animation: proto-breathe var(--iv-duration-pulse) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .h-tile[data-running] {
+    animation: none;
+  }
+}

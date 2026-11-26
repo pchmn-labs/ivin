@@ -4,7 +4,7 @@ import {
   STATE_LABEL,
   ciOf,
   ciText,
-  healthOf,
+  isRunning,
   leadPr,
   mergeText,
   urlOf,
@@ -125,11 +125,9 @@ function More({ prs }: { prs: ReadonlyArray<Pr> }) {
   return prs.length > 1 ? <span className="g-more">+{prs.length - 1}</span> : null
 }
 
-type DraftStyle = "dashed" | "hollow" | "pencil"
+/* Health: the tile's colour is checks and mergeability once settled; it pulses while checks run. */
 
-/* The tile's colour is checks and mergeability; its outline says draft. */
-
-function HealthBadge({ prs, draftStyle }: { prs: ReadonlyArray<Pr>; draftStyle: DraftStyle }) {
+function HealthBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
   const lead = leadPr(prs)!
   const health = worstHealth(prs)
   return (
@@ -138,29 +136,15 @@ function HealthBadge({ prs, draftStyle }: { prs: ReadonlyArray<Pr>; draftStyle: 
         className="h-tile"
         data-state={lead.state}
         data-health={health}
-        data-draft-style={lead.state === "draft" ? draftStyle : undefined}
+        data-running={isRunning(prs) || undefined}
       >
         <Svg name={STATE_ICON[lead.state]} size={13} />
-        {lead.state === "draft" && draftStyle === "pencil" && (
-          <span className="h-pencil">
-            <Svg name="pencil" size={7} />
-          </span>
-        )}
       </span>
       <More prs={prs} />
     </span>
   )
 }
 
-const variant = (draftStyle: DraftStyle): Variant => ({
-  Badge: (props) => <HealthBadge {...props} draftStyle={draftStyle} />,
-  Card: MixCard,
-  cardWidth: 340,
-})
-const dashed = variant("dashed")
-const hollow = variant("hollow")
-const pencil = variant("pencil")
+const health: Variant = { Badge: HealthBadge, Card: MixCard, cardWidth: 340 }
 
-export const Dashed = () => <Window variant={dashed} />
-export const Hollow = () => <Window variant={hollow} />
-export const Pencil = () => <Window variant={pencil} />
+export const HealthVariant = () => <Window variant={health} />
