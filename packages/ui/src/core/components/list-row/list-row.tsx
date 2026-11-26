@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import type { ListRowProps } from "@ivin/plugin-api/ui"
 import { Tooltip } from "../tooltip/tooltip.tsx"
 import "./list-row.css"
@@ -10,6 +11,7 @@ export function ListRow({
   title,
   subtitle,
   meta,
+  subtitleMeta,
   selected = false,
   attention = false,
   onSelect,
@@ -19,6 +21,39 @@ export function ListRow({
   "aria-current": ariaCurrent,
   "data-testid": testId,
 }: ListRowProps) {
+  const metaSpan = (node: ReactNode) =>
+    node === undefined ? null : <span className="iv-list-row__meta">{node}</span>
+  const content = (
+    <>
+      {leading === undefined ? null : <span className="iv-list-row__leading">{leading}</span>}
+      {subtitle === undefined ? (
+        <>
+          <span className="iv-list-row__title">{title}</span>
+          {metaSpan(subtitleMeta)}
+          {metaSpan(meta)}
+        </>
+      ) : subtitleMeta === undefined ? (
+        <>
+          <span className="iv-list-row__text">
+            <span className="iv-list-row__title">{title}</span>
+            <span className="iv-list-row__subtitle">{subtitle}</span>
+          </span>
+          {metaSpan(meta)}
+        </>
+      ) : (
+        <span className="iv-list-row__text">
+          <span className="iv-list-row__text-line">
+            <span className="iv-list-row__title">{title}</span>
+            {metaSpan(meta)}
+          </span>
+          <span className="iv-list-row__text-line">
+            <span className="iv-list-row__subtitle">{subtitle}</span>
+            {metaSpan(subtitleMeta)}
+          </span>
+        </span>
+      )}
+    </>
+  )
   const row = (
     <div
       className="iv-list-row"
@@ -34,16 +69,7 @@ export function ListRow({
             onClick={onSelect}
             aria-current={ariaCurrent ?? (selected ? "true" : undefined)}
           >
-            {leading === undefined ? null : <span className="iv-list-row__leading">{leading}</span>}
-            {subtitle === undefined ? (
-              <span className="iv-list-row__title">{title}</span>
-            ) : (
-              <span className="iv-list-row__text">
-                <span className="iv-list-row__title">{title}</span>
-                <span className="iv-list-row__subtitle">{subtitle}</span>
-              </span>
-            )}
-            {meta === undefined ? null : <span className="iv-list-row__meta">{meta}</span>}
+            {content}
           </button>
         ) : (
           <a
@@ -52,16 +78,7 @@ export function ListRow({
             target="_blank"
             rel="noreferrer"
           >
-            {leading === undefined ? null : <span className="iv-list-row__leading">{leading}</span>}
-            {subtitle === undefined ? (
-              <span className="iv-list-row__title">{title}</span>
-            ) : (
-              <span className="iv-list-row__text">
-                <span className="iv-list-row__title">{title}</span>
-                <span className="iv-list-row__subtitle">{subtitle}</span>
-              </span>
-            )}
-            {meta === undefined ? null : <span className="iv-list-row__meta">{meta}</span>}
+            {content}
           </a>
         )}
         {actions === undefined ? null : <div className="iv-list-row__actions">{actions}</div>}

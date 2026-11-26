@@ -232,6 +232,8 @@ export interface ListRowProps {
   readonly title: ReactNode
   readonly subtitle?: ReactNode
   readonly meta?: ReactNode
+  // At the end of the subtitle line, with `meta` at the end of the title line; before `meta` on a row with no subtitle.
+  readonly subtitleMeta?: ReactNode
   readonly selected?: boolean
   readonly attention?: boolean
   readonly onSelect?: () => void
