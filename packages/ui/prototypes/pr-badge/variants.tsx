@@ -1,14 +1,15 @@
-import { useState, type ReactNode } from "react"
+import type { ReactNode } from "react"
 import {
-  REVIEW_LABEL,
+  HEALTH_LABEL,
   STATE_LABEL,
-  anyConflict,
   ciOf,
   ciText,
-  count,
+  healthOf,
   leadPr,
+  mergeText,
   urlOf,
-  worstCi,
+  worstHealth,
+  type Health,
   type Pr,
   type ProtoSession,
 } from "./data.ts"
@@ -32,265 +33,161 @@ function RemoveButton({ pr, onRemove }: { pr: Pr; onRemove: (pr: Pr) => void }) 
   )
 }
 
-function CardError({ session }: { session: ProtoSession }) {
-  if (!session.error) return null
+function Pill({ tone, children }: { tone: string; children: ReactNode }) {
   return (
-    <div className="proto-card-error">
-      <Svg name="warning" size={14} />
-      <span>{session.error}</span>
-    </div>
+    <span className="c-pill" data-tone={tone}>
+      {children}
+    </span>
   )
 }
 
 const shortRepo = (repo: string) => repo.split("/")[1]
 
-/* 1. Glyph: one icon, its shape the state, its colour the checks. */
+/* The card all three share: Glyph's list, Chip's labels. */
 
-function GlyphBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
-  const lead = leadPr(prs)!
-  const live = lead.state === "open" || lead.state === "draft"
+function MixCard({
+  session,
+  prs,
+  onRemove,
+}: {
+  session: ProtoSession
+  prs: ReadonlyArray<Pr>
+  onRemove: (pr: Pr) => void
+}) {
   return (
-    <span className="g-badge" data-state={lead.state} data-ci={live ? worstCi(prs) : undefined}>
-      <span className="g-icon">
-        <Svg name={STATE_ICON[lead.state]} size={14} />
-        {anyConflict(prs) && <span className="g-conflict" />}
-      </span>
-      {prs.length > 1 && <span className="g-more">+{prs.length - 1}</span>}
-    </span>
-  )
-}
-
-function GlyphCard({ session, prs, onRemove }: { session: ProtoSession; prs: ReadonlyArray<Pr>; onRemove: (pr: Pr) => void }) {
-  return (
-    <div className="g-card">
+    <div className="m-card">
       <div className="g-card-head">
         {prs.length === 1 ? "Pull request" : `Pull requests · ${prs.length}`}
       </div>
       {prs.map((pr) => {
         const ci = ciOf(pr.checks)
         const live = pr.state === "open" || pr.state === "draft"
+        const merge = mergeText(pr)
         return (
-          <div key={`${pr.repo}${pr.number}`} className="g-pr">
-           <a className="g-pr-link" href={urlOf(pr)} target="_blank" rel="noreferrer">
-            <span className="g-badge" data-state={pr.state} data-ci={live ? ci : undefined}>
-              <span className="g-icon"><Svg name={STATE_ICON[pr.state]} size={14} /></span>
-            </span>
-            <span className="g-pr-text">
-              <span className="g-pr-title">{pr.title}</span>
-              <span className="g-pr-meta">
-                <span className="g-mono">{shortRepo(pr.repo)} #{pr.number}</span>
-                <span>{STATE_LABEL[pr.state]}</span>
-                {live && pr.checks.length > 0 && <span data-ci={ci}>{ciText(pr.checks)}</span>}
-                {live && pr.review && <span data-review={pr.review}>{REVIEW_LABEL[pr.review]}</span>}
-                {live && pr.conflict && <span className="g-danger">Conflicts</span>}
+          <div key={`${pr.repo}${pr.number}`} className="m-pr">
+            <a className="m-pr-link" href={urlOf(pr)} target="_blank" rel="noreferrer">
+              <span className="m-state" data-state={pr.state}>
+                <Svg name={STATE_ICON[pr.state]} size={16} />
               </span>
-            </span>
-           </a>
-            <RemoveButton pr={pr} onRemove={onRemove} />
-          </div>
-        )
-      })}
-      <CardError session={session} />
-    </div>
-  )
-}
-
-/* 2. Chip: a labelled pill, state colour, number and checks mark. */
-
-function ChipBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
-  const lead = leadPr(prs)!
-  const live = lead.state === "open" || lead.state === "draft"
-  const conflict = anyConflict(prs)
-  return (
-    <span className="c-chip" data-state={lead.state} data-conflict={conflict || undefined}>
-      <Svg name={STATE_ICON[lead.state]} size={12} />
-      <span className="c-num">#{lead.number}</span>
-      {live && <CiMark ci={worstCi(prs)} />}
-      {conflict && <Svg name="warning" size={11} className="c-warn" />}
-      {prs.length > 1 && <span className="c-more">+{prs.length - 1}</span>}
-    </span>
-  )
-}
-
-function Pill({ tone, children }: { tone: string; children: ReactNode }) {
-  return <span className="c-pill" data-tone={tone}>{children}</span>
-}
-
-function ChipCard({ session, prs, onRemove }: { session: ProtoSession; prs: ReadonlyArray<Pr>; onRemove: (pr: Pr) => void }) {
-  const [all, setAll] = useState(false)
-  const shown = all ? prs : prs.slice(0, 2)
-  return (
-    <div className="c-card">
-      {shown.map((pr) => {
-        const ci = ciOf(pr.checks)
-        const live = pr.state === "open" || pr.state === "draft"
-        return (
-          <div key={`${pr.repo}${pr.number}`} className="c-pr">
-           <a className="c-pr-link" href={urlOf(pr)} target="_blank" rel="noreferrer">
-            <span className="c-pr-head">
-              <span className="g-mono">{pr.repo} #{pr.number}</span>
-              <span className="c-dot">·</span>
-              <span>{pr.updated}</span>
-            </span>
-            <span className="c-pr-title">{pr.title}</span>
-            <span className="c-pills">
-              <Pill tone={pr.state}>
-                <Svg name={STATE_ICON[pr.state]} size={12} />
-                {STATE_LABEL[pr.state]}
-              </Pill>
-              {live && pr.checks.length > 0 && (
-                <Pill tone={ci}>
-                  <CiMark ci={ci} />
-                  {ciText(pr.checks)}
-                </Pill>
-              )}
-              {live && pr.review && <Pill tone={pr.review}>{REVIEW_LABEL[pr.review]}</Pill>}
-              {live && pr.conflict && (
-                <Pill tone="failed">
-                  <Svg name="warning" size={12} />
-                  Conflicts with main
-                </Pill>
-              )}
-            </span>
-           </a>
-            <RemoveButton pr={pr} onRemove={onRemove} />
-          </div>
-        )
-      })}
-      {prs.length > 2 && !all && (
-        <button type="button" className="c-more-button" onClick={() => setAll(true)}>
-          Show {prs.length - 2} more
-        </button>
-      )}
-      <CardError session={session} />
-    </div>
-  )
-}
-
-/* 3. Ring: the checks as a ring around the state icon, a card that names each check. */
-
-function Ring({ pr, size }: { pr: Pr; size: number }) {
-  const live = pr.state === "open" || pr.state === "draft"
-  const r = size / 2 - 1.25
-  const c = 2 * Math.PI * r
-  const total = pr.checks.length
-  let offset = 0
-  const arcs = live && total > 0
-    ? (["passed", "running", "failed"] as const).map((result) => {
-        const n = count(pr.checks, result)
-        const len = (n / total) * c
-        const arc = { result, len, offset }
-        offset += len
-        return arc
-      })
-    : []
-  const icon = Math.round(size * 0.55)
-  return (
-    <span className="r-ring" data-state={pr.state} style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <circle cx={size / 2} cy={size / 2} r={r} className="r-track" />
-        {arcs.map((a) =>
-          a.len === 0 ? null : (
-            <circle
-              key={a.result}
-              cx={size / 2}
-              cy={size / 2}
-              r={r}
-              className="r-arc"
-              data-ci={a.result}
-              strokeDasharray={`${Math.max(a.len - 1, 0.5)} ${c}`}
-              strokeDashoffset={-a.offset}
-              transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            />
-          ),
-        )}
-      </svg>
-      <Svg name={STATE_ICON[pr.state]} size={icon} className="r-icon" />
-    </span>
-  )
-}
-
-function RingBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
-  const lead = leadPr(prs)!
-  return (
-    <span className="r-badge">
-      <Ring pr={lead} size={18} />
-      {anyConflict(prs) && <span className="g-conflict r-conflict" />}
-      {prs.length > 1 && <span className="g-more">+{prs.length - 1}</span>}
-    </span>
-  )
-}
-
-function RingCard({ session, prs, onRemove }: { session: ProtoSession; prs: ReadonlyArray<Pr>; onRemove: (pr: Pr) => void }) {
-  const [open, setOpen] = useState(0)
-  return (
-    <div className="r-card">
-      {prs.map((pr, i) => {
-        const live = pr.state === "open" || pr.state === "draft"
-        const expanded = i === open
-        const notable = pr.checks.filter((c) => c.result !== "passed")
-        const passedN = count(pr.checks, "passed")
-        return (
-          <div key={`${pr.repo}${pr.number}`} className="r-pr" data-expanded={expanded || undefined}>
-            <div className="r-pr-head">
-            <button type="button" className="r-pr-toggle" onClick={() => setOpen(i)} aria-expanded={expanded}>
-              <Ring pr={pr} size={22} />
-              <span className="r-pr-text">
-                <span className="r-pr-title">{pr.title}</span>
-                <span className="r-pr-meta">
-                  <span className="g-mono">{pr.repo} #{pr.number}</span>
-                  <span>· {STATE_LABEL[pr.state]}</span>
+              <span className="m-pr-text">
+                <span className="m-pr-title">{pr.title}</span>
+                <span className="m-pr-meta">
+                  <span className="g-mono">
+                    {shortRepo(pr.repo)} #{pr.number}
+                  </span>
+                  <span>·</span>
+                  <span>{pr.updated}</span>
+                </span>
+                <span className="c-pills">
+                  {pr.state !== "open" && (
+                    <Pill tone={pr.state}>
+                      <Svg name={STATE_ICON[pr.state]} size={12} />
+                      {STATE_LABEL[pr.state]}
+                    </Pill>
+                  )}
+                  {live && pr.checks.length > 0 && (
+                    <Pill tone={ci}>
+                      <CiMark ci={ci} />
+                      {ciText(pr.checks)}
+                    </Pill>
+                  )}
+                  {merge && (
+                    <Pill tone={merge.tone}>
+                      {merge.tone === "conflict" && <Svg name="warning" size={12} />}
+                      {merge.tone === "ready" && <Svg name="merge" size={12} />}
+                      {merge.text}
+                    </Pill>
+                  )}
                 </span>
               </span>
-            </button>
-              <RemoveButton pr={pr} onRemove={onRemove} />
-            </div>
-            {expanded && (
-              <div className="r-detail">
-                {live && pr.checks.length > 0 && (
-                  <ul className="r-checks">
-                    {notable.map((c) => (
-                      <li key={c.name} data-ci={c.result}>
-                        <CiMark ci={c.result} />
-                        <span className="g-mono">{c.name}</span>
-                        <span className="r-time">{c.time}</span>
-                      </li>
-                    ))}
-                    {passedN > 0 && (
-                      <li data-ci="passed">
-                        <CiMark ci="passed" />
-                        <span>{passedN} checks passed</span>
-                      </li>
-                    )}
-                  </ul>
-                )}
-                {live && pr.checks.length === 0 && <div className="r-line">No checks have run.</div>}
-                {live && pr.review && (
-                  <div className="r-line" data-review={pr.review}>{REVIEW_LABEL[pr.review]}</div>
-                )}
-                {live && pr.conflict && (
-                  <div className="r-line g-danger">
-                    <Svg name="warning" size={12} /> Conflicts with main
-                  </div>
-                )}
-                {!live && <div className="r-line">{STATE_LABEL[pr.state]} {pr.updated}</div>}
-                <a className="r-open" href={urlOf(pr)} target="_blank" rel="noreferrer">
-                  Open on GitHub <Svg name="external" size={12} />
-                </a>
-              </div>
-            )}
+            </a>
+            <RemoveButton pr={pr} onRemove={onRemove} />
           </div>
         )
       })}
-      <CardError session={session} />
+      {session.error && (
+        <div className="proto-card-error">
+          <Svg name="warning" size={14} />
+          <span>{session.error}</span>
+        </div>
+      )}
     </div>
   )
 }
 
-const glyph: Variant = { Badge: GlyphBadge, Card: GlyphCard, cardWidth: 320 }
-const chip: Variant = { Badge: ChipBadge, Card: ChipCard, cardWidth: 360 }
-const ring: Variant = { Badge: RingBadge, Card: RingCard, cardWidth: 380 }
+const label = (prs: ReadonlyArray<Pr>, health: Health) => {
+  const lead = leadPr(prs)!
+  const base = `Pull request #${lead.number}, ${STATE_LABEL[lead.state]}`
+  return health === "none" ? base : `${base}, ${HEALTH_LABEL[health]}`
+}
 
-export const Glyph = () => <Window variant={glyph} />
-export const Chip = () => <Window variant={chip} />
-export const RingVariant = () => <Window variant={ring} />
+function More({ prs }: { prs: ReadonlyArray<Pr> }) {
+  return prs.length > 1 ? <span className="g-more">+{prs.length - 1}</span> : null
+}
+
+/* 1. Dot: the icon in its state colour, a dot on its corner for checks and mergeability. */
+
+function DotBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
+  const lead = leadPr(prs)!
+  const health = worstHealth(prs)
+  return (
+    <span className="d-badge" aria-label={label(prs, health)}>
+      <span className="d-icon" data-state={lead.state}>
+        <Svg name={STATE_ICON[lead.state]} size={14} />
+        {health !== "none" && <span className="d-dot" data-health={health} />}
+      </span>
+      <More prs={prs} />
+    </span>
+  )
+}
+
+/* 2. Marks: the icon in its state colour, then a checks mark and a merge mark. */
+
+function MarksBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
+  const lead = leadPr(prs)!
+  const health = worstHealth(prs)
+  const live = prs.filter((pr) => pr.state === "open")
+  const ci = live.some((pr) => ciOf(pr.checks) === "failed")
+    ? "failed"
+    : live.some((pr) => ciOf(pr.checks) === "running")
+      ? "running"
+      : live.some((pr) => pr.checks.length > 0)
+        ? "passed"
+        : "none"
+  const conflict = live.some((pr) => pr.conflict)
+  const ready = live.length > 0 && live.every((pr) => healthOf(pr) === "ready")
+  return (
+    <span className="k-badge" aria-label={label(prs, health)}>
+      <span className="d-icon" data-state={lead.state}>
+        <Svg name={STATE_ICON[lead.state]} size={14} />
+      </span>
+      <CiMark ci={ci} />
+      {conflict && <Svg name="warning" size={13} className="k-conflict" />}
+      {ready && <Svg name="merge" size={13} className="k-ready" />}
+      <More prs={prs} />
+    </span>
+  )
+}
+
+/* 3. Health: the icon's shape is the state, one colour and tile for checks and mergeability together. */
+
+function HealthBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
+  const lead = leadPr(prs)!
+  const health = worstHealth(prs)
+  return (
+    <span className="h-badge" aria-label={label(prs, health)}>
+      <span className="h-tile" data-state={lead.state} data-health={health}>
+        <Svg name={STATE_ICON[lead.state]} size={13} />
+      </span>
+      <More prs={prs} />
+    </span>
+  )
+}
+
+const dot: Variant = { Badge: DotBadge, Card: MixCard, cardWidth: 340 }
+const marks: Variant = { Badge: MarksBadge, Card: MixCard, cardWidth: 340 }
+const health: Variant = { Badge: HealthBadge, Card: MixCard, cardWidth: 340 }
+
+export const Dot = () => <Window variant={dot} />
+export const Marks = () => <Window variant={marks} />
+export const HealthVariant = () => <Window variant={health} />

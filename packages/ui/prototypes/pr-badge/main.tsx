@@ -4,12 +4,12 @@ import "../../src/core/theme/tokens.css"
 import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
-import { Glyph, Chip, RingVariant } from "./variants.tsx"
+import { Dot, Marks, HealthVariant } from "./variants.tsx"
 
 const VARIANTS = [
-  { name: "Glyph", Component: Glyph },
-  { name: "Chip", Component: Chip },
-  { name: "Ring", Component: RingVariant },
+  { name: "Dot", Component: Dot },
+  { name: "Marks", Component: Marks },
+  { name: "Health", Component: HealthVariant },
 ]
 
 const requested = Number.parseInt(new URLSearchParams(location.search).get("v") ?? "", 10)

@@ -784,3 +784,234 @@ body {
 .r-line.g-danger {
   color: var(--iv-danger);
 }
+
+/* Round 2 */
+
+:is(.m-pr):is(:hover, :focus-within) .proto-remove {
+  opacity: 1;
+}
+
+.iv-tab-bar__tab :is(.d-badge, .k-badge, .h-badge) {
+  margin-left: auto;
+}
+
+.d-icon {
+  --tone: var(--pr-open);
+
+  position: relative;
+  display: inline-grid;
+  color: var(--tone);
+}
+
+.d-icon[data-state="draft"] {
+  --tone: var(--pr-draft);
+}
+
+.d-icon[data-state="merged"] {
+  --tone: var(--pr-merged);
+}
+
+.d-icon[data-state="closed"] {
+  --tone: var(--pr-closed);
+}
+
+.d-badge,
+.k-badge,
+.h-badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.d-dot {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--iv-radius-pill);
+  box-shadow: 0 0 0 1.5px var(--ground, var(--iv-bg-card));
+}
+
+.iv-tab-bar__item .d-dot {
+  --ground: var(--iv-bg);
+}
+
+.iv-tab-bar__item[data-selected] .d-dot {
+  --ground: color-mix(in srgb, var(--iv-accent) 12%, var(--iv-bg-raised));
+}
+
+.iv-list-row[data-selected] .d-dot {
+  --ground: color-mix(in srgb, var(--iv-bg-card) 89%, var(--iv-accent));
+}
+
+.d-dot[data-health="conflict"],
+.d-dot[data-health="failed"] {
+  background: var(--ci-failed);
+}
+
+.d-dot[data-health="ready"] {
+  background: var(--ci-passed);
+}
+
+.d-dot[data-health="blocked"] {
+  border: 1.5px solid var(--iv-text-muted);
+  background: var(--ground, var(--iv-bg-card));
+}
+
+.d-dot[data-health="running"] {
+  border: 1.5px solid var(--ci-running);
+  border-top-color: transparent;
+  background: var(--ground, var(--iv-bg-card));
+  animation: proto-spin var(--iv-duration-spin) linear infinite;
+}
+
+.k-badge .proto-ci {
+  width: 10px;
+  height: 10px;
+  color: var(--iv-bg-card);
+}
+
+.k-conflict {
+  color: var(--ci-failed);
+}
+
+.k-ready {
+  color: var(--ci-passed);
+}
+
+.h-tile {
+  --tone: var(--pr-open);
+
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: var(--iv-radius-sm);
+  background: color-mix(in srgb, var(--tone) 16%, transparent);
+  color: var(--tone);
+}
+
+.h-tile[data-state="draft"] {
+  --tone: var(--pr-draft);
+}
+
+.h-tile[data-state="merged"] {
+  --tone: var(--pr-merged);
+}
+
+.h-tile[data-state="closed"] {
+  --tone: var(--pr-closed);
+}
+
+.h-tile[data-health="ready"] {
+  --tone: var(--ci-passed);
+}
+
+.h-tile[data-health="blocked"] {
+  --tone: var(--iv-text-muted);
+}
+
+.h-tile[data-health="conflict"],
+.h-tile[data-health="failed"] {
+  --tone: var(--ci-failed);
+}
+
+.h-tile[data-health="running"] {
+  --tone: var(--ci-running);
+
+  animation: proto-breathe var(--iv-duration-pulse) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .h-tile[data-health="running"],
+  .d-dot[data-health="running"] {
+    animation: none;
+  }
+}
+
+.m-pr {
+  position: relative;
+}
+
+.m-pr > .proto-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+
+.m-pr-link {
+  display: flex;
+  gap: var(--iv-space-2);
+  padding: var(--iv-space-2);
+  border-radius: var(--iv-radius-md);
+  color: inherit;
+  text-decoration: none;
+  cursor: default;
+}
+
+.m-pr-link:hover {
+  background: var(--iv-bg-hover);
+}
+
+.m-state {
+  --tone: var(--pr-open);
+
+  display: inline-grid;
+  margin-top: 2px;
+  color: var(--tone);
+}
+
+.m-state[data-state="draft"] {
+  --tone: var(--pr-draft);
+}
+
+.m-state[data-state="merged"] {
+  --tone: var(--pr-merged);
+}
+
+.m-state[data-state="closed"] {
+  --tone: var(--pr-closed);
+}
+
+.m-pr-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding-right: var(--iv-space-5);
+}
+
+.m-pr-title {
+  overflow: hidden;
+  font-size: var(--iv-text-md);
+  font-weight: var(--iv-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m-pr-meta {
+  display: flex;
+  gap: var(--iv-space-1);
+  color: var(--iv-text-faint);
+  font-size: var(--iv-text-xs);
+}
+
+.m-pr-text .c-pills {
+  margin-top: 2px;
+}
+
+.c-pill[data-tone="ready"] {
+  --tone: var(--ci-passed);
+}
+
+.c-pill[data-tone="conflict"] {
+  --tone: var(--ci-failed);
+}
+
+.c-pill[data-tone="blocked"] {
+  --tone: var(--iv-text-muted);
+}

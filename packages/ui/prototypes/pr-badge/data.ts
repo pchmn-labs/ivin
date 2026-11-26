@@ -174,16 +174,34 @@ export const SESSIONS: ReadonlyArray<ProtoSession> = [
         title: "chore(release): 0.4.0",
         state: "open",
         checks: [...suite, passed("unit", "3m 20s")],
-        review: "required",
+        review: "approved",
         conflict: false,
         updated: "4 h ago",
+      },
+    ],
+  },
+  {
+    id: "keys",
+    title: "Add keyboard shortcuts to the tab bar",
+    status: "idle",
+    time: "3h",
+    prs: [
+      {
+        repo: "pchmn-labs/ivin",
+        number: 411,
+        title: "feat(tab): move between tabs with ⌘⌥ and the arrow keys",
+        state: "open",
+        checks: [...suite, passed("unit", "3m 05s")],
+        review: "required",
+        conflict: false,
+        updated: "3 h ago",
       },
     ],
   },
   { id: "tabs", title: "Refactor the tab store", status: "idle", time: "5h", prs: [] },
 ]
 
-export const TAB_IDS = ["login", "rate", "drizzle", "electron", "release"]
+export const TAB_IDS = ["login", "rate", "drizzle", "keys", "release"]
 
 const STATE_ORDER: Record<PrState, number> = { open: 0, draft: 1, merged: 2, closed: 3 }
 export const leadPr = (prs: ReadonlyArray<Pr>): Pr | undefined =>
@@ -236,3 +254,37 @@ export const ciText = (checks: ReadonlyArray<Check>): string => {
 }
 
 export const urlOf = (pr: Pr) => `https://github.com/${pr.repo}/pull/${pr.number}`
+
+export type Health = "conflict" | "failed" | "running" | "blocked" | "ready" | "none"
+
+export const healthOf = (pr: Pr): Health => {
+  if (pr.state !== "open") return "none"
+  if (pr.conflict) return "conflict"
+  const ci = ciOf(pr.checks)
+  if (ci === "failed") return "failed"
+  if (ci === "running") return "running"
+  if (pr.review !== "approved") return "blocked"
+  return "ready"
+}
+
+const HEALTH_ORDER: Record<Health, number> = { conflict: 0, failed: 1, running: 2, blocked: 3, ready: 4, none: 5 }
+export const worstHealth = (prs: ReadonlyArray<Pr>): Health =>
+  prs.map(healthOf).sort((a, b) => HEALTH_ORDER[a] - HEALTH_ORDER[b])[0] ?? "none"
+
+export const HEALTH_LABEL: Record<Health, string> = {
+  conflict: "Conflicts with main",
+  failed: "Checks failing",
+  running: "Checks running",
+  blocked: "Waiting for review",
+  ready: "Ready to merge",
+  none: "",
+}
+
+export const mergeText = (pr: Pr): { tone: "ready" | "blocked" | "conflict"; text: string } | null => {
+  if (pr.state !== "open") return null
+  if (pr.conflict) return { tone: "conflict", text: "Conflicts with main" }
+  if (pr.review === "changes") return { tone: "conflict", text: "Changes requested" }
+  if (pr.review === "required") return { tone: "blocked", text: "Review required" }
+  if (ciOf(pr.checks) === "passed") return { tone: "ready", text: "Ready to merge" }
+  return { tone: "blocked", text: "Approved" }
+}
