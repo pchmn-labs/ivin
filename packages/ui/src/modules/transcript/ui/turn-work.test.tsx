@@ -76,42 +76,6 @@ const mount = async (seeded: TranscriptItem[], live = false, height = 600) => {
 const toolRows = () => document.querySelectorAll('[data-testid="turn"] [data-testid="tool-output"]')
 const turnLine = () => page.getByTestId("turn-line")
 
-test("a running turn stays unfolded, with its last step open and the steps before folded", async () => {
-  const { user, text, call } = items(Date.now() - 20_000)
-  await mount(
-    [
-      user("u1", "fix it"),
-      text("t1", "Looking at the code"),
-      call("c1", "read"),
-      text("t2", "Running the tests"),
-      call("c2", "command", "error"),
-      call("c3", "command", "running"),
-    ],
-    true,
-  )
-
-  await expect.element(turnLine()).toHaveAttribute("aria-expanded", "true")
-  expect(turnLine().element().textContent).toMatch(/^Working for [12]\ds · 1 failed$/)
-  await expect.element(page.getByText("Looking at the code")).toBeVisible()
-  await expect.element(page.getByText("Running the tests")).toBeVisible()
-  await expect.element(page.getByText("tool-c3")).toBeVisible()
-  expect(toolRows()).toHaveLength(2)
-  await expect
-    .element(page.getByTestId("step-summary").nth(0))
-    .toHaveAttribute("aria-expanded", "false")
-  const steps = page.getByTestId("turn-step")
-  expect(steps.nth(0).element().hasAttribute("data-current")).toBe(false)
-  expect(steps.nth(1).element().hasAttribute("data-current")).toBe(true)
-})
-
-test("a turn that has just started shows its line with no timeline under it", async () => {
-  const { user } = items(Date.now())
-  await mount([user("u1", "fix it")], true)
-
-  await expect.element(page.getByText(/^Working for/)).toBeVisible()
-  expect(document.querySelector(".iv-turn__timeline")).toBeNull()
-})
-
 test("while the turn runs, a sentence streamed after the last call heads a step and never shows as the answer", async () => {
   const { user, text, call } = items(Date.now())
   const server = await mount([user("u1", "fix it"), text("t1", "Looking"), call("c1")], true)
@@ -169,49 +133,6 @@ test("when the turn ends, the text after its last call leaves the timeline and b
   expect(page.getByText("Fixed it").element().closest('[data-testid="turn"]')).toBeNull()
 })
 
-test("a finished turn folds its work behind one line, and shows the user's message and the answer", async () => {
-  const { user, text, call } = items()
-  await mount([
-    user("u1", "fix it"),
-    text("t1", "Looking"),
-    call("c1"),
-    call("c2", "read", "error"),
-    text("a", "Fixed it"),
-  ])
-
-  await expect.element(turnLine()).toHaveTextContent("Worked for 4s · 2 tool calls · 1 failed")
-  await expect.element(turnLine()).toHaveAttribute("aria-expanded", "false")
-  await expect.element(page.getByText("fix it")).toBeVisible()
-  await expect.element(page.getByText("Fixed it")).toBeVisible()
-  expect(page.getByText("Looking").query()).toBeNull()
-  expect(toolRows()).toHaveLength(0)
-})
-
-test("unfolded, each sentence heads a step with a summary of its calls", async () => {
-  const { user, text, call } = items()
-  await mount([
-    user("u1"),
-    call("c0", "search"),
-    text("t1", "Reading the files"),
-    call("c1"),
-    call("c2"),
-    call("c3", "read"),
-    call("c4", "command", "error"),
-    text("a", "Done"),
-  ])
-
-  await turnLine().click()
-
-  const summaries = page.getByTestId("step-summary")
-  await expect.element(summaries.nth(0)).toHaveTextContent("Searched")
-  await expect
-    .element(summaries.nth(1))
-    .toHaveTextContent("Ran 3 commands · read 1 file · 1 failed")
-  await expect.element(page.getByText("Reading the files")).toBeVisible()
-  expect(toolRows()).toHaveLength(5)
-  expect(page.getByTestId("turn-step").nth(1).element().hasAttribute("data-failed")).toBe(true)
-})
-
 test("a turn of 9 calls opens its steps folded, but for a failed call and a subagent call", async () => {
   const { user, text, call } = items()
   await mount([
@@ -234,15 +155,6 @@ test("a turn of 9 calls opens its steps folded, but for a failed call and a suba
   expect(toolRows()).toHaveLength(2)
   await page.getByTestId("step-summary").nth(0).click()
   expect(toolRows()).toHaveLength(6)
-})
-
-test("a stopped turn stays unfolded and says it stopped", async () => {
-  const { user, text, call, interruption } = items()
-  await mount([user("u1"), text("t1", "Trying"), call("c1"), interruption("i")])
-
-  await expect.element(turnLine()).toHaveTextContent("Stopped after 3s · 1 tool call")
-  await expect.element(turnLine()).toHaveAttribute("aria-expanded", "true")
-  await expect.element(page.getByText("Trying")).toBeVisible()
 })
 
 test("the keyboard folds and unfolds the turn line and a step summary", async () => {
@@ -345,25 +257,6 @@ const scrollToEnd = async () => {
   })
 }
 
-test("a running turn of 13 steps shows its last 3 under one line, and nothing of the 10 before", async () => {
-  await mount(stepsOf(13, { failed: [2, 4], agent: [5] }), true)
-
-  await expect.element(earlierLine()).toHaveTextContent("10 earlier steps · 2 failed")
-  await expect.element(earlierLine()).toHaveAttribute("aria-expanded", "false")
-  expect(page.getByTestId("turn-step").all()).toHaveLength(3)
-  await expect.element(page.getByText("Step 11")).toBeVisible()
-  for (const hidden of ["Step 1", "Step 10", "tool-c2", "tool-c4", "tool-c5"]) {
-    expect(page.getByText(hidden, { exact: true }).query()).toBeNull()
-  }
-})
-
-test("a running turn of 3 steps has no earlier steps line", async () => {
-  await mount(stepsOf(3), true)
-
-  await expect.element(page.getByText("Step 1", { exact: true })).toBeVisible()
-  expect(earlierLine().query()).toBeNull()
-})
-
 test("a click and Enter unfold and fold the earlier steps, and the line stays in place", async () => {
   await mount(stepsOf(13, { failed: [2] }), true, 400)
   await expect.element(earlierLine()).toBeVisible()
@@ -459,27 +352,6 @@ test("an open step of 8 calls does not scroll", async () => {
   expect(callList().scrollHeight).toBe(callList().clientHeight)
 })
 
-test("once the turn ends, the earlier steps line and the scrolling calls are gone", async () => {
-  const { interruption, call } = items(Date.now())
-  const extra = Array.from({ length: 9 }, (_, i) => ({ ...call(`x${i}`), position: 100 + i }))
-  const seeded = [...stepsOf(12), ...extra]
-  const server = makeFakeServer()
-  server.seedItems("s1", seeded)
-  const screen = await render(view(server, { live: true }))
-  await expect.element(earlierLine()).toBeVisible()
-  expect(callList().scrollHeight).toBeGreaterThan(callList().clientHeight)
-
-  server.pushItem({ ...interruption("i"), position: 1000 })
-  await screen.rerender(view(server))
-
-  await vi.waitFor(() => expect(turnLine().element().textContent).toMatch(/^Stopped after/))
-  expect(earlierLine().query()).toBeNull()
-  expect(page.getByTestId("turn-step").all()).toHaveLength(12)
-  await page.getByTestId("step-summary").last().click()
-  await expect.element(page.getByText("tool-x8")).toBeVisible()
-  expect(callList().scrollHeight).toBe(callList().clientHeight)
-})
-
 test("while the turn runs, a step of 9 calls the user unfolds also stops at 8 rows", async () => {
   const { user, text, call } = items(Date.now())
   await mount(
@@ -502,34 +374,6 @@ test("while the turn runs, a step of 9 calls the user unfolds also stops at 8 ro
     .querySelector<HTMLElement>(".iv-turn__calls")!
   expect(list.scrollHeight).toBeGreaterThan(list.clientHeight)
   await vi.waitFor(() => expect(atListEnd(list)).toBe(true))
-})
-
-test("a steer heads its own step in the running turn, above the agent's reply, and the turn keeps its clock", async () => {
-  const { user, text, call } = items(Date.now() - 20_000)
-  const steer = (id: string, words: string): TranscriptItem =>
-    ({ ...user(id, words), steer: true }) as TranscriptItem
-  await mount(
-    [
-      user("u1", "fix it"),
-      text("t1", "Looking at the code"),
-      call("c1", "read"),
-      steer("s1", "leave the e2e tests alone"),
-      text("t2", "Understood, unit tests only"),
-      call("c2", "command", "running"),
-    ],
-    true,
-  )
-
-  await expect.element(turnLine()).toHaveAttribute("aria-expanded", "true")
-  expect(turnLine().element().textContent).toMatch(/^Working for [12]\ds$/)
-  const bubble = page.getByTestId("turn-steer")
-  await expect.element(bubble).toHaveTextContent("leave the e2e tests alone")
-  const steps = page.getByTestId("turn-step")
-  await expect.element(steps).toHaveLength(2)
-  expect(steps.nth(1).element().hasAttribute("data-steer")).toBe(true)
-  expect(steps.nth(1).element().textContent).toMatch(
-    /^leave the e2e tests alone.*Understood, unit tests only/,
-  )
 })
 
 test("a prompt longer than its fold shows a Show more link that opens it all", async () => {

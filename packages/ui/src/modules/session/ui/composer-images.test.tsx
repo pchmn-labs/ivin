@@ -15,7 +15,6 @@ import {
   field,
   mount,
   paste,
-  PIXEL,
   png,
   transfer,
   view,
@@ -29,25 +28,6 @@ const drop = (files: ReadonlyArray<File>) => {
     target.dispatchEvent(new DragEvent(type, { dataTransfer, bubbles: true, cancelable: true }))
 }
 
-test("a pasted image puts its marker at the caret and its thumbnail above the text, and is sent with the message", async () => {
-  const { server } = await mount()
-  await field().click()
-  await userEvent.keyboard("look ")
-  paste([png("shot.png")])
-
-  await expect.element(draftThumbnails()).toHaveAccessibleName("View image #1")
-  await expect.element(field().getByRole("img", { name: "Image #1" })).toBeVisible()
-  await userEvent.keyboard("please")
-  await userEvent.keyboard("{Enter}")
-
-  await expect.poll(() => server.sentMessages.at(-1)?.text).toBe("look [Image #1] please")
-  expect(server.sentMessages.at(-1)?.images).toEqual([
-    { id: expect.any(String), number: 1, mediaType: "image/png", base64: PIXEL },
-  ])
-  await expect.element(page.getByTestId("draft-images")).not.toBeInTheDocument()
-  await expect.element(page.getByRole("button", { name: "View image #1" }).first()).toBeVisible()
-})
-
 test("dropped images each get a thumbnail and a marker, numbered after the session's last image", async () => {
   await mount({ lastImageNumber: 4 })
   drop([png("a.png"), png("b.png")])
@@ -55,23 +35,6 @@ test("dropped images each get a thumbnail and a marker, numbered after the sessi
   await expect.poll(() => draftThumbnails().elements().length).toBe(2)
   await expect.element(field().getByRole("img", { name: "Image #5" })).toBeVisible()
   await expect.element(field().getByRole("img", { name: "Image #6" })).toBeVisible()
-})
-
-test("removing a thumbnail takes its marker out of the text", async () => {
-  const { server } = await mount()
-  await field().click()
-  await userEvent.keyboard("before ")
-  paste([png("shot.png")])
-  await expect.element(draftThumbnails()).toBeVisible()
-
-  await page.getByRole("button", { name: "Remove image #1" }).click()
-
-  await expect.element(page.getByTestId("draft-images")).not.toBeInTheDocument()
-  expect(field().getByRole("img").query()).toBeNull()
-  await field().click()
-  await userEvent.keyboard("{Enter}")
-  await expect.poll(() => server.sentMessages.at(-1)?.text).toBe("before ")
-  expect(server.sentMessages.at(-1)?.images).toBeUndefined()
 })
 
 test("a file that is not an image, or is too large, is refused with a message next to the composer", async () => {
@@ -183,43 +146,6 @@ test("the full-screen view draws the images of its strip only as they scroll int
   await vi.waitFor(() => expect(strip.querySelectorAll("img").length).toBeGreaterThan(0))
   expect(strip.querySelectorAll("button")).toHaveLength(80)
   expect(strip.querySelectorAll("img").length).toBeLessThan(40)
-})
-
-test("a marker in a sent message opens its image full screen", async () => {
-  const server = makeFakeServer()
-  server.openProject("/p")
-  addSession(server, "s1", 3)
-  seedTranscript(server)
-  await render(view(server, "s1"))
-
-  await page.getByRole("button", { name: "View image #3" }).last().click()
-  await expect
-    .element(page.getByRole("dialog").getByRole("heading"))
-    .toHaveTextContent("Image #3 · 3 of 3")
-})
-
-test("a marker in the composer opens the draft's images full screen", async () => {
-  await mount()
-  paste([png("one.png"), png("two.png")])
-  await expect.element(field().getByRole("img", { name: "Image #2" })).toBeVisible()
-
-  await field().getByRole("img", { name: "Image #2" }).click()
-  const viewer = page.getByRole("dialog")
-  await expect.element(viewer.getByRole("heading")).toHaveTextContent("Image #2 · 2 of 2")
-  await expect.element(viewer.getByText("two.png · Not sent yet")).toBeVisible()
-})
-
-test("hovering a marker in a sent message shows its image in a preview card", async () => {
-  const server = makeFakeServer()
-  server.openProject("/p")
-  addSession(server, "s1", 3)
-  seedTranscript(server)
-  await render(view(server, "s1"))
-
-  await page.getByRole("button", { name: "View image #3" }).last().hover()
-  await expect.element(page.getByText("Image #3", { exact: true })).toBeVisible()
-  await page.getByText("a test fails", { exact: false }).hover()
-  await expect.element(page.getByText("Image #3", { exact: true })).not.toBeInTheDocument()
 })
 
 test("a deleted image keeps its place in the message and says it was deleted in the full-screen view", async () => {

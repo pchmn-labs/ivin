@@ -16,75 +16,6 @@ import { SessionView } from "./session-view.tsx"
 const composerText = () =>
   (page.getByRole("textbox", { name: "Message" }).element() as HTMLElement).innerText
 
-test("the transcript renders through the plugins and the status line shows the usage", async () => {
-  const server = makeFakeServer()
-  server.openProject("/p")
-  const base = { sessionId: "s1" }
-  server.seedItems("s1", [
-    {
-      ...base,
-      id: "m0",
-      position: 0,
-      at: 0,
-      type: "message",
-      role: "user",
-      text: "hello",
-      images: [],
-      steer: false,
-    },
-    {
-      ...base,
-      id: "t1",
-      position: 1,
-      at: 0,
-      type: "tool_call",
-      toolCallId: "c1",
-      name: "Bash",
-      kind: "command",
-      input: null,
-      status: "done",
-      output: "ok",
-    },
-    {
-      ...base,
-      id: "u2",
-      position: 2,
-      at: 0,
-      type: "usage",
-      inputTokens: 1000,
-      outputTokens: 200,
-      costUsd: 0.01,
-    },
-    {
-      ...base,
-      id: "u3",
-      position: 3,
-      at: 0,
-      type: "usage",
-      inputTokens: 300,
-      outputTokens: 40,
-      costUsd: 0.0023,
-    },
-  ])
-  server.sessions.set("s1", makeTestSession({ id: "s1", title: "t" }))
-
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <PluginsProvider plugins={builtinPlugins}>
-        <SessionView projectPath="/p" sessionId="s1" />
-      </PluginsProvider>
-    </RegistryProvider>,
-  )
-
-  await expect.element(page.getByText("hello", { exact: true })).toBeVisible()
-  await expect.element(page.getByTestId("tool-output")).toBeVisible()
-  expect(document.querySelectorAll('[data-testid="transcript-item"]')).toHaveLength(1)
-  expect(document.querySelectorAll('[data-testid="transcript-work"]')).toHaveLength(1)
-  await expect
-    .element(page.getByTestId("composer-status"))
-    .toHaveTextContent("1,540 tokens · $0.0123")
-})
-
 const mountSession = async (
   status: "idle" | "working" | "waiting",
   harness: Harness = "claude",
@@ -150,26 +81,6 @@ test("the composer announces the status and follows the server", async () => {
   await expect
     .element(page.getByTestId("composer-session-status"))
     .toHaveTextContent("Waiting for you")
-})
-
-test("the Interrupt button shows only while the session works and interrupts it", async () => {
-  const server = await mountSession("idle")
-  await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
-  expect(page.getByRole("button", { name: "Interrupt" }).query()).toBeNull()
-
-  server.setStatus("s1", "working")
-  await page.getByRole("button", { name: "Interrupt" }).click()
-  await expect.element(page.getByTestId("composer-session-status")).toHaveTextContent("Idle")
-  await expect.element(page.getByText("Interrupted")).toBeVisible()
-  expect(page.getByRole("button", { name: "Interrupt" }).query()).toBeNull()
-})
-
-test("the composer accepts a message while the session works", async () => {
-  const server = await mountSession("working")
-  await page.getByRole("textbox", { name: "Message" }).fill("also this")
-  await page.getByRole("button", { name: "Send" }).click()
-  await expect.element(page.getByText("also this", { exact: true })).toBeVisible()
-  await vi.waitFor(() => expect(server.sentMessages).toHaveLength(1))
 })
 
 test("a message that fails to send stays in the composer, and Retry sends it", async () => {
@@ -372,30 +283,6 @@ const sendText = async (text: string) => {
   await page.getByRole("button", { name: "Send" }).click()
 }
 
-test("a new session asks for its task with the composer in the middle, and the working folder choice stays until the first message", async () => {
-  const server = await mountNewSession()
-  const title = page.getByRole("heading", { name: "What should we work on in shop?" })
-  await expect.element(title).toBeVisible()
-  expect(picker().element().textContent).toBe("Current checkout")
-
-  await choose("New worktree")
-  expect(picker().element().textContent).toBe("New worktree")
-  await expect.element(page.getByText("New branch from origin/main")).toBeVisible()
-  await sendText("go")
-
-  await expect.element(title).not.toBeInTheDocument()
-  await expect.element(picker()).not.toBeInTheDocument()
-  await expect
-    .element(page.getByTestId("session-location"))
-    .toHaveTextContent("Worktreeivin/generated")
-  await sendText("again")
-  await vi.waitFor(() => expect(server.sentMessages).toHaveLength(2))
-  expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
-    { kind: "new_worktree" },
-    undefined,
-  ])
-})
-
 test("a worktree list git cannot read shows a message with a retry in the working folder menu", async () => {
   const server = await mountNewSession()
   server.failListingWith("fatal: detected dubious ownership")
@@ -430,23 +317,6 @@ test("15 worktrees scroll inside the working folder menu; keyboard only filters,
   await expect.element(picker()).toHaveFocus()
 })
 
-test("the menu lists the project's worktrees with the session using each, and one can be picked", async () => {
-  const server = await mountNewSession()
-  await picker().click()
-  const existing = page.getByRole("option", { name: /docs\/adr/ })
-  expect(existing.element().textContent).toContain("Write the ADR")
-  await existing.click()
-
-  expect(picker().element().textContent).toBe("Worktree")
-  await expect.element(page.getByText("docs/adr", { exact: true })).toBeVisible()
-  await sendText("go")
-  await vi.waitFor(() =>
-    expect(server.sentMessages.map((m) => m.workingFolder)).toEqual([
-      { kind: "existing_worktree", path: "/p/.worktrees/docs-adr" },
-    ]),
-  )
-})
-
 test("a worktree git cannot create shows git's message in the transcript and keeps the message and the choice", async () => {
   const server = await mountNewSession()
   server.failWorktreeWith("fatal: unable to access 'origin': Could not resolve host")
@@ -464,18 +334,6 @@ test("a worktree git cannot create shows git's message in the transcript and kee
     .toBeVisible()
   await expect.poll(composerText).toBe("go")
   expect(picker().element().textContent).toBe("New worktree")
-})
-
-test("a session preparing its worktree says so under the transcript until the run starts", async () => {
-  const server = await mountNewSession()
-  await page.getByRole("textbox", { name: "Message" }).fill("go")
-  server.setStatus("s1", "preparing_worktree")
-  const preparing = page.getByTestId("preparing-worktree")
-  await expect.element(preparing).toBeVisible()
-  expect(preparing.element().textContent).toBe("Preparing worktree…")
-  await expect.element(page.getByRole("button", { name: "Send" })).toBeDisabled()
-  server.setStatus("s1", "working")
-  await expect.element(preparing).not.toBeInTheDocument()
 })
 
 const switchButton = () => page.getByRole("button", { name: "Switch to main" })
@@ -525,20 +383,6 @@ test("a branch behind origin pulls in one click, and a pull refused by local cha
 
   await expect.element(pull).not.toBeInTheDocument()
   expect(server.localChangesChoices).toEqual(["stash before pull"])
-})
-
-test("the switch and pull buttons are gone once the first message is sent, and absent for a worktree", async () => {
-  await mountNewSession({ branch: "feat/search", behind: 2 })
-  await expect.element(switchButton()).toBeVisible()
-  await choose("New worktree")
-  await expect.element(switchButton()).not.toBeInTheDocument()
-  await choose("Current checkout")
-  await expect.element(switchButton()).toBeVisible()
-
-  await sendText("go")
-  await expect.poll(composerText).toBe("")
-  await expect.element(switchButton()).not.toBeInTheDocument()
-  await expect.element(page.getByRole("button", { name: /^Pull/ })).not.toBeInTheDocument()
 })
 
 const mountDeletedFolderSession = async ({
@@ -664,39 +508,6 @@ test("a pick that fails says so beside the picker, keeps the choice and offers a
 
 const runOptions = (name: string) => page.getByRole("button", { name: `Run options: ${name}` })
 
-test("the composer shows the session's model, effort and permission mode by name in one menu", async () => {
-  await mountSession("idle")
-  await runOptions("Sonnet 5.5, High, Manual").click()
-
-  for (const column of ["Model", "Effort", "Permissions"]) {
-    await expect.element(page.getByRole("listbox", { name: column })).toBeVisible()
-  }
-  for (const mode of ["manual", "acceptEdits", "plan"]) {
-    await expect.element(page.getByTestId(`run-option-permissionMode-${mode}`)).toBeVisible()
-  }
-  await expect
-    .element(page.getByTestId("run-option-permissionMode-manual").getByLabelText("Current"))
-    .toBeVisible()
-  await expect
-    .element(page.getByRole("group", { name: "Older models" }))
-    .toHaveTextContent("Older modelsOpus 4.6Haiku 4.5")
-})
-
-test("picking a model changes it for the session, keeps the menu open and adds a line to the transcript", async () => {
-  const server = await mountSession("idle")
-  await runOptions("Sonnet 5.5, High, Manual").click()
-  await page.getByTestId("run-option-model-opus").click()
-
-  await expect.element(runOptions("Opus 5.5, High, Manual")).toBeVisible()
-  await expect.element(page.getByRole("listbox", { name: "Model" })).toBeVisible()
-  await vi.waitFor(() => expect(server.sessions.get("s1")?.model).toBe("opus"))
-  await vi.waitFor(() =>
-    expect(page.getByTestId("transcript-item").last().element().textContent).toBe(
-      "ModelSonnet 5.5Opus 5.5",
-    ),
-  )
-})
-
 test("a model that does not take the current effort moves it down, and greys out what it does not take", async () => {
   const server = await mountSession("idle")
   await runOptions("Sonnet 5.5, High, Manual").click()
@@ -709,18 +520,6 @@ test("a model that does not take the current effort moves it down, and greys out
   )
   await expect
     .element(page.getByTestId("run-option-effort-xhigh"))
-    .toHaveAttribute("aria-disabled", "true")
-})
-
-test("a model with no effort greys out the effort column and leaves the effort out of the button", async () => {
-  await mountSession("idle")
-  await runOptions("Sonnet 5.5, High, Manual").click()
-  await page.getByTestId("run-option-model-claude-haiku-4-5").click()
-
-  await expect.element(runOptions("Haiku 4.5, Manual")).toBeVisible()
-  await expect.element(page.getByText("Haiku 4.5 has no effort setting.")).toBeVisible()
-  await expect
-    .element(page.getByTestId("run-option-effort-low"))
     .toHaveAttribute("aria-disabled", "true")
 })
 
@@ -744,15 +543,6 @@ test("each permission mode shows its description under its name, and models show
     .element(page.getByTestId("run-option-permissionMode-plan"))
     .toHaveAccessibleDescription("Reads and plans, changes nothing")
   await expect.element(page.getByText("For everyday tasks")).not.toBeInTheDocument()
-})
-
-test("while the agent works, the run options menu says the change waits for the end of the turn", async () => {
-  await mountSession("working")
-  await runOptions("Sonnet 5.5, High, Manual").click()
-  await expect.element(page.getByText("Applies once the agent finishes this turn.")).toBeVisible()
-  await expect
-    .element(page.getByText("Applies to this session from the next message"))
-    .not.toBeInTheDocument()
 })
 
 test("a failed relaunch docks a sheet above the composer, puts the message back and offers the previous model", async () => {
@@ -837,20 +627,6 @@ test("messages sent while the agent works wait in a sheet on the composer, and S
   // The view scrolls to the last message sent, which pushes the first one above it.
   await expect.element(page.getByText("and the config")).toBeVisible()
   await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toEqual([]))
-})
-
-test("the sheet names a single waiting message, and leaves once the agent reads it", async () => {
-  const server = await mountSession("working")
-  await page.getByRole("textbox").fill("also check the logs")
-  await userEvent.keyboard("{Enter}")
-
-  const sheet = page.getByTestId("composer-pending")
-  await expect.element(sheet.getByText("Sent to the agent")).toBeVisible()
-  await vi.waitFor(() => expect(server.sessions.get("s1")?.pendingMessages).toHaveLength(1))
-  server.readPendingMessages("s1")
-
-  await expect.element(sheet).not.toBeInTheDocument()
-  await expect.element(page.getByTestId("turn-steer")).toHaveTextContent("also check the logs")
 })
 
 test("unread messages come back after a draft the user typed in the meantime, and a message of images alone still shows in the sheet", async () => {

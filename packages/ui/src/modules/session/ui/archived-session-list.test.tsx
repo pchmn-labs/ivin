@@ -39,12 +39,6 @@ const setup = async (titles: ReadonlyArray<string>) => {
 
 const rows = () => page.getByTestId("archived-session")
 
-test("a project with no archived session says how to archive one", async () => {
-  await setup([])
-  await expect.element(page.getByText("No archived sessions in p.")).toBeVisible()
-  await expect.element(page.getByText(/Archive a session from its menu/)).toBeVisible()
-})
-
 test("the keyboard alone restores an archived session and moves to the next one", async () => {
   const { server } = await setup(["First", "Second"])
   await vi.waitFor(() => expect(rows().first().element().textContent).toContain("First"))

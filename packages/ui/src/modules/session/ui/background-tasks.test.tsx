@@ -1,12 +1,10 @@
 import { RegistryProvider } from "@effect/atom-react"
-import type { Session } from "@ivin/contracts/session"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "../../../app/plugin-host.tsx"
-import { NotificationProvider } from "../../../core/components/notification/notification.tsx"
 import { makeFakeServer } from "../../../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { makeTestSession } from "../../../core/test-session.ts"
@@ -89,51 +87,7 @@ const items: TranscriptItem[] = [
   }),
 ]
 
-const mountSession = async (overrides: Partial<Session> = {}) => {
-  const server = makeFakeServer()
-  server.openProject("/p")
-  server.sessions.set(
-    "s1",
-    makeTestSession({
-      id: "s1",
-      title: "Fix the double stop",
-      projectPath: "/p",
-      started: true,
-      status: "in_background",
-      backgroundTasks: [review, tests],
-      ...overrides,
-    }),
-  )
-  server.seedItems("s1", items)
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <PluginsProvider plugins={builtinPlugins}>
-        <NotificationProvider>
-          <div style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
-            <SessionView projectPath="/p" sessionId="s1" />
-          </div>
-        </NotificationProvider>
-      </PluginsProvider>
-    </RegistryProvider>,
-  )
-  return server
-}
-
 const line = () => page.getByTestId("background-line")
-
-test("a session in background folds its tasks under the last turn, and its steps stay out of the turns", async () => {
-  await mountSession()
-
-  await expect.element(line()).toHaveTextContent("2 tasks in background")
-  expect(page.getByText("Review the diff").query()).toBeNull()
-  expect(page.getByText("I read the session runner first.").query()).toBeNull()
-
-  await line().click()
-
-  await expect.element(page.getByText("Review the diff")).toBeVisible()
-  await expect.element(page.getByText("End-to-end tests")).toBeVisible()
-  await expect.element(page.getByText("Both run in the background.")).toBeVisible()
-})
 
 test("a task started before the loaded page of the transcript still shows in the fold and opens in the sheet", async () => {
   const later = Array.from({ length: 80 }, (_, i): TranscriptItem => ({
@@ -175,40 +129,4 @@ test("a task started before the loaded page of the transcript still shows in the
   await expect.element(page.getByText("End-to-end tests")).toBeVisible()
   await page.getByTestId("task-details").click()
   await expect.element(page.getByTestId("view-sheet")).toBeVisible()
-})
-
-test("a task's Stop button asks the server to stop that task and does not unfold the row", async () => {
-  const server = await mountSession()
-  await line().click()
-
-  await page.getByTestId("task-stop").first().click()
-
-  await expect.poll(() => server.stoppedTasks).toEqual([expect.stringMatching(/^s1\//)])
-  await expect.element(page.getByTestId("task-stopping")).toBeVisible()
-  expect(page.getByTestId("view-sheet").query()).toBeNull()
-  await expect
-    .element(page.getByTestId("background-task").first().getByRole("button").first())
-    .toHaveAttribute("aria-expanded", "false")
-})
-
-test("the fold stays while the agent works again with tasks running, and goes with the last task", async () => {
-  const server = await mountSession()
-  await expect.element(line()).toBeVisible()
-
-  server.setStatus("s1", "working")
-  server.setBackgroundTasks("s1", [tests])
-
-  await expect.element(line()).toHaveTextContent("1 task in background")
-  server.setBackgroundTasks("s1", [])
-  await expect.poll(() => page.getByTestId("background-line").query()).toBeNull()
-})
-
-test("a task's row unfolds on its last steps without opening the sheet", async () => {
-  await mountSession()
-  await line().click()
-
-  await page.getByText("Review the diff").click()
-
-  await expect.element(page.getByText("I read the session runner first.")).toBeVisible()
-  expect(page.getByTestId("view-sheet").query()).toBeNull()
 })

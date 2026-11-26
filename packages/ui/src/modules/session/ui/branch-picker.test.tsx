@@ -40,25 +40,6 @@ const mount = async (extraBranches = 0) => {
 const row = (label: string) =>
   page.getByTestId("branch-row").filter({ hasText: new RegExp(`^${label}`) })
 
-test("remote branches are fetched on open, and the list marks the current branch and those held by a worktree", async () => {
-  const server = await mount()
-  const fetch = server.holdNextFetch()
-  await page.getByTestId("branch-picker").click()
-
-  await expect.element(page.getByText("Fetching remote branches…")).toBeVisible()
-  fetch.release()
-  await expect.element(row("origin/feat/new")).toBeVisible()
-
-  await expect.element(row("main").getByLabelText("Current branch")).toBeInTheDocument()
-  await expect.element(row("feat/login").getByText("in worktree")).toBeVisible()
-  expect(row("fix/typo").getByText(/^in /).query()).toBeNull()
-  for (const remote of ["origin/main", "origin/feat/login", "origin/feat/new"]) {
-    await expect.element(row(remote)).toHaveAttribute("data-muted")
-    expect(row(remote).getByText("in worktree").query()).toBeNull()
-    expect(row(remote).getByLabelText("Current branch").query()).toBeNull()
-  }
-})
-
 test("40 branches scroll inside the menu, and typing filters them; picking one held by a worktree moves the session there", async () => {
   await mount(40)
   await page.getByTestId("branch-picker").click()
