@@ -3,8 +3,11 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { expect, test, vi } from "vitest"
-import { PluginHost } from "../usecases/plugin-host.ts"
+import { NO_PERMISSIONS } from "../rules/permissions.ts"
+import { PluginHost, type RunningPluginHost } from "../usecases/plugin-host.ts"
+import { layerPluginStubs } from "../usecases/plugin-stubs.ts"
 import { runPluginHost } from "../usecases/run-plugin-host.ts"
+import { serveHost } from "../usecases/serve-host.ts"
 import { layerServerHalves, ServerHalves } from "../usecases/server-halves.ts"
 import { UserPlugins } from "../usecases/user-plugins.ts"
 import { layerChildPluginHost } from "./child-plugin-host.ts"
@@ -54,6 +57,7 @@ const withHost = <A>(
       Effect.provide(
         Layer.mergeAll(
           layerServerHalves,
+          layerPluginStubs,
           layerFsUserPlugins(ivinHome),
           layerChildPluginHost(process.execPath, hostEntry),
         ),
@@ -169,4 +173,78 @@ test("deactivating a plugin aborts its ctx.signal", async () => {
     ),
   )
   expect(logged).toEqual([{ id: "stops", line: "signal aborted" }])
+})
+
+// Runs one plugin in a real host, with the server answering its `ctx` calls.
+const withActivated = <A>(
+  id: string,
+  server: string,
+  use: (host: RunningPluginHost, lines: string[]) => Effect.Effect<A>,
+) => {
+  const ivinHome = home()
+  writePlugin(ivinHome, id, server)
+  return Effect.runPromise(
+    Effect.gen(function* () {
+      const plugins = (yield* UserPlugins)!
+      const launcher = (yield* PluginHost)!
+      const [folder] = yield* plugins.folders
+      const file = yield* plugins.compile({
+        id,
+        path: folder!.path,
+        entry: "src/server.ts",
+        half: "server",
+      })
+      const host = yield* launcher.launch
+      yield* serveHost(host, [{ id, permissions: NO_PERMISSIONS }])
+      const lines: string[] = []
+      yield* Effect.forkScoped(
+        host.logs.pipe(Stream.runForEach(({ line }) => Effect.sync(() => void lines.push(line)))),
+      )
+      yield* host.activate({ id, file: plugins.bundlePath(file) })
+      return yield* use(host, lines)
+    }).pipe(
+      Effect.provide(
+        Layer.mergeAll(
+          layerPluginStubs,
+          layerFsUserPlugins(ivinHome),
+          layerChildPluginHost(process.execPath, hostEntry),
+        ),
+      ),
+      Effect.scoped,
+    ),
+  )
+}
+
+test("a process a server half started with ctx.exec is killed when the plugin is deactivated", async () => {
+  const lines = await withActivated(
+    "runs",
+    `export const activate = (ctx) => {
+  ctx.exec("sleep", ["30"]).then((result) => console.log("exited " + result.exitCode))
+}`,
+    (host, lines) =>
+      Effect.gen(function* () {
+        yield* Effect.sleep(Duration.millis(300))
+        yield* host.deactivate("runs")
+        yield* until(Effect.sync(() => lines.length > 0))
+        return lines
+      }),
+  )
+  expect(lines).toEqual(["exited null"])
+})
+
+test("an interval a server half set with ctx.setInterval stops when the plugin is deactivated", async () => {
+  const afterDeactivate = await withActivated(
+    "ticks",
+    `export const activate = (ctx) => { ctx.setInterval(() => console.log("tick"), 10) }`,
+    (host, lines) =>
+      Effect.gen(function* () {
+        yield* until(Effect.sync(() => lines.length > 1))
+        yield* host.deactivate("ticks")
+        yield* Effect.sleep(Duration.millis(50))
+        const count = lines.length
+        yield* Effect.sleep(Duration.millis(150))
+        return lines.length - count
+      }),
+  )
+  expect(afterDeactivate).toBe(0)
 })

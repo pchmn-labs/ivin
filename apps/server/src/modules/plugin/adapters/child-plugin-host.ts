@@ -75,6 +75,17 @@ export const layerChildPluginHost = (runtime: string, entry: string) =>
         logs: client["pluginHost.logs"]().pipe(
           Stream.catchTag("RpcClientError", () => Stream.empty),
         ),
+        calls: client["pluginHost.calls"]().pipe(
+          Stream.catchTag("RpcClientError", () => Stream.empty),
+        ),
+        reply: (reply) =>
+          client["pluginHost.reply"]({ reply }).pipe(
+            Effect.catchTag("RpcClientError", () => Effect.void),
+          ),
+        dispatch: (dispatch) =>
+          client["pluginHost.dispatch"](dispatch).pipe(
+            Effect.catchTag("RpcClientError", () => Effect.never),
+          ),
         exited: Deferred.await(exited),
       }
       return host

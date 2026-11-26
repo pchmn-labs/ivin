@@ -1,5 +1,5 @@
 import { Rpcs } from "@ivin/contracts/rpcs"
-import { Effect, Layer, Stream } from "effect"
+import { Effect, Layer, Stream, SubscriptionRef } from "effect"
 import { layerSqliteAnnotationStore } from "../modules/annotation/adapters/sqlite-annotation-store.ts"
 import { addAnnotation } from "../modules/annotation/usecases/add-annotation.ts"
 import { layerAnnotationFeed } from "../modules/annotation/usecases/annotation-feed.ts"
@@ -31,6 +31,9 @@ import { discardChanges } from "../modules/file/usecases/discard-changes.ts"
 import { writeFile } from "../modules/file/usecases/write-file.ts"
 import { logFailure } from "../modules/log/usecases/log-error.ts"
 import { writeError } from "../modules/log/usecases/write-error.ts"
+import { layerSqlitePluginStorage } from "../modules/plugin/adapters/sqlite-plugin-storage.ts"
+import { layerPluginBridge, PluginBridge } from "../modules/plugin/usecases/plugin-bridge.ts"
+import { layerPluginServices } from "./plugin-services.ts"
 import { listPluginStatus } from "../modules/plugin/usecases/list-plugin-status.ts"
 import { listPlugins } from "../modules/plugin/usecases/list-plugins.ts"
 import { layerServerHalves } from "../modules/plugin/usecases/server-halves.ts"
@@ -116,6 +119,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     layerFirstMessageReading,
     layerUnrestoredSubViewsDropped,
     layerServerHalves,
+    layerPluginServices,
   ).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
     Layer.provideMerge(Layer.mergeAll(layerSessionTabs, layerSessionsWithTab)),
@@ -140,6 +144,8 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
         layerItemFeed,
         layerSqliteAnnotationStore,
         layerAnnotationFeed,
+        layerPluginBridge,
+        layerSqlitePluginStorage,
       ),
     ),
     Layer.provideMerge(layerFsProjectTrust),
@@ -184,6 +190,12 @@ export const handlers = Rpcs.toLayer(
       "plugin.readLog": ({ id }) => readPluginLog(id),
       "plugin.status": () => listPluginStatus,
       "plugin.lock": ({ id }) => lockPlugin(id),
+      "plugin.run": ({ command, args }) =>
+        Effect.flatMap(PluginBridge, (bridge) => bridge.runCommand(command, args)),
+      "plugin.setWindowVisible": ({ visible }) =>
+        Effect.flatMap(PluginBridge, (bridge) =>
+          SubscriptionRef.set(bridge.windowVisible, visible),
+        ),
       "setting.watch": () => watchSettings,
       "setting.get": ({ path }) => getSetting(path),
       "setting.set": ({ path, value }) => setSetting(path, value),

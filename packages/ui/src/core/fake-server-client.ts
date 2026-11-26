@@ -28,7 +28,12 @@ import {
 } from "@ivin/contracts/file"
 import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
-import { PluginNotFound, type PluginFailure, type UserPlugin } from "@ivin/contracts/plugin"
+import {
+  CommandNotFound,
+  PluginNotFound,
+  type PluginFailure,
+  type UserPlugin,
+} from "@ivin/contracts/plugin"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
 import type {
   AgentCommand,
@@ -511,6 +516,9 @@ export const makeFakeServer = (
     "plugin.readLog": ({ id }: { id: string }) =>
       Effect.sync(() => pluginFailures.filter((f) => f.id === id).map((f) => f.reason)),
     "plugin.status": () => Effect.succeed([]),
+    "plugin.run": ({ command }: { command: string }) =>
+      Effect.fail(new CommandNotFound({ command })),
+    "plugin.setWindowVisible": () => Effect.void,
     "keybinding.watch": () =>
       Stream.unwrap(
         Effect.map(PubSub.subscribe(keybindingChanges), (subscription) =>

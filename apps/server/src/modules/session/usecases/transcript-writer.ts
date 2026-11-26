@@ -2,6 +2,7 @@ import type { Session } from "@ivin/contracts/session"
 import type { HarnessDelta, HarnessEvent } from "@ivin/contracts/transcript"
 import { HarnessProvider, type HarnessError, type RequestAnswer } from "@ivin/harness"
 import { DateTime, Effect, Semaphore } from "effect"
+import { PluginBridge, type PluginEvent } from "../../plugin/usecases/plugin-bridge.ts"
 import { guarded, logError } from "../../log/usecases/log-error.ts"
 import {
   applyEvent,
@@ -30,6 +31,7 @@ export const openTranscriptWriter = (session: Session) =>
     const feed = yield* ItemFeed
     const sessionFeed = yield* SessionFeed
     const sessions = yield* SessionStore
+    const bridge = yield* PluginBridge
     const context = yield* Effect.context<SessionStore | SessionFeed>()
     const setStatus = (...args: Parameters<typeof setSessionStatus>) =>
       setSessionStatus(...args).pipe(Effect.provideContext(context))
@@ -71,6 +73,16 @@ export const openTranscriptWriter = (session: Session) =>
         itemState = next.state
         if (next.item) yield* feed.publish({ type: "upsert", item: next.item })
         yield* sessionFeed.publish(session.id)
+        yield* bridge.publish(
+          "transcript",
+          sessions.findById(session.id).pipe(
+            Effect.map((current): PluginEvent => ({
+              kind: "transcript",
+              session: current ?? session,
+              event: stored,
+            })),
+          ),
+        )
       })
 
     const syncTasks = Effect.suspend(() =>

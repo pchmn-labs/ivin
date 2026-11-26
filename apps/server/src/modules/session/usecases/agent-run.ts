@@ -2,6 +2,7 @@ import type { RunOptions, Session } from "@ivin/contracts/session"
 import type { HarnessEvent, HarnessOutput } from "@ivin/contracts/transcript"
 import { HarnessError, HarnessProvider, type RequestAnswer } from "@ivin/harness"
 import { Cause, Effect, Exit, Option, Scope, Stream } from "effect"
+import { PluginBridge } from "../../plugin/usecases/plugin-bridge.ts"
 import { guarded, logError } from "../../log/usecases/log-error.ts"
 import { type FirstTurn, firstTurnOutcome, runOptionsOf } from "../rules/run-options.ts"
 import { type UserMessage, userMessageEvent } from "../rules/user-message.ts"
@@ -100,12 +101,16 @@ const buildRun = (
 
     const storedProviderSessionId = yield* sessions.providerSessionId(session.id)
     const options = runOptionsOf(session)
+    const spawn = yield* (yield* PluginBridge).beforeSpawn(session.id)
+    for (const warning of spawn.warnings)
+      yield* writer.record({ type: "error", message: warning, raw: null })
     const harness = yield* provider
       .start({
         sessionId: session.id,
         cwd: session.workingFolder,
         options,
         providerSessionId: storedProviderSessionId,
+        env: spawn.env,
       })
       .pipe(Scope.provide(scope))
 

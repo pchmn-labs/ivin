@@ -280,6 +280,15 @@ export const migrations: readonly Migration[] = [
       0
     )`,
   },
+  {
+    version: 27,
+    sql: `CREATE TABLE plugin_storage (
+      plugin TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      PRIMARY KEY (plugin, key)
+    )`,
+  },
 ]
 
 const inTransaction = <A, E>(db: DatabaseSync, body: Effect.Effect<A, E>) =>

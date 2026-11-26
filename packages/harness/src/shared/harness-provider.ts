@@ -13,6 +13,8 @@ export interface StartInput {
   readonly cwd: string
   readonly options: RunOptions
   readonly providerSessionId: string | null
+  // Added to the agent's process environment.
+  readonly env?: Readonly<Record<string, string>>
 }
 
 export interface UserMessage {

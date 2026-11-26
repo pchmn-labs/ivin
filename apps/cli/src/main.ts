@@ -14,6 +14,7 @@ import { link } from "./link.ts"
 import { pluginList } from "./plugin-list.ts"
 import { pluginLock } from "./plugin-lock.ts"
 import { pluginLogs } from "./plugin-logs.ts"
+import { runPluginCommand } from "./run.ts"
 import { sessionAnnotate } from "./session-annotate.ts"
 import { sessionRename } from "./session-rename.ts"
 import { settingsGet } from "./settings-get.ts"
@@ -21,6 +22,7 @@ import { settingsSet } from "./settings-set.ts"
 
 const commands: readonly Command[] = [
   doctor,
+  runPluginCommand,
   sessionAnnotate,
   sessionRename,
   link,

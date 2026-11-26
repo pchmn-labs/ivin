@@ -1,3 +1,4 @@
+import type { PluginBridge } from "../../plugin/usecases/plugin-bridge.ts"
 import { ProjectNotTrusted } from "@ivin/contracts/project"
 import {
   ApprovalNotOpen,
@@ -81,7 +82,13 @@ export const layerSessionRunsWith = (
   Layer.effect(SessionRuns)(
     Effect.gen(function* () {
       const context = yield* Effect.context<
-        HarnessProvider | SessionStore | SessionFeed | TranscriptStore | ItemFeed | Git
+        | HarnessProvider
+        | SessionStore
+        | SessionFeed
+        | TranscriptStore
+        | ItemFeed
+        | Git
+        | PluginBridge
       >()
       const sessions = yield* SessionStore
       const sessionFeed = yield* SessionFeed

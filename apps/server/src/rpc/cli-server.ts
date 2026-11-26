@@ -6,7 +6,9 @@ import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
+import { layerChildPluginHost } from "../modules/plugin/adapters/child-plugin-host.ts"
 import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
+import { runPluginHost } from "../modules/plugin/usecases/run-plugin-host.ts"
 import { layerFsSettingsFile } from "../modules/setting/adapters/fs-settings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { SkillInstallation } from "../modules/skill/usecases/skill-installation.ts"
@@ -55,6 +57,8 @@ export interface CliServerOptions {
   readonly keybindings?: string | null
   readonly version?: string
   readonly skill?: SkillInstall | null
+  // Runs the plugin host from this entry, so the plugins of `ivinHome` run their server halves.
+  readonly pluginHostEntry?: string
 }
 
 const layerCliServer = ({
@@ -62,6 +66,7 @@ const layerCliServer = ({
   keybindings = null,
   ivinHome,
   skill = null,
+  pluginHostEntry,
 }: CliServerOptions) =>
   layerServices.pipe(
     Layer.provideMerge(
@@ -73,6 +78,9 @@ const layerCliServer = ({
         layerKeybindingsFileOf([keybindings]),
         Layer.succeed(SkillInstallation)(skill),
         ivinHome === undefined ? Layer.empty : layerFsUserPlugins(ivinHome),
+        pluginHostEntry === undefined
+          ? Layer.empty
+          : layerChildPluginHost(process.execPath, pluginHostEntry),
       ),
     ),
   )
@@ -88,6 +96,7 @@ export const withCliServer = <A>(
 ) => {
   const socketPath = tempSocketPath()
   return Effect.gen(function* () {
+    if (options.pluginHostEntry !== undefined) yield* Effect.forkScoped(runPluginHost())
     yield* serveOverSocket(socketPath, { version })
     const services = yield* Effect.context<CliServerServices>()
     const run: RunOnServer = (effect) => Effect.runPromise(Effect.provide(effect, services))

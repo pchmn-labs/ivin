@@ -1,3 +1,4 @@
+import { useReportWindowVisible } from "../modules/plugin/hooks/use-report-window-visible.ts"
 import {
   RegistryContext,
   useAtom,
@@ -72,6 +73,7 @@ export function App() {
   useRecordSessionVisits()
   useAtomMount(tabTranscriptsAtom)
   useReportUncaughtErrors()
+  useReportWindowVisible()
   useCommandHandler("sidebar.toggle", toggleSidebar, projectPath !== null)
   const { step } = useStepProject()
   useCommandHandler("project.next", () => step(1), projectPath !== null)

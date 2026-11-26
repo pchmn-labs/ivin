@@ -68,6 +68,15 @@ export type PluginStatus = typeof PluginStatus.Type
 export const HostLog = Schema.Struct({ id: Schema.String, line: Schema.String })
 export type HostLog = typeof HostLog.Type
 
+export class CommandNotFound extends Schema.TaggedError<CommandNotFound>()("CommandNotFound", {
+  command: Schema.String,
+}) {}
+
+export class CommandFailed extends Schema.TaggedError<CommandFailed>()("CommandFailed", {
+  command: Schema.String,
+  reason: Schema.String,
+}) {}
+
 export const PluginRpcs = RpcGroup.make(
   // Each plugin as soon as it is compiled or failed: one whose dependencies install comes last.
   Rpc.make("plugin.list", { success: UserPlugin, stream: true }),
@@ -82,11 +91,57 @@ export const PluginRpcs = RpcGroup.make(
     payload: { id: Schema.String },
     error: Schema.Union([PluginNotFound, PluginNotLocked]),
   }),
+  // `ivin run`: any plugin's command, with its result.
+  Rpc.make("plugin.run", {
+    payload: { command: Schema.String, args: Schema.Json },
+    success: Schema.Json,
+    error: Schema.Union([CommandNotFound, CommandFailed]),
+  }),
+  // Whether the window is on screen: `ctx.poll` pauses while it is not.
+  Rpc.make("plugin.setWindowVisible", { payload: { visible: Schema.Boolean } }),
 )
 export class PluginActivateFailed extends Schema.TaggedError<PluginActivateFailed>()(
   "PluginActivateFailed",
   { reason: Schema.String },
 ) {}
+
+export class PluginHandlerFailed extends Schema.TaggedError<PluginHandlerFailed>()(
+  "PluginHandlerFailed",
+  { reason: Schema.String },
+) {}
+
+// A `ctx` call a server half makes: the host asks, the server answers through `pluginHost.reply`.
+export const HostCall = Schema.Struct({
+  callId: Schema.Number,
+  // The plugin whose code made the call.
+  id: Schema.String,
+  method: Schema.String,
+  args: Schema.Json,
+})
+export type HostCall = typeof HostCall.Type
+
+export const HostReply = Schema.Struct({
+  callId: Schema.Number,
+  // The error's message when the call failed.
+  failure: Schema.NullOr(Schema.String),
+  value: Schema.Json,
+})
+export type HostReply = typeof HostReply.Type
+
+// What the server tells a plugin's half happened, or asks of it.
+export const HostDispatch = Schema.Struct({
+  id: Schema.String,
+  kind: Schema.Literals([
+    "transcript",
+    "sessionCreated",
+    "settingChanged",
+    "command",
+    "beforeSpawn",
+    "poll",
+  ]),
+  payload: Schema.Json,
+})
+export type HostDispatch = typeof HostDispatch.Type
 
 // Spoken by the server to the plugin host over the host's own port; the host is the RPC server.
 export const PluginHostRpcs = RpcGroup.make(
@@ -99,4 +154,12 @@ export const PluginHostRpcs = RpcGroup.make(
   Rpc.make("pluginHost.ping"),
   // What the plugins' halves wrote to their console and what they threw, as it happens.
   Rpc.make("pluginHost.logs", { success: HostLog, stream: true }),
+  Rpc.make("pluginHost.calls", { success: HostCall, stream: true }),
+  Rpc.make("pluginHost.reply", { payload: { reply: HostReply } }),
+  // The result of the plugin's handler; a failure is the handler's.
+  Rpc.make("pluginHost.dispatch", {
+    payload: HostDispatch,
+    success: Schema.Json,
+    error: PluginHandlerFailed,
+  }),
 )

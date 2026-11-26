@@ -1,7 +1,9 @@
 import { Duration, Effect, Ref, Stream } from "effect"
 import { readManifest } from "../rules/manifest.ts"
+import type { Permissions } from "../rules/permissions.ts"
 import { PluginHost, type RunningPluginHost } from "./plugin-host.ts"
 import { reportPluginFailure } from "./report-plugin-failure.ts"
+import { serveHost } from "./serve-host.ts"
 import { ServerHalves } from "./server-halves.ts"
 import { UserPlugins } from "./user-plugins.ts"
 
@@ -20,6 +22,7 @@ export const defaultPluginHostTimings: PluginHostTimings = {
 interface ServerHalf {
   readonly id: string
   readonly file: string
+  readonly permissions: Permissions
 }
 
 type Ending = { readonly kind: "blocked" } | { readonly kind: "exited"; readonly reason: string }
@@ -35,7 +38,7 @@ const compileHalves = Effect.gen(function* () {
   for (const folder of yield* plugins.folders) {
     const reading = readManifest(folder.manifest)
     if (reading.kind === "invalid" || reading.manifest.server === null) continue
-    const { id, server } = reading.manifest
+    const { id, server, permissions } = reading.manifest
     // plugin.list reports a duplicate id for the UI half.
     if (seen.has(id)) continue
     seen.add(id)
@@ -48,7 +51,7 @@ const compileHalves = Effect.gen(function* () {
             .pipe(Effect.andThen(reportPluginFailure(id, reason)), Effect.as(null)),
         ),
       )
-    if (file !== null) compiled.push({ id, file: plugins.bundlePath(file) })
+    if (file !== null) compiled.push({ id, file: plugins.bundlePath(file), permissions })
   }
   return compiled
 })
@@ -75,10 +78,11 @@ const runOnce = (
     yield* Effect.forkScoped(
       host.logs.pipe(Stream.runForEach(({ id, line }) => reportPluginFailure(id, line))),
     )
+    yield* serveHost(host, halves)
     const activation = Effect.gen(function* () {
       for (const half of halves) {
         yield* Ref.set(activating, half.id)
-        const failure = yield* host.activate(half).pipe(
+        const failure = yield* host.activate({ id: half.id, file: half.file }).pipe(
           Effect.as(null),
           Effect.catchTag("PluginActivateFailed", ({ reason }) => Effect.succeed(reason)),
         )
