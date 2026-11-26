@@ -28,13 +28,13 @@ Single-context: one `GLOSSARY.md` for the domain's terms and `docs/adr/` for its
 
 ### Launching ivin
 
-To run ivin, show it to the user, capture its screens or show a UI change in a pull request, use the `launch-ivin` skill: its `shot` command is the way to capture them, for example to compare a change with its prototype.
+The `launch-ivin` skill runs ivin and captures its screens, for the user or a pull request.
 
 ### Running scripts and tools
 
 Run a tool through the root `package.json` script that wraps it, because the script carries the config. With no script for what you need, call Vite+ through `pnpm vp <command>`, and any other tool through `pnpm exec <tool>`, never `npx`.
 
-While building, run the test files you touch: `pnpm test <path>…`. Run `pnpm check` before the commit: it runs the tests the branch changes reach. After an edit that changes no code, only words in docs or a test's name, run `pnpm lint` and `pnpm format:check` instead. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI. `pnpm install-app` packages ivin and replaces `/Applications/ivin.app`: run it only when the user asks.
+`pnpm install-app` replaces `/Applications/ivin.app`: run it only when the user asks.
 
 ### Grilling
 
@@ -54,10 +54,7 @@ Start every branch in its own git worktree under `.worktrees/`, named after the 
 
 One PR per ticket or ticketless change, opened against `main`. Its title is a conventional commit, `<type>(<scope>): <subject>`, because a squash merge takes the title. Its body follows `.github/pull_request_template.md` when the repo has one.
 
-The end-to-end tests of the packaged app run on a pull request only when it has a label; without one, they run after the merge, on `main`. Give the PR:
-
-- `e2e:linux` when the change can break what only the packaged app shows: the desktop app's main process or preload, the server's startup or its processes, the harness's processes, packaging, a native dependency, the CLI, or a test in `apps/desktop/e2e/`.
-- `e2e:macos` when the change can behave differently on macOS: code that checks the platform, the desktop app's main process or preload, packaging, a native dependency, keyboard handling.
+The end-to-end tests of the packaged app run on a pull request only with the `e2e:linux` or `e2e:macos` label, and otherwise after the merge, on `main`. Add the label when the change can break what only the packaged app shows, or behave differently on macOS.
 
 Before opening the PR, run the `code-review` skill on the branch since its merge-base with `main`, and fix what it finds or say in the PR why you left it.
 

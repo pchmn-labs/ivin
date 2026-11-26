@@ -27,8 +27,7 @@ plugins/<id>/
 
 ## Tests
 
-- `rules/`: called directly.
-- The halves: with a fake `ctx`.
+The halves are tested with a fake `ctx`.
 
 ## Failures the host contains
 

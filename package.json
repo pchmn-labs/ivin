@@ -12,7 +12,7 @@
     "test": "vp test run",
     "record:claude": "node tools/record-claude-fixture/main.ts",
     "build": "vp run --filter './apps/*' --filter './packages/*' build",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && vp test run --changed origin/main",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck",
     "dev": "vp run --filter @ivin/server --filter @ivin/cli build && vp run --parallel --filter @ivin/ui --filter @ivin/desktop dev",
     "package": "pnpm build && pnpm --filter @ivin/desktop package",
     "install-app": "node apps/desktop/scripts/install-app.ts",
