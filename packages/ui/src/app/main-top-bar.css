@@ -24,4 +24,6 @@
 /* Over the card's top border, as the sidebar's top row is, so their hairlines line up. */
 .iv-app[data-window-layout="panels"] .iv-main-top-bar {
   margin-top: -1px;
+  /* Minus that border and the bottom hairline, so the left gap matches the top and bottom ones. */
+  padding-left: calc((var(--iv-tab-row-height) - 1px - 1px - var(--iv-tab-height)) / 2);
 }
