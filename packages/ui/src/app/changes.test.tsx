@@ -4,7 +4,8 @@ import { afterEach, beforeEach, expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
 import { makeTestSession } from "../core/test-session.ts"
-import { mountApp } from "./test-app.tsx"
+import { storeSidebarTab } from "./stored-sidebar-tab.ts"
+import { mountApp, seedSubViews } from "./test-app.tsx"
 
 const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 const project = "/dev/shop"
@@ -110,21 +111,13 @@ const makeServer = () => {
 }
 
 const mount = async (server: FakeServer) => {
-  localStorage.setItem("ivin.sidebar.tab", "changes/panel")
+  storeSidebarTab("changes/panel")
   await mountApp(server, { height: 800 })
   return server
 }
 
-const openDiff = (server: FakeServer, kind: "working" | "committed", path: string) => {
-  const view = { view: "changes/diff", params: { kind, path } } as const
-  server.subViews.set("s1", {
-    sessionId: "s1",
-    subViews: [view],
-    selected: view,
-    fullWidth: false,
-    sessionTabSelected: false,
-  })
-}
+const openDiff = (server: FakeServer, path: string) =>
+  seedSubViews(server, [{ view: "changes/diff", params: { kind: "working", path } }])
 
 const discard = async (name: string) => {
   await row(name).hover()
@@ -159,7 +152,8 @@ afterEach(() => localStorage.clear())
 test("the Changes tab lists the uncommitted changes with their status, and its label counts them", async () => {
   const server = makeServer()
   server.committedChanges.delete(project)
-  await mount(server)
+  await mountApp(server, { height: 800 })
+  await userEvent.keyboard(`{${mod}>}3{/${mod}}`)
   await expect.element(changesTab()).toHaveTextContent("Changes3")
   await expect.element(row("README.md")).toMatchTextContent(/\+2−1$/)
   await expect.element(row("cart.ts")).toMatchTextContent(/cart\.tssrc\+3$/)
@@ -213,7 +207,7 @@ test("a click on a change opens its diff beside the chat, and Open file opens th
 
 test("a deleted file's diff has no Open file button", async () => {
   const server = makeServer()
-  openDiff(server, "working", "old.ts")
+  openDiff(server, "old.ts")
   await mount(server)
   await expect.element(page.getByTestId("diff-view").getByText("export {}")).toBeVisible()
   await expect.element(card().getByRole("button", { name: "Open file" })).not.toBeInTheDocument()
@@ -221,7 +215,7 @@ test("a deleted file's diff has no Open file button", async () => {
 
 test("a diff with no change left, or a binary one, says so in its place", async () => {
   const server = makeServer()
-  openDiff(server, "working", "src/cart.ts")
+  openDiff(server, "src/cart.ts")
   await mount(server)
   await expect.element(card().getByText("cart.ts has no uncommitted changes.")).toBeVisible()
 

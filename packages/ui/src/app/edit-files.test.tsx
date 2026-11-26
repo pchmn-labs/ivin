@@ -3,7 +3,8 @@ import { afterEach, beforeEach, expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
 import { makeTestSession } from "../core/test-session.ts"
-import { folder, mountApp } from "./test-app.tsx"
+import { storeSidebarTab } from "./stored-sidebar-tab.ts"
+import { fileView, folder, mountApp, seedSubViews } from "./test-app.tsx"
 
 const project = "/dev/shop"
 const readme = `${project}/README.md`
@@ -24,15 +25,8 @@ const makeServer = () => {
   server.folders.set(project, folder("README.md", "main.ts"))
   server.files.set(readme, { kind: "text", text: "# Shop" })
   server.files.set(`${project}/main.ts`, { kind: "text", text: "export {}" })
-  server.subViews.set("s1", {
-    sessionId: "s1",
-    subViews: [
-      { view: "files/file", params: { path: "README.md" } },
-      { view: "files/file", params: { path: "main.ts" } },
-    ],
-    selected: { view: "files/file", params: { path: "README.md" } },
-    fullWidth: false,
-    sessionTabSelected: false,
+  seedSubViews(server, [fileView("README.md"), fileView("main.ts")], {
+    selected: fileView("README.md"),
   })
   server.openTab("s2")
   server.openTab("s1")
@@ -60,8 +54,7 @@ const fileOf = (server: FakeServer, path = readme) => {
 }
 
 const typeAtEnd = async (name: string, text: string) => {
-  await expect.element(code(name)).toBeVisible()
-  ;(code(name).element() as HTMLElement).focus()
+  await code(name).click()
   await userEvent.keyboard(`{${mod}>}{End}{/${mod}}${text}`)
 }
 const save = () => userEvent.keyboard(`{${mod}>}s{/${mod}}`)
@@ -101,7 +94,7 @@ test("unsaved edits survive a session switch, and are saved afterwards", async (
 })
 
 test("closing an unsaved file asks first; Cancel keeps it, Close without saving drops the edits", async () => {
-  localStorage.setItem("ivin.sidebar.tab", "files/panel")
+  storeSidebarTab("files/panel")
   const server = makeServer()
   await mount(server)
   await typeAtEnd("README.md", " draft")

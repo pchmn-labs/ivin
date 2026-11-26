@@ -48,9 +48,12 @@ const mountApp = async () => {
   return server
 }
 
-const openSection = async (key: string, title: string) => {
+const showSection = (key: string) => {
   registryOfApp.set(settingsSectionAtom, key)
   registryOfApp.set(settingsPageOpenAtom, true)
+}
+const openSection = async (key: string, title: string) => {
+  showSection(key)
   await expect.element(page.getByRole("heading", { name: title })).toBeVisible()
 }
 
@@ -468,8 +471,7 @@ test("a plugin's own settings.section replaces the generated one", async () => {
       badge: undefined,
     },
   ])
-  registryOfApp.set(settingsSectionAtom, "plugin:prs")
-  registryOfApp.set(settingsPageOpenAtom, true)
+  showSection("plugin:prs")
 
   await expect.element(page.getByText("Custom PR settings")).toBeVisible()
   await expect.element(page.getByRole("textbox", { name: "Fold after" })).not.toBeInTheDocument()

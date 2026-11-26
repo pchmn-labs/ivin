@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import type { FakeServer } from "../core/fake-server-client.ts"
-import { folder, makeShopServer, mountApp, shopProject, shopWorktree } from "./test-app.tsx"
+import {
+  fileView,
+  folder,
+  makeShopServer,
+  mountApp,
+  seedSubViews,
+  shopProject,
+  shopWorktree,
+} from "./test-app.tsx"
 
 const project = shopProject
 const worktree = shopWorktree
@@ -52,18 +60,8 @@ const previousKeys = `{${mod}>}{Alt>}{ArrowLeft}{/Alt}{/${mod}}`
 
 const seedTwoFiles = (
   server: FakeServer,
-  state: { fullWidth?: boolean; sessionTab?: boolean } = {},
-) =>
-  server.subViews.set("s1", {
-    sessionId: "s1",
-    subViews: [
-      { view: "files/file", params: { path: "README.md" } },
-      { view: "files/file", params: { path: "src/main.ts" } },
-    ],
-    selected: { view: "files/file", params: { path: "src/main.ts" } },
-    fullWidth: state.fullWidth ?? false,
-    sessionTabSelected: state.sessionTab ?? false,
-  })
+  state?: { fullWidth?: boolean; sessionTabSelected?: boolean },
+) => seedSubViews(server, [fileView("README.md"), fileView("src/main.ts")], state)
 
 const openTwoFiles = async () => {
   await showFiles()
@@ -162,7 +160,7 @@ test("closing files in full width keeps the mode, and closing the last one leave
 
 test("the Close file keybinding does nothing while the Session tab is selected", async () => {
   const server = makeServer()
-  seedTwoFiles(server, { fullWidth: true, sessionTab: true })
+  seedTwoFiles(server, { fullWidth: true, sessionTabSelected: true })
   await mount(server)
   await expect.element(rowTab("Session")).toHaveAttribute("aria-selected", "true")
 

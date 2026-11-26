@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import type { FakeServer } from "../core/fake-server-client.ts"
-import { folder, makeShopServer, mountApp, shopProject, shopWorktree } from "./test-app.tsx"
+import {
+  fileView,
+  folder,
+  makeShopServer,
+  mountApp,
+  seedSubViews,
+  shopProject,
+  shopWorktree,
+} from "./test-app.tsx"
 
 const project = shopProject
 const worktree = shopWorktree
@@ -22,21 +30,6 @@ const makeServer = () => {
   server.openTab("s2")
   server.openTab("s1")
   return server
-}
-
-const seedOpen = (
-  server: FakeServer,
-  paths: string[],
-  options: { selected?: string; fullWidth?: boolean } = {},
-) => {
-  const view = (path: string) => ({ view: "files/file", params: { path } })
-  server.subViews.set("s1", {
-    sessionId: "s1",
-    subViews: paths.map(view),
-    selected: view(options.selected ?? paths.at(-1)!),
-    fullWidth: options.fullWidth ?? false,
-    sessionTabSelected: false,
-  })
 }
 
 const mount = (server: FakeServer) => mountApp(server, { height: 800 })
@@ -80,7 +73,7 @@ test("files opened from the tree show beside the chat, each in a tab of its own;
 
 test("the arrow keys move between the open files", async () => {
   const server = makeServer()
-  seedOpen(server, ["README.md", "logo.png"])
+  seedSubViews(server, ["README.md", "logo.png"].map(fileView))
   await mount(server)
   await fileTab("logo.png").click()
 
@@ -91,7 +84,7 @@ test("the arrow keys move between the open files", async () => {
 
 test("closing a file selects its neighbour, and closing the last one closes the card", async () => {
   const server = makeServer()
-  seedOpen(server, ["README.md", "logo.png"])
+  seedSubViews(server, ["README.md", "logo.png"].map(fileView))
   await mount(server)
   await expect.element(fileTab("logo.png")).toHaveAttribute("aria-selected", "true")
 
@@ -106,7 +99,7 @@ test("closing a file selects its neighbour, and closing the last one closes the 
 
 test("a large file and a binary file say why they are not shown", async () => {
   const server = makeServer()
-  seedOpen(server, ["bundle.js", "logo.png"], { selected: "bundle.js" })
+  seedSubViews(server, ["bundle.js", "logo.png"].map(fileView), { selected: fileView("bundle.js") })
   await mount(server)
   await expect
     .element(card().getByText("bundle.js is 3 MB, over the 2 MB ivin shows, so it is not shown."))
@@ -119,7 +112,7 @@ test("a large file and a binary file say why they are not shown", async () => {
 
 test("a file that is gone says so in its place, and Retry reads it again", async () => {
   const server = makeServer()
-  seedOpen(server, ["gone.ts"])
+  seedSubViews(server, [fileView("gone.ts")])
   await mount(server)
 
   await expect
@@ -133,7 +126,7 @@ test("a file that is gone says so in its place, and Retry reads it again", async
 test("a file that cannot be read says to check its permissions", async () => {
   const server = makeServer()
   server.files.set(`${project}/gone.ts`, "unreadable")
-  seedOpen(server, ["gone.ts"])
+  seedSubViews(server, [fileView("gone.ts")])
   await mount(server)
   await expect
     .element(card().getByText("gone.ts could not be read. Check its permissions, then retry."))
@@ -142,7 +135,7 @@ test("a file that cannot be read says to check its permissions", async () => {
 
 test("switching sessions and back keeps the open files and the selected one", async () => {
   const server = makeServer()
-  seedOpen(server, ["README.md", "logo.png"], { selected: "README.md" })
+  seedSubViews(server, ["README.md", "logo.png"].map(fileView), { selected: fileView("README.md") })
   await mount(server)
   await expect.element(code("README.md")).toHaveTextContent("# Shop")
 
@@ -185,7 +178,7 @@ const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 
 test("the Close file keybinding closes the selected file", async () => {
   const server = makeServer()
-  seedOpen(server, ["README.md", "logo.png"])
+  seedSubViews(server, ["README.md", "logo.png"].map(fileView))
   await mount(server)
   await expect.element(fileTab("logo.png")).toHaveAttribute("aria-selected", "true")
 
@@ -196,7 +189,7 @@ test("the Close file keybinding closes the selected file", async () => {
 
 test("a close that fails keeps the file and says so, and Retry closes it", async () => {
   const server = makeServer()
-  seedOpen(server, ["README.md"])
+  seedSubViews(server, [fileView("README.md")])
   await mount(server)
   await expect.element(fileTab("README.md")).toBeVisible()
   server.failNextCall("tab.closeSubView")
@@ -212,7 +205,7 @@ test("a file keeps its scroll position when another file or session comes and go
   const server = makeServer()
   const long = Array.from({ length: 2000 }, (_, n) => `line ${n}`).join("\n")
   server.files.set(`${project}/src/main.ts`, { kind: "text", text: long })
-  seedOpen(server, ["README.md", "src/main.ts"])
+  seedSubViews(server, ["README.md", "src/main.ts"].map(fileView))
   await mount(server)
   await expect.element(code("main.ts").getByText("line 0", { exact: true })).toBeVisible()
 
@@ -426,7 +419,9 @@ test("a png, a jpg, a gif and an svg open as images, each with its size", async 
     version: "1",
   })
   server.files.set(`${project}/mark.svg`, { kind: "text", text: SVG })
-  seedOpen(server, ["logo.png", "photo.jpg", "spin.gif", "mark.svg"], { selected: "logo.png" })
+  seedSubViews(server, ["logo.png", "photo.jpg", "spin.gif", "mark.svg"].map(fileView), {
+    selected: fileView("logo.png"),
+  })
   await mount(server)
   await expect.element(image("logo.png")).toBeVisible()
   await expect.element(card().getByText(/^1 × 1 · \d+ B$/)).toBeVisible()
@@ -442,7 +437,7 @@ test("an svg switches to its source, editable, and back to the image", async () 
   const server = makeServer()
   server.folders.set(project, folder("mark.svg"))
   server.files.set(`${project}/mark.svg`, { kind: "text", text: SVG })
-  seedOpen(server, ["mark.svg"])
+  seedSubViews(server, [fileView("mark.svg")])
   await mount(server)
   await expect.element(image("mark.svg")).toBeVisible()
   await card().getByRole("button", { name: "Source" }).click()
@@ -468,7 +463,7 @@ test("an image over the limit, and one that does not decode, say so in place of 
     data: btoa("not a png"),
     version: "1",
   })
-  seedOpen(server, ["demo.gif", "broken.png"], { selected: "demo.gif" })
+  seedSubViews(server, ["demo.gif", "broken.png"].map(fileView), { selected: fileView("demo.gif") })
   await mount(server)
   await expect
     .element(card().getByText("demo.gif is 48 MB, over the 10 MB ivin shows, so it is not shown."))
@@ -493,7 +488,7 @@ test("an image changed on disk shows again", async () => {
     data: PNG,
     version: "1",
   })
-  seedOpen(server, ["logo.png"])
+  seedSubViews(server, [fileView("logo.png")])
   await mount(server)
   await expect.element(card().getByText(/^1 × 1 · /)).toBeVisible()
   server.files.set(`${project}/logo.png`, {
@@ -511,7 +506,7 @@ const cardWidth = () => card().element().getBoundingClientRect().width
 
 test("the files card's left edge resizes it, keeps the chat's minimum width, and the size is kept", async () => {
   const server = makeServer()
-  seedOpen(server, ["README.md"])
+  seedSubViews(server, [fileView("README.md")])
   const first = await mount(server)
   await expect.element(resizeHandle()).toBeInTheDocument()
   const start = cardWidth()
@@ -534,7 +529,7 @@ test("the files card's left edge resizes it, keeps the chat's minimum width, and
 
 test("the files card in full width has no resize handle", async () => {
   const server = makeServer()
-  seedOpen(server, ["README.md"], { fullWidth: true })
+  seedSubViews(server, [fileView("README.md")], { fullWidth: true })
   await mount(server)
   await expect.element(card().getByRole("button", { name: "Beside chat" })).toBeVisible()
   await expect.element(resizeHandle()).not.toBeInTheDocument()

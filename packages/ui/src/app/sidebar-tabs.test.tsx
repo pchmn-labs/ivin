@@ -1,24 +1,23 @@
 import { afterEach, beforeEach, expect, test } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import type { FakeServer } from "../core/fake-server-client.ts"
+import { storeSidebarTab } from "./stored-sidebar-tab.ts"
 import { folder, makeShopServer, mountApp, shopProject, shopWorktree } from "./test-app.tsx"
 
 const mod = navigator.platform.includes("Mac") ? "Meta" : "Control"
 const project = shopProject
 const worktree = shopWorktree
 
-const startOnFiles = () => localStorage.setItem("ivin.sidebar.tab", "files/panel")
+const startOnFiles = () => storeSidebarTab("files/panel")
 
-const makeServer = ({ openTabs = true }: { openTabs?: boolean } = {}) => {
+const makeServer = () => {
   const server = makeShopServer()
   server.folders.set(project, folder("src/", "package.json", "README.md"))
   server.folders.set(`${project}/src`, folder("lib/", "main.ts"))
   server.folders.set(`${project}/src/lib`, folder("cart.ts"))
   server.folders.set(worktree, folder("cart/", "notes.md"))
-  if (openTabs) {
-    server.openTab("s1")
-    server.openTab("s2")
-  }
+  server.openTab("s1")
+  server.openTab("s2")
   return server
 }
 
@@ -110,7 +109,11 @@ test("the selected tab is kept between launches", async () => {
 
 test("with no session on screen, Files says so", async () => {
   startOnFiles()
-  await mount(makeServer({ openTabs: false }))
+  await mount(makeServer())
+  for (const title of ["Fix the cart", "Checkout flow"]) {
+    await sessionTab(title).hover()
+    await page.getByRole("button", { name: `Close ${title}`, includeHidden: true }).click()
+  }
   await expect.element(page.getByText("No session on screen.", { exact: false })).toBeVisible()
 })
 
