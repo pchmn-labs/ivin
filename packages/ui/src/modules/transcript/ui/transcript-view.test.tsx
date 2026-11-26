@@ -212,6 +212,27 @@ test("a transcript left at its end keeps only its last page, and scrolling up lo
   })
 })
 
+test("scrolling up loads past the pages that hold only a subagent's steps", async () => {
+  const server = makeFakeServer()
+  const steps = PAGE_SIZE * 2
+  server.seedItems("s1", [
+    userMessage(0),
+    toolCall(1),
+    ...Array.from({ length: steps }, (_, i) => ({ ...toolCall(i + 2), parentToolCallId: "t1" })),
+    ...Array.from({ length: PAGE_SIZE }, (_, i) => message(steps + 2 + i)),
+  ])
+  await render(heldView(server, true))
+  await expect
+    .element(page.getByText(`message ${steps + PAGE_SIZE + 1}`, { exact: true }))
+    .toBeVisible()
+
+  scroller().dispatchEvent(new WheelEvent("wheel", { deltaY: -100 }))
+  await vi.waitFor(() => {
+    scroller().scrollTop = 0
+    expect(page.getByText("question 0", { exact: true }).query()).not.toBeNull()
+  })
+})
+
 test("a transcript left scrolled back keeps the pages it has", async () => {
   const server = makeFakeServer()
   const total = PAGE_SIZE * 3

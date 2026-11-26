@@ -2,6 +2,7 @@ import { createElement } from "react"
 import type { ComponentType, ReactNode } from "react"
 import type { Extension as EditorExtension } from "@codemirror/state"
 import type {
+  AgentCommand,
   Annotation,
   AnnotationDataOf,
   AnnotationTarget,
@@ -52,6 +53,7 @@ import { HostContext, useHost } from "./host-context.ts"
 import type {
   ActionError,
   ActionFailure,
+  AgentCommandListing,
   ChangeKind,
   ChangeListing,
   ChangeListingOf,
@@ -67,6 +69,7 @@ import type {
 } from "./host-context.ts"
 
 export type {
+  AgentCommand,
   Annotation,
   AnnotationDataOf,
   AnnotationTarget,
@@ -259,6 +262,7 @@ export const defineUi = (activate: UiPlugin): UiPlugin => activate
 export type {
   ActionError,
   ActionFailure,
+  AgentCommandListing,
   ChangeKind,
   ChangeListing,
   ChangeListingOf,
@@ -317,6 +321,7 @@ export const useKeyHint = (title: string, commandId: string) =>
 export const useListFolder = () => useHost().useListFolder()
 export const useOpenView = () => useHost().useOpenView()
 export const useOpenFile = () => useHost().useOpenFile()
+export const useAgentCommands = (sessionId: string) => useHost().useAgentCommands(sessionId)
 export const useListFiles = () => useHost().useListFiles()
 export const useFolderChanges = (
   sessionId: string,

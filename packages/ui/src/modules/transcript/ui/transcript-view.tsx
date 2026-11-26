@@ -35,7 +35,9 @@ export function TranscriptView({
   // The tasks the agent rests on; the fold under the last turn lists them.
   background?: ReadonlyArray<BackgroundTask>
 }) {
-  const { loaded, failed, hasBefore, prepended, rows } = useAtomValue(transcriptOf(sessionId).view)
+  const { loaded, failed, hasBefore, prepended, rows, oldestId } = useAtomValue(
+    transcriptOf(sessionId).view,
+  )
   const retry = useAtomRefresh(transcriptOf(sessionId).list.status)
   const loadItemsBefore = useAtomSet(loadItemsBeforeAtom)
   const shown = useMemo(() => shownRows(rows, live), [rows, live])
@@ -51,7 +53,7 @@ export function TranscriptView({
     list: save.list,
   })
   const { rangeChanged, startReached } = useLoadBefore({
-    rows,
+    oldestId,
     firstIndex,
     hasBefore,
     load: () => loadItemsBefore(sessionId),
@@ -95,7 +97,11 @@ function RowContent({ sessionId, row, live }: { sessionId: string; row: RowData;
     <>
       {(live || row.itemIds.length > 0) && (
         <div className="iv-transcript__column">
-          <div className="iv-transcript__item" data-testid="transcript-work">
+          <div
+            className="iv-transcript__item iv-transcript__item--turn"
+            data-answer-below={live || row.answerIds.length > 0 || undefined}
+            data-testid="transcript-work"
+          >
             <TurnWork sessionId={sessionId} rowId={row.id} live={live} />
           </div>
         </div>

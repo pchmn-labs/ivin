@@ -1,7 +1,7 @@
 import type { OfferedModel } from "@ivin/contracts/session"
 import * as Schema from "effect/Schema"
 
-const ControlResponse = Schema.Struct({
+export const ControlResponse = Schema.Struct({
   type: Schema.Literal("control_response"),
   response: Schema.Struct({
     subtype: Schema.String,

@@ -106,6 +106,7 @@ export const transcriptOf = strongFamily((sessionId: string) => {
       failed: status !== undefined && AsyncResult.isFailure(status) && !status.waiting,
       rows: shown,
       prepended,
+      oldestId: get(list.ids)[0],
     }
   })
   // `live`: the session's agent is working.

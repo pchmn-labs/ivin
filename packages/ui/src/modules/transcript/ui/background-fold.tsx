@@ -182,7 +182,7 @@ export function BackgroundFold({
   }
   return (
     <div className="iv-transcript__column" data-testid="background-fold" ref={fold}>
-      <div className="iv-transcript__item">
+      <div className="iv-transcript__item iv-transcript__item--turn">
         <button
           type="button"
           className="iv-turn__line iv-turn__line--toggle"

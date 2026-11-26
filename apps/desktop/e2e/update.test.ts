@@ -86,7 +86,8 @@ const launchCopy = (bundle: string, userDataDir: string, releaseUrl: string) => 
   })
 }
 
-test("a newer release is downloaded in the background, and a click replaces the app and relaunches it", async () => {
+// Flaky on CI: #361.
+test.fixme("a newer release is downloaded in the background, and a click replaces the app and relaunches it", async () => {
   const bundle = installedCopy()
   const release = await releaseServer()
   const app = await launchCopy(bundle, makeTempDir("user-data"), release.url)

@@ -1,4 +1,11 @@
-import { type Ref, useEffect, useImperativeHandle, useLayoutEffect, useRef } from "react"
+import {
+  type KeyboardEvent,
+  type Ref,
+  useEffect,
+  useImperativeHandle,
+  useLayoutEffect,
+  useRef,
+} from "react"
 import { imageDataUrl } from "../../transcript/rules/image-url.ts"
 import { imageMarker, messageParts } from "../../transcript/rules/message-parts.ts"
 import type { DraftImage } from "@ivin/plugin-api/ui"
@@ -10,6 +17,13 @@ export interface MessageEditorHandle {
   readonly insertImages: (images: ReadonlyArray<DraftImage>, at: Range | null) => void
   readonly removeImage: (number: number) => void
   readonly focus: () => void
+  // Replaces the characters from `before` behind the caret to `after` past it, on the undo stack.
+  readonly replaceAroundCaret: (before: number, after: number, text: string) => void
+}
+
+export interface EditorCombobox {
+  readonly listId: string
+  readonly activeId: string | null
 }
 
 export interface MessageEditorProps {
@@ -24,6 +38,12 @@ export interface MessageEditorProps {
   readonly onImageFiles: (files: ReadonlyArray<File>, at: Range | null) => void
   readonly onOpenImage: (imageId: string) => void
   readonly onHoverImage: (imageId: string | null, anchor: HTMLElement | null) => void
+  // Where the caret is in `value`, or null while the field has no focus.
+  readonly onCaret?: (caret: number | null) => void
+  // Runs before the field's own keys; preventing the default keeps the key from them.
+  readonly onKeyDown?: (event: KeyboardEvent<HTMLDivElement>) => void
+  // The list the field's keys move through, while it shows.
+  readonly combobox?: EditorCombobox | null
 }
 
 const markerElement = (image: DraftImage) => {
@@ -113,6 +133,9 @@ export function MessageEditor({
   onImageFiles,
   onOpenImage,
   onHoverImage,
+  onCaret,
+  onKeyDown,
+  combobox,
 }: MessageEditorProps) {
   const field = useRef<HTMLDivElement>(null)
   // What the field holds, so a value it emitted itself does not redraw it under the caret.
@@ -142,6 +165,24 @@ export function MessageEditor({
     const range = selection?.rangeCount ? selection.getRangeAt(0) : null
     return range && field.current?.contains(range.startContainer) ? range.cloneRange() : null
   }
+
+  const caretOffset = (): number | null => {
+    const element = field.current
+    const range = caret()
+    if (!element || !range || document.activeElement !== element) return null
+    const head = document.createRange()
+    head.selectNodeContents(element)
+    head.setEnd(range.startContainer, range.startOffset)
+    const before = head.cloneContents()
+    return serialize(before, before).length
+  }
+
+  useEffect(() => {
+    if (!onCaret) return
+    const report = () => onCaret(caretOffset())
+    document.addEventListener("selectionchange", report)
+    return () => document.removeEventListener("selectionchange", report)
+  })
 
   useImperativeHandle(ref, () => ({
     insertImages: (added, at) => {
@@ -197,6 +238,15 @@ export function MessageEditor({
       })
       emit()
     },
+    replaceAroundCaret: (before, after, text) => {
+      const selection = getSelection()
+      if (!field.current || !selection || !caret()) return
+      selection.collapseToStart()
+      for (let i = 0; i < before; i++) selection.modify("move", "backward", "character")
+      for (let i = 0; i < before + after; i++) selection.modify("extend", "forward", "character")
+      document.execCommand("insertText", false, text)
+      emit()
+    },
     focus: () => {
       const element = field.current
       if (!element) return
@@ -239,8 +289,16 @@ export function MessageEditor({
         aria-multiline="true"
         aria-label={label}
         aria-placeholder={placeholder}
+        {...(combobox && {
+          "aria-controls": combobox.listId,
+          "aria-autocomplete": "list" as const,
+          ...(combobox.activeId !== null && { "aria-activedescendant": combobox.activeId }),
+        })}
         onInput={emit}
+        onBlur={() => onCaret?.(null)}
         onKeyDown={(event) => {
+          onKeyDown?.(event)
+          if (event.defaultPrevented) return
           if (event.key === "Enter" && event.shiftKey && !event.metaKey && !event.ctrlKey) {
             event.preventDefault()
             document.execCommand("insertLineBreak")

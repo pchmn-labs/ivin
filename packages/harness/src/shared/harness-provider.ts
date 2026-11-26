@@ -1,5 +1,5 @@
 import type { HarnessProgram } from "@ivin/contracts/server"
-import type { Harness, HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
+import type { AgentCommand, Harness, HarnessRunOptions, RunOptions } from "@ivin/contracts/session"
 import type { HarnessOutput, ImageData, QuestionAnswer, ToolKind } from "@ivin/contracts/transcript"
 import { Context, Data, type Effect, type Scope, type Stream } from "effect"
 
@@ -68,6 +68,10 @@ export class HarnessProvider extends Context.Service<
     readonly skillsFolder: string | null
     // One prompt, one reply, from a small model, outside any session; null for a harness that has none.
     readonly completeText: ((prompt: string) => Effect.Effect<string, HarnessError>) | null
+    // What the user can send as `/name` in `cwd`, kept until a run there lists other names; null for a harness that has none.
+    readonly listCommands:
+      | ((cwd: string) => Effect.Effect<readonly AgentCommand[], HarnessError>)
+      | null
     readonly start: (input: StartInput) => Effect.Effect<HarnessRun, HarnessError, Scope.Scope>
     // The end of a file the agent writes a background task's output to; empty when it cannot be read.
     readonly readTaskOutput: (path: string) => Effect.Effect<string>

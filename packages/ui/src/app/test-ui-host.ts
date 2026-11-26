@@ -36,6 +36,7 @@ export const testUiHost: UiHost = {
   useOpenFile: () => async () => undefined,
   useListFiles: () => async () => ({ kind: "listed", paths: [], truncated: false }),
   useFolderChanges: () => {},
+  useAgentCommands: () => ({ listing: { kind: "none" }, refresh: () => {} }),
   useGitStatus: () => ({ entries: [], failure: null, retry: () => {} }),
   useFileOnScreen: () => null,
   useTask: () => undefined,

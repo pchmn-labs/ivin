@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync } from "node:fs"
+import { existsSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
@@ -441,4 +441,124 @@ test("the program is the claude found first on the PATH, or none when it is miss
   } finally {
     process.env["PATH"] = path
   }
+})
+
+// Lists FAKE_COMMANDS on initialize and FAKE_RUN_COMMANDS in a run's first line; logs each start's folder and hooks setting.
+const answerCommands = `
+const fs = require("node:fs")
+const settings = process.argv[process.argv.indexOf("--settings") + 1]
+fs.appendFileSync(process.env.FAKE_LOG, process.cwd() + " " + settings + "\\n")
+const names = (variable) => fs.readFileSync(process.env[variable], "utf8").split(",")
+require("node:readline").createInterface({ input: process.stdin }).on("line", (text) => {
+  const line = JSON.parse(text)
+  if (line.type === "control_request") {
+    const commands = names("FAKE_COMMANDS").map((name) => ({ name, description: "Does " + name, argumentHint: "" }))
+    console.log(JSON.stringify({ type: "control_response", response: { subtype: "success", request_id: line.request_id, response: { commands } } }))
+  } else {
+    const slash_commands = names("FAKE_RUN_COMMANDS")
+    console.log(JSON.stringify({ type: "system", subtype: "init", session_id: "p1", slash_commands, skills: slash_commands, terminal_slash_commands: [] }))
+  }
+})
+setInterval(() => {}, 1000)`
+
+const withFakeCommands = (
+  use: (
+    dir: string,
+    list: (names: string) => void,
+    runLists: (names: string) => void,
+  ) => Promise<void>,
+) =>
+  withFakeClaude(answerCommands, async (dir) => {
+    process.env["FAKE_LOG"] = join(dir, "starts.log")
+    process.env["FAKE_COMMANDS"] = join(dir, "commands")
+    process.env["FAKE_RUN_COMMANDS"] = join(dir, "run-commands")
+    await use(
+      dir,
+      (names) => writeFileSync(join(dir, "commands"), names),
+      (names) => writeFileSync(join(dir, "run-commands"), names),
+    )
+  })
+
+const listCommandsIn = (cwd: string) =>
+  Effect.gen(function* () {
+    const { listCommands } = yield* HarnessProvider
+    return (yield* listCommands!(cwd)).map((command) => command.name)
+  })
+
+const runOnce = (cwd: string) =>
+  Effect.gen(function* () {
+    const run = yield* (yield* HarnessProvider).start({
+      sessionId: "s1",
+      cwd,
+      options: { model: "haiku", effort: "low", permissionMode: "manual" },
+      providerSessionId: null,
+    })
+    yield* run.send({ id: "m1", text: "hi", images: [] })
+    yield* Stream.runDrain(Stream.takeUntil(run.events, (o) => o.type === "provider_session"))
+  }).pipe(Effect.scoped)
+
+test("the commands are listed in the working folder with hooks off, asked for once per folder", async () => {
+  await withFakeCommands(async (dir, list) => {
+    list("review,compact")
+    const [first, second] = await Effect.runPromise(
+      Effect.all([listCommandsIn(dir), listCommandsIn(dir)]).pipe(Effect.provide(layerClaude)),
+    )
+
+    expect(first).toEqual(["review", "compact"])
+    expect(second).toEqual(first)
+    expect(readFileSync(join(dir, "starts.log"), "utf8")).toBe(
+      `${realpathSync(dir)} {"disableAllHooks":true}\n`,
+    )
+  })
+})
+
+test("a run that lists other names makes the next listing ask Claude again", async () => {
+  await withFakeCommands(async (dir, list, runLists) => {
+    list("review")
+    runLists("review,added")
+    const names = await Effect.runPromise(
+      Effect.gen(function* () {
+        const before = yield* listCommandsIn(dir)
+        list("review,added")
+        yield* runOnce(dir)
+        return [before, yield* listCommandsIn(dir)]
+      }).pipe(Effect.provide(layerClaude)),
+    )
+
+    expect(names).toEqual([["review"], ["review", "added"]])
+  })
+})
+
+test("a run that lists the same names keeps the listing", async () => {
+  await withFakeCommands(async (dir, list, runLists) => {
+    list("review")
+    runLists("review")
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        yield* listCommandsIn(dir)
+        yield* runOnce(dir)
+        yield* listCommandsIn(dir)
+      }).pipe(Effect.provide(layerClaude)),
+    )
+
+    // One start for the listing, one for the run.
+    expect(readFileSync(join(dir, "starts.log"), "utf8").trim().split("\n")).toHaveLength(2)
+  })
+})
+
+test("a Claude Code that exits before answering fails the listing, which asks again next time", async () => {
+  await withFakeClaude(
+    `require("node:fs").appendFileSync(process.env.FAKE_LOG, "start\\n")`,
+    async (dir) => {
+      process.env["FAKE_LOG"] = join(dir, "starts.log")
+      const errors = await Effect.runPromise(
+        Effect.all([Effect.flip(listCommandsIn(dir)), Effect.flip(listCommandsIn(dir))]).pipe(
+          Effect.provide(layerClaude),
+        ),
+      )
+
+      expect(errors.map((error) => error._tag)).toEqual(["HarnessError", "HarnessError"])
+      expect(readFileSync(join(dir, "starts.log"), "utf8")).toBe("start\nstart\n")
+    },
+  )
 })

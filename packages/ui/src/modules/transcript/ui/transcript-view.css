@@ -35,6 +35,18 @@
   padding: var(--iv-space-2) 0;
 }
 
+.iv-transcript__item--turn {
+  /* The turn's icon and rings sit in the column's padding, so its text lines up with the answer. */
+  margin-left: calc(-1 * var(--iv-turn-indent));
+}
+
+.iv-transcript__item--turn[data-answer-below] {
+  /* The answer row's top padding is the gap; while the turn runs, the timeline's bottom margin stands in for it. */
+  padding-bottom: 0;
+  /* Holds the timeline's bottom margin, which Virtuoso would otherwise not measure. */
+  display: flow-root;
+}
+
 /* A plugin may render nothing for an item; Virtuoso breaks on zero-height rows. */
 .iv-transcript__item:empty {
   height: 1px;
