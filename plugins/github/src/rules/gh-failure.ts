@@ -20,13 +20,15 @@ const firstLine = (text: string) =>
       .find((line) => line !== "") ?? ""
   ).slice(0, 160)
 
-// `rejected` is the message of an exec that rejected (program not found, killed on its time limit).
+// `rejected` is the message of an exec that never ran to an exit code (not found, killed on its time limit, refused).
 export const classifyGhFailure = (
   failure: { readonly rejected: string } | { readonly stderr: string },
 ): GhFailure => {
   if ("rejected" in failure) {
-    const kind = /timed? ?out|timeout/i.test(failure.rejected) ? "network" : "missing"
-    return { kind, detail: firstLine(failure.rejected) }
+    const detail = firstLine(failure.rejected)
+    if (/ENOENT/.test(failure.rejected)) return { kind: "missing", detail }
+    if (/timed? ?out|timeout/i.test(failure.rejected)) return { kind: "network", detail }
+    return { kind: "other", detail }
   }
   const stderr = failure.stderr
   const detail = firstLine(stderr)
@@ -51,7 +53,7 @@ export const classifyGhFailure = (
 export const failureMessage = (failure: GhFailure): string => {
   switch (failure.kind) {
     case "missing":
-      return "gh is not installed, so the pull request's status cannot be read."
+      return "gh is not installed, or not on the PATH ivin reads, so the pull request's status cannot be read."
     case "not-logged-in":
       return "gh is not logged in. Run gh auth login."
     case "rate-limit":

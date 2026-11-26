@@ -6,7 +6,7 @@ const message = (failure: Parameters<typeof classifyGhFailure>[0]) =>
 
 test("each failure of gh reads as one plain sentence", () => {
   expect(message({ rejected: "spawn gh ENOENT" })).toBe(
-    "gh is not installed, so the pull request's status cannot be read.",
+    "gh is not installed, or not on the PATH ivin reads, so the pull request's status cannot be read.",
   )
   expect(message({ stderr: "To get started with GitHub CLI, please run:  gh auth login" })).toBe(
     "gh is not logged in. Run gh auth login.",
@@ -19,6 +19,9 @@ test("each failure of gh reads as one plain sentence", () => {
   ).toBe("GitHub could not be reached. The status is read again at the next check.")
   expect(message({ rejected: "Command timed out after 30000ms" })).toBe(
     "GitHub could not be reached. The status is read again at the next check.",
+  )
+  expect(message({ rejected: "Missing permission: exec: gh" })).toBe(
+    "gh failed: Missing permission: exec: gh",
   )
   expect(message({ stderr: "\nsomething odd happened\nmore" })).toBe(
     "gh failed: something odd happened",
