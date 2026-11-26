@@ -3,7 +3,9 @@ import { SessionNotFound, type Session, WorkingFolderDeleted } from "@ivin/contr
 import { Effect } from "effect"
 import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
 import { ProjectStore } from "../../project/usecases/project-store.ts"
+import { awaitsWorkspaceFolder } from "../../session/rules/workspace-start.ts"
 import { SessionStore } from "../../session/usecases/session-store.ts"
+import { subfolderNames } from "../../worktree/rules/workspace-folder.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { FolderReader } from "./folder-reader.ts"
 
@@ -14,12 +16,47 @@ export interface Repository {
 
 const nameOf = (folder: string) => folder.slice(folder.lastIndexOf("/") + 1)
 
+// Before its working folder exists, a workspace session shows each project folder as a top-level
+// folder, named as its worktree will be. Null for any other session.
+export const projectFoldersOf = (session: Session) =>
+  Effect.gen(function* () {
+    if (!awaitsWorkspaceFolder(session)) return null
+    const folders = (yield* (yield* ProjectStore).folders(session.projectPath)) ?? []
+    const names = subfolderNames(folders)
+    return folders.map((folder, index): Repository => ({ name: names[index]!, folder }))
+  })
+
+// The real folder a relative path's `names` are read under, and the names left inside it. Null
+// when the first name is no project folder of a session that shows them.
+export const folderOfNames = (session: Session, names: ReadonlyArray<string>) =>
+  Effect.gen(function* () {
+    const reader = yield* FolderReader
+    const projectFolders = yield* projectFoldersOf(session)
+    if (projectFolders === null) {
+      const root = yield* reader.realPath(session.workingFolder)
+      if (root === null) return yield* new WorkingFolderDeleted({ sessionId: session.id })
+      return { root, names }
+    }
+    const folder = projectFolders.find((candidate) => candidate.name === names[0])
+    const root = folder === undefined ? null : yield* reader.realPath(folder.folder)
+    return root === null ? null : { root, names: names.slice(1) }
+  })
+
 // The repositories of a working folder that is none itself, as on a workspace: the subfolders of
-// a folder of worktrees, or the project folders in the common parent. Null for any other session.
+// a folder of worktrees, the project folders, or those in the common parent an older session started
+// in. Null for any other session.
 export const repositoriesIn = (session: Session, root: string) =>
   Effect.gen(function* () {
     if (!isWorkspaceFile(session.projectPath)) return null
     const git = yield* Git
+    const projectFolders = yield* projectFoldersOf(session)
+    if (projectFolders !== null) {
+      const found: Repository[] = []
+      for (const folder of projectFolders) {
+        if ((yield* git.gitDir(folder.folder)) !== null) found.push(folder)
+      }
+      return found
+    }
     if ((yield* git.gitDir(root)) !== null) return null
     const candidates = session.inWorktree
       ? (yield* (yield* FolderReader).readEntries(root).pipe(Effect.orElseSucceed(() => [])))

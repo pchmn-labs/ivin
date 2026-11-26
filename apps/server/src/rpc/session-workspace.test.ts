@@ -153,41 +153,47 @@ test("when one worktree cannot be created, no folder is left and the message is 
   expect(git(apiApp, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(1)
 })
 
-test("a session on the checkouts starts in the first folder, the others being extra directories", async () => {
-  const starts: StartInput[] = []
-  const session = await withServer(starts, (client) =>
-    Effect.gen(function* () {
-      yield* openTrusted(client)
-      const created = yield* client["session.create"]({ projectPath: workspace })
-      yield* client["session.sendMessage"]({
-        sessionId: created.id,
-        messageId: "m1",
-        text: "go",
-        workingFolder: { kind: "checkout" },
-      })
-      return created
-    }),
-  )
-
-  expect(session).toMatchObject({ workingFolder: apiApp, inWorktree: false })
-  expect(starts.map((s) => [s.cwd, s.extraDirectories])).toEqual([[apiApp, [webApp, notes]]])
-})
-
-test("folders sharing a parent start in it", async () => {
+test("before the first message, Files shows only the project folders, though they share a parent holding another", async () => {
   const shared = join(root, "shared")
-  mkdirSync(join(shared, "x"), { recursive: true })
-  mkdirSync(join(shared, "y"), { recursive: true })
+  repository(join(shared, "api"))
+  repository(join(shared, "web"))
+  mkdirSync(join(shared, "other"))
   writeFileSync(
     workspace,
-    JSON.stringify({ folders: [{ path: "shared/x" }, { path: "shared/y" }] }),
+    JSON.stringify({ folders: [{ path: "shared/web" }, { path: "shared/api" }] }),
   )
   const starts: StartInput[] = []
-  await withServer(starts, (client) =>
+  const { created, top, inside, file, files, sent } = await withServer(starts, (client) =>
     Effect.gen(function* () {
       yield* openTrusted(client)
       const created = yield* client["session.create"]({ projectPath: workspace })
-      expect(created).toMatchObject({ workingFolder: shared, branch: null })
-      yield* client["session.sendMessage"]({
+      const sessionId = created.id
+      const top = yield* client["file.listFolder"]({ sessionId, path: "" })
+      const inside = yield* client["file.listFolder"]({ sessionId, path: "api" })
+      const file = yield* client["file.readFile"]({ sessionId, path: "web/first.txt" })
+      const files = yield* client["file.listFiles"]({ sessionId })
+      const sent = yield* client["session.sendMessage"]({ sessionId, messageId: "m1", text: "go" })
+      return { created, top, inside, file, files, sent }
+    }),
+  )
+
+  expect(created).toMatchObject({ workingFolder: workspace, inWorktree: false, branch: null })
+  expect(top.map((entry) => entry.name)).toEqual(["web", "api"])
+  expect(inside.map((entry) => entry.name)).toEqual(["first.txt"])
+  expect(file).toMatchObject({ kind: "text" })
+  expect(files).toMatchObject({ paths: ["api/first.txt", "web/first.txt"] })
+  const folder = join(worktrees, "ivin", `ivin-${sent.id.slice(0, 8)}`)
+  expect(sent).toMatchObject({ workingFolder: folder, inWorktree: true })
+  expect(readdirSync(folder).sort()).toEqual(["api", "web"])
+  expect(starts.map((s) => s.cwd)).toEqual([folder])
+})
+
+test("a first message on the checkout choice still creates the working folder", async () => {
+  const sent = await withServer([], (client) =>
+    Effect.gen(function* () {
+      yield* openTrusted(client)
+      const created = yield* client["session.create"]({ projectPath: workspace })
+      return yield* client["session.sendMessage"]({
         sessionId: created.id,
         messageId: "m1",
         text: "go",
@@ -196,7 +202,28 @@ test("folders sharing a parent start in it", async () => {
     }),
   )
 
-  expect(starts.map((s) => [s.cwd, s.extraDirectories])).toEqual([[shared, []]])
+  expect(sent).toMatchObject({ inWorktree: true, branch: `ivin/${sent.id.slice(0, 8)}` })
+})
+
+test("a workspace with no repository starts in its first folder, the others being extra directories", async () => {
+  const other = join(root, "other")
+  mkdirSync(other)
+  writeFileSync(workspace, JSON.stringify({ folders: [{ path: "docs/notes" }, { path: "other" }] }))
+  const starts: StartInput[] = []
+  const sent = await withServer(starts, (client) =>
+    Effect.gen(function* () {
+      yield* openTrusted(client)
+      const created = yield* client["session.create"]({ projectPath: workspace })
+      return yield* client["session.sendMessage"]({
+        sessionId: created.id,
+        messageId: "m1",
+        text: "go",
+      })
+    }),
+  )
+
+  expect(sent).toMatchObject({ workingFolder: notes, inWorktree: false })
+  expect(starts.map((s) => [s.cwd, s.extraDirectories])).toEqual([[notes, [other]]])
 })
 
 test("a turn's edits in two repositories are listed under each repository, and read and discarded there", async () => {

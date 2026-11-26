@@ -8,9 +8,14 @@ import { Clock, Effect } from "effect"
 import { ImageStore } from "../../transcript/usecases/image-store.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { titleFromMessage } from "../rules/session-title.ts"
+import { awaitsWorkspaceFolder } from "../rules/workspace-start.ts"
 import { checkWorkingFolder } from "./check-working-folder.ts"
 import { FirstMessageReading } from "./first-message-reading.ts"
-import { moveToExistingWorktree, moveToNewWorktree } from "./move-working-folder.ts"
+import {
+  moveToExistingWorktree,
+  moveToNewWorktree,
+  moveToWorkspaceStart,
+} from "./move-working-folder.ts"
 import { SessionRuns } from "./session-runs.ts"
 import { SessionStore } from "./session-store.ts"
 
@@ -37,6 +42,8 @@ export const sendMessage = (
         yield* moveToNewWorktree(found, "creation")
       } else if (workingFolder?.kind === "existing_worktree") {
         yield* moveToExistingWorktree(found, workingFolder.path, "choice")
+      } else if (awaitsWorkspaceFolder(found)) {
+        yield* moveToWorkspaceStart(found)
       } else {
         // The user may have switched branches in the checkout since the session was created.
         yield* store.setWorkingFolder(

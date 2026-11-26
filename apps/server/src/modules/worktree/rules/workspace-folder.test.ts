@@ -6,11 +6,10 @@ import {
   workingFolderPath,
 } from "./workspace-folder.ts"
 
-test("folders sharing a parent start in it; others in the first, with the rest as extra directories", () => {
-  expect(checkoutStart(["/w/api", "/w/web"])).toEqual({ cwd: "/w", extraDirectories: [] })
-  expect(checkoutStart(["/a/api", "/b/web", "/c/db"])).toEqual({
-    cwd: "/a/api",
-    extraDirectories: ["/b/web", "/c/db"],
+test("a session on the checkouts starts in the first folder, even when the folders share a parent", () => {
+  expect(checkoutStart(["/w/api", "/w/web"])).toEqual({
+    cwd: "/w/api",
+    extraDirectories: ["/w/web"],
   })
   expect(checkoutStart(["/w/api"])).toEqual({ cwd: "/w/api", extraDirectories: [] })
   expect(checkoutStart([])).toBeNull()
