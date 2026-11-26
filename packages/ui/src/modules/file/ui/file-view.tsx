@@ -47,7 +47,7 @@ export function FileView({
   const registry = useContext(RegistryContext)
   const scroll = fileScrollOf(sessionId, workingFolder, path)
   // Read once, not subscribed: each scroll writes it.
-  const [scrollTop] = useState(() => registry.get(scroll))
+  const [scrolled] = useState(() => registry.get(scroll))
   const shownLinesAtom = shownLinesOf(sessionId, workingFolder, path)
   const shownLines = useAtomValue(shownLinesAtom)
   useEffect(() => () => registry.set(shownLinesAtom, undefined), [registry, shownLinesAtom])
@@ -142,8 +142,8 @@ export function FileView({
             <CodeView
               text={text}
               fileName={name}
-              scrollTop={scrollTop}
-              onScroll={(top) => registry.set(scroll, top)}
+              {...(scrolled && { scroll: scrolled })}
+              onScroll={(snapshot) => registry.set(scroll, snapshot)}
               {...(!outside && {
                 onChange: (typed: string) =>
                   registry.set(editAtom, withTyped(registry.get(editAtom), typed)),

@@ -7,6 +7,7 @@ import {
   EditorSelection,
   EditorState,
   type Extension,
+  type StateEffect,
   Transaction,
 } from "@codemirror/state"
 import {
@@ -95,14 +96,16 @@ const showLines = (editor: EditorView, { start, end }: ShownLines) => {
   })
 }
 
+export type CodeScroll = StateEffect<unknown>
+
 export interface CodeViewProps {
   readonly text: string
   // Picks the language, and names the view for assistive technology.
   readonly fileName: string
-  // Where the view opens scrolled to, in pixels.
-  readonly scrollTop?: number
-  readonly onScroll?: (scrollTop: number) => void
-  // Scrolled to and selected, in place of `scrollTop`.
+  // Where the view opens scrolled to, as `onScroll` last reported it.
+  readonly scroll?: CodeScroll
+  readonly onScroll?: (scroll: CodeScroll) => void
+  // Scrolled to and selected, in place of `scroll`.
   readonly shownLines?: ShownLines
   // Makes the text editable, and receives it after each edit.
   readonly onChange?: (text: string) => void
@@ -118,7 +121,7 @@ const gutterOf = (diff: DiffLayout | undefined): Extension =>
 export function CodeView({
   text,
   fileName,
-  scrollTop = 0,
+  scroll,
   onScroll,
   shownLines,
   onChange,
@@ -162,18 +165,11 @@ export function CodeView({
           added.current.of(extensions),
         ],
       }),
+      ...(shownLines === undefined && scroll && { scrollTo: scroll }),
     })
     view.current = editor
-    const scrolled = () => latestOnScroll.current?.(editor.scrollDOM.scrollTop)
+    const scrolled = () => latestOnScroll.current?.(editor.scrollSnapshot())
     editor.scrollDOM.addEventListener("scroll", scrolled, { passive: true })
-    if (shownLines === undefined) {
-      editor.requestMeasure({
-        read: () => null,
-        write: () => {
-          editor.scrollDOM.scrollTop = scrollTop
-        },
-      })
-    }
     return () => {
       editor.scrollDOM.removeEventListener("scroll", scrolled)
       editor.destroy()
