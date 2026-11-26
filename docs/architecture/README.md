@@ -332,15 +332,18 @@ import type { ServerPlugin } from "@ivin/plugin-api/server"
 export const activate: ServerPlugin = (ctx) => {
   ctx.transcript.onEvent((session, event) => { /* every normalised event */ })
   ctx.sessions.onCreated((session) => {})
+  ctx.sessions.onChanged((session) => {})                     // after a stored change: branch, title, status…
+  await ctx.sessions.list() / await ctx.sessions.get(id)      // open sessions of every project; get gives undefined for an unknown or archived one
   await ctx.annotations.add(sessionId, { kind: "pr", data })
   await ctx.storage.get(key) / await ctx.storage.set(key, value)
   ctx.harness.beforeSpawn(async (spawn) => ({ env: { FOO: "1" } }))
   ctx.commands.register("prs.refresh", async (args) => {})   // also exposed as `ivin run prs.refresh`
   await ctx.commands.run("github.refresh", args)             // another plugin's command, with its result
-  await ctx.exec("gh", ["pr", "view", url, "--json", "state"], { cwd })
+  await ctx.annotations.listAll(target, "pr")                 // every namespace's annotations, read only; `list` reads the plugin's own
+  await ctx.exec("gh", ["pr", "view", url, "--json", "state"], { cwd, env, timeout })   // `env` is added for this run; a run over `timeout` (30 s by default) is killed and rejects
   await ctx.fetch("https://api.github.com/repos/o/r/pulls")  // also in the UI half; made by the server
   await ctx.settings.get("foldThreshold")
-  ctx.poll(`pr:${url}`, refresh, { every: 60_000 })          // one run per key, paused while the window is hidden
+  const stop = ctx.poll(`pr:${url}`, refresh, { every: 60_000 })   // one run per key, paused while the window is hidden, run at once when it shows again after 15 s; `stop()` ends it for this plugin
   ctx.setInterval(tick, 60_000)                              // cleared on deactivate
 }
 ```
@@ -364,8 +367,8 @@ Transcript slots render inside a virtualised list and once per item, so they rec
 | `composer.status` | session id | tokens, cost, branch PR |
 | `composer.above` | session, `isEmptyComposer(target)` (lets a sheet take keys from the empty composer) | approval sheet (built in, `approvals/sheet`), question sheet (built in, `questions/sheet`), queued messages, detail sheets; an attention sheet squares the composer's top corners and dashes its top border |
 | `composer.suggest` | trigger char, query | `#` issues, `@../` paths, `/` commands |
-| `session.badge` | session | linked PR/issue icon in the sidebar and tabs |
-| `session.card` | session | hover card sections |
+| `session.badge` | session | after the title on the session's sidebar row and on its tab: the pull request status tile (built in, `prs/badge`) |
+| `session.card` | session | a section of the card a hover on the session's row or tab opens (the host's `SessionCardTrigger`, one card per place that slides between triggers); the card stays closed while no section renders: the pull request list (built in, `prs/card`) |
 | `sidebar.section` | — | Inactive sessions, custom sections; rendered by the Sessions panel under the selected project's sessions |
 | `sidebar.bottom` | — | Working panel; a panel across the bottom of the sidebar card, under the rail and the sessions, that the user resizes |
 | `sidebar.panel` | — | a tab of the sidebar's list column, named by the contribution's `title`, with its `badge` component after the name: Sessions (built in, `sessions/panel`, first by its `order` of -1), Files (built in, `files/panel`), Changes (built in, `changes/panel`, its count as the badge). The tab the user picked is kept by contribution id; a picked panel that another replaces shows its replacement, and one that is gone shows the first tab |
@@ -411,7 +414,7 @@ Plugins share through four soft channels; none makes a plugin fail when another 
 - **Annotations.** A kind shared by several plugins has its `data` shape defined in `contracts`, `pr` first. Whoever writes it and whoever renders it need not know each other.
 - **Slots defined by a plugin.** `ctx.slots.define("prs.card.section")` opens a slot prefixed with the plugin's id. Contributions to a slot nobody defines never render.
 - **Commands with a result.** `ctx.commands.run("github.refresh", args)` calls another plugin's command and returns its result, or fails with an "unknown command" error. These calls are untyped across plugins.
-- **Core services**, for what no forge or tool owns: git, the account a project uses on a host, `ctx.poll`, `ctx.exec`.
+- **Core services**, for what no forge or tool owns: git, `ctx.poll`, `ctx.exec`. The account a project uses on a forge belongs to that forge's plugin: `github` keeps it in the repository's git config.
 
 The core knows no forge. GitHub is a built-in plugin (`github`: PR detection and polling with `gh`, `#` issue mentions) that writes `pr` annotations, and the `prs` plugin renders them. A GitLab plugin writing the same annotations gets the same UI.
 
@@ -516,13 +519,15 @@ Once the CLI is stable, an optional `ivin` MCP server can expose the same comman
 
 ## Example: session PRs
 
-The feature that started this design, as two plugins: `github` knows the forge, `prs` shows pull requests whatever the forge.
+The feature that started this design, as two built-in plugins: `github` knows the forge, `prs` shows pull requests whatever the forge.
 
-- `github`'s `server.ts` watches `transcript.onEvent` for a `gh pr create` or GitHub MCP `create_pull_request` result holding a PR URL, and adds a `pr` annotation with `relation: "created"`. Deterministic, free, no agent cooperation needed.
-- `github` turns the `citation` the server stores from a session's first message into an `issue` or `pr` annotation with `relation: "referenced"`, on the project's GitHub remote, asking `gh` whether the number is an issue or a pull request.
-- The agent adds what detection can't see with `ivin link <url> --as referenced`; the `ivin-customize` skill tells it when.
-- `github` polls each open PR's state, CI and mergeability with `ctx.poll` and `ctx.exec("gh", …)`, and updates the annotation.
-- `prs`'s `ui.tsx` reads the `pr` annotations and fills `session.badge` (state icon, CI chip, `+n`), `session.card` (folded PR list) and `tab.decoration`.
+- `github`'s `server.ts` looks up the pull request of a session's branch with `gh pr list --head` when the session starts and when its branch changes (`sessions.onCreated`, `sessions.onChanged`), keeping those whose head repository belongs to the repository's owner, and none on the default branch; it writes it with `relation: "branch"`.
+- It watches `transcript.onEvent` for a `gh pr create` or GitHub MCP `create_pull_request` result holding a PR URL, and adds a `pr` annotation with `relation: "created"`. Deterministic, free, no agent cooperation needed.
+- It turns the `citation` the server stores from a session's first message into an `issue` or `pr` annotation with `relation: "referenced"`, on the project's GitHub remote, asking `gh` whether the number is an issue or a pull request.
+- The agent adds what detection can't see with `ivin link <url> --as referenced`; the `ivin-customize` skill tells it when. A sweep every minute reads every namespace's `pr` annotations (`annotations.listAll`) to find them.
+- It polls each open PR's state, checks, review and mergeability with `ctx.poll` and `ctx.exec("gh", …)` (every 3 minutes, every 45 s while checks run, at once when the window shows again after 15 s, never again once merged or closed) and writes them to its own `pr` annotation for that URL; a failure is kept in `error` until the next success.
+- Each project can use one of the user's `gh` accounts, chosen in its Settings section and kept in the repository's local git config (`ivin.githubUser`): its token goes to every `gh` call for the project and to the agent through `harness.beforeSpawn` (`GH_TOKEN`).
+- `prs`'s `ui.tsx` reads the `pr` annotations of every namespace, one pull request per URL, and fills `session.badge` (a status tile on the row and the tab, `+n`) and `session.card` (the list, with a remove action that deletes every annotation of that URL).
 
 In the fork this took hooks in 10 upstream files; here it touches no core file.
 

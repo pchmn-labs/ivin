@@ -17,6 +17,8 @@ export class SessionStore extends Context.Service<
     readonly findById: (id: string) => Effect.Effect<Session | null>
     // Archived sessions included.
     readonly listByProject: (projectPath: string) => Effect.Effect<readonly Session[]>
+    // Archived sessions included, of every project.
+    readonly listAll: Effect.Effect<readonly Session[]>
     // False, title unchanged, when the agent renames a session the user named.
     readonly rename: (id: string, title: string, by: RenamedBy) => Effect.Effect<boolean>
     // No-op once the title was set by a first message or a rename.

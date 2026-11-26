@@ -151,6 +151,10 @@ export interface SlotProps {
   "window.overlay": Record<string, never>
   // The plugin's section of the settings page, in place of the one generated from its manifest.
   "settings.section": Record<string, never>
+  // After the session's title, on its sidebar row and on its tab.
+  "session.badge": { readonly session: Session }
+  // A section of the card that opens after a hover on the session's row or tab; the card stays closed while no section renders.
+  "session.card": { readonly session: Session }
 }
 export type SlotName = keyof SlotProps
 
@@ -301,6 +305,8 @@ export const usePendingQuestion = (sessionId: string) => useHost().usePendingQue
 export const useUsage = (sessionId: string) => useHost().useUsage(sessionId)
 export const useAnnotations = <K extends string>(sessionId: string, kind: K) =>
   useHost().useAnnotations(sessionId, kind) as ReadonlyArray<AnnotationOf<K>>
+export const useRemoveAnnotation = () => useHost().useRemoveAnnotation()
+export const useRunServerCommand = () => useHost().useRunServerCommand()
 export const useAnswerApproval = (sessionId: string) => useHost().useAnswerApproval(sessionId)
 export const useAnswerQuestion = (sessionId: string) => useHost().useAnswerQuestion(sessionId)
 export const useSessionActions = (session: Session) => useHost().useSessionActions(session)

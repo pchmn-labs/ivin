@@ -5,6 +5,7 @@ import "./list-row.css"
 export type { ListRowProps }
 
 export function ListRow({
+  href,
   leading,
   title,
   subtitle,
@@ -26,23 +27,43 @@ export function ListRow({
       data-testid={testId}
     >
       <div className="iv-list-row__line">
-        <button
-          type="button"
-          className="iv-list-row__main"
-          onClick={onSelect}
-          aria-current={ariaCurrent ?? (selected ? "true" : undefined)}
-        >
-          {leading === undefined ? null : <span className="iv-list-row__leading">{leading}</span>}
-          {subtitle === undefined ? (
-            <span className="iv-list-row__title">{title}</span>
-          ) : (
-            <span className="iv-list-row__text">
+        {href === undefined ? (
+          <button
+            type="button"
+            className="iv-list-row__main"
+            onClick={onSelect}
+            aria-current={ariaCurrent ?? (selected ? "true" : undefined)}
+          >
+            {leading === undefined ? null : <span className="iv-list-row__leading">{leading}</span>}
+            {subtitle === undefined ? (
               <span className="iv-list-row__title">{title}</span>
-              <span className="iv-list-row__subtitle">{subtitle}</span>
-            </span>
-          )}
-          {meta === undefined ? null : <span className="iv-list-row__meta">{meta}</span>}
-        </button>
+            ) : (
+              <span className="iv-list-row__text">
+                <span className="iv-list-row__title">{title}</span>
+                <span className="iv-list-row__subtitle">{subtitle}</span>
+              </span>
+            )}
+            {meta === undefined ? null : <span className="iv-list-row__meta">{meta}</span>}
+          </button>
+        ) : (
+          <a
+            className="iv-list-row__main iv-list-row__main--link"
+            href={href}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {leading === undefined ? null : <span className="iv-list-row__leading">{leading}</span>}
+            {subtitle === undefined ? (
+              <span className="iv-list-row__title">{title}</span>
+            ) : (
+              <span className="iv-list-row__text">
+                <span className="iv-list-row__title">{title}</span>
+                <span className="iv-list-row__subtitle">{subtitle}</span>
+              </span>
+            )}
+            {meta === undefined ? null : <span className="iv-list-row__meta">{meta}</span>}
+          </a>
+        )}
         {actions === undefined ? null : <div className="iv-list-row__actions">{actions}</div>}
       </div>
       {below === undefined ? null : <div className="iv-list-row__below">{below}</div>}

@@ -1,0 +1,10 @@
+[
+  {
+    "headRepositoryOwner": { "id": "O_kgDODiA3Cg", "login": "pchmn-labs" },
+    "isDraft": false,
+    "state": "MERGED",
+    "title": "fix(transcript): page only the main agent's items, so a session whose last items are subagent steps no longer opens empty",
+    "updatedAt": "2026-11-26T14:54:58Z",
+    "url": "https://github.com/pchmn-labs/ivin/pull/389"
+  }
+]

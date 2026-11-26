@@ -1,0 +1,79 @@
+.iv-status-tile {
+  --iv-status-tile-ring: var(--iv-bg-card);
+
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  width: var(--iv-status-tile-size);
+  height: var(--iv-status-tile-size);
+  place-items: center;
+  border-radius: var(--iv-radius-sm);
+  background: color-mix(in srgb, var(--iv-text-muted) 12%, transparent);
+  color: var(--iv-tone);
+}
+
+.iv-status-tile__icon {
+  display: inline-grid;
+}
+
+/* The icon sizes stop at 12 and 14; the tile's glyph is 13. */
+.iv-status-tile__icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.iv-status-tile[data-pulse] .iv-status-tile__icon {
+  animation: iv-status-tile-pulse var(--iv-duration-pulse) ease-in-out infinite;
+}
+
+@keyframes iv-status-tile-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.iv-status-tile__mark {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: grid;
+  width: 8px;
+  height: 8px;
+  place-items: center;
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-text-muted);
+  box-shadow: 0 0 0 1px var(--iv-status-tile-ring);
+  color: var(--iv-bg-raised);
+}
+
+.iv-status-tile__mark[data-mark="check"] {
+  background: var(--iv-accent);
+}
+
+.iv-status-tile__mark[data-mark="cross"] {
+  background: var(--iv-danger);
+}
+
+.iv-tab-bar__item .iv-status-tile {
+  --iv-status-tile-ring: var(--iv-bg);
+}
+
+.iv-tab-bar__item[data-selected] .iv-status-tile {
+  --iv-status-tile-ring: color-mix(in srgb, var(--iv-accent) 12%, var(--iv-bg-raised));
+}
+
+.iv-list-row:hover .iv-status-tile {
+  --iv-status-tile-ring: color-mix(in srgb, var(--iv-text) 5%, var(--iv-bg-card));
+}
+
+.iv-list-row[data-selected] .iv-status-tile {
+  --iv-status-tile-ring: color-mix(in srgb, var(--iv-text) 10%, var(--iv-bg-card));
+}
+
+.iv-session-card .iv-status-tile {
+  --iv-status-tile-ring: var(--iv-bg-raised);
+}
+
+.iv-session-card .iv-list-row:hover .iv-status-tile {
+  --iv-status-tile-ring: color-mix(in srgb, var(--iv-text) 5%, var(--iv-bg-raised));
+}

@@ -16,6 +16,8 @@ export const testUiHost: UiHost = {
   usePendingQuestion: () => undefined,
   useUsage: () => null,
   useAnnotations: () => [],
+  useRemoveAnnotation: () => async () => undefined,
+  useRunServerCommand: () => async () => ({ value: null }),
   useAnswerApproval: () => async () => undefined,
   useAnswerQuestion: () => async () => undefined,
   useSessionActions: () => ({ items: [], failure: null }),

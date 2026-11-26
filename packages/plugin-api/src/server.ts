@@ -24,6 +24,10 @@ export interface SpawnPatch {
 
 export interface ExecOptions {
   readonly cwd?: string
+  // Added to the server's environment for this run only.
+  readonly env?: { readonly [name: string]: string }
+  // Milliseconds before the program is killed and the call rejects; 30 s when absent.
+  readonly timeout?: number
 }
 
 export interface ExecResult {
@@ -44,6 +48,11 @@ export interface ServerContext {
   }
   readonly sessions: {
     readonly onCreated: (handler: (session: Session) => void) => void
+    // After a session's stored state changes: its branch, its title, its status…
+    readonly onChanged: (handler: (session: Session) => void) => void
+    // The sessions of every project, archived ones left out.
+    readonly list: () => Promise<ReadonlyArray<Session>>
+    readonly get: (sessionId: string) => Promise<Session | undefined>
   }
   // In the plugin's own namespace.
   readonly annotations: {
@@ -53,6 +62,11 @@ export interface ServerContext {
     ) => Promise<Annotation>
     readonly remove: (id: string) => Promise<void>
     readonly list: (target: AnnotationTarget, kind?: string) => Promise<ReadonlyArray<Annotation>>
+    // Every plugin's and the CLI's annotations on the target, to read only.
+    readonly listAll: (
+      target: AnnotationTarget,
+      kind?: string,
+    ) => Promise<ReadonlyArray<Annotation>>
   }
   // Kept per plugin across restarts.
   readonly storage: {
@@ -79,12 +93,12 @@ export interface ServerContext {
   ) => Promise<ExecResult>
   // Made by the server, to a host the manifest's `permissions.fetch` declares, also after each redirect.
   readonly fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>
-  // One run of `fn` per key across plugins, paused while the window is hidden; `fn` may return `{ every }` to change its interval.
+  // One run of `fn` per key across plugins, paused while the window is hidden, and run at once when the window shows again after 15 s; `fn` may return `{ every }` to change its interval. The returned function stops it.
   readonly poll: (
     key: string,
     fn: () => void | { readonly every: number } | Promise<void | { readonly every: number }>,
     options: PollOptions,
-  ) => void
+  ) => () => void
   readonly setInterval: (fn: () => void, ms: number) => void
   readonly harness: {
     readonly beforeSpawn: (
@@ -99,4 +113,4 @@ export type ServerPlugin = (ctx: ServerContext) => void | Promise<void>
 
 export const defineServer = (activate: ServerPlugin): ServerPlugin => activate
 
-export type { Annotation, AnnotationTarget, Json, Session } from "./types.ts"
+export type { Annotation, AnnotationTarget, Json, PrAnnotationData, Session } from "./types.ts"

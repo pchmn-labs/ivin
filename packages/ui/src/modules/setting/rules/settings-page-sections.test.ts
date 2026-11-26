@@ -58,10 +58,11 @@ test("a string setting with allowed values is a choice", () => {
   ])
 })
 
-test("a plugin with its own section and no setting still gets a section", () => {
-  const sections = settingsPageSections([], ["tools"])
+test("a plugin with its own section and no setting still gets a section, under its name", () => {
+  const sections = settingsPageSections([], ["tools", "misc"], new Map([["tools", "Tools"]]))
   expect(sections.find(({ key }) => key === "plugin:tools")).toMatchObject({
-    title: "tools",
+    title: "Tools",
     settings: [],
   })
+  expect(sections.find(({ key }) => key === "plugin:misc")?.title).toBe("misc")
 })

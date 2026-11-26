@@ -1,6 +1,7 @@
 import type { SessionChange } from "@ivin/contracts/session"
 import { Context, Effect, Layer, type Scope, type Stream } from "effect"
 import { makeWatcherFeed } from "../../../shared/usecases/watcher-feed.ts"
+import { PluginBridge } from "../../plugin/usecases/plugin-bridge.ts"
 import { SessionStore } from "./session-store.ts"
 
 const WATCHER_BUFFER = 256
@@ -24,6 +25,7 @@ export class SessionFeed extends Context.Service<
 export const layerSessionFeed = Layer.effect(SessionFeed)(
   Effect.gen(function* () {
     const store = yield* SessionStore
+    const bridge = yield* PluginBridge
     const feed = makeWatcherFeed<string, SessionChange>({
       capacity: WATCHER_BUFFER,
       matches: (projectPath, change) => projectOf(change) === projectPath,
@@ -37,7 +39,16 @@ export const layerSessionFeed = Layer.effect(SessionFeed)(
           Effect.flatMap((session) => {
             if (!session) return Effect.void
             if (session.archivedAt !== null) return publishRemoved(session.projectPath, session.id)
-            return feed.publish({ _tag: "changed", session })
+            return feed
+              .publish({ _tag: "changed", session })
+              .pipe(
+                Effect.andThen(
+                  bridge.publish(
+                    "sessionChanged",
+                    Effect.succeed({ kind: "sessionChanged", session }),
+                  ),
+                ),
+              )
           }),
         ),
       publishRemoved,

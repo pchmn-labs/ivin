@@ -192,10 +192,19 @@ export type AnnotationTarget =
 
 export interface PrAnnotationData {
   readonly url: string
-  readonly relation: "created" | "referenced" | "reviewed"
+  readonly relation: "created" | "referenced" | "reviewed" | "branch"
   readonly title?: string
   readonly state?: "open" | "draft" | "merged" | "closed"
   readonly checks?: "pending" | "passing" | "failing"
+  readonly checkCounts?: {
+    readonly passed: number
+    readonly failed: number
+    readonly pending: number
+  }
+  readonly review?: "approved" | "changes_requested" | "review_required"
+  readonly merge?: "ready" | "blocked" | "conflict"
+  readonly activityAt?: string
+  readonly error?: string
 }
 
 export interface IssueAnnotationData {

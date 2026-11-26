@@ -23,9 +23,14 @@ import { QuickPick } from "../core/components/quick-pick/quick-pick.tsx"
 import { Chips } from "../core/components/chips/chips.tsx"
 import { SearchField } from "../core/components/search-field/search-field.tsx"
 import { ListRow } from "../core/components/list-row/list-row.tsx"
+import { Pill } from "../core/components/pill/pill.tsx"
+import { Select } from "../core/components/select/select.tsx"
+import { StatusTile } from "../core/components/status-tile/status-tile.tsx"
 import { ListSection } from "../core/components/list-section/list-section.tsx"
 import { FilePath } from "../modules/file/ui/file-path.tsx"
 import { SessionMarkdown } from "../modules/file/ui/session-markdown.tsx"
+import { SettingList, SettingRow } from "../modules/setting/ui/setting-row.tsx"
+import { SessionCardTrigger } from "../modules/session/ui/session-card.tsx"
 import { ProjectCreature } from "../modules/project/ui/project-creature.tsx"
 import { RelativeTime } from "../modules/session/ui/relative-time.tsx"
 import { SessionMark } from "../modules/session/ui/session-mark.tsx"
@@ -87,4 +92,10 @@ export const hostComponents = {
   FileView: HostFileView,
   DiffView: HostDiffView,
   TaskRun: HostTaskRun,
+  StatusTile,
+  Pill,
+  SessionCardTrigger,
+  Select,
+  SettingRow,
+  SettingList,
 } satisfies HostComponents

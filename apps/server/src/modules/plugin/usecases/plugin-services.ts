@@ -23,6 +23,14 @@ export class PluginServices extends Context.Service<
       target: AnnotationTarget,
       kind: string | null,
     ) => Effect.Effect<ReadonlyArray<unknown>, PluginCallFailed>
+    // Every namespace's annotations, for reading.
+    readonly listAllAnnotations: (
+      target: AnnotationTarget,
+      kind: string | null,
+    ) => Effect.Effect<ReadonlyArray<unknown>, PluginCallFailed>
+    // The sessions of every project, archived ones left out.
+    readonly listSessions: Effect.Effect<ReadonlyArray<unknown>>
+    readonly getSession: (sessionId: string) => Effect.Effect<unknown>
     readonly pluginSettings: Effect.Effect<ReadonlyArray<PluginSetting>>
     // The current settings first, then each change.
     readonly pluginSettingChanges: Stream.Stream<ReadonlyArray<PluginSetting>>

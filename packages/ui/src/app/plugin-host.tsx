@@ -28,6 +28,10 @@ import {
   type Draft,
   type UiHost,
 } from "@ivin/plugin-api/ui"
+import { removeAnnotationAtom } from "../modules/annotation/atoms/remove-annotation.ts"
+import { removeAnnotationFailure } from "../modules/annotation/rules/failure-message.ts"
+import { runCommandAtom } from "../modules/plugin/atoms/run-command.ts"
+import { commandFailureMessage } from "../modules/plugin/rules/command-failure.ts"
 import { sessionAnnotationsOf } from "../modules/annotation/atoms/list-annotations.ts"
 import { projectsAtom } from "../modules/project/atoms/list-projects.ts"
 import { selectedProjectAtom } from "../modules/project/atoms/selected-project.ts"
@@ -201,6 +205,22 @@ const host: UiHost = {
   useAnnotations: (sessionId, kind) => {
     const annotations = useAtomValue(sessionAnnotationsOf(sessionId).items)
     return useMemo(() => annotations.filter((a) => a.kind === kind), [annotations, kind])
+  },
+  useRemoveAnnotation: () => {
+    const remove = useAtomSet(removeAnnotationAtom, { mode: "promiseExit" })
+    return async (id) => {
+      const exit = await remove({ id })
+      return Exit.isFailure(exit) ? removeAnnotationFailure(Cause.squash(exit.cause)) : undefined
+    }
+  },
+  useRunServerCommand: () => {
+    const run = useAtomSet(runCommandAtom, { mode: "promiseExit" })
+    return async (command, args = null) => {
+      const exit = await run({ command, args })
+      return Exit.isSuccess(exit)
+        ? { value: exit.value }
+        : { failure: commandFailureMessage(Cause.squash(exit.cause), command) }
+    }
   },
   useAnswerApproval: (sessionId) => {
     const projectPath = useSessionProjectPath(sessionId)

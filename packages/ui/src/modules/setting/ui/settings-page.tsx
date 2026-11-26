@@ -6,6 +6,7 @@ import { Switch } from "../../../core/components/switch/switch.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import { TextField } from "../../../core/components/text-field/text-field.tsx"
 import { contributionsAtom } from "../../plugin/atoms/contributions.ts"
+import { SettingRow as SettingRowLayout } from "./setting-row.tsx"
 import { SlotContribution } from "../../../app/slot-renderer.tsx"
 import { setSettingOf, shownSettingOf } from "../atoms/set-setting.ts"
 import { settingsPageSectionsAtom, settingsSectionAtom } from "../atoms/settings-page.ts"
@@ -104,90 +105,91 @@ function SettingRow({ setting, disabled }: { setting: PageSetting; disabled: boo
             ? "text"
             : "switch"
   return (
-    <li className="iv-settings-page__setting">
-      <div className="iv-settings-page__setting-text">
-        <Text weight="medium">{setting.label}</Text>
-        <div id={descriptionId}>
-          <Text size="sm" tone="muted">
-            {setting.description}
-          </Text>
-        </div>
-        <div className="iv-settings-page__path">
-          <Text size="xs" tone="faint" mono>
-            {setting.path}
-          </Text>
-        </div>
-        {setting.plugin?.ignored === true && (
-          <Text size="sm" tone="muted">
-            {ignoredPluginSettingMessage(setting.plugin)}
-          </Text>
-        )}
-        {shown.failure !== null && (
-          <ErrorMessage
-            message={shown.failure}
-            onRetry={() =>
-              save(
-                control === "count" || control === "number"
-                  ? Number(shown.value)
-                  : control === "switch"
-                    ? shown.value === true
-                    : String(shown.value),
-              )
-            }
+    <SettingRowLayout
+      title={setting.label}
+      description={setting.description}
+      descriptionId={descriptionId}
+      below={
+        <>
+          <div className="iv-settings-page__path">
+            <Text size="xs" tone="faint" mono>
+              {setting.path}
+            </Text>
+          </div>
+          {setting.plugin?.ignored === true && (
+            <Text size="sm" tone="muted">
+              {ignoredPluginSettingMessage(setting.plugin)}
+            </Text>
+          )}
+          {shown.failure !== null && (
+            <ErrorMessage
+              message={shown.failure}
+              onRetry={() =>
+                save(
+                  control === "count" || control === "number"
+                    ? Number(shown.value)
+                    : control === "switch"
+                      ? shown.value === true
+                      : String(shown.value),
+                )
+              }
+            />
+          )}
+        </>
+      }
+      control={
+        control === "count" && setting.count !== undefined ? (
+          <DraftField
+            label={setting.label}
+            value={Number(shown.value)}
+            parse={(draft) => countOf(draft, setting.count!.min)}
+            invalidMessage={`Enter a whole number of ${setting.count.unit}, ${setting.count.min} or more.`}
+            suffix={setting.count.unit}
+            numeric
+            disabled={disabled}
+            describedBy={descriptionId}
+            save={save}
           />
-        )}
-      </div>
-      {control === "count" && setting.count !== undefined ? (
-        <DraftField
-          label={setting.label}
-          value={Number(shown.value)}
-          parse={(draft) => countOf(draft, setting.count!.min)}
-          invalidMessage={`Enter a whole number of ${setting.count.unit}, ${setting.count.min} or more.`}
-          suffix={setting.count.unit}
-          numeric
-          disabled={disabled}
-          describedBy={descriptionId}
-          save={save}
-        />
-      ) : control === "number" ? (
-        <DraftField
-          label={setting.label}
-          value={Number(shown.value)}
-          parse={numberOf}
-          invalidMessage="Enter a number."
-          disabled={disabled}
-          describedBy={descriptionId}
-          save={save}
-        />
-      ) : control === "text" ? (
-        <DraftField
-          label={setting.label}
-          value={String(shown.value)}
-          parse={(draft) => draft}
-          invalidMessage=""
-          disabled={disabled}
-          describedBy={descriptionId}
-          save={save}
-        />
-      ) : control === "switch" ? (
-        <Switch
-          label={setting.label}
-          checked={shown.value === true}
-          disabled={disabled}
-          onChange={save}
-          aria-describedby={descriptionId}
-        />
-      ) : (
-        <Select
-          label={setting.label}
-          value={String(shown.value)}
-          options={setting.choices ?? []}
-          disabled={disabled}
-          onChange={save}
-          aria-describedby={descriptionId}
-        />
-      )}
-    </li>
+        ) : control === "number" ? (
+          <DraftField
+            label={setting.label}
+            value={Number(shown.value)}
+            parse={numberOf}
+            invalidMessage="Enter a number."
+            disabled={disabled}
+            describedBy={descriptionId}
+            save={save}
+          />
+        ) : control === "text" ? (
+          <DraftField
+            label={setting.label}
+            value={String(shown.value)}
+            parse={(draft) => draft}
+            invalidMessage=""
+            disabled={disabled}
+            describedBy={descriptionId}
+            save={save}
+          />
+        ) : control === "switch" ? (
+          <Switch
+            label={setting.label}
+            checked={shown.value === true}
+            disabled={disabled}
+            onChange={save}
+            aria-describedby={descriptionId}
+          />
+        ) : (
+          <Select
+            label={setting.label}
+            value={String(shown.value)}
+            options={setting.choices ?? []}
+            disabled={disabled}
+            onChange={save}
+            aria-describedby={descriptionId}
+          />
+        )
+      }
+    />
   )
 }
 

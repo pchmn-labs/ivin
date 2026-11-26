@@ -22,7 +22,7 @@ const argumentsOf = (input: Input) => {
       ].join("\n"),
     })
   }
-  const relations: readonly string[] = forgeRelations[link.kind]
+  const relations: readonly string[] = forgeRelations[link.kind].filter((r) => r !== "branch")
   const relation = stringOf(input.values["as"])
   if (relation === null || !relations.includes(relation)) {
     const [first, second, third] = relations

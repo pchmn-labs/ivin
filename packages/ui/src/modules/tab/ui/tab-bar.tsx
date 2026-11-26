@@ -14,7 +14,9 @@ import { sessionsOf } from "../../session/atoms/list-sessions.ts"
 import { useStartSession } from "../../session/hooks/use-start-session.ts"
 import { useSessionActions } from "../../session/hooks/use-session-actions.ts"
 import { NewSessionButton } from "../../session/ui/new-session-button.tsx"
+import { SessionCardTrigger } from "../../session/ui/session-card.tsx"
 import { SessionMark } from "../../session/ui/session-mark.tsx"
+import { Slot } from "../../../app/slot-renderer.tsx"
 import { closeTabAtom } from "../atoms/close-tab.ts"
 import { tabsOf } from "../atoms/list-tabs.ts"
 import { openTabAtom } from "../atoms/open-tab.ts"
@@ -97,70 +99,75 @@ function TabItem({
 
   return (
     <>
-      <ContextMenu items={actions.items}>
-        <div
-          ref={item}
-          className="iv-tab-bar__item"
-          role="presentation"
-          draggable
-          data-selected={selected || undefined}
-          data-drop={drop}
-          data-testid="tab"
-          onDragStart={(event) => {
-            event.dataTransfer.effectAllowed = "move"
-            event.dataTransfer.setData("text/plain", sessionId)
-            onDragStart()
-          }}
-          onDragOver={(event) => {
-            event.preventDefault()
-            onDragOver(placementAt(event))
-          }}
-          onDrop={(event) => {
-            event.preventDefault()
-            onDrop()
-          }}
-          onDragEnd={onDragEnd}
-          onMouseDown={(event) => {
-            // Stops the browser's middle-click autoscroll.
-            if (event.button === 1) event.preventDefault()
-          }}
-          onAuxClick={(event) => {
-            if (event.button !== 1) return
-            event.preventDefault()
-            requestClose()
-          }}
-        >
-          <button
-            type="button"
-            role="tab"
-            className="iv-tab-bar__tab"
-            aria-selected={selected}
-            tabIndex={focusable ? 0 : -1}
-            onClick={() => openTab({ sessionId })}
+      <SessionCardTrigger session={session} place="tab">
+        <ContextMenu items={actions.items}>
+          <div
+            ref={item}
+            className="iv-tab-bar__item"
+            role="presentation"
+            draggable
+            data-selected={selected || undefined}
+            data-drop={drop}
+            data-testid="tab"
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = "move"
+              event.dataTransfer.setData("text/plain", sessionId)
+              onDragStart()
+            }}
+            onDragOver={(event) => {
+              event.preventDefault()
+              onDragOver(placementAt(event))
+            }}
+            onDrop={(event) => {
+              event.preventDefault()
+              onDrop()
+            }}
+            onDragEnd={onDragEnd}
+            onMouseDown={(event) => {
+              // Stops the browser's middle-click autoscroll.
+              if (event.button === 1) event.preventDefault()
+            }}
+            onAuxClick={(event) => {
+              if (event.button !== 1) return
+              event.preventDefault()
+              requestClose()
+            }}
           >
-            <SessionMark
-              status={session.status}
-              waitingFor={session.waitingFor}
-              harness={session.harness}
-              tasks={session.backgroundTasks}
-            />
-            <span className="iv-tab-bar__title" data-testid="tab-title" title={session.title}>
-              {session.title}
-            </span>
-          </button>
-          <button
-            type="button"
-            className="iv-tab-bar__close"
-            tabIndex={-1}
-            aria-hidden
-            aria-label={`Close ${session.title}`}
-            data-testid="tab-close"
-            onClick={requestClose}
-          >
-            <Icon name="x" size={14} />
-          </button>
-        </div>
-      </ContextMenu>
+            <button
+              type="button"
+              role="tab"
+              className="iv-tab-bar__tab"
+              aria-selected={selected}
+              tabIndex={focusable ? 0 : -1}
+              onClick={() => openTab({ sessionId })}
+            >
+              <SessionMark
+                status={session.status}
+                waitingFor={session.waitingFor}
+                harness={session.harness}
+                tasks={session.backgroundTasks}
+              />
+              <span className="iv-tab-bar__title" data-testid="tab-title" title={session.title}>
+                {session.title}
+              </span>
+              <span className="iv-tab-bar__badge">
+                <Slot slot="session.badge" props={{ session }} />
+              </span>
+            </button>
+            <button
+              type="button"
+              className="iv-tab-bar__close"
+              tabIndex={-1}
+              aria-hidden
+              aria-label={`Close ${session.title}`}
+              data-testid="tab-close"
+              onClick={requestClose}
+            >
+              <Icon name="x" size={14} />
+            </button>
+          </div>
+        </ContextMenu>
+      </SessionCardTrigger>
       <Dialog
         open={confirming}
         onOpenChange={setConfirming}

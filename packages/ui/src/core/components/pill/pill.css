@@ -1,0 +1,35 @@
+.iv-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--iv-space-1);
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--iv-radius-pill);
+  background: color-mix(in srgb, var(--iv-tone) 13%, transparent);
+  color: var(--iv-tone);
+  font-size: var(--iv-text-xs);
+  font-weight: var(--iv-weight-medium);
+  white-space: nowrap;
+}
+
+.iv-pill__disc {
+  display: inline-grid;
+  flex: none;
+  width: 10px;
+  height: 10px;
+  place-items: center;
+  border-radius: var(--iv-radius-pill);
+  background: var(--iv-tone);
+  color: var(--iv-bg-raised);
+}
+
+.iv-pill__spinner {
+  flex: none;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid currentcolor;
+  border-top-color: transparent;
+  border-radius: var(--iv-radius-pill);
+  animation: iv-spin var(--iv-duration-spin) linear infinite;
+}

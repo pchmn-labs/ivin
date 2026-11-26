@@ -47,6 +47,10 @@ import arrowRight from "@phosphor-icons/core/assets/regular/arrow-right.svg?raw"
 import squareSplitHorizontal from "@phosphor-icons/core/assets/regular/square-split-horizontal.svg?raw"
 import arrowClockwise from "@phosphor-icons/core/assets/regular/arrow-clockwise.svg?raw"
 import arrowSquareOut from "@phosphor-icons/core/assets/regular/arrow-square-out.svg?raw"
+import gitPullRequest from "@phosphor-icons/core/assets/regular/git-pull-request.svg?raw"
+import gitMerge from "@phosphor-icons/core/assets/regular/git-merge.svg?raw"
+import xCircle from "@phosphor-icons/core/assets/regular/x-circle.svg?raw"
+import gitPullRequestDraft from "./assets/git-pull-request-draft.svg?raw"
 import type { IconProps as PluginIconProps } from "@ivin/plugin-api/ui"
 import "./icon.css"
 
@@ -62,7 +66,7 @@ interface SvgProps {
 }
 
 // The files are `<svg …>…</svg>` on one line; only the inside is kept, the wrapper is drawn below.
-const innerOf = (svg: string) => svg.slice(svg.indexOf(">") + 1, svg.lastIndexOf("</svg>"))
+export const innerOf = (svg: string) => svg.slice(svg.indexOf(">") + 1, svg.lastIndexOf("</svg>"))
 
 function Svg({ inner, size, ...rest }: SvgProps & { inner: string }) {
   return (
@@ -110,6 +114,10 @@ const eagerIcons = {
   loader: circleNotch,
   copy: copy,
   "git-branch": gitBranch,
+  "git-pull-request": gitPullRequest,
+  "git-pull-request-draft": gitPullRequestDraft,
+  "git-merge": gitMerge,
+  "git-pull-request-closed": xCircle,
   folder: folder,
   worktree: gitFork,
   user: user,

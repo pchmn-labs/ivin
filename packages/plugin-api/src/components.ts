@@ -38,6 +38,10 @@ export type IconName =
   | "loader"
   | "copy"
   | "git-branch"
+  | "git-pull-request"
+  | "git-pull-request-draft"
+  | "git-merge"
+  | "git-pull-request-closed"
   | "folder"
   | "worktree"
   | "brain"
@@ -222,6 +226,8 @@ export interface StatusMarkProps {
 }
 
 export interface ListRowProps {
+  // Opens in the browser on a click, under a pointer cursor; `onSelect` is not called.
+  readonly href?: string
   readonly leading?: ReactNode
   readonly title: ReactNode
   readonly subtitle?: ReactNode
@@ -662,6 +668,66 @@ export interface ComposerFrameProps {
   readonly children?: ReactNode
 }
 
+export type Tone =
+  | "accent"
+  | "danger"
+  | "muted"
+  | "faint"
+  | "hue-0"
+  | "hue-1"
+  | "hue-2"
+  | "hue-3"
+  | "hue-4"
+  | "hue-5"
+
+// An 18px icon on a neutral square, such as a pull request's state.
+export interface StatusTileProps {
+  readonly icon: IconName
+  readonly tone: Tone
+  // A disc on the square's bottom-right corner: a check in the accent, a cross in red, a "!" in grey.
+  readonly mark?: "check" | "cross" | "exclamation"
+  // The icon breathes, while something runs; still under reduced motion.
+  readonly pulse?: boolean
+  readonly label: string
+}
+
+// A short status on a tinted pill, such as "2 failing · 5 passed".
+export interface PillProps {
+  readonly tone: Tone
+  readonly icon?: IconName
+  // A filled check or cross disc, or a spinner, before the text; in place of `icon`.
+  readonly status?: "passed" | "failed" | "running"
+  readonly children: ReactNode
+}
+
+// Opens the session's card after a hover on its child, on the right of a row or under a tab; one card per place moves between triggers.
+export interface SessionCardTriggerProps {
+  readonly session: Session
+  readonly place: "row" | "tab"
+  readonly children: ReactNode
+}
+
+export interface SelectProps {
+  readonly label: string
+  readonly value: string
+  readonly onChange: (value: string) => void
+  readonly options: ReadonlyArray<{ readonly value: string; readonly label: string }>
+  readonly disabled?: boolean
+}
+
+// A row of a `settings.section`, drawn like the settings page's own.
+export interface SettingRowProps {
+  readonly title: string
+  readonly description?: ReactNode
+  readonly control: ReactNode
+  // Under the row, such as an `ErrorMessage`.
+  readonly below?: ReactNode
+}
+
+export interface SettingListProps {
+  readonly children: ReactNode
+}
+
 export interface HostComponents {
   readonly Button: ComponentType<ButtonProps>
   readonly IconButton: ComponentType<IconButtonProps>
@@ -707,6 +773,12 @@ export interface HostComponents {
   readonly FileView: ComponentType<FileViewProps>
   readonly DiffView: ComponentType<DiffViewProps>
   readonly TaskRun: ComponentType<TaskRunProps>
+  readonly StatusTile: ComponentType<StatusTileProps>
+  readonly Pill: ComponentType<PillProps>
+  readonly SessionCardTrigger: ComponentType<SessionCardTriggerProps>
+  readonly Select: ComponentType<SelectProps>
+  readonly SettingRow: ComponentType<SettingRowProps>
+  readonly SettingList: ComponentType<SettingListProps>
 }
 
 const hostComponent =
@@ -757,3 +829,9 @@ export const ComposerFrame = hostComponent((c) => c.ComposerFrame)
 export const FileView = hostComponent((c) => c.FileView)
 export const DiffView = hostComponent((c) => c.DiffView)
 export const TaskRun = hostComponent((c) => c.TaskRun)
+export const StatusTile = hostComponent((c) => c.StatusTile)
+export const Pill = hostComponent((c) => c.Pill)
+export const SessionCardTrigger = hostComponent((c) => c.SessionCardTrigger)
+export const Select = hostComponent((c) => c.Select)
+export const SettingRow = hostComponent((c) => c.SettingRow)
+export const SettingList = hostComponent((c) => c.SettingList)

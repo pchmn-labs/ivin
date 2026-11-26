@@ -8,6 +8,7 @@ import type {
   GitStatusEntry,
   HarnessRunOptions,
   ImageData,
+  Json,
   OpenProjects,
   QuestionAnswer,
   QuestionItem,
@@ -140,6 +141,13 @@ export interface UiHost {
   readonly useUsage: (sessionId: string) => SessionUsage
   // The session's annotations of this kind, oldest first.
   readonly useAnnotations: (sessionId: string, kind: string) => ReadonlyArray<Annotation>
+  // Removes an annotation of any namespace, or returns why it could not.
+  readonly useRemoveAnnotation: () => (id: string) => Promise<ActionFailure | undefined>
+  // Runs a command a server half registered, as `ivin run` does.
+  readonly useRunServerCommand: () => (
+    command: string,
+    args?: Json,
+  ) => Promise<{ readonly value: Json } | { readonly failure: string }>
   readonly useAnswerApproval: (
     sessionId: string,
   ) => (answer: {

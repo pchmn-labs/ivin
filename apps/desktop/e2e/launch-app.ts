@@ -34,13 +34,24 @@ export const makeFakeClaudeBin = (): string => {
   return dir
 }
 
+// A directory holding an executable named `gh`, to put first on PATH.
+export const makeFakeGhBin = (): string => {
+  const dir = makeTempDir("gh")
+  const executable = join(dir, "gh")
+  copyFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures/fake-gh.cjs"), executable)
+  chmodSync(executable, 0o755)
+  return dir
+}
+
 export const claudeConfigDir = (userDataDir: string) => join(userDataDir, "claude")
 
 export interface LaunchOptions {
   readonly fakeClaudeBin?: string
-  readonly harness?: "scripted" | "scripted-approval"
+  readonly harness?: "scripted" | "scripted-approval" | "scripted-pr"
   // Replaces the app's PATH, to show it needs nothing from it.
   readonly path?: string
+  // Put first on the app's PATH.
+  readonly prependPath?: string
   // False shows the window, as a user's launch does.
   readonly background?: boolean
 }
@@ -69,6 +80,9 @@ export const packagedLaunch = (userDataDir: string, options: LaunchOptions = {})
           ...common,
           IVIN_HARNESS: options.harness ?? "scripted",
           ...(options.path !== undefined && { PATH: options.path }),
+          ...(options.prependPath !== undefined && {
+            PATH: `${options.prependPath}${delimiter}${options.path ?? process.env["PATH"] ?? ""}`,
+          }),
         },
   }
 }

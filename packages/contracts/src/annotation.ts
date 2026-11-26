@@ -44,10 +44,13 @@ const forgeUrl = (kind: ForgeKind) =>
   Schema.String.check(Schema.makeFilter((url) => forgeUrlOf(kind, url) === url))
 
 export const forgeRelations = {
-  pr: ["created", "referenced", "reviewed"],
+  // `branch`: the pull request of the session's branch, which the forge's plugin finds itself.
+  pr: ["created", "referenced", "reviewed", "branch"],
   // `resolved`: the session's work closes the issue.
   issue: ["created", "referenced", "resolved"],
 } as const
+
+const count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0))
 
 export const PrAnnotationData = Schema.Struct({
   url: forgeUrl("pr"),
@@ -55,6 +58,14 @@ export const PrAnnotationData = Schema.Struct({
   title: Schema.optionalKey(Schema.String),
   state: Schema.optionalKey(Schema.Literals(["open", "draft", "merged", "closed"])),
   checks: Schema.optionalKey(Schema.Literals(["pending", "passing", "failing"])),
+  checkCounts: Schema.optionalKey(Schema.Struct({ passed: count, failed: count, pending: count })),
+  review: Schema.optionalKey(Schema.Literals(["approved", "changes_requested", "review_required"])),
+  // `ready`: the forge would merge it now; `blocked`: something other than a conflict stops it.
+  merge: Schema.optionalKey(Schema.Literals(["ready", "blocked", "conflict"])),
+  // When the pull request last changed on the forge, as an ISO date.
+  activityAt: Schema.optionalKey(Schema.String),
+  // Why the last status check failed; gone once one succeeds.
+  error: Schema.optionalKey(Schema.String),
 })
 export type PrAnnotationData = typeof PrAnnotationData.Type
 

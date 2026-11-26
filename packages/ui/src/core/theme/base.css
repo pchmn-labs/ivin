@@ -98,6 +98,7 @@ kbd {
 
   /* A spinner that stops makes a waiting screen look stuck. */
   .iv-icon--spin,
+  .iv-pill__spinner,
   .iv-session-mark[data-status="working"] .iv-session-mark__overlay,
   .iv-session-mark[data-status="preparing_worktree"] .iv-session-mark__overlay {
     animation-duration: var(--iv-duration-spin) !important;

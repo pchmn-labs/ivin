@@ -106,3 +106,14 @@
 .iv-list-row__actions:has([data-popup-open]) {
   display: flex;
 }
+
+.iv-list-row__main--link {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* A status tile leads the title line, not the middle of a title with a subtitle under it. */
+.iv-list-row__main:has(.iv-list-row__subtitle) > .iv-list-row__leading:has(> .iv-status-tile) {
+  align-self: flex-start;
+  margin-top: calc(var(--iv-space-2) + (var(--iv-text-md-lh) - var(--iv-status-tile-size)) / 2);
+}

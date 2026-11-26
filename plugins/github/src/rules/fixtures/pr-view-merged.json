@@ -1,0 +1,41 @@
+{
+  "isDraft": false,
+  "mergeStateStatus": "UNKNOWN",
+  "mergeable": "UNKNOWN",
+  "reviewDecision": "",
+  "state": "MERGED",
+  "statusCheckRollup": [
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-11-26T14:41:44Z",
+      "conclusion": "SUCCESS",
+      "detailsUrl": "https://github.com/pchmn-labs/ivin/actions/runs/45841028746/job/139982389573",
+      "name": "Lint, format, types and unit tests",
+      "startedAt": "2026-11-26T14:38:21Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-11-26T14:38:19Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/pchmn-labs/ivin/actions/runs/45841028746/job/139982392338",
+      "name": "Packaged app on linux",
+      "startedAt": "2026-11-26T14:38:19Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    },
+    {
+      "__typename": "CheckRun",
+      "completedAt": "2026-11-26T14:38:19Z",
+      "conclusion": "SKIPPED",
+      "detailsUrl": "https://github.com/pchmn-labs/ivin/actions/runs/45841028746/job/139982391694",
+      "name": "Packaged app on macos",
+      "startedAt": "2026-11-26T14:38:19Z",
+      "status": "COMPLETED",
+      "workflowName": "CI"
+    }
+  ],
+  "title": "fix(transcript): page only the main agent's items, so a session whose last items are subagent steps no longer opens empty",
+  "updatedAt": "2026-11-26T14:54:58Z"
+}

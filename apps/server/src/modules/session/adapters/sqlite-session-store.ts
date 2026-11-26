@@ -164,6 +164,15 @@ export const layerSqliteSessionStore = Layer.effect(SessionStore)(
               .all(projectPath) as unknown as SessionRow[]
           ).map((row) => toSession(row, report)),
         ),
+      listAll: decoding((report) =>
+        (
+          db
+            .prepare(
+              `SELECT ${columns} FROM sessions ORDER BY last_activity_at DESC, created_at DESC`,
+            )
+            .all() as unknown as SessionRow[]
+        ).map((row) => toSession(row, report)),
+      ),
       rename: (id, title, by) =>
         Effect.sync(
           () =>
