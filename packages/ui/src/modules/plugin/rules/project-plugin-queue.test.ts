@@ -68,3 +68,8 @@ test("a unified diff splits into the file, hunk, added, removed and context line
   ])
   expect(lines.at(-1)?.text).toBe("+new")
 })
+
+test("a removed line that starts with dashes after a hunk header is a removed line, not a file header", () => {
+  const lines = diffLines("--- a/x\n+++ b/x\n@@ -1 +1 @@\n-- a comment\n++ b\n")
+  expect(lines.map((line) => line.kind)).toEqual(["file", "file", "hunk", "removed", "added"])
+})

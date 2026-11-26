@@ -1,5 +1,5 @@
 import type { ProjectPlugin, ProjectPluginChange, ProjectPlugins } from "@ivin/contracts/plugin"
-import { DateTime, Effect, Semaphore } from "effect"
+import { DateTime, Effect } from "effect"
 import { readManifest } from "../rules/manifest.ts"
 import { changedFiles, unifiedDiff, type PluginTree } from "../rules/plugin-diff.ts"
 import {
@@ -9,6 +9,7 @@ import {
   projectPluginKey,
   projectPluginsRoot,
 } from "../rules/project-plugin-trust.ts"
+import { ProjectPluginLock } from "./project-plugin-lock.ts"
 import { PluginProjects } from "./plugin-projects.ts"
 import { PluginSwitches } from "./plugin-switches.ts"
 import { ProjectPluginTrustStore } from "./project-plugin-trust-store.ts"
@@ -18,7 +19,7 @@ import { UserPlugins, type PluginFolder, type UserPluginsService } from "./user-
 export interface ResolvedProjectPlugin {
   readonly key: string
   readonly plugin: ProjectPlugin
-  // The folder whose files run: the disk's when trusted, the trusted copy's when changed, none when new.
+  // The hash-named copy whose files run, whatever the state; none when new.
   readonly run: PluginFolder | null
 }
 
@@ -30,9 +31,6 @@ export interface ResolvedProject {
   readonly unreadable: ReadonlyArray<PluginFolder>
   readonly changes: ReadonlyArray<ProjectPluginChange>
 }
-
-// One reconciliation at a time, so two listings never record the same change twice.
-const lock = Semaphore.makeUnsafe(1)
 
 const trustedVersionOf = (plugins: UserPluginsService, hash: string) =>
   Effect.gen(function* () {
@@ -72,8 +70,15 @@ const resolveProject = (project: string, seenOnAdopt: boolean) =>
       if (trusted !== null && trusted.hash !== tree.hash && previous === null) trusted = null
       const decision = decideTrust({ trusted, hash: tree.hash, permissions: declared, fullTrust })
       const diffBase = previous?.files ?? null
+      const settled = decision.state === "trusted"
+      // What runs is always the copy that hashes to what the user trusted, never the live folder.
+      const copy = settled
+        ? ((yield* plugins.trustedFolder(tree.hash)) ??
+          (yield* plugins.keepTrusted(tree.hash, folder.path)))
+        : null
+      // The files changed between the read and the copy: the next change on disk resolves again.
+      if (settled && copy === null) continue
       if (decision.adopt) {
-        yield* plugins.keepTrusted(tree.hash, folder.path)
         yield* store.trust(project, id, { hash: tree.hash, permissions: declared })
         yield* store.addChange(project, {
           id,
@@ -87,16 +92,15 @@ const resolveProject = (project: string, seenOnAdopt: boolean) =>
         })
         adopted = true
       }
-      const settled = decision.state === "trusted"
-      const run: PluginFolder | null = settled
-        ? { name: key, label: folder.name, path: folder.path, manifest: folder.manifest }
-        : previous === null
+      const runPath = copy ?? previous?.path ?? null
+      const run: PluginFolder | null =
+        runPath === null
           ? null
           : {
               name: key,
               label: folder.name,
-              path: previous.path,
-              manifest: manifestOf(previous.files),
+              path: runPath,
+              manifest: settled ? manifestOf(tree.files) : manifestOf(previous!.files),
             }
       resolved.push({
         key,
@@ -123,8 +127,7 @@ const resolveProject = (project: string, seenOnAdopt: boolean) =>
     } satisfies ResolvedProject
   })
 
-// The trusted projects' plugins as they stand now; full trust adopts what it covers on the way.
-export const resolveProjectPlugins = (seenOnAdopt = false) =>
+const resolveTrusted = (seenOnAdopt: boolean, only?: string) =>
   Effect.gen(function* () {
     const plugins = yield* UserPlugins
     const projects = yield* PluginProjects
@@ -133,10 +136,29 @@ export const resolveProjectPlugins = (seenOnAdopt = false) =>
     if (plugins === null || projects === null || store === null || switches?.safe === true) {
       return [] as ReadonlyArray<ResolvedProject>
     }
-    return yield* Effect.forEach(yield* projects.trusted, (project) =>
-      resolveProject(project, seenOnAdopt),
+    const trusted = (yield* projects.trusted).filter(
+      (project) => only === undefined || project === only,
     )
-  }).pipe(lock.withPermits(1))
+    return yield* Effect.forEach(trusted, (project) => resolveProject(project, seenOnAdopt))
+  })
+
+// The trusted projects' plugins as they stand now; full trust adopts what it covers on the way.
+export const resolveProjectPlugins = Effect.gen(function* () {
+  return yield* (yield* ProjectPluginLock).exclusive(resolveTrusted(false))
+})
+
+// Sets the flag and adopts what waits in one locked step, so a concurrent listing never adopts it as unseen.
+export const turnProjectFullTrustOn = (project: string) =>
+  Effect.gen(function* () {
+    const store = yield* ProjectPluginTrustStore
+    yield* (yield* ProjectPluginLock).exclusive(
+      Effect.gen(function* () {
+        yield* store!.setFullTrust(project, true)
+        // What waited was already shown to the user: its change is recorded as seen.
+        yield* resolveTrusted(true, project)
+      }),
+    )
+  })
 
 // What a window shows: projects with no plugin and no change are left out.
 export const toProjectPlugins = (
@@ -162,7 +184,7 @@ export const pluginFolders = Effect.gen(function* () {
   const switches = yield* PluginSwitches
   if (plugins === null || switches?.safe === true) return []
   const user = yield* plugins.folders
-  const project = (yield* resolveProjectPlugins()).flatMap(({ plugins: found, unreadable }) => [
+  const project = (yield* resolveProjectPlugins).flatMap(({ plugins: found, unreadable }) => [
     ...unreadable,
     ...found.flatMap(({ run }) => (run === null ? [] : [run])),
   ])

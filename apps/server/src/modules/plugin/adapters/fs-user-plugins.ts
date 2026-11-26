@@ -5,10 +5,12 @@ import {
   appendFile,
   copyFile,
   mkdir,
+  mkdtemp,
   readdir,
   readFile,
   realpath,
   rename,
+  rm,
   stat,
   writeFile,
 } from "node:fs/promises"
@@ -26,7 +28,7 @@ import { pluginFolderChanges } from "./plugin-folder-changes.ts"
 import { pluginTypePaths } from "./plugin-types.ts"
 import { checkTypes } from "./ts-check.ts"
 import { makePluginDependencies } from "./plugin-dependencies.ts"
-import { bundle, contentHashOf, filesOf, hashOf } from "./plugin-bundler.ts"
+import { bundle, filesOf, hashOf } from "./plugin-bundler.ts"
 import { layerFsPluginSwitches } from "./fs-plugin-switches.ts"
 import { installedPnpmFolder } from "./pnpm.ts"
 
@@ -61,20 +63,25 @@ const foldersIn = async (root: string) => {
 
 const isBinary = (bytes: Buffer) => bytes.includes(0)
 
+// Each file is read once, so the digests, the diff's text and the hash all come from the same bytes.
 const readTree = async (path: string) => {
   if (!(await isFolder(path))) return null
   const folder = await realpath(path)
   const files = new Map<string, TreeFile>()
+  const hash = createHash("sha256")
   for (const file of await filesOf(folder)) {
     const bytes = await readFile(join(folder, file)).catch(() => null)
     if (bytes === null) continue
+    hash.update(`${file}\0`).update(bytes).update("\0")
     files.set(file, {
       text: isBinary(bytes) ? null : bytes.toString("utf8"),
       digest: createHash("sha256").update(bytes).digest("hex"),
     })
   }
-  return { hash: await contentHashOf(folder), files: files as PluginTree }
+  return { hash: hash.digest("hex"), files: files as PluginTree }
 }
+
+const isMissing = (error: unknown) => (error as NodeJS.ErrnoException).code === "ENOENT"
 
 // `pnpmFolder` is the pnpm and `toolsFolder` the type checker and types the desktop app ships; the tests run the ones in node_modules.
 // `safe` loads no user or project plugin and ignores the list of disabled plugins.
@@ -85,6 +92,8 @@ export const layerFsUserPlugins = (
   { safe = false }: { readonly safe?: boolean } = {},
 ) => {
   const trustFolder = join(ivinHome, "cache", "plugin-trust")
+  const isKept = async (target: string, hash: string) =>
+    (await isFolder(target)) && (await readTree(target))?.hash === hash
   const dependencies = makePluginDependencies(ivinHome, pnpmFolder ?? installedPnpmFolder())
   const pluginsFolder = join(ivinHome, "plugins")
   const cacheFolder = join(ivinHome, "cache", "plugins")
@@ -100,24 +109,33 @@ export const layerFsUserPlugins = (
     keepTrusted: (hash, path) =>
       Effect.promise(async () => {
         const target = join(trustFolder, hash)
-        if (await isFolder(target)) return target
-        const folder = await realpath(path)
-        // Built beside the target and renamed into place, so a copy found there is complete.
-        const partial = `${target}.${process.pid}.partial`
-        for (const file of await filesOf(folder)) {
-          await mkdir(dirname(join(partial, file)), { recursive: true, mode: 0o700 })
-          await copyFile(join(folder, file), join(partial, file))
+        if (await isKept(target, hash)) return target
+        await mkdir(trustFolder, { recursive: true, mode: 0o700 })
+        const copy = await mkdtemp(join(trustFolder, ".copy-"))
+        try {
+          const folder = await realpath(path)
+          for (const file of await filesOf(folder)) {
+            await mkdir(dirname(join(copy, file)), { recursive: true, mode: 0o700 })
+            await copyFile(join(folder, file), join(copy, file))
+          }
+          // The copy is what runs: it must be the version the user saw.
+          if ((await readTree(copy))?.hash !== hash) return null
+          await rm(target, { recursive: true, force: true })
+          await rename(copy, target).catch(async (error: unknown) => {
+            if (!(await isKept(target, hash))) throw error
+          })
+          return target
+        } catch (error) {
+          if (isMissing(error)) return null
+          throw error
+        } finally {
+          await rm(copy, { recursive: true, force: true })
         }
-        await mkdir(partial, { recursive: true, mode: 0o700 })
-        await rename(partial, target).catch(async (error: NodeJS.ErrnoException) => {
-          if (!(await isFolder(target))) throw error
-        })
-        return target
       }),
     trustedFolder: (hash) =>
       Effect.promise(async () => {
         const target = join(trustFolder, hash)
-        return (await isFolder(target)) ? target : null
+        return (await isKept(target, hash)) ? target : null
       }),
     bundlePath: (name) => join(cacheFolder, name),
     check: (path) =>

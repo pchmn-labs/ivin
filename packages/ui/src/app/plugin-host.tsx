@@ -430,7 +430,9 @@ const host: UiHost = {
   components: hostComponents,
 }
 
-const activateReported = (...args: Parameters<typeof activatePlugin>) => {
+// Only a plugin the user can disable is reported: a freeze never turns off a built-in plugin.
+const activateReported = (reported: boolean, ...args: Parameters<typeof activatePlugin>) => {
+  if (!reported) return activatePlugin(...args)
   const id = args[1].manifest.id
   reportPluginActivity(id, "activating")
   try {
@@ -485,10 +487,16 @@ export function PluginsProvider({
             // Back in the same pass, so the replaced built-in plugin never leaves the screen.
             const builtIn = plugins.find((p) => p.manifest.id === plugin.manifest.id)
             if (builtIn !== undefined && !current.has(builtIn))
-              current.set(builtIn, activateReported(registry, builtIn, showPanel))
+              current.set(builtIn, activateReported(false, registry, builtIn, showPanel))
           }
         : undefined
-      const deactivate = activateReported(registry, plugin, showPanel, onFailure)
+      const deactivate = activateReported(
+        userPlugins.plugins.includes(plugin),
+        registry,
+        plugin,
+        showPanel,
+        onFailure,
+      )
       // Deactivating a failed plugin would remove its replaced built-in plugin's contributions, which share its id.
       if (!failed) current.set(plugin, deactivate)
     }

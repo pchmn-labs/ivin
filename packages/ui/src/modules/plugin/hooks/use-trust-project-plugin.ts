@@ -4,12 +4,8 @@ import { Cause } from "effect"
 import { AsyncResult } from "effect/reactivity"
 import { setFullTrustOf } from "../atoms/set-full-trust.ts"
 import { trustKey, trustProjectPluginOf } from "../atoms/trust-project-plugin.ts"
+import { FULL_TRUST_FAILURE } from "../rules/full-trust-copy.ts"
 import { trustFailureMessage } from "../rules/trust-failure-message.ts"
-
-export const FULL_TRUST_WARNING =
-  "Every change to this project's plugins runs at once, including one that arrives with a git pull. Only for a project you control."
-
-export const FULL_TRUST_FAILURE = "ivin could not turn on full trust for this project."
 
 // The hash handed back is the one on screen: a plugin that changed since fails with `PluginContentChanged`.
 export function useTrustProjectPlugin(project: string, plugin: ProjectPlugin) {

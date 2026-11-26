@@ -1,5 +1,5 @@
 import { PluginContentChanged, PluginNotFound } from "@ivin/contracts/plugin"
-import { Effect, Stream } from "effect"
+import { Effect } from "effect"
 import { readManifest } from "../rules/manifest.ts"
 import {
   permissionList,
@@ -10,7 +10,6 @@ import { PluginHost } from "./plugin-host.ts"
 import { PluginProjects } from "./plugin-projects.ts"
 import { ProjectPluginTrustStore } from "./project-plugin-trust-store.ts"
 import { ProjectPluginUpdates } from "./project-plugin-updates.ts"
-import { resolveProjectPlugins, toProjectPlugins } from "./project-plugins.ts"
 import { reloadFolders } from "./reload-folders.ts"
 import { UserPlugins } from "./user-plugins.ts"
 
@@ -28,12 +27,15 @@ export const trustProjectPlugin = (project: string, id: string, hash: string) =>
       const reading = readManifest(candidate.manifest)
       return reading.kind === "valid" && reading.manifest.id === id
     })
-    const reading = readManifest(folder?.manifest ?? null)
-    if (folder === undefined || reading.kind === "invalid") return yield* new PluginNotFound({ id })
-    const tree = yield* plugins.readTree(folder.path)
-    if (tree === null) return yield* new PluginNotFound({ id })
-    if (tree.hash !== hash) return yield* new PluginContentChanged({ id })
-    yield* plugins.keepTrusted(hash, folder.path)
+    if (folder === undefined) return yield* new PluginNotFound({ id })
+    // Trust follows what was copied and hashed, never a second read of the live folder.
+    const kept = yield* plugins.keepTrusted(hash, folder.path)
+    if (kept === null) return yield* new PluginContentChanged({ id })
+    const copy = yield* plugins.readTree(kept)
+    const reading = readManifest(copy?.files.get("package.json")?.text ?? null)
+    if (reading.kind === "invalid" || reading.manifest.id !== id) {
+      return yield* new PluginContentChanged({ id })
+    }
     yield* store.trust(project, id, {
       hash,
       permissions: permissionList(reading.manifest.permissions),
@@ -45,53 +47,3 @@ export const trustProjectPlugin = (project: string, id: string, hash: string) =>
       host !== null && reading.manifest.server !== null,
     )
   })
-
-const everyFolderKey = (project: string) =>
-  Effect.gen(function* () {
-    const plugins = (yield* UserPlugins)!
-    return (yield* plugins.foldersIn(projectPluginsRoot(project))).map((folder) =>
-      projectPluginKey(project, folder.name),
-    )
-  })
-
-// Full trust ON runs at once what the project holds pending, permissions apart; OFF leaves what runs as it is.
-export const setProjectFullTrust = (project: string, enabled: boolean) =>
-  Effect.gen(function* () {
-    const store = yield* ProjectPluginTrustStore
-    const projects = yield* PluginProjects
-    const plugins = yield* UserPlugins
-    if (store === null || projects === null || plugins === null) return
-    if (!(yield* projects.trusted).includes(project)) return
-    yield* store.setFullTrust(project, enabled)
-    if (enabled) {
-      // What was pending was already shown to the user: its change is recorded as seen.
-      yield* resolveProjectPlugins(true)
-      const host = yield* PluginHost
-      yield* reloadFolders(yield* everyFolderKey(project), host !== null)
-    }
-    yield* (yield* ProjectPluginUpdates).publish
-  })
-
-export const markProjectChangesSeen = (project: string) =>
-  Effect.gen(function* () {
-    const store = yield* ProjectPluginTrustStore
-    if (store === null) return
-    yield* store.markChangesSeen(project)
-    yield* (yield* ProjectPluginUpdates).publish
-  })
-
-// The snapshot now, then one more after each trust change, edit, toggle or seen mark.
-export const watchProjectPlugins = Stream.unwrap(
-  Effect.gen(function* () {
-    const updates = yield* (yield* ProjectPluginUpdates).subscribe
-    const projects = yield* PluginProjects
-    const snapshot = Effect.gen(function* () {
-      const openAs =
-        projects === null ? new Map<string, ReadonlyArray<string>>() : yield* projects.openAs
-      return toProjectPlugins(yield* resolveProjectPlugins(), openAs)
-    })
-    return Stream.fromEffect(snapshot).pipe(
-      Stream.concat(updates.pipe(Stream.mapEffect(() => snapshot))),
-    )
-  }),
-)

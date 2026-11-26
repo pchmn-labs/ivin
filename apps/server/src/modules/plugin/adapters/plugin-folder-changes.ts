@@ -1,4 +1,4 @@
-import { Cause, Effect, Queue, Stream } from "effect"
+import { Cause, Duration, Effect, Queue, Stream } from "effect"
 import { watch, type FSWatcher } from "node:fs"
 import { mkdir, readdir, stat } from "node:fs/promises"
 import { join } from "node:path"
@@ -8,16 +8,34 @@ const SETTLE_MS = 100
 const isIgnored = (path: string) =>
   path.split(/[/\\]/).some((part) => part.startsWith(".") || part === "node_modules")
 
+const isFolder = (path: string) =>
+  stat(path).then(
+    (s) => s.isDirectory(),
+    () => false,
+  )
+
 // A burst of writes to one plugin's folder is one change, sent once it has been quiet for SETTLE_MS.
-// `create` makes the folder when it is missing; a project's is never made, and is not watched while missing.
-export const pluginFolderChanges = (pluginsFolder: string, create = true): Stream.Stream<string> =>
+// `create` makes the folder when it is missing; a project's is never made: it is looked for again every `lookEvery`
+// until it exists (a `git pull` can bring it), and the plugins it then holds are each announced once.
+export const pluginFolderChanges = (
+  pluginsFolder: string,
+  create = true,
+  lookEvery: Duration.Duration = Duration.seconds(3),
+): Stream.Stream<string> =>
   Stream.unwrap(
-    Effect.promise(() =>
-      stat(pluginsFolder).then(
-        (s) => s.isDirectory(),
-        () => create,
-      ),
-    ).pipe(Effect.map((watched) => (watched ? watchChanges(pluginsFolder, create) : Stream.empty))),
+    Effect.gen(function* () {
+      if (create || (yield* Effect.promise(() => isFolder(pluginsFolder)))) {
+        return watchChanges(pluginsFolder, create)
+      }
+      while (!(yield* Effect.promise(() => isFolder(pluginsFolder)))) {
+        yield* Effect.sleep(lookEvery)
+      }
+      const names = yield* Effect.promise(async () => {
+        const found = await readdir(pluginsFolder).catch(() => [])
+        return found.filter((name) => !name.startsWith("."))
+      })
+      return Stream.fromIterable(names).pipe(Stream.concat(watchChanges(pluginsFolder, create)))
+    }),
   )
 
 const watchChanges = (pluginsFolder: string, create: boolean): Stream.Stream<string> =>

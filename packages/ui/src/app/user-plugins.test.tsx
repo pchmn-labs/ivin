@@ -297,7 +297,7 @@ test("a plugin the server removes leaves the window, and the built-in plugin it 
 
 afterEach(() => Reflect.deleteProperty(window, "ivin"))
 
-test("the desktop app is told when each plugin starts and ends its activation, and once the window has settled", async () => {
+test("the desktop app is told when a user plugin starts and ends its activation, never a built-in's, and once the window has settled", async () => {
   const told: Array<string> = []
   Object.assign(window, {
     ivin: {
@@ -307,7 +307,18 @@ test("the desktop app is told when each plugin starts and ends its activation, a
     },
   })
 
-  await renderWith([textPlugin("notes", "built in")], importFromSource({}), () => {})
+  await renderWith(
+    [textPlugin("notes", "built in")],
+    importFromSource({ "a.js": textBundle("from the user") }),
+    (server) =>
+      server.userPlugins.push({
+        _tag: "compiled",
+        id: "mine",
+        name: "Mine",
+        bundle: "a.js",
+        views: [],
+      }),
+  )
 
-  await expect.poll(() => told).toEqual(["notes activating", "notes activated", "settled"])
+  await expect.poll(() => told).toEqual(["mine activating", "mine activated", "settled"])
 })

@@ -11,6 +11,6 @@ export const startupNoticeMessage = (notice: StartupNotice): string => {
     case "safeAfterCrash":
       return "Safe mode: ivin did not finish starting last time, so it started with only its built-in plugins. User and project plugins are off; relaunch to turn them back on."
     case "reloadedWithout":
-      return `The window stopped answering and was reloaded without ${notice.plugins.join(", ")}. Turn a plugin back on with \`ivin plugin enable <id>\`.`
+      return `The window stopped answering and was reloaded without ${notice.plugins.join(", ")}. Run ivin plugin enable with a plugin's id to turn it back on.`
   }
 }

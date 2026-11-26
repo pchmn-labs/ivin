@@ -138,3 +138,16 @@ test("safe mode loads only the built-in plugins, and ignores the list of disable
 
   expect(result).toEqual({ builtin: "built-in", status: [], projects: [] })
 })
+
+test("in safe mode a user plugin can still be disabled, so the next launch leaves it off", async () => {
+  const home = tempDir("home")
+  writePlugin(home, "greeter", greeter("user"))
+
+  await withPluginServer(
+    home,
+    (client) => client["plugin.setEnabled"]({ id: "greeter", enabled: false }),
+    { safe: true },
+  )
+
+  expect(JSON.parse(readFileSync(join(home, "disabled-plugins.json"), "utf8"))).toEqual(["greeter"])
+})

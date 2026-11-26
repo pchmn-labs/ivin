@@ -102,3 +102,17 @@ test("a project's plugins folder is never created, and is watched once it exists
   )
   expect(present).toEqual(["a"])
 })
+
+test("a project's plugins folder created after the watch began is watched, and its plugins announced", async () => {
+  const project = tempFolder()
+  const plugins = join(project, ".ivin", "plugins")
+
+  const names = await changesDuring(
+    plugins,
+    () => void mkdirSync(join(plugins, "a"), { recursive: true }),
+    (folder) => pluginFolderChanges(folder, false, Duration.millis(50)),
+  )
+
+  expect(names).toContain("a")
+  expect(existsSync(join(plugins, "a"))).toBe(true)
+})

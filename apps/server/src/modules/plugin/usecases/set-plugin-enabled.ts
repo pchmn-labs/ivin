@@ -14,6 +14,8 @@ export const setPluginEnabled = (id: string, enabled: boolean) =>
   Effect.gen(function* () {
     const switches = yield* PluginSwitches
     const host = yield* PluginHost
+    // Nothing but built-in plugins is listed in safe mode, yet the user disables the culprit from there.
+    if (switches?.safe === true) return yield* switches.setEnabled(id, enabled)
     const folders = (yield* pluginFolders).filter((folder) => {
       const reading = readManifest(folder.manifest)
       return reading.kind === "valid" && reading.manifest.id === id

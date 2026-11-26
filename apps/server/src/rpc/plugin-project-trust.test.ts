@@ -1,5 +1,5 @@
 import { Effect, Fiber, Stream } from "effect"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync, symlinkSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import { expect, test, vi } from "vitest"
 import { projectPluginKey } from "../modules/plugin/rules/project-plugin-trust.ts"
@@ -257,4 +257,119 @@ test("a project trusted while the server runs offers its plugins to a window tha
   )
 
   expect(offered[0]?.[0]?.plugins[0]?.state).toBe("new")
+})
+
+test.each([
+  ["a dotfile", { "src/.hidden.ts": "export const x = 1\n" }, "./.hidden.ts"],
+  ["a file outside the folder", { "../outside.ts": "export const x = 1\n" }, "../../outside.ts"],
+])(
+  "a trusted plugin that imports %s the hash does not cover fails to compile",
+  async (_, extra, specifier) => {
+    const { home, project, db } = setup({
+      "package.json": packageJson({ id: "hello", name: "Hello", ui: "src/ui.tsx" }),
+      "src/ui.tsx": `import { x } from "${specifier}"\nexport const activate = () => x\n`,
+    })
+    for (const [path, text] of Object.entries(extra)) {
+      writeFiles(join(project, ".ivin", "plugins", "hello"), { [path]: text })
+    }
+
+    const status = await withServer(
+      home,
+      (client) =>
+        Effect.gen(function* () {
+          const offered = yield* snapshot(client)
+          yield* client["plugin.trust"]({ project, id: "hello", hash: offered!.hash })
+          return yield* client["plugin.status"]()
+        }),
+      { db },
+    )
+
+    expect(status).toMatchObject([{ id: "hello", ui: "failed" }])
+  },
+)
+
+test("a trusted plugin does not follow a symlinked file", async () => {
+  const { home, project, db } = setup({
+    "package.json": packageJson({ id: "hello", name: "Hello", ui: "src/ui.tsx" }),
+    "src/ui.tsx": `import { x } from "./linked.ts"\nexport const activate = () => x\n`,
+  })
+  const target = join(tempDir("target"), "x.ts")
+  writeFileSync(target, "export const x = 1\n")
+  symlinkSync(target, join(project, ".ivin", "plugins", "hello", "src", "linked.ts"))
+
+  const status = await withServer(
+    home,
+    (client) =>
+      Effect.gen(function* () {
+        const offered = yield* snapshot(client)
+        yield* client["plugin.trust"]({ project, id: "hello", hash: offered!.hash })
+        return yield* client["plugin.status"]()
+      }),
+    { db },
+  )
+
+  expect(status).toMatchObject([{ id: "hello", ui: "failed" }])
+})
+
+test("a kept copy that no longer matches its hash is not run, and the plugin waits as new", async () => {
+  const { home, project, db, edit } = setup()
+
+  const result = await withServer(
+    home,
+    (client) =>
+      Effect.gen(function* () {
+        const offered = yield* snapshot(client)
+        yield* client["plugin.trust"]({ project, id: "hello", hash: offered!.hash })
+        edit(hello("v2"))
+        const kept = join(home, "cache", "plugin-trust", offered!.hash)
+        writeFileSync(join(kept, "src", "ui.tsx"), 'export const activate = () => "tampered"\n')
+        return { after: yield* snapshot(client), status: yield* client["plugin.status"]() }
+      }),
+    { db },
+  )
+
+  expect(result.after?.state).toBe("new")
+  expect(result.status).toEqual([])
+})
+
+test("trusting leaves no half-made copy in the cache", async () => {
+  const { home, project, db } = setup()
+
+  await withServer(
+    home,
+    (client) =>
+      Effect.gen(function* () {
+        const offered = yield* snapshot(client)
+        yield* client["plugin.trust"]({ project, id: "hello", hash: offered!.hash })
+        yield* client["plugin.trust"]({ project, id: "hello", hash: "0".repeat(64) }).pipe(
+          Effect.flip,
+        )
+      }),
+    { db },
+  )
+
+  expect(readdirSync(join(home, "cache", "plugin-trust"))).toHaveLength(1)
+})
+
+test("full trust turned on while a listing runs never leaves the adopted change unseen", async () => {
+  const { home, project, db } = setup()
+
+  const projects = await withServer(
+    home,
+    (client) =>
+      Effect.gen(function* () {
+        yield* Effect.all(
+          [
+            client["plugin.setFullTrust"]({ project, enabled: true }),
+            firstSnapshot(client),
+            firstSnapshot(client),
+          ],
+          { concurrency: "unbounded" },
+        )
+        return yield* firstSnapshot(client)
+      }),
+    { db },
+  )
+
+  expect(projects[0]?.changes).toMatchObject([{ isNew: true, seen: true }])
 })

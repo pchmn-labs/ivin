@@ -46,12 +46,11 @@ import { reloadPlugin } from "../modules/plugin/usecases/reload-plugin.ts"
 import { layerSqliteProjectPluginTrust } from "../modules/plugin/adapters/sqlite-project-plugin-trust.ts"
 import { layerProjectPluginUpdates } from "../modules/plugin/usecases/project-plugin-updates.ts"
 import { setPluginEnabled } from "../modules/plugin/usecases/set-plugin-enabled.ts"
-import {
-  markProjectChangesSeen,
-  setProjectFullTrust,
-  trustProjectPlugin,
-  watchProjectPlugins,
-} from "../modules/plugin/usecases/trust-project-plugin.ts"
+import { trustProjectPlugin } from "../modules/plugin/usecases/trust-project-plugin.ts"
+import { setProjectFullTrust } from "../modules/plugin/usecases/set-project-full-trust.ts"
+import { markProjectChangesSeen } from "../modules/plugin/usecases/mark-project-changes-seen.ts"
+import { watchProjectPlugins } from "../modules/plugin/usecases/watch-project-plugins.ts"
+import { layerProjectPluginLock } from "../modules/plugin/usecases/project-plugin-lock.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
@@ -138,6 +137,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     layerPluginServices,
     layerPluginReloads,
     layerProjectPluginUpdates,
+    layerProjectPluginLock,
   ).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
     Layer.provideMerge(Layer.mergeAll(layerSessionTabs, layerSessionsWithTab)),

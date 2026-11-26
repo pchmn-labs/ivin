@@ -48,9 +48,6 @@ const hashFiles = async (folder: string, prefix: string) => {
 export const hashOf = (folder: string, entry: string, half: Half) =>
   hashFiles(folder, `${COMPILE_VERSION}\0${half}\0${entry}\0`)
 
-// Stable across compiler versions: the hash a user trusts.
-export const contentHashOf = (folder: string) => hashFiles(folder, "")
-
 // Copied beside the server bundle by its build; the tests find it in node_modules.
 const shippedBinding = join(import.meta.dirname, "native", "rolldown-binding.node")
 
@@ -95,7 +92,14 @@ export const bundle = async (
           }
           // Rolldown's own output imports `node:module` for a Node target.
           if (half === "server" && isBuiltin(specifier)) return { id: specifier, external: true }
-          if (!isBare(specifier)) return null
+          if (!isBare(specifier)) {
+            if (!isUnder(importer, folder)) return null
+            const resolved = await this.resolve(specifier, importer, { skipSelf: true })
+            if (resolved !== null && !resolved.external && !isUnder(resolved.id, folder)) {
+              throw new Error(`It imports ${specifier}, which leads out of the plugin's folder.`)
+            }
+            return resolved
+          }
           const name = packageOf(specifier)
           if (PROVIDED_PACKAGES.includes(name)) {
             throw new Error(`It imports ${specifier}, which ivin does not provide to plugins.`)

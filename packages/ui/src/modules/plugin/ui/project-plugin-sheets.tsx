@@ -9,11 +9,8 @@ import { Text } from "../../../core/components/text/text.tsx"
 import { selectedProjectAtom } from "../../project/atoms/selected-project.ts"
 import { markChangesSeenOf } from "../atoms/mark-changes-seen.ts"
 import { projectPluginsAtom } from "../atoms/project-plugins.ts"
-import {
-  FULL_TRUST_WARNING,
-  useSetFullTrust,
-  useTrustProjectPlugin,
-} from "../hooks/use-trust-project-plugin.ts"
+import { useSetFullTrust, useTrustProjectPlugin } from "../hooks/use-trust-project-plugin.ts"
+import { FULL_TRUST_WARNING } from "../rules/full-trust-copy.ts"
 import { unseenChanges, waitingPlugins } from "../rules/project-plugin-queue.ts"
 import { PluginReview } from "./plugin-review.tsx"
 import "./project-plugin-sheets.css"

@@ -13,11 +13,8 @@ import { useNow } from "../../../shared/use-now.ts"
 import { relativeTime } from "../../session/rules/relative-time.ts"
 import { markChangesSeenOf } from "../atoms/mark-changes-seen.ts"
 import { projectPluginsAtom } from "../atoms/project-plugins.ts"
-import {
-  FULL_TRUST_WARNING,
-  useSetFullTrust,
-  useTrustProjectPlugin,
-} from "../hooks/use-trust-project-plugin.ts"
+import { useSetFullTrust, useTrustProjectPlugin } from "../hooks/use-trust-project-plugin.ts"
+import { FULL_TRUST_WARNING } from "../rules/full-trust-copy.ts"
 import { unseenChanges } from "../rules/project-plugin-queue.ts"
 import { PluginReview } from "./plugin-review.tsx"
 import "./plugins-section.css"

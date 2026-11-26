@@ -16,8 +16,11 @@ export interface DiffLine {
   readonly text: string
 }
 
-const kindOf = (line: string): DiffLine["kind"] => {
-  if (/^(diff |index |--- |\+\+\+ |new file|deleted file|similarity|rename )/.test(line)) {
+const kindOf = (line: string, inHeader: boolean): DiffLine["kind"] => {
+  if (
+    inHeader &&
+    /^(diff |index |--- |\+\+\+ |new file|deleted file|similarity|rename )/.test(line)
+  ) {
     return "file"
   }
   if (line.startsWith("@@")) return "hunk"
@@ -32,4 +35,7 @@ export const diffLines = (diff: string): ReadonlyArray<DiffLine> =>
     : diff
         .replace(/\n$/, "")
         .split("\n")
-        .map((text) => ({ kind: kindOf(text), text }))
+        .map((text, i, lines) => ({
+          kind: kindOf(text, !lines.slice(0, i).some((earlier) => earlier.startsWith("@@"))),
+          text,
+        }))
