@@ -134,9 +134,9 @@ export function ByScope({ choice, onChoose, started }: LocationProps) {
     popup.close()
   })
   const rows = [
-    { ...all[0]!, heading: `All projects · ${FOLDERS.map((f) => f.name).join(", ")}` },
+    { ...all[0], heading: `All projects · ${FOLDERS.map((f) => f.name).join(", ")}` },
     ...all.slice(1),
-    { ...one[0]!, heading: "One project" },
+    { ...one[0], heading: "One project" },
     ...one.slice(1),
   ]
   return (
