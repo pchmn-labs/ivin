@@ -4,11 +4,10 @@ import "../../src/core/theme/tokens.css"
 import "../../src/core/theme/base.css"
 import "./picker.css"
 import "./prototype.css"
-import { Corner, Beside } from "./variants.tsx"
+import { HealthVariant } from "./variants.tsx"
 
 const VARIANTS = [
-  { name: "Check on the corner", Component: Corner },
-  { name: "Check beside", Component: Beside },
+  { name: "Health", Component: HealthVariant },
 ]
 
 const requested = Number.parseInt(new URLSearchParams(location.search).get("v") ?? "", 10)

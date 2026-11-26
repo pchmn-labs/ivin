@@ -1186,3 +1186,20 @@ body {
   width: 6px !important;
   height: 6px !important;
 }
+
+.t-check-corner {
+  right: -2px;
+  bottom: -2px;
+}
+
+.m-state {
+  margin-top: 0;
+}
+
+.proto-card .t-check-corner {
+  --ring: var(--iv-bg-raised);
+}
+
+.m-pr-link:hover .t-check-corner {
+  --ring: color-mix(in srgb, var(--iv-bg-raised) 94%, var(--iv-accent));
+}
