@@ -87,6 +87,7 @@ import {
   withSubViewClosed,
   withSubViewOpen,
 } from "../modules/tab/rules/sub-views.ts"
+import { isSubagentStep } from "../modules/transcript/rules/turns.ts"
 import { ServerClient } from "./server-client.ts"
 
 export interface FakeServer {
@@ -503,7 +504,7 @@ export const makeFakeServer = (
     after: number
   }) =>
     Effect.sync(() => {
-      const items = itemsOf(sessionId)
+      const items = itemsOf(sessionId).filter((item) => !isSubagentStep(item))
       const anchor =
         position === null ? items.length : items.findIndex((i) => i.position >= position)
       const start = Math.max(0, anchor - before)

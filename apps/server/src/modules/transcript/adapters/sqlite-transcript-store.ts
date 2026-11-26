@@ -26,6 +26,8 @@ interface EventRow {
 }
 
 const EVENT_COLUMNS = "id, session_id, sequence, type, at, payload"
+// A subagent's steps load with its task, so a page of them alone would show an empty transcript.
+const TOP_LEVEL = "payload ->> '$.parentToolCallId' IS NULL"
 
 const decodeEvent = rowDecoder(TranscriptEvent, "transcript event")
 const decodeItem = rowDecoder(TranscriptItem, "transcript item")
@@ -197,7 +199,8 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
           const earlier = readItems(
             report,
             `SELECT id, payload FROM transcript_items
-             WHERE session_id = ? AND position < ? ORDER BY position DESC LIMIT ?`,
+             WHERE session_id = ? AND position < ? AND ${TOP_LEVEL}
+             ORDER BY position DESC LIMIT ?`,
             sessionId,
             position ?? Number.MAX_SAFE_INTEGER,
             before + 1,
@@ -208,7 +211,8 @@ export const layerSqliteTranscriptStore = Layer.effect(TranscriptStore)(
               : readItems(
                   report,
                   `SELECT id, payload FROM transcript_items
-                   WHERE session_id = ? AND position >= ? ORDER BY position LIMIT ?`,
+                   WHERE session_id = ? AND position >= ? AND ${TOP_LEVEL}
+                   ORDER BY position LIMIT ?`,
                   sessionId,
                   position,
                   after + 1,
