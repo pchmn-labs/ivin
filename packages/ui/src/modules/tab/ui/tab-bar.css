@@ -106,6 +106,12 @@
   pointer-events: auto;
 }
 
+/* The badge takes the close button's place while it is hidden. */
+.iv-tab-bar__item:not([data-selected], :focus-within):has(.iv-tab-bar__badge:not(:empty))
+  .iv-tab-bar__tab {
+  padding-right: var(--iv-space-1);
+}
+
 @media (hover: hover) and (pointer: fine) {
   .iv-tab-bar__item:hover .iv-tab-bar__tab {
     color: var(--iv-text);
@@ -114,6 +120,10 @@
   .iv-tab-bar__item:hover .iv-tab-bar__close {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .iv-tab-bar__item:hover:has(.iv-tab-bar__badge:not(:empty)) .iv-tab-bar__tab {
+    padding-right: calc(var(--iv-tab-close-size) + var(--iv-space-2));
   }
 
   .iv-tab-bar__item:not([data-selected]):hover {
