@@ -255,3 +255,29 @@ export function TurnWork({
     </div>
   )
 }
+
+const PROMPT_LINES_FOLDED = 4
+
+export function PromptBubble({ prompt }: { prompt: string }) {
+  const [open, setOpen] = useState(false)
+  const long = prompt.split("\n").length > PROMPT_LINES_FOLDED || prompt.length > 400
+  return (
+    <div
+      className="iv-turn__prompt"
+      data-testid="task-prompt"
+      data-folded={long && !open ? true : undefined}
+    >
+      <span className="iv-turn__prompt-text">{prompt}</span>
+      {long && (
+        <button
+          type="button"
+          className="iv-turn__prompt-toggle"
+          aria-expanded={open}
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Show less" : "Show more"}
+        </button>
+      )}
+    </div>
+  )
+}

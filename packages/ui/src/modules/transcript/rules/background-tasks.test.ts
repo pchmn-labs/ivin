@@ -1,6 +1,13 @@
 import type { BackgroundTask } from "@ivin/contracts/session"
+import type { TranscriptItem } from "@ivin/contracts/transcript"
 import { expect, test } from "vitest"
-import { knownTasks, runningTasks, type TaskItem } from "./background-tasks.ts"
+import {
+  handbackAsMessage,
+  knownTasks,
+  promptOfTask,
+  runningTasks,
+  type TaskItem,
+} from "./background-tasks.ts"
 
 const listed = (taskId: string): BackgroundTask => ({
   taskId,
@@ -41,4 +48,40 @@ test("the known tasks are the loaded ones and the running ones outside the loade
     "k1",
     "k2",
   ])
+})
+
+const call = (name: string, input: unknown, toolCallId = "c1"): TranscriptItem => ({
+  id: `i-${toolCallId}`,
+  sessionId: "s1",
+  position: 3,
+  at: 1,
+  type: "tool_call",
+  toolCallId,
+  name,
+  kind: "other",
+  input,
+  status: "done",
+  output: null,
+  parentToolCallId: "t1",
+})
+
+test("a subagent's hand-back call reads as its assistant message", () => {
+  expect(handbackAsMessage(call("SubagentHandback", { message: "Done." }))).toMatchObject({
+    type: "message",
+    role: "assistant",
+    text: "Done.",
+    parentToolCallId: "t1",
+    position: 3,
+  })
+})
+
+test("any other call, or a hand-back without a message, stays as it is", () => {
+  const bash = call("Bash", { message: "x" })
+  const empty = call("SubagentHandback", {})
+  expect([handbackAsMessage(bash), handbackAsMessage(empty)]).toEqual([bash, empty])
+})
+
+test("the prompt of a task is the prompt of the call that started it", () => {
+  const items = [call("Agent", { prompt: "Review it" }, "t9")]
+  expect([promptOfTask(items, "t9"), promptOfTask(items, "t8")]).toEqual(["Review it", null])
 })

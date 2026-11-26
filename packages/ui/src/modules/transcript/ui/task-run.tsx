@@ -4,12 +4,12 @@ import { CodeBlock } from "../../../core/components/code-block/code-block.tsx"
 import { Icon } from "../../../core/components/icon/icon.tsx"
 import { Text } from "../../../core/components/text/text.tsx"
 import type { TaskRunProps } from "@ivin/plugin-api/ui"
-import { taskOf, taskStepsOf } from "../atoms/background-tasks.ts"
+import { taskOf, taskPromptOf, taskStepsOf } from "../atoms/background-tasks.ts"
 import type { TaskItem } from "../rules/background-tasks.ts"
 import { foldsOf } from "../atoms/folds.ts"
 import { useTaskOutput } from "../hooks/use-task-output.ts"
 import { duration, earlierSteps, turnWork, type TurnWork as Work } from "../rules/turns.ts"
-import { EarlierStepsLine, ElapsedClock, StepView } from "./turn-work.tsx"
+import { EarlierStepsLine, ElapsedClock, PromptBubble, StepView } from "./turn-work.tsx"
 
 // A subagent's run drawn as the agent's own turn: its last steps in the fold, every step in the sheet.
 export function AgentRun({
@@ -23,6 +23,7 @@ export function AgentRun({
 }) {
   const steps = useAtomValue(taskStepsOf(sessionId)(task.toolCallId))
   const work = useMemo(() => turnWork(task.id, steps, steps), [task.id, steps])
+  const prompt = useAtomValue(taskPromptOf(sessionId)(task.toolCallId))
   const running = task.status === "running"
   // The preview and the sheet draw the same steps, each with its own folds.
   const [folds, setFolds] = useAtom(foldsOf(sessionId))
@@ -35,6 +36,7 @@ export function AgentRun({
 
   return (
     <div className="iv-turn" data-testid="task-run" data-live={running || undefined}>
+      {!lastOnly && prompt !== null && <PromptBubble prompt={prompt} />}
       {!lastOnly && <RunLine task={task} work={work} />}
       {work.steps.length > 0 && (
         <div className="iv-turn__timeline">
