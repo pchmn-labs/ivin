@@ -1,52 +1,20 @@
-import { layerScripted } from "@ivin/harness"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
+import { Effect } from "effect"
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { layerErrorLogFile } from "../modules/log/adapters/error-log-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
+import { type Client, makeClient, serverLayer } from "./test-server.ts"
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-
-const withServer = <A, E>(
-  logPath: string,
-  use: (client: Effect.Success<ReturnType<typeof makeClient>>) => Effect.Effect<A, E>,
-) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
+const withServer = <A, E>(logPath: string, use: (client: Client) => Effect.Effect<A, E>) =>
+  Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([])),
-        ),
-      ),
+      Effect.provide(serverLayer()),
       Effect.provide(layerErrorLogFile(logPath)),
       Effect.scoped,
     ),
   )
-}
 
 const tempLogPath = () => join(mkdtempSync(join(tmpdir(), "ivin-log-")), "logs", "ivin.log")
 const readLines = (path: string) =>

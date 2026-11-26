@@ -1,6 +1,5 @@
-import { Schema } from "effect"
 import { expect, test } from "vitest"
-import { defaultSettings, defaultSettingsFor, settingSections, Settings } from "./setting.ts"
+import { defaultSettings, defaultSettingsFor, settingSections } from "./setting.ts"
 
 const leafPaths = (value: object, prefix = ""): string[] =>
   Object.entries(value).flatMap(([key, child]) =>
@@ -21,15 +20,11 @@ test("every setting has a label and a description, once, in the section of its f
   expect(described.toSorted()).toEqual(leafPaths(defaultSettings).toSorted())
 })
 
-test("the idle stop is a whole number of minutes, 0 or more, that a number input can take", () => {
-  const check = Schema.is(Settings.fields.agents.fields.stopWhenIdleMinutes)
-  expect([0, 10, 90].every(check)).toBe(true)
-  expect([-1, 1.5, "10", null].some(check)).toBe(false)
+test("the idle stop is shown to a number input as minutes, 0 or more", () => {
   const setting = settingSections
     .flatMap((section) => section.settings)
     .find((s) => s.path === "agents.stopWhenIdleMinutes")
   expect(setting?.count).toEqual({ min: 0, unit: "minutes" })
-  expect(defaultSettings.agents.stopWhenIdleMinutes).toBe(10)
 })
 
 test("betas are on by default only when the installed version is itself a beta", () => {

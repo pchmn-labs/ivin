@@ -1,8 +1,8 @@
 import { Effect } from "effect"
-import { readdirSync, writeFileSync } from "node:fs"
+import { cpSync, readdirSync, writeFileSync } from "node:fs"
 import { join } from "node:path"
 import * as React from "react"
-import { expect, test, vi } from "vitest"
+import { beforeAll, expect, test, vi } from "vitest"
 import {
   bundlePath,
   importBundle,
@@ -57,6 +57,23 @@ const counter = (dependencies: Record<string, string>) => ({
 const lock = (home: string, id: string) =>
   withServer(home, (client) => client["plugin.lock"]({ id }).pipe(Effect.result))
 
+// One locked `counter` plugin, copied into each test's home instead of running pnpm again.
+let locked: { home: string; dependencies: Record<string, string> }
+
+beforeAll(async () => {
+  const home = tempDir("locked-home")
+  const dependencies = { doubler: `file:${doubler()}` }
+  writePlugin(home, "counter", counter(dependencies))
+  expect((await lock(home, "counter"))._tag).toBe("Success")
+  locked = { home, dependencies }
+})
+
+const homeWithLockedCounter = () => {
+  const home = tempDir("home")
+  cpSync(join(locked.home, "plugins"), join(home, "plugins"), { recursive: true })
+  return home
+}
+
 const commandValue = (bundle: Record<string, unknown>) => {
   let run: (() => unknown) | undefined
   ;(bundle["activate"] as (ctx: unknown) => void)({
@@ -81,9 +98,13 @@ const failureOf = async (home: string) => {
 const installs = (home: string) =>
   readdirSync(join(home, "cache", "plugins", "deps")).filter((name) => !name.startsWith("."))
 
-test("a plugin's dependency, locked then installed, computes its command's value and gets the host's React", async () => {
+test("a plugin's dependency, locked then installed, computes its command's value and gets the host's React, and the plugin's own node_modules is ignored", async () => {
   const home = tempDir("home")
-  writePlugin(home, "counter", counter({ doubler: `file:${doubler()}` }))
+  writePlugin(home, "counter", {
+    ...counter({ doubler: `file:${doubler()}` }),
+    "node_modules/doubler/package.json": JSON.stringify({ name: "doubler", main: "index.js" }),
+    "node_modules/doubler/index.js": "exports.double = (n) => n * 100\n",
+  })
 
   expect((await lock(home, "counter"))._tag).toBe("Success")
   const [plugin] = await listPlugins(home)
@@ -91,18 +112,23 @@ test("a plugin's dependency, locked then installed, computes its command's value
   const bundle = await importBundle(bundlePath(home, plugin))
   expect(commandValue(bundle)).toBe(42)
   expect(bundle["doublerReact"]).toBe(React)
+
+  writePlugin(home, "counter", { "node_modules/doubler/index.js": "exports.double = () => 0\n" })
+  const [again] = await listPlugins(home)
+  expect(again).toEqual(plugin)
 })
 
 test("two plugins with the same lockfile share one install, and a second load installs nothing", async () => {
-  const home = tempDir("home")
-  const dependencies = { doubler: `file:${doubler()}` }
-  writePlugin(home, "counter", counter(dependencies))
-  await lock(home, "counter")
+  const home = homeWithLockedCounter()
+  const dependencies = locked.dependencies
   writePlugin(home, "twin", {
     ...counter(dependencies),
     "package.json": packageJson({ id: "twin", ui: "src/ui.ts" }, { dependencies }),
   })
-  await lock(home, "twin")
+  cpSync(
+    join(home, "plugins", "counter", "pnpm-lock.yaml"),
+    join(home, "plugins", "twin", "pnpm-lock.yaml"),
+  )
 
   const first = await listPlugins(home)
   expect(first.map((p) => p._tag)).toEqual(["compiled", "compiled"])
@@ -116,22 +142,6 @@ test("two plugins with the same lockfile share one install, and a second load in
   expect(readdirSync(join(home, "cache", "plugins", "deps", install!))).toContain("marker")
 })
 
-test("the plugin's own node_modules is ignored, and changing it changes nothing", async () => {
-  const home = tempDir("home")
-  writePlugin(home, "counter", {
-    ...counter({ doubler: `file:${doubler()}` }),
-    "node_modules/doubler/package.json": JSON.stringify({ name: "doubler", main: "index.js" }),
-    "node_modules/doubler/index.js": "exports.double = (n) => n * 100\n",
-  })
-  await lock(home, "counter")
-  const [plugin] = await listPlugins(home)
-  expect(commandValue(await importBundle(bundlePath(home, plugin)))).toBe(42)
-
-  writePlugin(home, "counter", { "node_modules/doubler/index.js": "exports.double = () => 0\n" })
-  const [again] = await listPlugins(home)
-  expect(again).toEqual(plugin)
-})
-
 test("a plugin with dependencies and no lockfile fails, naming ivin plugin lock", async () => {
   const home = tempDir("home")
   writePlugin(home, "counter", counter({ doubler: `file:${doubler()}` }))
@@ -143,13 +153,11 @@ test("a plugin with dependencies and no lockfile fails, naming ivin plugin lock"
 })
 
 test("a lockfile that no longer matches package.json fails the plugin", async () => {
-  const home = tempDir("home")
-  writePlugin(home, "counter", counter({ doubler: `file:${doubler()}` }))
-  await lock(home, "counter")
+  const home = homeWithLockedCounter()
   writePlugin(home, "counter", {
     "package.json": packageJson(
       { id: "counter", ui: "src/ui.ts" },
-      { dependencies: { doubler: `file:${doubler()}`, extra: `file:${writePackage("extra")}` } },
+      { dependencies: { ...locked.dependencies, extra: `file:${writePackage("extra")}` } },
     ),
   })
 
@@ -191,12 +199,10 @@ test("a dependency that needs native code fails the plugin, naming it", async ()
 })
 
 test("an import missing from the plugin's dependencies fails the compile", async () => {
-  const home = tempDir("home")
+  const home = homeWithLockedCounter()
   writePlugin(home, "counter", {
-    ...counter({ doubler: `file:${doubler()}` }),
     "src/ui.ts": `import pad from "left-pad"\n${counterUi}\nexport const p = pad\n`,
   })
-  await lock(home, "counter")
 
   expect(await failureOf(home)).toMatchObject({
     _tag: "failed",

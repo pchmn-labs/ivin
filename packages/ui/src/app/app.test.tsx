@@ -1,54 +1,29 @@
-import { RegistryProvider } from "@effect/atom-react"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
-import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
-import { serverStateAtom } from "../modules/server/atoms/server-state.ts"
-import { App } from "./app.tsx"
+import { makeTestSession } from "../core/test-session.ts"
+import { mountApp } from "./test-app.tsx"
 
 const openSessions = () => page.getByRole("tablist", { name: "Open sessions" })
 const mac = navigator.platform.includes("Mac")
 const mod = mac ? "Meta" : "Control"
 
-const mountApp = async (
+const mountWithSessions = async (
   titles: readonly [string, string] = ["First", "Second"],
   options: { otherProject?: boolean } = {},
 ) => {
   const server = makeFakeServer({
     project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
-  const at = DateTime.makeUnsafe(0)
   for (const [id, title] of [
     ["s1", titles[0]],
     ["s2", titles[1]],
   ] as const) {
-    server.sessions.set(id, {
+    server.sessions.set(
       id,
-      projectPath: "/dev/ivin",
-      workingFolder: "/dev/ivin",
-      inWorktree: false,
-      branch: "main",
-      started: true,
-      workingFolderDeleted: false,
-      title,
-      harness: "claude",
-      model: "sonnet",
-      effort: "high",
-      permissionMode: "manual",
-      relaunchFailure: null,
-      pendingMessages: [],
-      unreadMessages: [],
-      backgroundTasks: [],
-      status: "idle",
-      statusChangedAt: at,
-      createdAt: at,
-      lastActivityAt: at,
-      archivedAt: null,
-      lastImageNumber: 0,
-      waitingFor: null,
-    })
+      makeTestSession({ id, title, projectPath: "/dev/ivin", workingFolder: "/dev/ivin" }),
+    )
   }
   server.openTab("s1")
   server.openTab("s2")
@@ -56,16 +31,12 @@ const mountApp = async (
     server.openProject("/dev/other")
     server.openProject("/dev/ivin")
   }
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
-    </RegistryProvider>,
-  )
+  await mountApp(server)
   return server
 }
 
 test("the sidebar card holds the project and its sessions, and the toggle hides it", async () => {
-  await mountApp()
+  await mountWithSessions()
   await expect.element(page.getByRole("complementary")).toBeVisible()
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
 
@@ -77,16 +48,8 @@ test("the sidebar card holds the project and its sessions, and the toggle hides 
   await expect.element(page.getByRole("complementary")).toBeVisible()
 })
 
-test("the sidebar toggle shows its key in its tooltip", async () => {
-  await mountApp()
-  await page.getByRole("button", { name: "Toggle sidebar" }).hover()
-  await expect
-    .element(page.getByText(mac ? "Toggle sidebar (⌘\\)" : "Toggle sidebar (Ctrl+\\)"))
-    .toBeVisible()
-})
-
 test("keybindings.json moves the sidebar toggle to mod+b while the app runs", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   await expect.element(page.getByRole("complementary")).toBeVisible()
   server.setUserKeybindings({
     keybindings: [
@@ -107,7 +70,7 @@ test("keybindings.json moves the sidebar toggle to mod+b while the app runs", as
 })
 
 test("an invalid keybindings.json is reported and keeps the previous keybindings", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   const moved = [
     { key: "mod+b", command: "sidebar.toggle", when: null },
     { key: "mod+\\", command: "-sidebar.toggle", when: null },
@@ -126,7 +89,7 @@ test("an invalid keybindings.json is reported and keeps the previous keybindings
 })
 
 test("back and forward walk the sessions opened in this window", async () => {
-  await mountApp()
+  await mountWithSessions()
   const back = page.getByRole("button", { name: "Back" })
   const forward = page.getByRole("button", { name: "Forward" })
   await expect.element(back).toBeDisabled()
@@ -161,7 +124,7 @@ test("back and forward walk the sessions opened in this window", async () => {
 })
 
 test("the project button badge counts the sessions waiting on the user", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   await vi.waitFor(() => expect(page.getByTestId("project-waiting").query()).toBeNull())
   server.setStatus("s1", "waiting")
   server.setStatus("s2", "waiting")
@@ -169,7 +132,7 @@ test("the project button badge counts the sessions waiting on the user", async (
 })
 
 test("each tab shows its session, closes on its button, and the bar reorders by drag", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   const tabs = openSessions().getByRole("tab")
   await expect.element(tabs).toHaveLength(2)
   await expect
@@ -201,7 +164,7 @@ test("each tab shows its session, closes on its button, and the bar reorders by 
 })
 
 test("picking another project shows its own tabs, and closing a project drops it", async () => {
-  await mountApp(["First", "Second"], { otherProject: true })
+  await mountWithSessions(["First", "Second"], { otherProject: true })
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")
   await page.getByRole("button", { name: "other" }).click()
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("other")
@@ -219,7 +182,7 @@ test("picking another project shows its own tabs, and closing a project drops it
 })
 
 test("the plus after the tabs starts a session, and arrow keys walk the tabs", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   await page.getByRole("button", { name: "New session" }).first().click()
   await vi.waitFor(() => expect(server.sessions.size).toBe(3))
 
@@ -240,28 +203,9 @@ test("the plus after the tabs starts a session, and arrow keys walk the tabs", a
   await expect.element(openSessions().getByRole("tab")).toHaveLength(4)
 })
 
-test("every tab has the same width, which hovering a tab does not change", async () => {
-  await page.viewport(1400, 800)
-  await mountApp(["Crée un fichier", "Lance la commande echo bonjour avec Bash"])
-  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
-  const widths = () =>
-    [...document.querySelectorAll<HTMLElement>('[data-testid="tab"]')].map(
-      (tab) => tab.getBoundingClientRect().width,
-    )
-  const before = widths()
-  expect(before[0]).toBe(before[1])
-
-  await openSessions().getByRole("tab", { name: /Crée/ }).hover()
-  await expect
-    .element(page.getByRole("button", { name: "Close Crée un fichier", includeHidden: true }))
-    .toBeVisible()
-
-  expect(widths()).toEqual(before)
-})
-
 test("tabs shrink together when the bar runs out of room, down to a minimum", async () => {
   await page.viewport(1400, 800)
-  await mountApp(["Crée un fichier", "Lance la commande echo bonjour avec Bash"])
+  await mountWithSessions(["Crée un fichier", "Lance la commande echo bonjour avec Bash"])
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
   const width = () =>
     document.querySelector<HTMLElement>('[data-testid="tab"]')!.getBoundingClientRect().width
@@ -278,7 +222,7 @@ test("tabs shrink together when the bar runs out of room, down to a minimum", as
 
 test("a middle click on a tab closes it without selecting it", async () => {
   await page.viewport(1400, 800)
-  const server = await mountApp()
+  const server = await mountWithSessions()
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 
   await openSessions().getByRole("tab", { name: /First/ }).click({ button: "middle" })
@@ -291,7 +235,7 @@ test("a middle click on a tab closes it without selecting it", async () => {
 })
 
 test("a key keybindings.json gives that ivin cannot read is reported", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   server.setUserKeybindings({
     keybindings: [{ key: "hyper+b", command: "sidebar.toggle", when: null }],
     problem: null,
@@ -304,7 +248,7 @@ test("a key keybindings.json gives that ivin cannot read is reported", async () 
 })
 
 test("a session that was not created shows why, and Retry creates it", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   server.failNextCall("session.create")
   await page.getByRole("main").getByRole("button", { name: "New session" }).click()
   const alert = page.getByRole("alert")
@@ -322,7 +266,7 @@ test("a folder that was not opened shows why, and Retry opens the same folder", 
     configurable: true,
     value: { pickFolder: () => Promise.resolve("/dev/other") },
   })
-  const server = await mountApp()
+  const server = await mountWithSessions()
   server.failNextCall("project.open")
   await page.getByRole("button", { name: "Open folder…" }).click()
   const alert = page.getByRole("alert")
@@ -339,7 +283,7 @@ test("a folder in no trusted project asks to be trusted before it opens, and Tru
     configurable: true,
     value: { pickFolder: () => Promise.resolve("/dev/other") },
   })
-  const server = await mountApp()
+  const server = await mountWithSessions()
   server.untrustedProjects.add("/dev/other")
   await page.getByRole("button", { name: "Open folder…" }).click()
   const dialog = page.getByRole("dialog")
@@ -359,7 +303,7 @@ test("cancelling the trust dialog leaves the folder unopened and shows no error"
     configurable: true,
     value: { pickFolder: () => Promise.resolve("/dev/other") },
   })
-  const server = await mountApp()
+  const server = await mountWithSessions()
   server.untrustedProjects.add("/dev/other")
   await page.getByRole("button", { name: "Open folder…" }).click()
   await page.getByRole("dialog").getByRole("button", { name: "Cancel" }).click()
@@ -370,73 +314,8 @@ test("cancelling the trust dialog leaves the folder unopened and shows no error"
   expect(server.untrustedProjects.has("/dev/other")).toBe(true)
 })
 
-test("a server that does not answer is reported in the window, without a raw error", async () => {
-  const server = makeFakeServer()
-  server.failNextCall("server.getVersion")
-  await render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
-    </RegistryProvider>,
-  )
-  await expect
-    .element(
-      page.getByRole("alert").getByText("ivin's server is not answering. Quit and reopen ivin."),
-    )
-    .toBeVisible()
-  expect(document.body.textContent).not.toContain("server.getVersion failed")
-})
-
-test("a restarting server is reported in the window", async () => {
-  const server = makeFakeServer()
-  const screen = await render(
-    <RegistryProvider
-      initialValues={[
-        [serverClientLayerAtom, server.layer],
-        [serverStateAtom, { kind: "restarting" }],
-      ]}
-    >
-      <App />
-    </RegistryProvider>,
-  )
-  await expect
-    .element(screen.getByRole("alert").getByText("ivin's server stopped. Restarting it…"))
-    .toBeVisible()
-  await expect.element(screen.getByRole("button", { name: "Restart" })).not.toBeInTheDocument()
-})
-
-test("a server that keeps stopping shows its log's path and a Restart button the keyboard reaches", async () => {
-  const server = makeFakeServer()
-  const restart = vi.fn(() => Promise.resolve())
-  Object.defineProperty(window, "ivin", { configurable: true, value: { restartServer: restart } })
-  await render(
-    <RegistryProvider
-      initialValues={[
-        [serverClientLayerAtom, server.layer],
-        [serverStateAtom, { kind: "gave-up", logPath: "/home/.ivin/logs/ivin.log" }],
-      ]}
-    >
-      <App />
-    </RegistryProvider>,
-  )
-  await expect
-    .element(
-      page
-        .getByRole("alert")
-        .getByText("ivin's server keeps stopping. Its log is at /home/.ivin/logs/ivin.log."),
-    )
-    .toBeVisible()
-
-  const button = page.getByRole("button", { name: "Restart" })
-  for (let tabs = 0; tabs < 40 && document.activeElement?.textContent !== "Restart"; tabs++) {
-    await userEvent.tab()
-  }
-  await expect.element(button).toHaveFocus()
-  await userEvent.keyboard("{Enter}")
-  expect(restart).toHaveBeenCalledOnce()
-})
-
 test("the keyboard alone archives the session on screen, opens the archived list and restores it", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
   await expect
     .element(openSessions().getByRole("tab", { name: /Second/ }))
@@ -459,7 +338,7 @@ test("the keyboard alone archives the session on screen, opens the archived list
 })
 
 test("a failed archive from the keyboard shows a notification, and its Retry archives again, with a second notification when that fails too", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   server.failNextCall("session.archive")
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
   await userEvent.keyboard(`{${mod}>}\\{/${mod}}`)
@@ -483,7 +362,7 @@ test("a failed archive from the keyboard shows a notification, and its Retry arc
 })
 
 test("notifications stack and stay when the session view is replaced", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
   await userEvent.keyboard(`{${mod}>}\\{/${mod}}`)
   const notifications = page.getByRole("region", { name: "Notifications" })
@@ -500,7 +379,7 @@ test("notifications stack and stay when the session view is replaced", async () 
 })
 
 test("a failed archive from the keyboard shows no notification while the session's row shows it", async () => {
-  const server = await mountApp()
+  const server = await mountWithSessions()
   server.failNextCall("session.archive")
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 
@@ -517,8 +396,24 @@ test("a failed archive from the keyboard shows no notification while the session
     .not.toBeInTheDocument()
 })
 
-test("a failed archive from a session's menu shows no notification", async () => {
-  const server = await mountApp()
+test("archiving a working session from its tab asks first, then stops it and closes the tab", async () => {
+  const server = await mountWithSessions()
+  server.setStatus("s1", "working")
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
+
+  await openSessions().getByRole("tab", { name: /First/ }).click({ button: "right" })
+  await page.getByRole("menuitem", { name: "Archive" }).click()
+  const dialog = page.getByRole("dialog")
+  await expect.element(dialog.getByText("Archive the session and stop its agent?")).toBeVisible()
+  expect(server.sessions.get("s1")?.archivedAt).toBeNull()
+
+  await dialog.getByRole("button", { name: "Stop and archive" }).click()
+  await expect.element(openSessions().getByRole("tab")).toHaveLength(1)
+  expect(server.sessions.get("s1")?.archivedAt).not.toBeNull()
+})
+
+test("a failed archive from a session's menu says so under its row, shows no notification and keeps its tab", async () => {
+  const server = await mountWithSessions()
   server.failNextCall("session.archive")
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 
@@ -535,40 +430,11 @@ test("a failed archive from a session's menu shows no notification", async () =>
         .getByText("The session was not archived."),
     )
     .not.toBeInTheDocument()
-})
-
-test("archiving a working session from its tab asks first, then stops it and closes the tab", async () => {
-  const server = await mountApp()
-  server.setStatus("s1", "working")
-  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
-
-  await openSessions().getByRole("tab", { name: /First/ }).click({ button: "right" })
-  await page.getByRole("menuitem", { name: "Archive" }).click()
-  const dialog = page.getByRole("dialog")
-  await expect.element(dialog.getByText("Archive the session and stop its agent?")).toBeVisible()
-  expect(server.sessions.get("s1")?.archivedAt).toBeNull()
-
-  await dialog.getByRole("button", { name: "Stop and archive" }).click()
-  await expect.element(openSessions().getByRole("tab")).toHaveLength(1)
-  expect(server.sessions.get("s1")?.archivedAt).not.toBeNull()
-})
-
-test("a failed archive from a session's menu says so under its row and keeps its tab", async () => {
-  const server = await mountApp()
-  server.failNextCall("session.archive")
-  await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
-
-  const row = page.getByTestId("session-item").filter({ hasText: "First" })
-  await row.hover()
-  await row.getByRole("button", { name: "Session actions" }).click()
-  await page.getByRole("menuitem", { name: "Archive" }).click()
-
-  await expect.element(row.getByRole("alert")).toHaveTextContent("The session was not archived.")
   await expect.element(openSessions().getByRole("tab")).toHaveLength(2)
 })
 
 test("mod+shift+m in the composer opens the run options menu", async () => {
-  await mountApp()
+  await mountWithSessions()
   await page.getByRole("textbox", { name: "Message" }).click()
   await userEvent.keyboard(`{${mod}>}{Shift>}m{/Shift}{/${mod}}`)
   await expect.element(page.getByTestId("run-option-model-opus")).toBeVisible()

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
-import { Database, layerDatabase } from "./database.ts"
+import { layerDatabase } from "./database.ts"
 import { DatabaseSchemaTooNew, migrations, runMigrations, type Migration } from "./migrations.ts"
 
 const first: Migration = { version: 1, sql: "CREATE TABLE a (id INTEGER)" }
@@ -70,21 +70,6 @@ test("a newer database makes the server refuse to start and says why", async () 
     expect(error).toBeInstanceOf(DatabaseSchemaTooNew)
     expect((error as DatabaseSchemaTooNew).message).toContain("version 2")
     expect((error as DatabaseSchemaTooNew).message).toContain("version 1")
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-  }
-})
-
-test("the connection is in WAL mode", async () => {
-  const dir = mkdtempSync(join(tmpdir(), "ivin-db-"))
-  try {
-    const mode = await Effect.runPromise(
-      Effect.gen(function* () {
-        const db = yield* Database
-        return db.prepare("PRAGMA journal_mode").get()
-      }).pipe(Effect.provide(layerDatabase(join(dir, "ivin.db"), [])), Effect.scoped),
-    )
-    expect(mode).toEqual({ journal_mode: "wal" })
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

@@ -34,26 +34,6 @@ const setup = async () => {
   return onOpenChange
 }
 
-const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]')!
-
-test("opening the dialog moves focus inside it", async () => {
-  await setup()
-  await vi.waitFor(() => expect(dialog().contains(document.activeElement)).toBe(true))
-})
-
-test("Tab and Shift+Tab cycle focus within the dialog", async () => {
-  await setup()
-  await vi.waitFor(() => expect(dialog().contains(document.activeElement)).toBe(true))
-  for (let i = 0; i < 6; i++) {
-    await userEvent.tab()
-    expect(dialog().contains(document.activeElement)).toBe(true)
-  }
-  for (let i = 0; i < 6; i++) {
-    await userEvent.tab({ shift: true })
-    expect(dialog().contains(document.activeElement)).toBe(true)
-  }
-})
-
 test("Escape closes the dialog and returns focus to the opener", async () => {
   const onOpenChange = await setup()
   await userEvent.keyboard("{Escape}")

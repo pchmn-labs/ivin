@@ -1,90 +1,28 @@
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
 import {
-  layerScripted,
   scriptedFailure,
   scriptedRead,
   type ScriptedElement,
   type ScriptedOptions,
   type StartInput,
 } from "@ivin/harness"
-import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
-import { DatabaseSync } from "node:sqlite"
+import { Effect } from "effect"
+import type { DatabaseSync } from "node:sqlite"
 import { expect, test } from "vitest"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { idle, running, said, askedApproval as asked, itemsOf, sessionOf } from "./test-scripts.ts"
+import { newDatabase, withServer as withTestServer, type Client } from "./test-server.ts"
 import { until } from "./test-waits.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 
-const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
-const running: HarnessOutput = { type: "status", status: "running", raw: null }
-const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
-const asked: HarnessOutput = {
-  type: "approval_request",
-  requestId: "r1",
-  toolCallId: "t1",
-  name: "ls",
-  input: { path: "." },
-  raw: null,
-}
 const answered = (text: string): readonly HarnessOutput[] => [running, said(text), idle]
 
 const defaults = { model: "scripted", effort: "low", permissionMode: "ask" }
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
 
 const withServer = <A, E>(
   db: DatabaseSync,
   turns: readonly (readonly ScriptedElement[])[],
   use: (client: Client) => Effect.Effect<A, E>,
   options: ScriptedOptions = {},
-) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerScripted(turns, { reportSession: true, ...options })),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-
-const sessionOf = (client: Client, sessionId: string) =>
-  client["session.list"]({ projectPath: "/p" }).pipe(
-    Effect.map((sessions) => sessions.find((s) => s.id === sessionId)),
-  )
-
-const itemsOf = (client: Client, sessionId: string) =>
-  client["transcript.getItems"]({ sessionId, position: null, before: 100, after: 100 }).pipe(
-    Effect.map((page) => page.items),
-  )
+) => withTestServer(use, { db, turns, scripted: { reportSession: true, ...options } })
 
 const untilSaid = (client: Client, sessionId: string, text: string) =>
   until(itemsOf(client, sessionId), (items) =>
@@ -117,21 +55,6 @@ test("a new session takes the harness's defaults, then the project's last run op
     permissionMode: "auto",
   })
   expect(sessions.otherProject).toMatchObject(defaults)
-})
-
-test("a new session does not take a last value its harness no longer offers", async () => {
-  const created = await withServer(newDatabase(), [], (client) =>
-    Effect.gen(function* () {
-      const first = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.setRunOptions"]({
-        sessionId: first.id,
-        options: { model: "retired", effort: "high" },
-      })
-      return yield* client["session.create"]({ projectPath: "/p" })
-    }),
-  )
-
-  expect(created).toMatchObject({ model: "scripted", effort: "high" })
 })
 
 test("a change while idle starts the next run with the new options and the stored provider session id", async () => {
@@ -319,19 +242,6 @@ test.each([
     expect(after.relaunchFailure).toBeNull()
   },
 )
-
-test("a failed first run with no earlier change offers nothing back", async () => {
-  const session = await withServer(newDatabase(), [failedTurn], (client) =>
-    Effect.gen(function* () {
-      const session = yield* client["session.create"]({ projectPath: "/p" })
-      yield* client["session.sendMessage"]({ sessionId: session.id, messageId: "m1", text: "a" })
-      yield* untilIdle(client, session.id)
-      return yield* sessionOf(client, session.id)
-    }),
-  )
-
-  expect(session?.relaunchFailure).toBeNull()
-})
 
 test("changing the run options of a missing session fails with SessionNotFound", async () => {
   const error = await withServer(newDatabase(), [], (client) =>

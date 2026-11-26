@@ -1,32 +1,14 @@
-import { mkdtempSync } from "node:fs"
-import { DatabaseSync } from "node:sqlite"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import type { Session } from "@ivin/contracts/session"
+import type { DatabaseSync } from "node:sqlite"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import {
-  layerScripted,
-  scriptedLater,
-  type ScriptedElement,
-  type ScriptedOptions,
-} from "@ivin/harness"
-import { Deferred, Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
+import { scriptedLater, type ScriptedElement, type ScriptedOptions } from "@ivin/harness"
+import { Deferred, Effect } from "effect"
 import { expect, test } from "vitest"
+import { idle, running, said, untilSession } from "./test-scripts.ts"
+import { newDatabase, withServer as withTestServer, type Client } from "./test-server.ts"
+import { until } from "./test-waits.ts"
 import { layerSessionRunsWith } from "../modules/session/usecases/session-runs.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { handlers, layerServicesWith } from "./handlers.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
+import { layerServicesWith } from "./handlers.ts"
 
-const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
-const running: HarnessOutput = { type: "status", status: "running", raw: null }
-const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
 const started = (taskId = "k1", kind: "agent" | "command" = "command"): HarnessOutput => ({
   type: "task_started",
   taskId,
@@ -51,59 +33,18 @@ const outputFile = (taskId = "k1"): HarnessOutput => ({
 // The turn that starts a task and ends while it still runs.
 const turn: ScriptedElement[] = [running, started(), said("started it"), idle]
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
-
 const withServer = <A, E>(
   db: DatabaseSync,
   turns: readonly (readonly ScriptedElement[])[],
   options: ScriptedOptions,
   use: (client: Client) => Effect.Effect<A, E>,
 ) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServicesWith(layerSessionRunsWith("20 millis"))),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerScripted(turns, options)),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-
-const until = <A, E>(read: Effect.Effect<A, E>, done: (value: A) => boolean) =>
-  Effect.gen(function* () {
-    for (let attempt = 0; attempt < 400; attempt++) {
-      const value = yield* read
-      if (done(value)) return value
-      yield* Effect.sleep("5 millis")
-    }
-    return yield* Effect.die("The condition was never met")
+  withTestServer(use, {
+    db,
+    turns,
+    scripted: options,
+    services: layerServicesWith(layerSessionRunsWith("20 millis")),
   })
-
-const untilSession = (client: Client, id: string, done: (session: Session) => boolean) =>
-  until(
-    client["session.list"]({ projectPath: "/p" }).pipe(
-      Effect.map((sessions) => sessions.find((s) => s.id === id)!),
-    ),
-    done,
-  )
 
 const gate = () => Effect.runSync(Deferred.make<void>())
 
@@ -170,21 +111,6 @@ test("the turn the agent starts after a task ends makes the session working agai
   expect(result).toEqual({ working: [], after: [] })
 })
 
-test("the last task ending with no turn running sets the session idle", async () => {
-  const db = newDatabase()
-  const done = gate()
-  const session = await withServer(db, [[...turn, scriptedLater(done, [ended()])]], {}, (client) =>
-    Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: "/p" })
-      yield* send(client, created.id)
-      yield* untilSession(client, created.id, (s) => s.status === "in_background")
-      yield* Deferred.succeed(done, undefined)
-      return yield* untilSession(client, created.id, (s) => s.status === "idle")
-    }),
-  )
-  expect(session.backgroundTasks).toEqual([])
-})
-
 test("a session stays in background until its last task ends", async () => {
   const db = newDatabase()
   const first = gate()
@@ -211,10 +137,16 @@ test("a session stays in background until its last task ends", async () => {
         const one = yield* untilSession(client, created.id, (s) => s.backgroundTasks.length === 1)
         yield* Deferred.succeed(second, undefined)
         const none = yield* untilSession(client, created.id, (s) => s.status === "idle")
-        return [both.status, one.status, one.backgroundTasks[0]?.taskId, none.status]
+        return [
+          both.status,
+          one.status,
+          one.backgroundTasks[0]?.taskId,
+          none.status,
+          none.backgroundTasks,
+        ]
       }),
   )
-  expect(result).toEqual(["in_background", "in_background", "k2", "idle"])
+  expect(result).toEqual(["in_background", "in_background", "k2", "idle", []])
 })
 
 test("a task that starts during a turn leaves the session working until the turn ends", async () => {
@@ -343,23 +275,16 @@ test("archiving a session in background stops its agent and ends its tasks", asy
   expect(result.tasks).toMatchObject([{ status: "stopped" }])
 })
 
-test("interrupting a session in background stops its agent and ends its tasks", async () => {
-  const db = newDatabase()
-  const closed: string[] = []
-  const session = await withServer(db, [turn], { closed }, (client) =>
-    Effect.gen(function* () {
-      const created = yield* client["session.create"]({ projectPath: "/p" })
-      yield* send(client, created.id)
-      yield* untilSession(client, created.id, (s) => s.status === "in_background")
-      yield* client["session.interrupt"]({ sessionId: created.id })
-      return yield* untilSession(client, created.id, (s) => s.status === "idle")
-    }),
-  )
-  expect(closed).toHaveLength(1)
-  expect(session.backgroundTasks).toEqual([])
-})
-
-test("closing the tab of a session in background stops its agent and ends its tasks", async () => {
+test.each([
+  {
+    trigger: "interrupting",
+    stop: (client: Client, id: string) => client["session.interrupt"]({ sessionId: id }),
+  },
+  {
+    trigger: "closing the tab of",
+    stop: (client: Client, id: string) => client["tab.close"]({ sessionId: id }),
+  },
+])("$trigger a session in background stops its agent and ends its tasks", async ({ stop }) => {
   const db = newDatabase()
   const closed: string[] = []
   const session = await withServer(db, [turn], { closed }, (client) =>
@@ -369,7 +294,7 @@ test("closing the tab of a session in background stops its agent and ends its ta
       yield* client["tab.open"]({ sessionId: created.id })
       yield* send(client, created.id)
       yield* untilSession(client, created.id, (s) => s.status === "in_background")
-      yield* client["tab.close"]({ sessionId: created.id })
+      yield* stop(client, created.id)
       return yield* untilSession(client, created.id, (s) => s.status === "idle")
     }),
   )

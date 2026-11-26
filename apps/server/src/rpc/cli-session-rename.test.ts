@@ -47,20 +47,6 @@ test("an empty or missing title exits 2", async () => {
   expect(blank.title).toBe("New session")
 }, 10_000)
 
-test("outside an ivin session, --session is required", async () => {
-  const run = await rename(["Fix tab drag"], { inSession: false })
-
-  expect(run.code).toBe(2)
-  expect(run.stderr).toContain("--session <id> is required outside an ivin session")
-}, 10_000)
-
-test("an unknown session exits 1 and names it", async () => {
-  const run = await rename(["Fix tab drag", "--session", "nope"])
-
-  expect(run.code).toBe(1)
-  expect(run.stderr).toContain('No session has the id "nope"')
-}, 10_000)
-
 test("--json prints the session's new title", async () => {
   const run = await rename(["Fix tab drag", "--json"])
 

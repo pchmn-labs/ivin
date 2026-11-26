@@ -1,11 +1,12 @@
 import { RegistryContext } from "@effect/atom-react"
 import { DateTime, Layer } from "effect"
 import { AtomRegistry } from "effect/reactivity"
-import { expect, test } from "vitest"
+import { afterEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeFakeServer } from "../core/fake-server-client.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
+import { makeTestSession } from "../core/test-session.ts"
 import { serverStateAtom } from "../modules/server/atoms/server-state.ts"
 import { App } from "./app.tsx"
 
@@ -14,33 +15,18 @@ const PIXEL =
 const LOG_PATH = `/Users/someone-with-a-long-name/Library/Logs/ivin/${"nested-folder/".repeat(12)}server.log`
 
 const mountApp = async ({ failVersion = false } = {}) => {
-  const at = DateTime.makeUnsafe(0)
-  const server = makeFakeServer({ project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: at } })
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: "/dev/ivin",
-    workingFolder: "/dev/ivin",
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "Work",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "idle",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
+  const server = makeFakeServer({
+    project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
+  server.sessions.set(
+    "s1",
+    makeTestSession({
+      id: "s1",
+      title: "Work",
+      projectPath: "/dev/ivin",
+      workingFolder: "/dev/ivin",
+    }),
+  )
   server.openTab("s1")
   if (failVersion) server.failNextCall("server.getVersion")
   await page.viewport(1280, 800)
@@ -58,6 +44,8 @@ const mountApp = async ({ failVersion = false } = {}) => {
   }
   return { server, registry, serverBack }
 }
+
+afterEach(() => vi.unstubAllGlobals())
 
 const field = () => page.getByRole("textbox", { name: "Message" })
 const alert = () => page.getByRole("alert")
@@ -98,6 +86,21 @@ test("when the server gave up, a log path too long for a line stays inside the a
   await expect.element(restart).toBeVisible()
   expect(alert().element().scrollWidth).toBeLessThanOrEqual(alert().element().clientWidth)
   expect(restart.element().getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth)
+})
+
+test("a Restart button the keyboard reaches calls the desktop's restart", async () => {
+  const restart = vi.fn(() => Promise.resolve())
+  vi.stubGlobal("ivin", { restartServer: restart })
+  const { registry } = await mountApp()
+  registry.set(serverStateAtom, { kind: "gave-up", logPath: "/home/.ivin/logs/ivin.log" })
+
+  const button = page.getByRole("button", { name: "Restart" })
+  for (let tabs = 0; tabs < 40 && document.activeElement?.textContent !== "Restart"; tabs++) {
+    await userEvent.tab()
+  }
+  await expect.element(button).toHaveFocus()
+  await userEvent.keyboard("{Enter}")
+  expect(restart).toHaveBeenCalledOnce()
 })
 
 test("a draft's text and images survive the server being lost and coming back", async () => {

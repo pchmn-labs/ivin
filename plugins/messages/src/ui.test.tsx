@@ -1,27 +1,14 @@
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
-import type { ComponentType } from "react"
 import { testUiHost } from "../../../packages/ui/src/app/test-ui-host.ts"
+import { activatePlugin } from "../../../packages/ui/src/app/test-plugin-mount.ts"
 import { UiHostProvider } from "@ivin/plugin-api/ui"
-import type { SlotProps, UiContext } from "@ivin/plugin-api/ui"
+import type { SlotProps } from "@ivin/plugin-api/ui"
 import { activate } from "./ui.tsx"
 
 const mount = async (item: SlotProps["transcript.message"]["item"]) => {
-  let Message!: ComponentType<SlotProps["transcript.message"]>
-  const ctx: UiContext = {
-    pluginId: "messages",
-    slots: { add: (_slot, component) => void (Message = component as typeof Message) },
-    commands: { register: () => undefined },
-    keybindings: { add: () => undefined },
-    editorExtensions: { add: () => undefined },
-    fileIcons: { add: () => undefined },
-    fileUrl: (path) => path,
-    views: { register: () => undefined, open: async () => undefined },
-    notify: () => undefined,
-    sidebar: { showPanel: () => undefined },
-  }
-  activate(ctx)
+  const Message = activatePlugin(activate, "messages")("transcript.message")
   const host = {
     ...testUiHost,
   }
@@ -116,23 +103,27 @@ test("a new worktree under a .worktrees/ that git does not ignore says what to a
   expect(note.element().textContent).toContain("Add .worktrees/ to .gitignore")
 })
 
-test("the agent entering a worktree says the session moved there", async () => {
-  await mount({ ...worktree, cause: "adoption", worktreesIgnored: true })
-  await expect.element(page.getByText("Moved to the worktree on")).toBeVisible()
-  await expect.element(page.getByText("feat/login")).toBeVisible()
-})
+const checkout = { path: "/repo", inWorktree: false, branch: "main" }
 
-test("the agent leaving a worktree says the session is back in the checkout", async () => {
-  await mount({
-    ...worktree,
-    path: "/repo",
-    inWorktree: false,
-    branch: "main",
-    cause: "adoption",
-    worktreesIgnored: true,
-  })
-  await expect.element(page.getByText("Back in the checkout on")).toBeVisible()
-  await expect.element(page.getByText("main", { exact: true })).toBeVisible()
+test.each([
+  [
+    "the agent entering a worktree",
+    { cause: "adoption" },
+    "Moved to the worktree on",
+    "feat/login",
+  ],
+  [
+    "the agent leaving a worktree",
+    { ...checkout, cause: "adoption" },
+    "Back in the checkout on",
+    "main",
+  ],
+  ["a folder picked after a deletion", { cause: "pick" }, "Moved to the worktree on", "feat/login"],
+  ["a pick of the checkout", { ...checkout, cause: "pick" }, "Moved to the checkout on", "main"],
+] as const)("%s says where the session moved", async (_, change, phrase, branch) => {
+  await mount({ ...worktree, ...change, worktreesIgnored: true })
+  await expect.element(page.getByText(phrase)).toBeVisible()
+  await expect.element(page.getByText(branch, { exact: true })).toBeVisible()
 })
 
 test("a branch picked in the branch picker names the branch and the folder it is checked out in", async () => {
@@ -147,22 +138,4 @@ test("a branch picked in the branch picker names the branch and the folder it is
   await expect.element(page.getByText("Switched to")).toBeVisible()
   await expect.element(page.getByText("fix/typo")).toBeVisible()
   await expect.element(page.getByText("/repo", { exact: true })).toBeVisible()
-})
-
-test("a folder picked after a deletion says where the session moved", async () => {
-  await mount({ ...worktree, cause: "pick", worktreesIgnored: true })
-  await expect.element(page.getByText("Moved to the worktree on")).toBeVisible()
-})
-
-test("a pick of the checkout names the checkout, not a worktree", async () => {
-  await mount({
-    ...worktree,
-    path: "/repo",
-    inWorktree: false,
-    branch: "main",
-    cause: "pick",
-    worktreesIgnored: true,
-  })
-  await expect.element(page.getByText("Moved to the checkout on")).toBeVisible()
-  await expect.element(page.getByText("main", { exact: true })).toBeVisible()
 })

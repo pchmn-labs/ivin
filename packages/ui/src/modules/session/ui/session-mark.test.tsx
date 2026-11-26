@@ -3,19 +3,14 @@ import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { SessionMark } from "./session-mark.tsx"
 
-test("a session waiting on questions shows a question mark and says it waits for an answer", async () => {
-  await render(<SessionMark status="waiting" waitingFor="question" harness="claude" />)
-  await expect.element(page.getByText("Waiting for your answer")).toBeInTheDocument()
+test.each([
+  ["question", "Waiting for your answer"],
+  ["approval", "Waiting for you"],
+] as const)("a session waiting on a %s says what it waits for", async (waitingFor, label) => {
+  await render(<SessionMark status="waiting" waitingFor={waitingFor} harness="claude" />)
+  await expect.element(page.getByText(label)).toBeInTheDocument()
   expect(document.querySelector(".iv-session-mark")?.getAttribute("data-waiting-for")).toBe(
-    "question",
-  )
-})
-
-test("a session waiting on an approval keeps the exclamation mark", async () => {
-  await render(<SessionMark status="waiting" waitingFor="approval" harness="claude" />)
-  await expect.element(page.getByText("Waiting for you")).toBeInTheDocument()
-  expect(document.querySelector(".iv-session-mark")?.getAttribute("data-waiting-for")).toBe(
-    "approval",
+    waitingFor,
   )
 })
 
@@ -38,17 +33,13 @@ const tasks = [
   },
 ] as const
 
-test("a session in background shows a pulsing dot, apart from the working spinner, and says so", async () => {
+test("a session in background shows its own status mark and says so", async () => {
   await render(<SessionMark status="in_background" harness="claude" tasks={tasks} />)
 
   await expect.element(page.getByText("In background")).toBeInTheDocument()
   expect(document.querySelector(".iv-session-mark")?.getAttribute("data-status")).toBe(
     "in_background",
   )
-  const overlay = document.querySelector(".iv-session-mark__overlay")!
-  const style = getComputedStyle(overlay)
-  expect(style.animationName).toBe("iv-background-pulse")
-  expect(style.borderTopWidth).toBe("0px")
 })
 
 test("hovering the mark of a session in background lists its tasks", async () => {

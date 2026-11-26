@@ -1,52 +1,11 @@
-import { layerScripted } from "@ivin/harness"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import { Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
-import { DatabaseSync } from "node:sqlite"
+import { Effect } from "effect"
 import { expect, test } from "vitest"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { handlers, layerServices } from "./handlers.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { mkdtempSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
+import { newDatabase, withServer as serve } from "./test-server.ts"
 
 const withServer = <A, E>(
-  db: DatabaseSync,
-  use: (client: Effect.Success<ReturnType<typeof makeClient>>) => Effect.Effect<A, E>,
-) =>
-  Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap(use),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provide(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted([])),
-        ),
-      ),
-      Effect.scoped,
-    ),
-  )
-const makeClient = () => RpcTest.makeClient(Rpcs)
+  db: ReturnType<typeof newDatabase>,
+  use: Parameters<typeof serve<A, E>>[0],
+) => serve(use, { db })
 
 test("nothing is open on a new database", async () => {
   const open = await withServer(newDatabase(), (client) => client["project.list"]())

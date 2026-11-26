@@ -1,39 +1,14 @@
-import { DateTime } from "effect"
 import { AsyncResult } from "effect/reactivity"
 import { expect, test, vi } from "vitest"
 import { makeTestRegistry } from "../../../core/test-registry.ts"
+import { makeTestSession } from "../../../core/test-session.ts"
 import { gitStatusOf } from "./git-status.ts"
 
 const project = "/project"
 
 test("a burst of changes during a read gives one read after it, not one per change", async () => {
   const { registry, server } = makeTestRegistry({ project })
-  const at = DateTime.makeUnsafe(0)
-  server.sessions.set("s1", {
-    id: "s1",
-    projectPath: project,
-    workingFolder: project,
-    inWorktree: false,
-    branch: "main",
-    started: true,
-    workingFolderDeleted: false,
-    title: "s1",
-    harness: "claude",
-    model: "sonnet",
-    effort: "high",
-    permissionMode: "manual",
-    relaunchFailure: null,
-    pendingMessages: [],
-    unreadMessages: [],
-    backgroundTasks: [],
-    status: "idle",
-    statusChangedAt: at,
-    createdAt: at,
-    lastActivityAt: at,
-    archivedAt: null,
-    lastImageNumber: 0,
-    waitingFor: null,
-  })
+  server.sessions.set("s1", makeTestSession({ id: "s1", projectPath: project, title: "s1" }))
   registry.mount(gitStatusOf("s1", project))
   await vi.waitFor(() =>
     expect(AsyncResult.isSuccess(registry.get(gitStatusOf("s1", project)))).toBe(true),

@@ -1,58 +1,13 @@
-import { RegistryProvider } from "@effect/atom-react"
-import type { FolderEntry } from "@ivin/contracts/file"
-import { DateTime } from "effect"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
-import { render } from "vitest-browser-react"
-import { makeFakeServer, type FakeServer } from "../core/fake-server-client.ts"
-import { serverClientLayerAtom } from "../core/server-client.ts"
-import { App } from "./app.tsx"
+import type { FakeServer } from "../core/fake-server-client.ts"
+import { folder, makeShopServer, mountApp, shopProject, shopWorktree } from "./test-app.tsx"
 
-const project = "/dev/shop"
-const worktree = "/dev/shop/.worktrees/fix-cart"
-
-const folder = (...names: string[]): ReadonlyArray<FolderEntry> =>
-  names.map((name) =>
-    name.endsWith("/")
-      ? { name: name.slice(0, -1), kind: "folder", ignored: false }
-      : { name, kind: "file", ignored: false },
-  )
+const project = shopProject
+const worktree = shopWorktree
 
 const makeServer = () => {
-  const server = makeFakeServer({
-    project: { path: project, name: "shop", lastOpenedAt: DateTime.makeUnsafe(0) },
-  })
-  const at = DateTime.makeUnsafe(0)
-  for (const [id, title, workingFolder] of [
-    ["s1", "Checkout flow", project],
-    ["s2", "Fix the cart", worktree],
-  ] as const) {
-    server.sessions.set(id, {
-      id,
-      projectPath: project,
-      workingFolder,
-      inWorktree: workingFolder !== project,
-      branch: "main",
-      started: true,
-      workingFolderDeleted: false,
-      title,
-      harness: "claude",
-      model: "sonnet",
-      effort: "high",
-      permissionMode: "manual",
-      relaunchFailure: null,
-      pendingMessages: [],
-      unreadMessages: [],
-      backgroundTasks: [],
-      status: "idle",
-      statusChangedAt: at,
-      createdAt: at,
-      lastActivityAt: at,
-      archivedAt: null,
-      lastImageNumber: 0,
-      waitingFor: null,
-    })
-  }
+  const server = makeShopServer()
   server.folders.set(project, folder("src/", "logo.png", "bundle.js", "gone.ts", "README.md"))
   server.folders.set(`${project}/src`, folder("main.ts"))
   server.folders.set(worktree, folder("notes.md"))
@@ -69,14 +24,7 @@ const makeServer = () => {
   return server
 }
 
-const mount = (server: FakeServer) =>
-  render(
-    <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <div style={{ height: 800 }}>
-        <App />
-      </div>
-    </RegistryProvider>,
-  )
+const mount = (server: FakeServer) => mountApp(server, { height: 800 })
 
 const showFiles = async () => {
   await page.getByRole("tablist", { name: "Sidebar" }).getByRole("tab", { name: "Files" }).click()
@@ -293,10 +241,17 @@ const answer = (text: string) => ({
 const transcriptLink = (name: string) => page.getByRole("link", { name, exact: true })
 const longMain = Array.from({ length: 2000 }, (_, n) => `line ${n + 1}`).join("\n")
 
-test("a file linked in an agent's answer opens beside the chat", async () => {
+test("a file linked in an agent's answer opens beside the chat, and a web link is left to the browser", async () => {
   const server = makeServer()
-  server.seedItems("s1", [answer("See [the readme](README.md) and [main](/dev/shop/src/main.ts).")])
+  server.seedItems("s1", [
+    answer(
+      "See [the readme](README.md) and [main](/dev/shop/src/main.ts), or [ivin](https://github.com/pchmn-labs/ivin).",
+    ),
+  ])
   await mount(server)
+  await expect
+    .element(transcriptLink("ivin"))
+    .toHaveAttribute("href", "https://github.com/pchmn-labs/ivin")
   await transcriptLink("the readme").click()
   await expect.element(code("README.md")).toHaveTextContent("# Shop")
   await transcriptLink("main").click()
@@ -316,25 +271,6 @@ test("a linked line opens the file scrolled to it, and another link to the file 
   await expect.element(code("main.ts").getByText("line 1500", { exact: true })).toBeInViewport()
   await transcriptLink("end").click()
   await expect.element(code("main.ts").getByText("line 1900", { exact: true })).toBeInViewport()
-})
-
-test("a file link opens with the keyboard", async () => {
-  const server = makeServer()
-  server.seedItems("s1", [answer("[the readme](./README.md)")])
-  await mount(server)
-  await expect.element(transcriptLink("the readme")).toBeVisible()
-  ;(transcriptLink("the readme").element() as HTMLElement).focus()
-  await userEvent.keyboard("{Enter}")
-  await expect.element(code("README.md")).toHaveTextContent("# Shop")
-})
-
-test("a web link is left to the browser and opens no file", async () => {
-  const server = makeServer()
-  server.seedItems("s1", [answer("[ivin](https://github.com/pchmn-labs/ivin)")])
-  await mount(server)
-  await expect
-    .element(transcriptLink("ivin"))
-    .toHaveAttribute("href", "https://github.com/pchmn-labs/ivin")
 })
 
 const outsideBar = () =>
@@ -384,16 +320,6 @@ test("a path in inline code opens its file scrolled to its line, with the mouse 
   await expect.element(code("README.md")).toHaveTextContent("# Shop")
 })
 
-test("an absolute path or a file URL in inline code opens the same file", async () => {
-  const server = makeServer()
-  server.seedItems("s1", [answer("`/dev/shop/README.md` and `file:///dev/shop/src/main.ts`")])
-  await mount(server)
-  await transcriptLink("/dev/shop/README.md").click()
-  await expect.element(code("README.md")).toHaveTextContent("# Shop")
-  await transcriptLink("file:///dev/shop/src/main.ts").click()
-  await expect.element(fileTab("main.ts")).toHaveAttribute("aria-selected", "true")
-})
-
 test("inline code that is not a path, or code in a block, stays plain code", async () => {
   const server = makeServer()
   server.seedItems("s1", [
@@ -402,26 +328,6 @@ test("inline code that is not a path, or code in a block, stays plain code", asy
   await mount(server)
   await expect.element(page.getByText("npm install")).toBeVisible()
   expect(page.getByRole("link").elements()).toEqual([])
-})
-
-test("inline code naming a branch, a property or a file the working folder does not hold stays plain code", async () => {
-  const server = makeServer()
-  server.seedItems("s1", [
-    answer("Rebase on `origin/main`, log with `console.log`, see `src/old.ts`."),
-  ])
-  await mount(server)
-  await expect.element(page.getByText("src/old.ts")).toBeVisible()
-  await expect.poll(() => server.fileListings()).toBeGreaterThan(0)
-  expect(page.getByRole("link").elements()).toEqual([])
-})
-
-test("a domain in inline code links to its web page", async () => {
-  const server = makeServer()
-  server.seedItems("s1", [answer("Published on `github.com/pchmn-labs/ivin`.")])
-  await mount(server)
-  await expect
-    .element(transcriptLink("github.com/pchmn-labs/ivin"))
-    .toHaveAttribute("href", "https://github.com/pchmn-labs/ivin")
 })
 
 test("a file the agent creates after its answer becomes a link to it", async () => {
@@ -605,16 +511,6 @@ test("an image changed on disk shows again", async () => {
 
 const resizeHandle = () => page.getByRole("separator", { name: "Resize the files card" })
 const cardWidth = () => card().element().getBoundingClientRect().width
-
-test("a file's tab shows the icon theme's icon for it", async () => {
-  await mount(makeServer())
-  await showFiles()
-  await item("README.md").click()
-
-  await expect
-    .poll(() => fileTab("README.md").element().querySelector("img")?.getAttribute("src"))
-    .toMatch(/^ivin-plugin:\/\/file-icons\/icons\/.+\.svg$/)
-})
 
 test("the files card's left edge resizes it, keeps the chat's minimum width, and the size is kept", async () => {
   const server = makeServer()

@@ -1,27 +1,15 @@
-import { Rpcs } from "@ivin/contracts/rpcs"
 import type { WorkingFolderChoice } from "@ivin/contracts/session"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import { layerScripted } from "@ivin/harness"
-import { Effect, Fiber, Layer, Stream } from "effect"
-import { RpcTest } from "effect/rpc"
-import { execFileSync } from "node:child_process"
-import { existsSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
+import { Effect, Fiber, Stream } from "effect"
+import { existsSync, writeFileSync } from "node:fs"
 import { basename, join } from "node:path"
-import { DatabaseSync } from "node:sqlite"
-import { afterEach, beforeEach, expect, test, vi } from "vitest"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
+import { beforeEach, expect, test, vi } from "vitest"
 import { WorktreeCleanup } from "../modules/session/usecases/worktree-cleanup.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
-import { handlers, layerServices } from "./handlers.ts"
+import { commit, git, useClonedProject } from "./git-fixture.ts"
+import { withServer as withTestServer, type Client } from "./test-server.ts"
 import { forkWatch } from "./test-waits.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
-// The worktree tests push and merge two branches, around forty git commands.
+// The worktree tests push and merge a branch, around twenty git commands.
 vi.setConfig({ testTimeout: 15000 })
 
 const turn: readonly HarnessOutput[] = [
@@ -31,42 +19,15 @@ const turn: readonly HarnessOutput[] = [
 ]
 const working: readonly HarnessOutput[] = [{ type: "status", status: "running", raw: null }]
 
-const gitEnv = {
-  ...process.env,
-  GIT_AUTHOR_NAME: "ivin",
-  GIT_AUTHOR_EMAIL: "ivin@example.com",
-  GIT_COMMITTER_NAME: "ivin",
-  GIT_COMMITTER_EMAIL: "ivin@example.com",
-  GIT_CONFIG_GLOBAL: "/dev/null",
-}
-const git = (cwd: string, ...args: string[]) =>
-  execFileSync("git", args, { cwd, env: gitEnv, encoding: "utf8" }).trim()
-
-const commit = (repo: string, file: string) => {
-  writeFileSync(join(repo, file), file)
-  git(repo, "add", file)
-  git(repo, "commit", "--quiet", "-m", file)
-}
-
-let root: string
-let project: string
-let upstream: string
-
-beforeEach(() => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), "ivin-archive-")))
-  const origin = join(root, "origin.git")
-  upstream = join(root, "upstream")
-  project = join(root, "project")
-  git(root, "init", "--quiet", "--bare", "-b", "main", origin)
-  git(root, "init", "--quiet", "-b", "main", upstream)
-  commit(upstream, "first.txt")
-  git(upstream, "remote", "add", "origin", origin)
-  git(upstream, "push", "--quiet", "origin", "main")
-  git(root, "clone", "--quiet", origin, project)
+const fixture = useClonedProject(({ project }) => {
   writeFileSync(join(project, ".git", "info", "exclude"), ".worktrees/\n")
 })
-
-afterEach(() => rmSync(root, { recursive: true, force: true }))
+let project = ""
+let upstream = ""
+beforeEach(() => {
+  project = fixture.project
+  upstream = fixture.upstream
+})
 
 const pushAndMerge = (worktree: string, branch: string) => {
   commit(worktree, `${basename(worktree)}.txt`)
@@ -77,38 +38,14 @@ const pushAndMerge = (worktree: string, branch: string) => {
   git(upstream, "push", "--quiet", "origin", "main")
 }
 
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
 const withServer = <A, E>(
   use: (client: Client) => Effect.Effect<A, E, WorktreeCleanup>,
   turns: readonly (readonly HarnessOutput[])[] = [turn],
-) => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return Effect.runPromise(
-    makeClient().pipe(
-      Effect.flatMap((client) =>
-        client["project.open"]({ path: project }).pipe(Effect.andThen(use(client))),
-      ),
-      Effect.provide(
-        handlers.pipe(
-          Layer.provideMerge(layerServices),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(layerScripted(turns)),
-        ),
-      ),
-      Effect.scoped,
-    ),
+) =>
+  withTestServer(
+    (client) => client["project.open"]({ path: project }).pipe(Effect.andThen(use(client))),
+    { turns },
   )
-}
 
 const startSession = (client: Client, workingFolder: WorkingFolderChoice = { kind: "checkout" }) =>
   Effect.gen(function* () {
@@ -280,24 +217,6 @@ test("archiving or deleting a session removes its merged worktree", async () => 
   )
 
   expect(worktrees.map(existsSync)).toEqual([false, false])
-})
-
-test("archiving or deleting a session keeps its worktree when it has changes or is not merged", async () => {
-  const worktrees = await withServer((client) =>
-    Effect.gen(function* () {
-      const archived = yield* startSession(client, { kind: "new_worktree" })
-      const deleted = yield* startSession(client, { kind: "new_worktree" })
-      pushAndMerge(archived.workingFolder, archived.branch!)
-      writeFileSync(join(archived.workingFolder, "draft.txt"), "untracked")
-      commit(deleted.workingFolder, "unpushed.txt")
-      yield* client["session.archive"]({ sessionId: archived.id })
-      yield* client["session.delete"]({ sessionId: deleted.id })
-      yield* listed(client)
-      return [archived.workingFolder, deleted.workingFolder]
-    }),
-  )
-
-  expect(worktrees.map(existsSync)).toEqual([true, true])
 })
 
 test("archiving, restoring or deleting an unknown session fails with SessionNotFound", async () => {

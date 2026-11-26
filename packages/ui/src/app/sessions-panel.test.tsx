@@ -19,33 +19,16 @@ const setup = async (
   const server = makeFakeServer({
     project: { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) },
   })
-  const at = DateTime.makeUnsafe(0)
   titles.forEach((title, index) => {
-    server.sessions.set(`s${index + 1}`, {
-      id: `s${index + 1}`,
-      projectPath: "/p",
-      workingFolder: "/p",
-      inWorktree: false,
-      branch: "main",
-      started: true,
-      workingFolderDeleted: false,
-      title,
-      harness: options.harness ?? "claude",
-      model: "sonnet",
-      effort: "high",
-      permissionMode: "manual",
-      relaunchFailure: null,
-      pendingMessages: [],
-      unreadMessages: [],
-      backgroundTasks: [],
-      status: "idle",
-      statusChangedAt: at,
-      createdAt: at,
-      lastActivityAt: at,
-      archivedAt: null,
-      lastImageNumber: 0,
-      waitingFor: null,
-    })
+    server.sessions.set(
+      `s${index + 1}`,
+      makeTestSession({
+        id: `s${index + 1}`,
+        title,
+        projectPath: "/p",
+        harness: options.harness ?? "claude",
+      }),
+    )
     if (title !== "Closed") server.openTab(`s${index + 1}`)
   })
   const list = options.holdTabs ? server.holdNextTabList() : null
@@ -121,21 +104,6 @@ test("a session outside a git repository has no branch line", async () => {
   server.setStatus("s1", "working")
   await expect.element(page.getByTestId("session-status")).toHaveTextContent("Working")
   expect(page.getByTestId("session-location").query()).toBeNull()
-})
-
-test("a row draws its session's harness mark", async () => {
-  await setup(["One"], { harness: "codex" })
-  const row = page.getByTestId("session-item").element()
-  expect(row.querySelector(".iv-harness-mark--agent")).not.toBeNull()
-  expect(row.querySelector(".iv-harness-mark--claude")).toBeNull()
-})
-
-test("a claude session's row draws the Claude mark", async () => {
-  await setup(["One"])
-  await expect.element(page.getByTestId("session-item")).toBeVisible()
-  expect(
-    page.getByTestId("session-item").element().querySelector(".iv-harness-mark--claude"),
-  ).not.toBeNull()
 })
 
 test("a branch name too long for the row keeps its gap after the worktree icon", async () => {

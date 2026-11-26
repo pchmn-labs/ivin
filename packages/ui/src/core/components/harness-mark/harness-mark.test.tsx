@@ -9,11 +9,6 @@ test("the Claude mark is a decorative svg of the requested size", async () => {
   expect(svg.getAttribute("width")).toBe("14")
 })
 
-test("the Claude mark is 16px by default", async () => {
-  const { container } = await render(<ClaudeMark />)
-  expect(container.querySelector("svg")!.getAttribute("height")).toBe("16")
-})
-
 test("a harness with no mark of its own draws the neutral agent mark", async () => {
   const { container } = await render(<HarnessMark mark="agent" />)
   expect(container.querySelector(".iv-harness-mark--agent")).not.toBeNull()

@@ -1,53 +1,25 @@
-import { mkdtempSync } from "node:fs"
-import { DatabaseSync } from "node:sqlite"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { Rpcs } from "@ivin/contracts/rpcs"
-import type { Session } from "@ivin/contracts/session"
+import type { DatabaseSync } from "node:sqlite"
 import type { HarnessOutput } from "@ivin/contracts/transcript"
-import {
-  layerScripted,
-  scriptedLater,
-  type ScriptedElement,
-  type ScriptedOptions,
-} from "@ivin/harness"
-import { Deferred, type Duration, Effect, Layer } from "effect"
-import { RpcTest } from "effect/rpc"
+import { scriptedLater, type ScriptedElement, type ScriptedOptions } from "@ivin/harness"
+import { Deferred, type Duration, Effect } from "effect"
 import { TestClock } from "effect/testing"
 import { expect, test } from "vitest"
+import {
+  askedApproval as asked,
+  idle,
+  running,
+  said,
+  send,
+  typesOf,
+  untilClosed,
+  untilSession,
+} from "./test-scripts.ts"
+import { makeClient, newDatabase, serverLayer, type Client } from "./test-server.ts"
 import { layerSessionRunsWith } from "../modules/session/usecases/session-runs.ts"
-import { ServerInfo } from "../modules/server/usecases/server-info.ts"
-import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
-import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
-import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
-import { Database } from "../shared/adapters/database.ts"
-import { runMigrations } from "../shared/adapters/migrations.ts"
-import { handlers, layerServicesWith } from "./handlers.ts"
+import { layerServicesWith } from "./handlers.ts"
 import { until } from "./test-waits.ts"
-import { trustEveryFolder } from "./trust-every-folder.ts"
 
-const said = (text: string): HarnessOutput => ({ type: "assistant_text", text, raw: null })
-const running: HarnessOutput = { type: "status", status: "running", raw: null }
-const idle: HarnessOutput = { type: "status", status: "idle", raw: null }
-const asked: HarnessOutput = {
-  type: "approval_request",
-  requestId: "r1",
-  toolCallId: "t1",
-  name: "ls",
-  input: { path: "." },
-  raw: null,
-}
 const turn: ScriptedElement[] = [running, said("hi"), idle]
-
-const makeClient = () => RpcTest.makeClient(Rpcs)
-type Client = Effect.Success<ReturnType<typeof makeClient>>
-
-const newDatabase = () => {
-  const db = new DatabaseSync(":memory:")
-  Effect.runSync(runMigrations(db))
-  trustEveryFolder(db)
-  return db
-}
 
 // The scripted agent and the server's fibers run on the test clock; TestClock.adjust returns once the fibers it woke have settled.
 const withServer = <A, E>(
@@ -61,54 +33,23 @@ const withServer = <A, E>(
     makeClient().pipe(
       Effect.flatMap(use),
       Effect.provide(
-        handlers.pipe(
-          Layer.provide(
-            layerServicesWith(layerSessionRunsWith("10 seconds", Effect.succeed(limit))),
-          ),
-          Layer.provide(Layer.succeed(ServerInfo)({ version: "1.2.3" })),
-          Layer.provide(Layer.succeed(Database)(db)),
-          Layer.provide(layerKeybindingsFileOf([])),
-          Layer.provide(layerSettingsFileOf([])),
-          Layer.provide(
-            Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
-          ),
-          Layer.provide(layerScripted(turns, { reportSession: true, ...options })),
-        ),
+        serverLayer({
+          db,
+          turns,
+          scripted: { reportSession: true, ...options },
+          services: layerServicesWith(layerSessionRunsWith("10 seconds", Effect.succeed(limit))),
+        }),
       ),
       Effect.provide(TestClock.layer()),
       Effect.scoped,
     ),
   )
 
-const untilSession = (client: Client, id: string, done: (session: Session) => boolean) =>
-  until(
-    client["session.list"]({ projectPath: "/p" }).pipe(
-      Effect.map((sessions) => sessions.find((s) => s.id === id)!),
-    ),
-    done,
-  )
-
-const typesOf = (db: DatabaseSync, sessionId: string) =>
-  (
-    db
-      .prepare("SELECT type FROM transcript_events WHERE session_id = ? ORDER BY sequence")
-      .all(sessionId) as { type: string }[]
-  ).map((row) => row.type)
-
 const untilCount = (db: DatabaseSync, sessionId: string, type: string, count: number) =>
   until(
     Effect.sync(() => typesOf(db, sessionId).filter((t) => t === type).length),
     (found) => found >= count,
   )
-
-const untilClosed = (closed: string[], sessionId: string) =>
-  until(
-    Effect.sync(() => closed),
-    (all) => all.includes(sessionId),
-  )
-
-const send = (client: Client, sessionId: string, messageId: string) =>
-  client["session.sendMessage"]({ sessionId, messageId, text: "go" })
 
 test("an agent idle for the limit is stopped and its session stays idle, with nothing added to the transcript", async () => {
   const db = newDatabase()

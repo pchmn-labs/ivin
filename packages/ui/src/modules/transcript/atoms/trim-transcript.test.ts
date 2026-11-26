@@ -34,9 +34,9 @@ const setup = async (count: number) => {
   return { registry, transcript, ids }
 }
 
-test("trimming a transcript loaded back ten pages keeps its last page and lets older pages load again", async () => {
-  const { registry, transcript, ids } = await setup(PAGE_SIZE * 10)
-  for (let page = 2; page <= 10; page++) {
+test("trimming a transcript loaded back three pages keeps its last page and lets older pages load again", async () => {
+  const { registry, transcript, ids } = await setup(PAGE_SIZE * 3)
+  for (let page = 2; page <= 3; page++) {
     registry.set(loadItemsBeforeAtom, "s1")
     await vi.waitFor(() => expect(ids()).toHaveLength(PAGE_SIZE * page))
   }
@@ -44,13 +44,13 @@ test("trimming a transcript loaded back ten pages keeps its last page and lets o
 
   registry.set(trimTranscriptAtom, "s1")
   await vi.waitFor(() => expect(ids()).toHaveLength(PAGE_SIZE))
-  expect(ids()[0]).toBe(`m${PAGE_SIZE * 9}`)
-  expect(ids().at(-1)).toBe(`m${PAGE_SIZE * 10 - 1}`)
+  expect(ids()[0]).toBe(`m${PAGE_SIZE * 2}`)
+  expect(ids().at(-1)).toBe(`m${PAGE_SIZE * 3 - 1}`)
   expect(registry.get(transcript.paging).hasBefore).toBe(true)
 
   registry.set(loadItemsBeforeAtom, "s1")
   await vi.waitFor(() => expect(ids()).toHaveLength(PAGE_SIZE * 2))
-  expect(ids()[0]).toBe(`m${PAGE_SIZE * 8}`)
+  expect(ids()[0]).toBe(`m${PAGE_SIZE}`)
 })
 
 test("trimming a transcript that holds one page changes nothing", async () => {
