@@ -414,7 +414,7 @@ Plugins share through four soft channels; none makes a plugin fail when another 
 - **Annotations.** A kind shared by several plugins has its `data` shape defined in `contracts`, `pr` first. Whoever writes it and whoever renders it need not know each other.
 - **Slots defined by a plugin.** `ctx.slots.define("prs.card.section")` opens a slot prefixed with the plugin's id. Contributions to a slot nobody defines never render.
 - **Commands with a result.** `ctx.commands.run("github.refresh", args)` calls another plugin's command and returns its result, or fails with an "unknown command" error. These calls are untyped across plugins.
-- **Core services**, for what no forge or tool owns: git, `ctx.poll`, `ctx.exec`. The account a project uses on a forge belongs to that forge's plugin: `github` keeps it in the repository's git config.
+- **Core services**, for what no forge or tool owns: git, `ctx.poll`, `ctx.exec`. The account a project uses on a forge belongs to that forge's plugin: `github` keeps it in the plugin's storage, keyed by the project's path.
 
 The core knows no forge. GitHub is a built-in plugin (`github`: PR detection and polling with `gh`, `#` issue mentions) that writes `pr` annotations, and the `prs` plugin renders them. A GitLab plugin writing the same annotations gets the same UI.
 
@@ -526,7 +526,7 @@ The feature that started this design, as two built-in plugins: `github` knows th
 - It turns the `citation` the server stores from a session's first message into an `issue` or `pr` annotation with `relation: "referenced"`, on the project's GitHub remote, asking `gh` whether the number is an issue or a pull request.
 - The agent adds what detection can't see with `ivin link <url> --as referenced`; the `ivin-customize` skill tells it when. A sweep every minute reads every namespace's `pr` annotations (`annotations.listAll`) to find them.
 - It polls each open PR's state, checks, review and mergeability with `ctx.poll` and `ctx.exec("gh", …)` (every 3 minutes, every 45 s while checks run, at once when the window shows again after 15 s, never again once merged or closed) and writes them to its own `pr` annotation for that URL; a failure is kept in `error` until the next success.
-- Each project can use one of the user's `gh` accounts, chosen in its Settings section and kept in the repository's local git config (`ivin.githubUser`): its token goes to every `gh` call for the project and to the agent through `harness.beforeSpawn` (`GH_TOKEN`).
+- Each project can use one of the user's `gh` accounts, chosen in its Settings section and kept in the plugin's storage under the project's path, which also works for a project opened from a `.code-workspace`. Its token goes to every `gh` call for the project and to the agent through `harness.beforeSpawn` (`GH_TOKEN`). An account chosen earlier in the repository's local git config (`ivin.githubUser`) is still read.
 - `prs`'s `ui.tsx` reads the `pr` annotations of every namespace, one pull request per URL, and fills `session.badge` (a status tile on the row and the tab, `+n`) and `session.card` (the list, with a remove action that deletes every annotation of that URL).
 
 In the fork this took hooks in 10 upstream files; here it touches no core file.

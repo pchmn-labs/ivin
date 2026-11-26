@@ -61,8 +61,19 @@ export const activate = defineServer(async (ctx: ServerContext) => {
   const tokens = new Map<string, { value: string | null; at: number }>()
   const repos = new Map<string, { value: RepoInfo | null; at: number }>()
 
+  const accountKey = (projectPath: string) => `account:${projectPath}`
+
   const readProjectAccount = async (projectPath: string): Promise<string | null> => {
-    let login: string | null = null
+    const stored = await ctx.storage.get(accountKey(projectPath))
+    const login =
+      isRecord(stored) && (typeof stored.login === "string" || stored.login === null)
+        ? stored.login
+        : await readAccountFromGitConfig(projectPath)
+    projectAccounts.set(projectPath, { value: login, at: Date.now() })
+    return login
+  }
+
+  const readAccountFromGitConfig = async (projectPath: string): Promise<string | null> => {
     try {
       const result = await ctx.exec("git", [
         "-C",
@@ -71,12 +82,10 @@ export const activate = defineServer(async (ctx: ServerContext) => {
         "--local",
         ACCOUNT_SETTING,
       ])
-      if (result.exitCode === 0 && result.stdout.trim() !== "") login = result.stdout.trim()
+      return result.exitCode === 0 && result.stdout.trim() !== "" ? result.stdout.trim() : null
     } catch {
-      login = null
+      return null
     }
-    projectAccounts.set(projectPath, { value: login, at: Date.now() })
-    return login
   }
 
   const tokenOf = async (login: string): Promise<string | null> => {
@@ -456,15 +465,7 @@ export const activate = defineServer(async (ctx: ServerContext) => {
     if (login !== null && (typeof login !== "string" || !LOGIN.test(login))) {
       throw new Error("The account must be a gh login or null.")
     }
-    const git = ["-C", projectPath, "config", "--local"]
-    const result = await ctx.exec(
-      "git",
-      login === null ? [...git, "--unset", ACCOUNT_SETTING] : [...git, ACCOUNT_SETTING, login],
-    )
-    // `git config --unset` exits 5 when the key was not set.
-    if (result.exitCode !== 0 && !(login === null && result.exitCode === 5)) {
-      throw new Error(`git could not save the account: ${result.stderr.trim()}`)
-    }
+    await ctx.storage.set(accountKey(projectPath), { login })
     projectAccounts.set(projectPath, { value: login, at: Date.now() })
     return { login }
   })
