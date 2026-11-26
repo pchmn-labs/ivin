@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { expect } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { builtinPlugins } from "../../../core/test-builtin-plugins.ts"
@@ -31,6 +32,8 @@ export const mount = async ({ lastImageNumber = 0 } = {}) => {
   server.openProject("/p")
   addSession(server, "s1", lastImageNumber)
   const screen = await render(view(server, "s1"))
+  // The field shows before it has the session's image limit and numbers; the menu shows with them.
+  await expect.element(page.getByRole("button", { name: /^Run options/ })).toBeVisible()
   return { server, screen }
 }
 
