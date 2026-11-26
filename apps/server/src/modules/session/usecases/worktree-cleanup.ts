@@ -1,6 +1,8 @@
 import type { Session } from "@ivin/contracts/session"
 import { Context, Effect, FiberSet, Layer, Semaphore } from "effect"
 import { logFailure } from "../../log/usecases/log-error.ts"
+import type { ProjectStore } from "../../project/usecases/project-store.ts"
+import type { WorkingFolderRoot } from "../../project/usecases/working-folder-root.ts"
 import type { CurrentSettings } from "../../setting/usecases/current-settings.ts"
 import type { WorkingFolders } from "../../worktree/usecases/working-folders.ts"
 import type { Git } from "../../worktree/usecases/git.ts"
@@ -30,6 +32,8 @@ export const layerWorktreeCleanup = Layer.effect(WorktreeCleanup)(
     const context = yield* Effect.context<
       | CurrentSettings
       | Git
+      | ProjectStore
+      | WorkingFolderRoot
       | WorkingFolders
       | OriginFetch
       | SessionFeed

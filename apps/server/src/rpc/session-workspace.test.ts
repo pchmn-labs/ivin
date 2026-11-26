@@ -12,6 +12,7 @@ import {
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, expect, test, vi } from "vitest"
+import { WorktreeCleanup } from "../modules/session/usecases/worktree-cleanup.ts"
 import { commit, git } from "./git-fixture.ts"
 import { newDatabase, withServer as withTestServer, type Client } from "./test-server.ts"
 
@@ -50,7 +51,7 @@ afterEach(() => rmSync(root, { recursive: true, force: true }))
 
 const withServer = <A, E>(
   starts: StartInput[],
-  use: (client: Client) => Effect.Effect<A, E>,
+  use: (client: Client) => Effect.Effect<A, E, WorktreeCleanup>,
   db = newDatabase({ trusted: false }),
 ) =>
   withTestServer(use, {
@@ -324,3 +325,142 @@ test("a repository that cannot list its commits is left out while another can", 
     "app/api.txt",
   ])
 })
+
+const withOrigins = () => {
+  for (const repo of [apiApp, webApp]) {
+    const bare = `${repo}-origin.git`
+    git(root, "init", "--quiet", "--bare", "-b", "main", bare)
+    git(repo, "remote", "add", "origin", bare)
+    git(repo, "push", "--quiet", "origin", "main")
+    git(repo, "remote", "set-head", "origin", "main")
+  }
+}
+
+const sendFirst = (
+  client: Client,
+  sessionId: string,
+  workingFolder?:
+    | { kind: "new_worktree" }
+    | { kind: "checkout"; path: string }
+    | { kind: "existing_worktree"; path: string },
+) =>
+  client["session.sendMessage"]({
+    sessionId,
+    messageId: crypto.randomUUID(),
+    text: "go",
+    ...(workingFolder !== undefined && { workingFolder }),
+  })
+
+test("picking one project folder runs the agent there, with the other project folders as extra directories", async () => {
+  const starts: StartInput[] = []
+  const { sent, picked, refused } = await withServer(starts, (client) =>
+    Effect.gen(function* () {
+      yield* openTrusted(client)
+      const first = yield* client["session.create"]({ projectPath: workspace })
+      const sent = yield* sendFirst(client, first.id, { kind: "checkout", path: webApp })
+      const second = yield* client["session.create"]({ projectPath: workspace })
+      const picked = yield* client["session.pickWorkingFolder"]({
+        sessionId: second.id,
+        workingFolder: { kind: "checkout", path: apiApp },
+      })
+      yield* sendFirst(client, second.id)
+      const third = yield* client["session.create"]({ projectPath: workspace })
+      const refused = yield* sendFirst(client, third.id, {
+        kind: "checkout",
+        path: root,
+      }).pipe(Effect.flip)
+      return { sent, picked, refused }
+    }),
+  )
+
+  expect(sent).toMatchObject({ workingFolder: webApp, inWorktree: false, branch: "main" })
+  expect(picked).toMatchObject({ workingFolder: apiApp, inWorktree: false, branch: "main" })
+  expect(starts.map((s) => [s.cwd, s.extraDirectories])).toEqual([
+    [webApp, [apiApp, notes]],
+    [apiApp, [webApp, notes]],
+  ])
+  expect(refused).toMatchObject({ _tag: "WorktreeNotCreated", reason: "not_a_project_folder" })
+  expect(existsSync(join(worktrees, "ivin"))).toBe(false)
+})
+
+test("the workspace's working folders are listed with their branch, and picking one reuses it", async () => {
+  const starts: StartInput[] = []
+  const { first, listed, reused, picked } = await withServer(starts, (client) =>
+    Effect.gen(function* () {
+      yield* openTrusted(client)
+      const created = yield* client["session.create"]({ projectPath: workspace })
+      const first = yield* sendFirst(client, created.id, { kind: "new_worktree" })
+      git(join(first.workingFolder, "app-2"), "switch", "--quiet", "-c", "feat/web")
+      const listed = yield* client["worktree.list"]({ projectPath: workspace })
+      git(join(first.workingFolder, "app-2"), "switch", "--quiet", first.branch!)
+      const second = yield* client["session.create"]({ projectPath: workspace })
+      const reused = yield* sendFirst(client, second.id, {
+        kind: "existing_worktree",
+        path: first.workingFolder,
+      })
+      const third = yield* client["session.create"]({ projectPath: workspace })
+      const picked = yield* client["session.pickWorkingFolder"]({
+        sessionId: third.id,
+        workingFolder: { kind: "existing_worktree", path: first.workingFolder },
+      })
+      return { first, listed, reused, picked }
+    }),
+  )
+
+  expect(listed).toEqual([
+    {
+      path: first.workingFolder,
+      branch: null,
+      repositories: [
+        { name: "app", branch: first.branch },
+        { name: "app-2", branch: "feat/web" },
+      ],
+    },
+  ])
+  for (const session of [reused, picked]) {
+    expect(session).toMatchObject({
+      workingFolder: first.workingFolder,
+      inWorktree: true,
+      branch: first.branch,
+    })
+  }
+  expect(readdirSync(join(worktrees, "ivin"))).toEqual([folderName(first.workingFolder)])
+  expect(git(apiApp, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2)
+  expect(starts.map((s) => [s.cwd, s.extraDirectories])).toEqual([
+    [first.workingFolder, [notes]],
+    [first.workingFolder, [notes]],
+  ])
+})
+
+test("closing the tabs removes a working folder whose worktrees are all merged, and keeps one with an unmerged worktree", async () => {
+  withOrigins()
+  const { merged, unmerged } = await withServer([], (client) =>
+    Effect.gen(function* () {
+      yield* openTrusted(client)
+      const start = Effect.gen(function* () {
+        const created = yield* client["session.create"]({ projectPath: workspace })
+        yield* client["tab.open"]({ sessionId: created.id })
+        return yield* sendFirst(client, created.id, { kind: "new_worktree" })
+      })
+      const merged = yield* start
+      const unmerged = yield* start
+      commit(join(merged.workingFolder, "app"), "api.txt")
+      git(join(merged.workingFolder, "app"), "push", "--quiet", "origin", "HEAD:main")
+      commit(join(unmerged.workingFolder, "app"), "api.txt")
+      git(join(unmerged.workingFolder, "app"), "push", "--quiet", "origin", "HEAD:main")
+      commit(join(unmerged.workingFolder, "app-2"), "web.txt")
+      for (const session of [merged, unmerged])
+        yield* client["tab.close"]({ sessionId: session.id })
+      yield* (yield* WorktreeCleanup).settled
+      return { merged, unmerged }
+    }),
+  )
+
+  expect(existsSync(merged.workingFolder)).toBe(false)
+  expect(existsSync(unmerged.workingFolder)).toBe(true)
+  expect(git(apiApp, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2)
+  expect(git(webApp, "worktree", "list", "--porcelain").match(/^worktree /gm)).toHaveLength(2)
+  // Four fetches and some forty git commands, slow while the whole suite runs.
+}, 20_000)
+
+const folderName = (path: string) => path.slice(path.lastIndexOf("/") + 1)

@@ -86,13 +86,28 @@ export const moveToExistingWorktree = (session: Session, path: string, cause: Ca
       return yield* new WorktreeNotCreated({ sessionId: session.id, reason: "not_a_worktree" })
     }
     // ivin created no folder here, so there is no untracked folder to warn about.
-    yield* moveTo(session, { ...worktree, inWorktree: true }, cause, true)
+    yield* moveTo(
+      session,
+      { path: worktree.path, branch: worktree.branch, inWorktree: true },
+      cause,
+      true,
+    )
   })
 
 export const moveToWorkspaceStart = (session: Session) =>
   Effect.gen(function* () {
     const git = yield* Git
     const folders = (yield* (yield* ProjectStore).folders(session.projectPath)) ?? []
+    // A project folder picked before the first message is kept.
+    if (folders.includes(session.workingFolder)) {
+      const branch = yield* git.currentBranch(session.workingFolder)
+      return yield* (yield* SessionStore).setWorkingFolder(
+        session.id,
+        session.workingFolder,
+        branch,
+        false,
+      )
+    }
     for (const folder of folders) {
       if ((yield* git.gitDir(folder)) !== null) return yield* moveToNewWorktree(session, "creation")
     }
@@ -102,12 +117,20 @@ export const moveToWorkspaceStart = (session: Session) =>
     }
   })
 
-export const moveToCheckout = (session: Session, cause: Cause) =>
+// On a workspace, `folder` is one of its project folders; the first one without it.
+export const moveToCheckout = (session: Session, cause: Cause, folder?: string) =>
   Effect.gen(function* () {
-    const start = isWorkspaceFile(session.projectPath)
-      ? checkoutStart((yield* (yield* ProjectStore).folders(session.projectPath)) ?? [])
-      : null
-    const path = start?.cwd ?? session.projectPath
+    let path = session.projectPath
+    if (isWorkspaceFile(session.projectPath)) {
+      const folders = (yield* (yield* ProjectStore).folders(session.projectPath)) ?? []
+      if (folder !== undefined && !folders.includes(folder)) {
+        return yield* new WorktreeNotCreated({
+          sessionId: session.id,
+          reason: "not_a_project_folder",
+        })
+      }
+      path = folder ?? checkoutStart(folders)?.cwd ?? path
+    }
     const branch = yield* (yield* Git).currentBranch(path)
     yield* moveTo(session, { path, inWorktree: false, branch }, cause, true)
   })

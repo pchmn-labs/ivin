@@ -39,6 +39,10 @@ const WORKTREE_FAILURES: Record<WorktreeFailure, ActionFailure> = {
     text: "This worktree no longer exists. Pick another working folder to send the message.",
     retryable: false,
   },
+  not_a_project_folder: {
+    text: "This folder is no longer in the workspace. Pick another working folder to send the message.",
+    retryable: false,
+  },
 }
 
 export const sendMessageFailure = (error: unknown): ActionFailure => {

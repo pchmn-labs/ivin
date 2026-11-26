@@ -12,6 +12,7 @@ import { awaitsWorkspaceFolder } from "../rules/workspace-start.ts"
 import { checkWorkingFolder } from "./check-working-folder.ts"
 import { FirstMessageReading } from "./first-message-reading.ts"
 import {
+  moveToCheckout,
   moveToExistingWorktree,
   moveToNewWorktree,
   moveToWorkspaceStart,
@@ -42,6 +43,8 @@ export const sendMessage = (
         yield* moveToNewWorktree(found, "creation")
       } else if (workingFolder?.kind === "existing_worktree") {
         yield* moveToExistingWorktree(found, workingFolder.path, "choice")
+      } else if (workingFolder?.kind === "checkout" && workingFolder.path !== undefined) {
+        yield* moveToCheckout(found, "choice", workingFolder.path)
       } else if (awaitsWorkspaceFolder(found)) {
         yield* moveToWorkspaceStart(found)
       } else {
