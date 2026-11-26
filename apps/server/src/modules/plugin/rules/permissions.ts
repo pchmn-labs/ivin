@@ -1,8 +1,6 @@
-export interface Permissions {
-  readonly harness: readonly string[]
-  readonly exec: readonly string[]
-  readonly fetch: readonly string[]
-}
+import type { PluginPermissions } from "@ivin/contracts/plugin"
+
+export type Permissions = PluginPermissions
 
 export type PermissionsReading =
   | { readonly kind: "valid"; readonly permissions: Permissions }
@@ -118,9 +116,3 @@ export const permits = (permissions: Permissions, call: PluginCall): Verdict =>
     permissions,
     call,
   )
-
-// Off until the permissions are enforced: every `ctx` call goes through here, so turning them on is one change.
-const ENFORCED = false
-
-export const verdictFor = (permissions: Permissions, call: PluginCall): Verdict =>
-  ENFORCED ? permits(permissions, call) : { allowed: true }

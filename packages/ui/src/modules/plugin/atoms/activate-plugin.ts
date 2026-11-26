@@ -1,5 +1,6 @@
 import type { Atom, AtomRegistry } from "effect/reactivity"
 import type { ViewDeclaration } from "@ivin/contracts/plugin"
+import { decodeFetchResponse, encodeFetchRequest } from "@ivin/state/plugin-fetch-wire"
 import type { UiContext, UiPlugin } from "@ivin/plugin-api/ui"
 import { declaredViewsAtom, registeredViewsAtom } from "../../view/atoms/registered-views.ts"
 import { runOpenView } from "../../view/atoms/open-view.ts"
@@ -14,6 +15,7 @@ import {
   editorContributionsAtom,
   fileIconContributionsAtom,
 } from "./contributions.ts"
+import { pluginFetch } from "./fetch.ts"
 import { reportPluginFailureAtom } from "./report-plugin-failure.ts"
 
 export interface UiPluginEntry {
@@ -92,6 +94,10 @@ export const activatePlugin = (
       },
     },
     notify,
+    fetch: async (input, init) =>
+      decodeFetchResponse(
+        await pluginFetch(registry, pluginId, await encodeFetchRequest(input, init)),
+      ),
     keybindings: {
       add: ({ key, command, when }) =>
         registry.set(defaultKeybindingsAtom, [

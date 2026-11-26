@@ -77,6 +77,8 @@ export interface ServerContext {
     args: ReadonlyArray<string>,
     options?: ExecOptions,
   ) => Promise<ExecResult>
+  // Made by the server, to a host the manifest's `permissions.fetch` declares, also after each redirect.
+  readonly fetch: (input: string | URL | Request, init?: RequestInit) => Promise<Response>
   // One run of `fn` per key across plugins, paused while the window is hidden; `fn` may return `{ every }` to change its interval.
   readonly poll: (
     key: string,

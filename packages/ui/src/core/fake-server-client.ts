@@ -1,5 +1,6 @@
 import { DateTime, Effect, Layer, PubSub, type Schema, Stream } from "effect"
 import { RpcClient, RpcServer } from "effect/rpc"
+import { PluginFetchFailed } from "@ivin/contracts/plugin-fetch"
 import { Rpcs } from "@ivin/contracts/rpcs"
 import { layerClientProtocolMessagePort } from "@ivin/state/rpc-client-protocol"
 import { layerProtocolMessagePort } from "@ivin/state/rpc-server-protocol"
@@ -546,6 +547,7 @@ export const makeFakeServer = (
     "plugin.status": () => Effect.succeed([]),
     "plugin.run": ({ command }: { command: string }) =>
       Effect.fail(new CommandNotFound({ command })),
+    "plugin.fetch": () => Effect.fail(new PluginFetchFailed({ reason: "No network in tests." })),
     "plugin.setWindowVisible": () => Effect.void,
     "plugin.reload": ({ id }) =>
       userPlugins.some((plugin) => plugin.id === id)

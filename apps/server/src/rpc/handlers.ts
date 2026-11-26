@@ -52,6 +52,8 @@ import { markProjectChangesSeen } from "../modules/plugin/usecases/mark-project-
 import { watchProjectPlugins } from "../modules/plugin/usecases/watch-project-plugins.ts"
 import { layerProjectPluginLock } from "../modules/plugin/usecases/project-plugin-lock.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
+import { fetchForUiHalf } from "../modules/plugin/usecases/fetch.ts"
+import { layerUiHalfPermissions } from "../modules/plugin/usecases/ui-half-permissions.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
 import { layerFsWorkingFolders } from "../modules/worktree/adapters/fs-working-folders.ts"
@@ -138,6 +140,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     layerPluginReloads,
     layerProjectPluginUpdates,
     layerProjectPluginLock,
+    layerUiHalfPermissions,
   ).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
     Layer.provideMerge(Layer.mergeAll(layerSessionTabs, layerSessionsWithTab)),
@@ -219,6 +222,7 @@ export const handlers = Rpcs.toLayer(
       "plugin.lock": ({ id }) => lockPlugin(id),
       "plugin.run": ({ command, args }) =>
         Effect.flatMap(PluginBridge, (bridge) => bridge.runCommand(command, args)),
+      "plugin.fetch": ({ id, request }) => fetchForUiHalf(id, request),
       "plugin.setWindowVisible": ({ visible }) =>
         Effect.flatMap(PluginBridge, (bridge) =>
           SubscriptionRef.set(bridge.windowVisible, visible),

@@ -12,6 +12,7 @@ import { projectPluginsAtom } from "../atoms/project-plugins.ts"
 import { useSetFullTrust, useTrustProjectPlugin } from "../hooks/use-trust-project-plugin.ts"
 import { FULL_TRUST_WARNING } from "../rules/full-trust-copy.ts"
 import { unseenChanges, waitingPlugins } from "../rules/project-plugin-queue.ts"
+import { permissionWords } from "../rules/permission-words.ts"
 import { PluginReview } from "./plugin-review.tsx"
 import "./project-plugin-sheets.css"
 
@@ -73,7 +74,7 @@ function TrustSheet({
             ? "This project ships a plugin. It runs code in ivin, outside the agent's approvals."
             : "It runs code in ivin, outside the agent's approvals. Until you trust the new version, ivin keeps running the one you trusted before."}
         </Text>
-        {plugin.permissionsChanged && (
+        {plugin.permissionsChanged && !isNew && (
           <Text size="sm" tone="muted">
             Its declared permissions changed, so full trust does not cover it: only you can trust
             this version.
@@ -84,7 +85,7 @@ function TrustSheet({
             heading={isNew ? "Files it would run" : "What changed since you trusted it"}
             files={plugin.files}
             diff={plugin.diff}
-            permissions={plugin.permissions}
+            permissions={permissionWords(plugin.permissions, plugin.hasServer)}
           />
         )}
         {own.failure !== null && <ErrorMessage message={own.failure} onRetry={own.trust} />}

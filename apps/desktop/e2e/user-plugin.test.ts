@@ -1,6 +1,8 @@
 import { expect, test } from "@playwright/test"
 import { execFile } from "node:child_process"
 import { mkdirSync, writeFileSync } from "node:fs"
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { launchPackagedApp, makeTempDir } from "./launch-app.ts"
@@ -40,6 +42,48 @@ export const activate = defineUi((ctx) => ctx.slots.add("sidebar.bottom", Hello)
     await expect(window.getByText("hello from a plugin 42")).toBeVisible()
   } finally {
     await app.close()
+  }
+})
+
+test("a UI half's own fetch to another origin is refused by the renderer, and its ctx.fetch to a declared host is made", async () => {
+  const requests: string[] = []
+  const server = createServer((request, response) => {
+    requests.push(request.url ?? "")
+    response.end("pong")
+  })
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
+  const userDataDir = makeTempDir("user-data")
+  writePlugin(userDataDir, "caller", {
+    "package.json": JSON.stringify({
+      ivin: { id: "caller", ui: "src/ui.tsx", permissions: { fetch: ["127.0.0.1"] } },
+    }),
+    "src/ui.tsx": `import { useEffect, useState } from "react"
+import { defineUi } from "@ivin/plugin-api/ui"
+
+export const activate = defineUi((ctx) => {
+  function Caller() {
+    const [own, setOwn] = useState("waiting")
+    const [viaCtx, setViaCtx] = useState("waiting")
+    useEffect(() => {
+      fetch("${origin}/own").then(() => setOwn("reached"), () => setOwn("refused"))
+      ctx.fetch("${origin}/ctx").then((r) => r.text()).then(setViaCtx, () => setViaCtx("failed"))
+    }, [])
+    return <span>own fetch {own}, ctx.fetch {viaCtx}</span>
+  }
+  ctx.slots.add("sidebar.bottom", Caller)
+})
+`,
+  })
+
+  const app = await launchPackagedApp(userDataDir)
+  try {
+    const window = await startSession(app)
+    await expect(window.getByText("own fetch refused, ctx.fetch pong")).toBeVisible()
+    expect(requests).toEqual(["/ctx"])
+  } finally {
+    await app.close()
+    server.close()
   }
 })
 

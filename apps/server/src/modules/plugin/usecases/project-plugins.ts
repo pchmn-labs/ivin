@@ -57,7 +57,7 @@ const resolveProject = (project: string, seenOnAdopt: boolean) =>
         unreadable.push({ ...folder, name: key, label: folder.name })
         continue
       }
-      const { id, name, permissions } = reading.manifest
+      const { id, name, server, permissions } = reading.manifest
       const tree = yield* plugins.readTree(folder.path)
       if (tree === null) continue
       const declared = permissionList(permissions)
@@ -113,7 +113,8 @@ const resolveProject = (project: string, seenOnAdopt: boolean) =>
           files: settled ? [] : changedFiles(diffBase, tree.files),
           diff: settled ? "" : unifiedDiff(diffBase, tree.files),
           permissionsChanged: decision.permissionsChanged,
-          permissions: declared,
+          permissions,
+          hasServer: server !== null,
         },
       })
     }

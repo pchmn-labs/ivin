@@ -6,6 +6,8 @@ import type {
   SpawnPatch,
   TranscriptEvent,
 } from "@ivin/plugin-api/server"
+import type { PluginFetchResponse } from "@ivin/contracts/plugin-fetch"
+import { decodeFetchResponse, encodeFetchRequest } from "@ivin/state/plugin-fetch-wire"
 import { execFile, type ChildProcess } from "node:child_process"
 
 export type CallServer = (method: string, args: Json) => Promise<Json>
@@ -49,10 +51,7 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
   const subscribeOnce = (handlers: unknown[], method: string) => {
     if (handlers.length === 0) void announce(method)
   }
-  const permit = async (call: Json) => {
-    const missing = await callServer("permission.check", { call })
-    if (missing !== null) throw new Error(`Its manifest does not declare ${missing as string}.`)
-  }
+  const permit = async (call: Json) => void (await callServer("permission.check", { call }))
 
   const ctx: ServerContext = {
     signal: controller.signal,
@@ -119,6 +118,11 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
         children.add(child)
       })
     },
+    fetch: async (input, init) => {
+      const request = (await encodeFetchRequest(input, init)) as unknown as Json
+      const answer = await callServer("fetch", { request })
+      return decodeFetchResponse(answer as unknown as PluginFetchResponse)
+    },
     poll: (key, fn, { every }) => {
       polls.set(key, fn)
       void announce("poll.register", { key, every })
@@ -133,7 +137,8 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
           const subscribing = permit({ member: "harness.beforeSpawn" }).then(() =>
             callServer("beforeSpawn.subscribe", null),
           )
-          registering.push(subscribing)
+          // A refusal is in the plugin's log; the rest of `activate` still counts.
+          registering.push(subscribing.catch(() => undefined))
         }
         spawnHandlers.push(handler)
       },
