@@ -58,12 +58,8 @@ export const PrAnnotationData = Schema.Struct({
   title: Schema.optionalKey(Schema.String),
   state: Schema.optionalKey(Schema.Literals(["open", "draft", "merged", "closed"])),
   checks: Schema.optionalKey(Schema.Literals(["pending", "passing", "failing"])),
-  checkCounts: Schema.optionalKey(
-    Schema.Struct({ passed: count, failed: count, pending: count }),
-  ),
-  review: Schema.optionalKey(
-    Schema.Literals(["approved", "changes_requested", "review_required"]),
-  ),
+  checkCounts: Schema.optionalKey(Schema.Struct({ passed: count, failed: count, pending: count })),
+  review: Schema.optionalKey(Schema.Literals(["approved", "changes_requested", "review_required"])),
   // `ready`: the forge would merge it now; `blocked`: something other than a conflict stops it.
   merge: Schema.optionalKey(Schema.Literals(["ready", "blocked", "conflict"])),
   // When the pull request last changed on the forge, as an ISO date.
