@@ -79,6 +79,21 @@
   padding: var(--iv-space-2) 0;
 }
 
+.iv-list-row__text-line {
+  display: flex;
+  align-items: center;
+  gap: var(--iv-space-3);
+  min-width: 0;
+}
+
+.iv-list-row__text-line > .iv-list-row__subtitle {
+  flex: 1;
+}
+
+.iv-list-row__text-line:has(> .iv-list-row__subtitle) {
+  min-height: var(--iv-status-tile-size);
+}
+
 .iv-list-row__subtitle {
   display: flex;
   min-width: 0;
@@ -91,6 +106,11 @@
   color: var(--iv-text-faint);
   font-size: var(--iv-text-sm);
   font-variant-numeric: tabular-nums;
+}
+
+/* A slot whose contributions render nothing leaves no gap. */
+.iv-list-row__meta:empty {
+  display: none;
 }
 
 .iv-list-row__actions {

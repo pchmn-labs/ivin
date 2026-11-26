@@ -85,12 +85,8 @@ function SessionRow({ session, selected }: { session: Session; selected: boolean
           {...(location.kind !== "folder" && {
             subtitle: <SessionLocation location={location} compact />,
           })}
-          meta={
-            <Stack direction="row" gap={2} align="center">
-              <Slot slot="session.badge" props={{ session }} />
-              <RelativeTime at={session.lastActivityAt} />
-            </Stack>
-          }
+          meta={<RelativeTime at={session.lastActivityAt} />}
+          subtitleMeta={<Slot slot="session.badge" props={{ session }} />}
           actions={
             <Menu
               align="end"
