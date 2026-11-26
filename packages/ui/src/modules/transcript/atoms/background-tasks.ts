@@ -1,12 +1,7 @@
 import { Effect } from "effect"
 import { Atom, AsyncResult } from "effect/reactivity"
 import type { TranscriptItem } from "@ivin/contracts/transcript"
-import {
-  handbackAsMessage,
-  knownTasks,
-  promptOfTask,
-  type TaskItem,
-} from "../rules/background-tasks.ts"
+import { knownTasks, type TaskItem } from "../rules/background-tasks.ts"
 import { strongFamily } from "@ivin/state/strong-family"
 import { ServerClient, serverRuntime } from "../../../core/server-client.ts"
 import { openSessionsAtom } from "../../session/atoms/open-sessions.ts"
@@ -56,12 +51,6 @@ export const taskShownOf = strongFamily((sessionId: string) =>
   ),
 )
 
-export const taskPromptOf = strongFamily((sessionId: string) =>
-  strongFamily((toolCallId: string) =>
-    Atom.readable((get) => promptOfTask(get(transcriptOf(sessionId).list.items), toolCallId)),
-  ),
-)
-
 const isStepOf = (toolCallId: string) => (item: TranscriptItem) =>
   "parentToolCallId" in item && item.parentToolCallId === toolCallId
 
@@ -80,7 +69,7 @@ export const taskStepsOf = strongFamily((sessionId: string) =>
       const byId = new Map<string, TranscriptItem>(fetched.map((item) => [item.id, item]))
       for (const item of get(transcriptOf(sessionId).list.items).filter(isStepOf(toolCallId)))
         byId.set(item.id, item)
-      return [...byId.values()].map(handbackAsMessage).toSorted((a, b) => a.position - b.position)
+      return [...byId.values()].toSorted((a, b) => a.position - b.position)
     })
   }),
 )

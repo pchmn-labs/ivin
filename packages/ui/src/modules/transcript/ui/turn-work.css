@@ -349,15 +349,12 @@
   max-width: 85%;
   margin-bottom: var(--iv-space-3);
   padding: 10px var(--iv-space-3);
-  border: 0;
   border-radius: var(--iv-radius-card) var(--iv-radius-card) var(--iv-radius-card)
     var(--iv-radius-sm);
   background: var(--iv-bg-subtle);
   color: var(--iv-text-muted);
-  font: inherit;
   font-size: var(--iv-text-sm);
   line-height: var(--iv-text-sm-lh);
-  text-align: left;
   overflow-wrap: anywhere;
 }
 

@@ -1,5 +1,5 @@
 import { useAtom, useAtomValue } from "@effect/atom-react"
-import { useEffect, useState, type ReactNode } from "react"
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react"
 import { Slot } from "../../../app/slot-renderer.tsx"
 import { Icon, type IconName } from "../../../core/components/icon/icon.tsx"
 import { ItemSlot } from "./transcript-row.tsx"
@@ -256,19 +256,21 @@ export function TurnWork({
   )
 }
 
-const PROMPT_LINES_FOLDED = 4
-
 export function PromptBubble({ prompt }: { prompt: string }) {
   const [open, setOpen] = useState(false)
-  const long = prompt.split("\n").length > PROMPT_LINES_FOLDED || prompt.length > 400
+  const [overflows, setOverflows] = useState(false)
+  const text = useRef<HTMLSpanElement>(null)
+  // Measured only while folded: an open bubble has no clamp to overflow.
+  useLayoutEffect(() => {
+    const el = text.current
+    if (!open && el) setOverflows(el.scrollHeight > el.clientHeight)
+  }, [prompt, open])
   return (
-    <div
-      className="iv-turn__prompt"
-      data-testid="task-prompt"
-      data-folded={long && !open ? true : undefined}
-    >
-      <span className="iv-turn__prompt-text">{prompt}</span>
-      {long && (
+    <div className="iv-turn__prompt" data-testid="task-prompt" data-folded={!open || undefined}>
+      <span ref={text} className="iv-turn__prompt-text">
+        {prompt}
+      </span>
+      {(overflows || open) && (
         <button
           type="button"
           className="iv-turn__prompt-toggle"

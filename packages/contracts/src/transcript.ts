@@ -163,6 +163,8 @@ const TaskStartedBody = Schema.Struct({
   toolCallId: Schema.String,
   kind: TaskKind,
   description: Schema.String,
+  // What a subagent was asked to do.
+  prompt: Schema.optional(Schema.String),
 })
 // `stopped`: the user or the agent stopped it, or the run ended first.
 export const TaskOutcome = Schema.Literals(["completed", "failed", "stopped"])
@@ -399,6 +401,7 @@ export const TaskItem = Schema.Struct({
   toolCallId: Schema.String,
   kind: TaskKind,
   description: Schema.String,
+  prompt: Schema.optional(Schema.String),
   status: Schema.Literals(["running", "completed", "failed", "stopped"]),
   summary: Schema.NullOr(Schema.String),
   output: Schema.NullOr(Schema.String),

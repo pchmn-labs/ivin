@@ -200,6 +200,7 @@ export const applyEvent = (
         toolCallId: event.toolCallId,
         kind: event.kind,
         description: event.description,
+        ...(event.prompt !== undefined ? { prompt: event.prompt } : {}),
         status: "running",
         summary: null,
         output: null,

@@ -16,6 +16,7 @@ const TaskStartedLine = Schema.Struct({
   tool_use_id: Schema.String,
   description: Schema.String,
   task_type: Schema.String,
+  prompt: Schema.optional(Schema.String),
   is_backgrounded: Schema.optional(Schema.Boolean),
 })
 
@@ -94,6 +95,7 @@ const ControlRequestLine = Schema.Struct({
 
 const CommandLifecycleLine = Schema.Struct({ command_uuid: Schema.String, state: Schema.String })
 
+const isHandback = Schema.is(Schema.Struct({ message: Schema.NonEmptyString }))
 const isBlock = Schema.is(AssistantBlock)
 const isToolResultBlock = Schema.is(ToolResultBlock)
 const isTextBlock = Schema.is(TextBlock)
@@ -133,6 +135,9 @@ const fromAssistant = (line: unknown, parent: string | null): HarnessOutput[] =>
         ? []
         : [{ type: "thinking", text: block.thinking, ...under, raw: block }]
     }
+    // A subagent reports back through this call; its message reads as the agent's words.
+    if (parent && block.name === "SubagentHandback" && isHandback(block.input))
+      return [{ type: "assistant_text", text: block.input.message, ...under, raw: block }]
     return [
       {
         type: "tool_call",
@@ -226,6 +231,7 @@ const fromTaskStarted = (line: unknown): HarnessOutput[] => {
       toolCallId: started.tool_use_id,
       kind: started.task_type === "local_bash" ? "command" : "agent",
       description: started.description,
+      ...(started.prompt ? { prompt: started.prompt } : {}),
       raw: line,
     },
   ]

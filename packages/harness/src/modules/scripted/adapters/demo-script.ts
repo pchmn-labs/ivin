@@ -290,7 +290,6 @@ const demoBackgroundTurn: readonly HarnessOutput[] = [
 const reviewPrompt =
   "Review the diff of the branch for conformance to the repo's documented coding standards.\n\nRead AGENTS.md and docs/conventions/ first. Report each hard violation with its file and line, and leave style nits out.\n\nDo not edit anything."
 
-// Starts a subagent in the background, which reads two files and hands back its report.
 const demoSubagentTurn: readonly HarnessOutput[] = [
   { type: "status", status: "running", raw: null },
   { type: "assistant_text", text: "I'll have a subagent review the branch.", raw: null },
@@ -307,6 +306,7 @@ const demoSubagentTurn: readonly HarnessOutput[] = [
     toolCallId: "demo-review",
     kind: "agent",
     description: "Standards review of branch",
+    prompt: reviewPrompt,
     raw: null,
   },
   {
@@ -344,21 +344,8 @@ const demoSubagentTurn: readonly HarnessOutput[] = [
       ] as const,
   ),
   {
-    type: "tool_call",
-    toolCallId: "demo-review-handback",
-    name: "SubagentHandback",
-    input: {
-      message:
-        "I reviewed the branch without editing anything.\n\n**Hard violations**\n1. `DESIGN.md`: the component table has no row for Chips.\n2. `plugins/changes/src/rules/repository-filter.ts`: a comment restates the code below it.",
-    },
-    parentToolCallId: "demo-review",
-    raw: null,
-  },
-  {
-    type: "tool_result",
-    toolCallId: "demo-review-handback",
-    output: "Report delivered to your caller.",
-    isError: false,
+    type: "assistant_text",
+    text: "I reviewed the branch without editing anything.\n\n**Hard violations**\n1. `DESIGN.md`: the component table has no row for Chips.\n2. `plugins/changes/src/rules/repository-filter.ts`: a comment restates the code below it.",
     parentToolCallId: "demo-review",
     raw: null,
   },
