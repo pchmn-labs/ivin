@@ -52,6 +52,7 @@ const renderWith = async (
   builtins: ReadonlyArray<UiPluginEntry> | undefined,
   importBundle: ImportBundle,
   setUp: (server: ReturnType<typeof makeTestRegistry>["server"]) => void,
+  settleAfterMs?: number,
 ) => {
   const { server, registry } = makeTestRegistry()
   setUp(server)
@@ -60,6 +61,7 @@ const renderWith = async (
       <PluginsProvider
         {...(builtins !== undefined && { plugins: builtins })}
         importBundle={importBundle}
+        {...(settleAfterMs !== undefined && { settleAfterMs })}
       >
         <Slot slot="sidebar.section" props={{}} />
       </PluginsProvider>
@@ -318,6 +320,7 @@ test("the desktop app is told when a user plugin starts and ends its activation,
         bundle: "a.js",
         views: [],
       }),
+    100,
   )
 
   await expect.poll(() => told).toEqual(["mine activating", "mine activated", "settled"])

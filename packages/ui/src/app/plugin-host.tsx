@@ -442,10 +442,14 @@ const activateReported = (reported: boolean, ...args: Parameters<typeof activate
   }
 }
 
+// A freeze keeps this timer from firing, so a launch whose plugins hang never counts as settled.
+const SETTLE_AFTER_MS = 3000
+
 export function PluginsProvider({
   plugins: given,
   importBundle = importPluginBundle,
   fallback = null,
+  settleAfterMs = SETTLE_AFTER_MS,
   children,
 }: {
   // The built-in plugins, when the window holds them itself rather than importing those the server lists.
@@ -453,6 +457,7 @@ export function PluginsProvider({
   importBundle?: ImportBundle
   // Shown until the built-in plugins are active, as when the server cannot start.
   fallback?: ReactNode
+  settleAfterMs?: number
   children: ReactNode
 }) {
   const registry = useContext(RegistryContext)
@@ -502,13 +507,12 @@ export function PluginsProvider({
     }
     if (builtins.ready) setActive(true)
   }, [registry, all, plugins, userPlugins.plugins, dropFailedPlugin, builtins.ready])
-  const settled = useRef(false)
+  // The server streams user plugins with no end marker, so the window is settled once the plugins have stayed quiet for a while.
   useEffect(() => {
-    if (!active || settled.current) return
-    settled.current = true
-    // After the paint that shows the window.
-    requestAnimationFrame(() => reportSettled())
-  }, [active])
+    if (!active) return
+    const timer = setTimeout(reportSettled, settleAfterMs)
+    return () => clearTimeout(timer)
+  }, [active, all, settleAfterMs])
   useEffect(
     () => () => {
       deactivations.current.forEach((deactivate) => deactivate())
