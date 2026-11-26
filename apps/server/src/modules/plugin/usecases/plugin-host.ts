@@ -6,8 +6,9 @@ import type {
   PluginActivateFailed,
   PluginHandlerFailed,
 } from "@ivin/contracts/plugin"
-import type { Effect, Schema, Scope, Stream } from "effect"
-import { Context, Data } from "effect"
+import type { Schema, Scope, Stream } from "effect"
+import { Context, Data, Effect, Layer } from "effect"
+import { LoginShellPath } from "../../../shared/usecases/login-shell-path.ts"
 
 export class PluginHostNotStarted extends Data.TaggedError("PluginHostNotStarted")<{
   readonly reason: string
@@ -39,3 +40,15 @@ export interface PluginHostLauncher {
 export const PluginHost = Context.Reference<PluginHostLauncher | null>("ivin/server/PluginHost", {
   defaultValue: () => null,
 })
+
+// The host process copies the server's PATH when it starts, so it waits for the login shell's.
+export const layerPluginHostAfterLoginShellPath = <E, R>(
+  host: Layer.Layer<never, E, R>,
+): Layer.Layer<never, E, R> =>
+  Layer.effect(PluginHost)(
+    Effect.gen(function* () {
+      const inner = yield* PluginHost
+      const { ready } = yield* LoginShellPath
+      return inner === null ? null : { launch: Effect.andThen(ready, inner.launch) }
+    }),
+  ).pipe(Layer.provide(host))

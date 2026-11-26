@@ -24,6 +24,7 @@ import { layerErrorLogFile } from "./modules/log/adapters/error-log-file.ts"
 import { layerFsKeybindingsFile } from "./modules/keybinding/adapters/fs-keybindings-file.ts"
 import { layerChildPluginHost } from "./modules/plugin/adapters/child-plugin-host.ts"
 import { watchPluginFolders } from "./modules/plugin/usecases/watch-plugin-folders.ts"
+import { layerPluginHostAfterLoginShellPath } from "./modules/plugin/usecases/plugin-host.ts"
 import { runPluginHost } from "./modules/plugin/usecases/run-plugin-host.ts"
 import { layerFsBuiltinPlugins } from "./modules/plugin/adapters/fs-builtin-plugins.ts"
 import { layerFsUserPlugins } from "./modules/plugin/adapters/fs-user-plugins.ts"
@@ -107,6 +108,8 @@ const pnpmFolder = pnpmPath as string
 const loginShell = process.env["SHELL"] || "/bin/zsh"
 const loginShellFolders = Effect.runSync(Deferred.make<ReadonlyArray<string> | null>())
 const loginShellPath = { ready: Deferred.await(loginShellFolders) }
+// Provided to each layer that waits for it: a sibling in `Layer.mergeAll` would only see the default.
+const layerLoginShellPath = Layer.succeed(LoginShellPath)(loginShellPath)
 const layerShellCommand =
   typeof cliCommandPath === "string"
     ? layerFsShellCommand({
@@ -119,10 +122,12 @@ const layerShellCommand =
 // Without them the server runs no plugin's server half.
 const layerPluginHost =
   typeof pluginHostPath === "string"
-    ? layerChildPluginHost(
-        typeof pluginHostRuntime === "string" ? pluginHostRuntime : process.execPath,
-        pluginHostPath,
-      )
+    ? layerPluginHostAfterLoginShellPath(
+        layerChildPluginHost(
+          typeof pluginHostRuntime === "string" ? pluginHostRuntime : process.execPath,
+          pluginHostPath,
+        ),
+      ).pipe(Layer.provide(layerLoginShellPath))
     : Layer.empty
 const socketPath = process.env["IVIN_SOCKET"]
 if (socketPath === undefined) fail("Missing IVIN_SOCKET, the path of the CLI socket")
@@ -184,8 +189,8 @@ const startup = Effect.gen(function* () {
           layerDatabase(path),
           Layer.succeed(ImageFolder)({ path: imageFolder }),
           Layer.succeed(WorkingFolderRoot)({ path: join(ivinHome, "worktrees") }),
-          layerHarnessAfterLoginShellPath(layerHarness),
-          Layer.succeed(LoginShellPath)(loginShellPath),
+          layerHarnessAfterLoginShellPath(layerHarness).pipe(Layer.provide(layerLoginShellPath)),
+          layerLoginShellPath,
           layerLogger,
           layerFsKeybindingsFile(ivinHome),
           layerFsSettingsFile(ivinHome),

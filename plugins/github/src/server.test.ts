@@ -244,7 +244,7 @@ test.each([
   [
     "gh is missing",
     new Error("spawn gh ENOENT"),
-    "gh is not installed, so the pull request's status cannot be read.",
+    "gh is not installed, or not on the PATH ivin reads, so the pull request's status cannot be read.",
   ],
   [
     "gh is not logged in",
@@ -478,6 +478,7 @@ test("the accounts gh knows are listed, and a gh that cannot run is an error", a
   expect(await plugin.runCommand("github.accounts")).toEqual({ accounts: [] })
   plugin.reply("gh auth status", new Error("spawn gh ENOENT"))
   expect(await plugin.runCommand("github.accounts")).toEqual({
-    error: "gh is not installed, so the pull request's status cannot be read.",
+    error:
+      "gh is not installed, or not on the PATH ivin reads, so the pull request's status cannot be read.",
   })
 })
