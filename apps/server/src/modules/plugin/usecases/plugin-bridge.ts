@@ -5,6 +5,7 @@ import { Context, Effect, Layer, Queue, type Schema, SubscriptionRef } from "eff
 export type PluginEvent =
   | { readonly kind: "transcript"; readonly session: Session; readonly event: unknown }
   | { readonly kind: "sessionCreated"; readonly session: Session }
+  | { readonly kind: "sessionChanged"; readonly session: Session }
 
 export type WatchedKind = PluginEvent["kind"]
 

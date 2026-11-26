@@ -1,4 +1,6 @@
-import { Effect, Fiber, type Scope, Stream, SubscriptionRef } from "effect"
+import { Clock, Effect, Fiber, Option, type Scope, Stream, SubscriptionRef } from "effect"
+
+const STALE_AFTER = 15_000
 
 interface Registrant {
   readonly plugin: string
@@ -13,6 +15,7 @@ interface Poll {
 export interface PollScheduler {
   // The first plugin to register a key runs it; the others take over when it stops.
   readonly register: (plugin: string, key: string, every: number) => Effect.Effect<void>
+  readonly stop: (plugin: string, key: string) => Effect.Effect<void>
   readonly stopPlugin: (plugin: string) => Effect.Effect<void>
 }
 
@@ -35,13 +38,30 @@ export const makePollScheduler = (
           yield* untilVisible
           const owner = registrants[0]
           if (owner === undefined) return
+          const startedAt = yield* Clock.currentTimeMillis
           const next = yield* run(owner.plugin, key)
           if (next !== null && next > 0) owner.every = next
-          yield* Effect.sleep(registrants[0]?.every ?? owner.every)
+          const shownAgain = SubscriptionRef.changes(visible).pipe(
+            Stream.zipWithPrevious,
+            Stream.filter(([before, now]) => now && Option.getOrNull(before) === false),
+            Stream.mapEffect(() => Clock.currentTimeMillis),
+            Stream.filter((now) => now - startedAt > STALE_AFTER),
+            Stream.take(1),
+            Stream.runDrain,
+          )
+          yield* Effect.race(Effect.sleep(registrants[0]?.every ?? owner.every), shownAgain)
         }
       })
     const stopKey = (key: string, poll: Poll) =>
       Effect.sync(() => polls.delete(key)).pipe(Effect.andThen(Fiber.interrupt(poll.fiber)))
+    const stopFor = (plugin: string, key: string) =>
+      Effect.suspend(() => {
+        const poll = polls.get(key)
+        if (poll === undefined) return Effect.void
+        const index = poll.registrants.findIndex((r) => r.plugin === plugin)
+        if (index >= 0) poll.registrants.splice(index, 1)
+        return poll.registrants.length === 0 ? stopKey(key, poll) : Effect.void
+      })
     return {
       register: (plugin, key, every) =>
         Effect.gen(function* () {
@@ -56,16 +76,8 @@ export const makePollScheduler = (
           const fiber = yield* Effect.forkIn(loop(key, registrants), scope)
           polls.set(key, { registrants, fiber })
         }),
+      stop: (plugin, key) => stopFor(plugin, key),
       stopPlugin: (plugin) =>
-        Effect.forEach(
-          [...polls],
-          ([key, poll]) =>
-            Effect.suspend(() => {
-              const index = poll.registrants.findIndex((r) => r.plugin === plugin)
-              if (index >= 0) poll.registrants.splice(index, 1)
-              return poll.registrants.length === 0 ? stopKey(key, poll) : Effect.void
-            }),
-          { discard: true },
-        ),
+        Effect.forEach([...polls.keys()], (key) => stopFor(plugin, key), { discard: true }),
     }
   })

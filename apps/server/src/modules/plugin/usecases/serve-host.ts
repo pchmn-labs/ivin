@@ -59,7 +59,8 @@ export const serveHost = (
     const subscribe = (id: string, kind: WatchedKind | "settingChanged" | "beforeSpawn") => {
       const set = subscribers.get(kind) ?? new Set<string>()
       subscribers.set(kind, set.add(id))
-      if (kind === "transcript" || kind === "sessionCreated") bridge.watch(kind, true)
+      if (kind === "transcript" || kind === "sessionCreated" || kind === "sessionChanged")
+        bridge.watch(kind, true)
     }
     const subscribersOf = (kind: WatchedKind | "settingChanged" | "beforeSpawn") =>
       plugins.order().filter((id) => subscribers.get(kind)?.has(id))
@@ -132,6 +133,7 @@ export const serveHost = (
         bridge.connect(null)
         bridge.watch("transcript", false)
         bridge.watch("sessionCreated", false)
+        bridge.watch("sessionChanged", false)
       }),
     )
 
@@ -143,11 +145,13 @@ export const serveHost = (
       switch (method) {
         case "transcript.subscribe":
         case "sessions.subscribe":
+        case "sessions.subscribeChanged":
         case "settings.subscribe":
         case "beforeSpawn.subscribe": {
           const kind = {
             "transcript.subscribe": "transcript",
             "sessions.subscribe": "sessionCreated",
+            "sessions.subscribeChanged": "sessionChanged",
             "settings.subscribe": "settingChanged",
             "beforeSpawn.subscribe": "beforeSpawn",
           }[method] as WatchedKind | "settingChanged" | "beforeSpawn"
@@ -173,6 +177,21 @@ export const serveHost = (
             const kind = typeof args["kind"] === "string" ? args["kind"] : null
             return (yield* services.listAnnotations(id, target, kind)) as Json
           })
+        case "annotations.listAll":
+          return Effect.gen(function* () {
+            const target = yield* targetArg(args)
+            const kind = typeof args["kind"] === "string" ? args["kind"] : null
+            return (yield* services.listAllAnnotations(target, kind)) as Json
+          })
+        case "sessions.list":
+          return services.listSessions.pipe(Effect.map((all) => all as Json))
+        case "sessions.get":
+          return stringArg(args, "sessionId").pipe(
+            Effect.flatMap((sessionId) => services.getSession(sessionId)),
+            Effect.map((session) =>
+              session === null ? { missing: true } : { value: session as Json },
+            ),
+          )
         case "storage.get":
           return stringArg(args, "key").pipe(
             Effect.flatMap((key) => storage.get(id, key)),
@@ -217,6 +236,11 @@ export const serveHost = (
             Effect.as(null),
           )
         }
+        case "poll.unregister":
+          return stringArg(args, "key").pipe(
+            Effect.flatMap((key) => scheduler.stop(id, key)),
+            Effect.as(null),
+          )
         case "permission.check":
           return Effect.sync(() => {
             const verdict = verdictFor(

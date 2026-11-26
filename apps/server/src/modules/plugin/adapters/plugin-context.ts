@@ -8,6 +8,8 @@ import type {
 } from "@ivin/plugin-api/server"
 import { execFile, type ChildProcess } from "node:child_process"
 
+const EXEC_TIMEOUT = 30_000
+
 export type CallServer = (method: string, args: Json) => Promise<Json>
 
 type CommandHandler = (args: Json) => Json | Promise<Json | void> | void
@@ -26,6 +28,7 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
   const registering: Promise<unknown>[] = []
   const transcriptHandlers: Array<(session: Session, event: TranscriptEvent) => void> = []
   const sessionHandlers: Array<(session: Session) => void> = []
+  const sessionChangedHandlers: Array<(session: Session) => void> = []
   const settingHandlers: Array<(key: string, value: Json) => void> = []
   const commands = new Map<string, CommandHandler>()
   const polls = new Map<string, PollFunction>()
@@ -67,6 +70,12 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
         subscribeOnce(sessionHandlers, "sessions.subscribe")
         sessionHandlers.push(handler)
       },
+      onChanged: (handler) => {
+        subscribeOnce(sessionChangedHandlers, "sessions.subscribeChanged")
+        sessionChangedHandlers.push(handler)
+      },
+      list: () => callServer("sessions.list", null) as Promise<never>,
+      get: (sessionId) => optional("sessions.get", { sessionId }) as Promise<never>,
     },
     annotations: {
       add: (target, { kind, data }) =>
@@ -75,6 +84,11 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
       list: (target, kind) =>
         callServer(
           "annotations.list",
+          kind === undefined ? { target } : { target, kind },
+        ) as Promise<never>,
+      listAll: (target, kind) =>
+        callServer(
+          "annotations.listAll",
           kind === undefined ? { target } : { target, kind },
         ) as Promise<never>,
     },
@@ -98,16 +112,24 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
     },
     exec: async (program, args, options = {}) => {
       await permit({ member: "exec", binary: program })
+      const timeout = options.timeout ?? EXEC_TIMEOUT
       return new Promise<ExecResult>((resolve, reject) => {
         const child = execFile(
           program,
           [...args],
           {
             ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+            ...(options.env === undefined ? {} : { env: { ...process.env, ...options.env } }),
+            timeout,
+            killSignal: "SIGKILL",
             maxBuffer: 64 * 1024 * 1024,
           },
           (error, stdout, stderr) => {
             children.delete(child)
+            if (error?.killed === true) {
+              reject(new Error(`${program} ran over its ${timeout} ms limit and was killed.`))
+              return
+            }
             // A string code is the system refusing to start it; a signal or an exit code is its result.
             if (error !== null && typeof error.code === "string") {
               reject(new Error(error.message))
@@ -122,6 +144,11 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
     poll: (key, fn, { every }) => {
       polls.set(key, fn)
       void announce("poll.register", { key, every })
+      return () => {
+        if (polls.get(key) !== fn) return
+        polls.delete(key)
+        void callServer("poll.unregister", { key }).catch(() => undefined)
+      }
     },
     setInterval: (fn, ms) => {
       const timer = setInterval(fn, ms)
@@ -164,6 +191,10 @@ export const makePluginContext = (callServer: CallServer = () => Promise.resolve
           return null
         case "sessionCreated":
           for (const handler of sessionHandlers) handler(data["session"] as unknown as Session)
+          return null
+        case "sessionChanged":
+          for (const handler of sessionChangedHandlers)
+            handler(data["session"] as unknown as Session)
           return null
         case "settingChanged":
           for (const handler of settingHandlers)

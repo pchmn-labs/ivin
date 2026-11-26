@@ -251,6 +251,7 @@ export const HostDispatch = Schema.Struct({
   kind: Schema.Literals([
     "transcript",
     "sessionCreated",
+    "sessionChanged",
     "settingChanged",
     "command",
     "beforeSpawn",

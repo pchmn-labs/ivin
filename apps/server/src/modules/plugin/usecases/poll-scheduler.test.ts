@@ -66,3 +66,39 @@ test("the next plugin takes over a key when its owner stops", () =>
       expect(runs).toHaveLength(2)
     }),
   ))
+
+test("a stopped poll stops running, and its key stops once no plugin is left on it", () =>
+  withScheduler((scheduler, { runs }) =>
+    Effect.gen(function* () {
+      yield* scheduler.register("a", "k", 1000)
+      yield* scheduler.register("b", "k", 1000)
+      yield* TestClock.adjust("0 millis")
+      yield* scheduler.stop("a", "k")
+      yield* TestClock.adjust("1000 millis")
+      expect(runs).toEqual(["a:k", "b:k"])
+      yield* scheduler.stop("b", "k")
+      yield* TestClock.adjust("5 seconds")
+      expect(runs).toHaveLength(2)
+    }),
+  ))
+
+test("a poll runs at once when the window shows again after more than 15 s, not before", () =>
+  withScheduler((scheduler, { visible, runs }) =>
+    Effect.gen(function* () {
+      yield* scheduler.register("a", "k", 600_000)
+      yield* TestClock.adjust("0 millis")
+      expect(runs).toHaveLength(1)
+
+      yield* SubscriptionRef.set(visible, false)
+      yield* TestClock.adjust("10 seconds")
+      yield* SubscriptionRef.set(visible, true)
+      yield* TestClock.adjust("0 millis")
+      expect(runs).toHaveLength(1)
+
+      yield* SubscriptionRef.set(visible, false)
+      yield* TestClock.adjust("10 seconds")
+      yield* SubscriptionRef.set(visible, true)
+      yield* TestClock.adjust("0 millis")
+      expect(runs).toHaveLength(2)
+    }),
+  ))
