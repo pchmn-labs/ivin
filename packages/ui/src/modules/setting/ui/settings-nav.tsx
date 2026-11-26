@@ -16,6 +16,7 @@ const sectionIcons: Record<string, IconName> = {
   tabs: "app-window",
   worktrees: "worktree",
   files: "folder",
+  window: "split",
   sidebar: "panel-left",
   agents: "robot",
   images: "image",

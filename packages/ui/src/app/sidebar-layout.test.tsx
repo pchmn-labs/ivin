@@ -39,36 +39,31 @@ const mountApp = async (options: { layout?: "rail" | "strip"; failVersion?: bool
   return server
 }
 
-test("choosing Strip in Settings lines the projects up at the sidebar's foot, and the file brings the rail back", async () => {
+test("choosing Rail in Settings lists the projects beside the sessions, and the file brings the strip back", async () => {
   const server = await mountApp()
-  await expect.element(rail()).toBeVisible()
+  await expect.element(strip()).toBeVisible()
+  await expect.element(page.getByRole("button", { name: /switch project/ })).toBeVisible()
 
   await page.getByRole("button", { name: "Settings" }).click()
   await page
     .getByRole("navigation", { name: "Settings sections" })
     .getByRole("button", { name: "Sidebar" })
     .click()
-  await page.getByRole("combobox", { name: "Projects" }).selectOptions("strip")
+  await page.getByRole("combobox", { name: "Projects" }).selectOptions("rail")
   await page.getByRole("button", { name: "Back to sessions" }).click()
 
-  await expect.element(strip()).toBeVisible()
-  await expect.element(rail()).not.toBeInTheDocument()
-  await expect.element(page.getByRole("button", { name: /switch project/ })).toBeVisible()
-
-  server.setUserSettings(layout("rail"))
   await expect.element(rail()).toBeVisible()
   await expect.element(strip()).not.toBeInTheDocument()
+
+  server.setUserSettings(layout("strip"))
+  await expect.element(strip()).toBeVisible()
+  await expect.element(rail()).not.toBeInTheDocument()
 })
 
-test("in the strip, a project's button, the project menu, the arrows and the keys select a project", async () => {
+test("in the strip, a project's button, the project menu and the keys select a project", async () => {
   await mountApp({ layout: "strip" })
-  const previous = page.getByRole("button", { name: "Previous project" })
-  const next = page.getByRole("button", { name: "Next project" })
-  await expect.element(previous).toBeDisabled()
-
-  await next.click()
+  await strip().getByRole("button", { name: "other", exact: true }).click()
   await expect.element(projectName()).toHaveTextContent("other")
-  await expect.element(next).toBeDisabled()
 
   await userEvent.keyboard(`{Control>}{${mod}>}[[{/${mod}}{/Control}`)
   await expect.element(projectName()).toHaveTextContent("ivin")

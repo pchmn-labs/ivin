@@ -34,6 +34,7 @@ import {
   SERVER_STATE,
   SHOW_IN_FOLDER,
   UPDATE_STATE,
+  WINDOW_LAYOUT,
 } from "./channels.ts"
 import { writeCliCommand } from "./cli-command.ts"
 import {
@@ -50,6 +51,7 @@ import { PLUGIN_BUNDLE_SCHEME, pluginBundleFile } from "./plugin-bundle-protocol
 import { mergeDisabledPlugins, pluginsToBlame, type PluginActivity } from "./plugin-blame.ts"
 import { createRestartPolicy } from "./restart-policy.ts"
 import { automaticCheckFrom, betaFrom } from "./update-settings.ts"
+import { TRAFFIC_LIGHTS, isWindowLayout, windowLayoutFrom } from "./window-layout.ts"
 import { createUpdater, startSwap } from "./updater.ts"
 
 // A dev build keeps its own data, so it never shares a database with the installed app.
@@ -196,10 +198,9 @@ const createWindow = async () => {
     width: 960,
     height: 640,
     show: false,
-    // The sidebar card holds the traffic lights: inset 15pt from its corner, centred on its top row.
     ...(process.platform === "darwin" && {
       titleBarStyle: "hiddenInset" as const,
-      trafficLightPosition: { x: 23, y: 21 },
+      trafficLightPosition: TRAFFIC_LIGHTS[windowLayoutFrom(readSettings())],
     }),
     webPreferences: {
       preload: join(import.meta.dirname, "preload.cjs"),
@@ -253,6 +254,10 @@ ipcMain.on(PLUGIN_ACTIVITY, (_event, value: { id?: unknown; phase?: unknown }) =
   if (value.phase !== "activating" && value.phase !== "activated") return
   activity.push({ at: Date.now(), id: value.id, phase: value.phase })
   if (activity.length > 500) activity.splice(0, activity.length - 500)
+})
+ipcMain.on(WINDOW_LAYOUT, (event, layout: unknown) => {
+  if (process.platform !== "darwin" || !isWindowLayout(layout)) return
+  BrowserWindow.fromWebContents(event.sender)?.setWindowButtonPosition(TRAFFIC_LIGHTS[layout])
 })
 ipcMain.on(LAUNCH_SETTLED, () => {
   if (!launchRecord.settled) saveLaunchRecord({ settled: true })

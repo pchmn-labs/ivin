@@ -152,6 +152,7 @@ test("closing files in full width keeps the mode, and closing the last one leave
   await expect.element(rowTab("README.md")).toHaveAttribute("aria-selected", "true")
   await expect.element(besideButton()).toBeVisible()
   await rowTab("Session").click()
+  await rowTab("README.md").hover()
   await card().getByRole("button", { name: "Close README.md", includeHidden: true }).click()
 
   await expect.element(card()).not.toBeInTheDocument()

@@ -5,6 +5,12 @@
   overflow: hidden;
 }
 
+.iv-app[data-window-layout="panels"] {
+  gap: var(--iv-window-gap);
+  padding: var(--iv-window-gap);
+  background: var(--iv-bg-window);
+}
+
 .iv-app[hidden] {
   display: none;
 }
@@ -23,21 +29,42 @@
   flex-direction: column;
   width: var(--iv-card-width);
   min-height: 0;
-  margin: var(--iv-space-2) 0 var(--iv-space-2) var(--iv-space-2);
   /* Clipped at the border box, so the resize line can draw over the border. */
   overflow: clip;
   overflow-clip-margin: border-box;
   isolation: isolate;
-  border: 1px solid var(--iv-border);
-  border-radius: var(--iv-radius-card);
   background: var(--iv-bg-card);
 }
 
+.iv-app__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--iv-bg);
+}
+
+.iv-app[data-window-layout="panels"] > :is(.iv-app__card, .iv-app__main) {
+  border: 1px solid var(--iv-border);
+  border-radius: var(--iv-radius-card);
+}
+
+.iv-app[data-window-layout="panels"] > .iv-app__main {
+  overflow: clip;
+}
+
+.iv-app[data-window-layout="plane"] > .iv-app__card {
+  border-right: 1px solid var(--iv-border);
+}
+
 .iv-app__card > .iv-resize-handle[data-edge="right"]::after {
-  top: var(--iv-radius-card);
   right: -1px;
-  bottom: var(--iv-radius-card);
   width: 1px;
+}
+
+.iv-app[data-window-layout="panels"] > .iv-app__card > .iv-resize-handle[data-edge="right"]::after {
+  top: var(--iv-radius-card);
+  bottom: var(--iv-radius-card);
   border-radius: var(--iv-radius-pill);
 }
 
@@ -45,11 +72,15 @@
   display: flex;
   flex: none;
   align-items: center;
-  height: var(--iv-space-10);
-  /* Over the card's top border, so this row stays centred on the traffic lights. */
-  margin-top: -1px;
+  height: var(--iv-tab-row-height);
   padding: 0 var(--iv-space-2) 0 0;
+  border-bottom: 1px solid var(--iv-border);
   -webkit-app-region: drag;
+}
+
+/* Over the card's top border, so this row stays centred on the traffic lights. */
+.iv-app[data-window-layout="panels"] .iv-app__card-top {
+  margin-top: -1px;
 }
 
 .iv-app__card-body {
@@ -86,13 +117,6 @@
 
 .iv-app__bottom-scroll:has(> .iv-disclosure--panel:not([open]):only-child) {
   padding-bottom: 0;
-}
-
-.iv-app__main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  min-height: 0;
 }
 
 .iv-app__alert {

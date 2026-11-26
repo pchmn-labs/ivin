@@ -1,3 +1,4 @@
+import { defaultSettings } from "@ivin/contracts/setting"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
@@ -11,7 +12,7 @@ const mod = mac ? "Meta" : "Control"
 
 const mountWithSessions = async (
   titles: readonly [string, string] = ["First", "Second"],
-  options: { otherProject?: boolean } = {},
+  options: { otherProject?: boolean; layout?: "rail" } = {},
 ) => {
   const server = makeFakeServer({
     project: { path: "/dev/ivin", name: "ivin", lastOpenedAt: DateTime.makeUnsafe(0) },
@@ -30,6 +31,12 @@ const mountWithSessions = async (
   if (options.otherProject) {
     server.openProject("/dev/other")
     server.openProject("/dev/ivin")
+  }
+  if (options.layout !== undefined) {
+    server.setUserSettings({
+      settings: { ...defaultSettings, sidebar: { layout: options.layout } },
+      problem: null,
+    })
   }
   await mountApp(server)
   return server
@@ -123,8 +130,8 @@ test("back and forward walk the sessions opened in this window", async () => {
     .toHaveAttribute("aria-selected", "true")
 })
 
-test("the project button badge counts the sessions waiting on the user", async () => {
-  const server = await mountWithSessions()
+test("the rail's project button badge counts the sessions waiting on the user", async () => {
+  const server = await mountWithSessions(undefined, { layout: "rail" })
   await vi.waitFor(() => expect(page.getByTestId("project-waiting").query()).toBeNull())
   server.setStatus("s1", "waiting")
   server.setStatus("s2", "waiting")

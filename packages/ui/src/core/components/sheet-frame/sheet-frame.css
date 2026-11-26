@@ -34,7 +34,10 @@
 }
 
 .iv-sheet__close {
-  margin-right: 0;
+  position: static;
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
 }
 
 .iv-sheet__body {

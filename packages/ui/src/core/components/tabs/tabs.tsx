@@ -34,7 +34,6 @@ export function Tabs({ tabs, value, onValueChange, children, "aria-label": ariaL
             {tab.badge === undefined ? null : <span className="iv-tabs__badge">{tab.badge}</span>}
           </BaseTabs.Tab>
         ))}
-        <span className="iv-tabs__indicator" aria-hidden="true" />
       </BaseTabs.List>
       {children === undefined ? null : (
         <BaseTabs.Panel value={value} className="iv-tabs__panel">

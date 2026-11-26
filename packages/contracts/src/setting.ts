@@ -8,6 +8,7 @@ export const Settings = Schema.Struct({
   }),
   worktrees: Schema.Struct({ removeOnTabClose: Schema.Boolean }),
   files: Schema.Struct({ folderIcons: Schema.Boolean }),
+  window: Schema.Struct({ layout: Schema.Literals(["panels", "plane"]) }),
   sidebar: Schema.Struct({ layout: Schema.Literals(["rail", "strip"]) }),
   agents: Schema.Struct({
     stopWhenIdleMinutes: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
@@ -20,7 +21,8 @@ export const defaultSettings: Settings = {
   tabs: { stopAgentOnClose: true, newTabPosition: "end" },
   worktrees: { removeOnTabClose: true },
   files: { folderIcons: true },
-  sidebar: { layout: "rail" },
+  window: { layout: "panels" },
+  sidebar: { layout: "strip" },
   agents: { stopWhenIdleMinutes: 10 },
   updates: { automaticCheck: true, beta: false },
 }
@@ -101,6 +103,23 @@ export const settingSections: ReadonlyArray<SettingSection> = [
         label: "Show folder icons",
         description:
           "Folders show the icon theme's icon for their name, open or closed. Off, a folder shows only its chevron and its name.",
+      },
+    ],
+  },
+  {
+    key: "window",
+    title: "Window",
+    description: "How the window lays out the sidebar and the session area.",
+    settings: [
+      {
+        path: "window.layout",
+        label: "Layout",
+        description:
+          "Two panels sets the sidebar and the session area apart as two cards on a darker ground. One plane joins them edge to edge, with the tab bar level with the sidebar's top row.",
+        choices: choicesOf(Settings.fields.window.fields.layout, {
+          panels: "Two panels",
+          plane: "One plane",
+        }),
       },
     ],
   },

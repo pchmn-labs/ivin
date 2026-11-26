@@ -53,7 +53,10 @@ test("two projects each with a session are back with their tabs after a relaunch
       )
       await window.getByRole("button", { name: "Open folder…" }).click()
       await window.getByRole("dialog").getByRole("button", { name: "Trust and open" }).click()
-      await expect(window.getByRole("button", { name })).toHaveAttribute("aria-current", "true")
+      await expect(window.getByRole("button", { name, exact: true })).toHaveAttribute(
+        "aria-current",
+        "true",
+      )
       await window.getByRole("complementary").getByRole("button", { name: "New session" }).click()
       await expect(
         window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
@@ -66,7 +69,7 @@ test("two projects each with a session are back with their tabs after a relaunch
   const second = await launchPackagedApp(userDataDir)
   try {
     const window = await second.firstWindow()
-    await expect(window.getByRole("button", { name: names[1]! })).toHaveAttribute(
+    await expect(window.getByRole("button", { name: names[1]!, exact: true })).toHaveAttribute(
       "aria-current",
       "true",
     )
@@ -74,7 +77,7 @@ test("two projects each with a session are back with their tabs after a relaunch
     await expect(
       window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
     ).toHaveCount(1)
-    await window.getByRole("button", { name: names[0]! }).click()
+    await window.getByRole("button", { name: names[0]!, exact: true }).click()
     await expect(window.getByTestId("project-name")).toHaveText(names[0]!)
     await expect(
       window.getByRole("tablist", { name: "Open sessions" }).getByRole("tab"),
