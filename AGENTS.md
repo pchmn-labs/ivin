@@ -34,7 +34,7 @@ To run ivin, show it to the user, capture its screens or show a UI change in a p
 
 Run a tool through the root `package.json` script that wraps it, because the script carries the config. With no script for what you need, call Vite+ through `pnpm vp <command>`, and any other tool through `pnpm exec <tool>`, never `npx`.
 
-While building, run the test files you touch: `pnpm test <path>…`. You choose which other tests to run: the tests of a module whose behaviour you changed, or the whole suite (`pnpm test`) when a change reaches many modules. The pull request's CI runs every test the branch's changes reach. Run `pnpm check` (lint, format, types) before the commit. After an edit that changes no code, only words in docs or a test's name, run `pnpm lint` and `pnpm format:check` instead. Run `pnpm e2e` locally only when the change touches the desktop app or the app's startup. Leave `pnpm package` to CI. `pnpm install-app` packages ivin and replaces `/Applications/ivin.app`: run it only when the user asks.
+`pnpm install-app` replaces `/Applications/ivin.app`: run it only when the user asks.
 
 ### Grilling
 
