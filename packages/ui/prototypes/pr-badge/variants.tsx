@@ -129,25 +129,41 @@ function More({ prs }: { prs: ReadonlyArray<Pr> }) {
 
 /* Health: the tile's colour is checks and mergeability once settled; it pulses while checks run. */
 
-function HealthBadge({ prs }: { prs: ReadonlyArray<Pr> }) {
+function HealthBadge({ prs, check }: { prs: ReadonlyArray<Pr>; check: "corner" | "beside" }) {
   const lead = leadPr(prs)!
   const health = worstHealth(prs)
+  const mergeable = mergeableOf(prs)
+  const verdict =
+    mergeable === "yes" ? "passed" : mergeable === "conflict" || iconToneOf(prs) === "failed" ? "failed" : null
   return (
     <span className="h-badge" aria-label={label(prs, health)}>
       <span
         className="t-tile"
         data-state={lead.state}
-        data-mergeable={mergeableOf(prs)}
+        data-mergeable={mergeable}
         data-icon={iconToneOf(prs)}
         data-running={isRunning(prs) || undefined}
       >
         <Svg name={STATE_ICON[lead.state]} size={13} />
+        {verdict && check === "corner" && (
+          <span className="t-check-corner" data-ci={verdict}>
+            <Svg name={verdict === "passed" ? "check" : "xBold"} size={5} />
+          </span>
+        )}
       </span>
+      {verdict && check === "beside" && <CiMark ci={verdict} />}
       <More prs={prs} />
     </span>
   )
 }
 
-const health: Variant = { Badge: HealthBadge, Card: MixCard, cardWidth: 340 }
+const variant = (check: "corner" | "beside"): Variant => ({
+  Badge: (props) => <HealthBadge {...props} check={check} />,
+  Card: MixCard,
+  cardWidth: 340,
+})
+const corner = variant("corner")
+const beside = variant("beside")
 
-export const HealthVariant = () => <Window variant={health} />
+export const Corner = () => <Window variant={corner} />
+export const Beside = () => <Window variant={beside} />

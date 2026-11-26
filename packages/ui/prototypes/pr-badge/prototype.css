@@ -1132,3 +1132,57 @@ body {
 .t-tile[data-mergeable="conflict"] {
   background: color-mix(in srgb, var(--ground) 26%, transparent);
 }
+
+/* Round 6: a check when it can merge */
+
+.t-tile {
+  position: relative;
+}
+
+.t-check-corner {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  width: 11px;
+  height: 11px;
+  place-items: center;
+  border-radius: var(--iv-radius-pill);
+  background: var(--ci-passed);
+  box-shadow: 0 0 0 1.5px var(--ring, var(--iv-bg-card));
+  color: var(--iv-bg-card);
+}
+
+.iv-tab-bar__item .t-check-corner {
+  --ring: var(--iv-bg);
+}
+
+.iv-tab-bar__item[data-selected] .t-check-corner {
+  --ring: color-mix(in srgb, var(--iv-accent) 12%, var(--iv-bg-raised));
+}
+
+.h-badge > .proto-ci {
+  color: var(--iv-bg-card);
+}
+
+.t-check-corner {
+  right: -3px;
+  bottom: -3px;
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 0 1px var(--ring, var(--iv-bg-card));
+}
+
+.t-check-corner[data-ci="failed"] {
+  background: var(--ci-failed);
+}
+
+.h-badge > .proto-ci {
+  width: 9px;
+  height: 9px;
+}
+
+.h-badge > .proto-ci .proto-svg {
+  width: 6px !important;
+  height: 6px !important;
+}
