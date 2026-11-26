@@ -50,7 +50,7 @@ const typePackageCopies = typePackages.map((name) => {
     name,
   )
   const scope = name.includes("/") ? `/${name.split("/")[0]}` : ""
-  return { from: folder, to: `dist/plugin-types/node_modules${scope}` }
+  return { from: folder, to: `dist/plugin-tools/plugin-types/modules${scope}` }
 })
 
 const server = {
@@ -78,22 +78,22 @@ const server = {
     neverBundle: [/^@rolldown\/binding-/],
     onlyBundle: false,
   },
-  // `webp-codec.ts` reads these from `dist/wasm`, `fs-user-plugins.ts` the binding from `dist/native`, the desktop app pnpm from `dist/pnpm`, `plugin-types.ts` the compiler and the plugin types from `dist/typescript` and `dist/plugin-types`.
+  // `webp-codec.ts` reads these from `dist/wasm`, `fs-user-plugins.ts` the binding from `dist/native`, the desktop app pnpm from `dist/pnpm`, the desktop app the compiler and the plugin types from `dist/plugin-tools`.
   copy: [
     { from: rolldownBinding, to: "dist/native", rename: "rolldown-binding.node" },
     { from: pnpmFolder, to: "dist" },
     // `.cjs`, because the server's package is an ES module package and the compiler is CommonJS.
     {
       from: join(typescriptFolder, "typescript.js"),
-      to: "dist/typescript",
+      to: "dist/plugin-tools/typescript",
       rename: "typescript.cjs",
     },
-    { from: typescriptLibraries, to: "dist/typescript", flatten: true },
+    { from: typescriptLibraries, to: "dist/plugin-tools/typescript", flatten: true },
     {
       from: readdirSync(apiFolder)
         .filter((name) => name.endsWith(".ts") && !name.endsWith(".test.ts"))
         .map((name) => join(apiFolder, name)),
-      to: "dist/plugin-types/plugin-api/src",
+      to: "dist/plugin-tools/plugin-types/plugin-api/src",
       flatten: true,
     },
     ...typePackageCopies,

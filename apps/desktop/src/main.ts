@@ -69,6 +69,9 @@ const cliEntry = app.isPackaged
 const pnpmFolder = app.isPackaged
   ? join(process.resourcesPath, "pnpm")
   : join(import.meta.dirname, "../../server/dist/pnpm")
+const pluginToolsFolder = app.isPackaged
+  ? join(process.resourcesPath, "plugin-tools")
+  : join(import.meta.dirname, "../../server/dist/plugin-tools")
 const skillsFolder = app.isPackaged
   ? join(process.resourcesPath, "skills")
   : join(import.meta.dirname, "../../server/skills")
@@ -332,6 +335,8 @@ void app.whenReady().then(() => {
     skillsFolder,
     "--pnpm",
     pnpmFolder,
+    "--plugin-tools",
+    pluginToolsFolder,
     "--cli-command",
     cliCommand,
     "--plugin-host",

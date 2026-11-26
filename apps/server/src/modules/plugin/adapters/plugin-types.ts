@@ -3,16 +3,9 @@ import { createRequire } from "node:module"
 import { dirname, join } from "node:path"
 import type { TypePaths } from "../rules/plugin-template.ts"
 
-// The desktop app ships the plugin API's sources and the packages they import beside the server bundle (`tsdown.config.ts`).
-// Packaged, files that Node must read from disk sit unpacked beside the asar.
-export const unpackedFolder = import.meta.dirname.replace(/app\.asar(?=[/\\])/, "app.asar.unpacked")
-
-const shipped = join(unpackedFolder, "plugin-types")
-
-const apiSources = () =>
-  existsSync(shipped)
-    ? join(shipped, "plugin-api", "src")
-    : dirname(createRequire(import.meta.url).resolve("@ivin/plugin-api/server"))
+// The desktop app ships these in a folder of its own (`tsdown.config.ts`, `electron-builder.yml`) and names it to the server; without it, a source checkout reads its own packages.
+const shippedIn = (toolsFolder: string | undefined) =>
+  toolsFolder !== undefined && existsSync(join(toolsFolder, "plugin-types")) ? toolsFolder : null
 
 const packageFolder = (from: string, name: string) => {
   try {
@@ -22,8 +15,21 @@ const packageFolder = (from: string, name: string) => {
   }
 }
 
-export const pluginTypePaths = (): TypePaths => {
-  const api = apiSources()
+export const pluginTypePaths = (toolsFolder: string | undefined): TypePaths => {
+  const shipped = shippedIn(toolsFolder)
+  if (shipped !== null) {
+    const types = join(shipped, "plugin-types")
+    const modules = join(types, "modules")
+    return {
+      "@ivin/plugin-api/*": [join(types, "plugin-api", "src", "*.ts")],
+      react: [join(modules, "@types", "react")],
+      "react/jsx-runtime": [join(modules, "@types", "react", "jsx-runtime")],
+      "react-dom": [join(modules, "@types", "react-dom")],
+      // What the plugin API's sources import, from the shipped copies.
+      "*": [join(modules, "*"), join(modules, "@types", "*")],
+    }
+  }
+  const api = dirname(createRequire(import.meta.url).resolve("@ivin/plugin-api/server"))
   const paths: Record<string, string[]> = { "@ivin/plugin-api/*": [join(api, "*.ts")] }
   const react = packageFolder(api, "@types/react")
   if (react !== null) {
@@ -35,10 +41,16 @@ export const pluginTypePaths = (): TypePaths => {
   return paths
 }
 
-// Run by the checker's worker: the compiler ships beside the server bundle, and a source checkout reads its own.
-export const typescriptFile = () => {
-  const bundled = join(unpackedFolder, "typescript", "typescript.cjs")
-  return existsSync(bundled)
-    ? bundled
-    : createRequire(import.meta.url).resolve("typescript-compiler-api")
+export const typescriptFile = (toolsFolder: string | undefined) => {
+  const shipped = shippedIn(toolsFolder)
+  return shipped === null
+    ? createRequire(import.meta.url).resolve("typescript-compiler-api")
+    : join(shipped, "typescript", "typescript.cjs")
+}
+
+export const checkWorkerFile = (toolsFolder: string | undefined) => {
+  const shipped = shippedIn(toolsFolder)
+  return shipped === null
+    ? join(import.meta.dirname, "ts-check-worker.ts")
+    : join(shipped, "ts-check-worker.js")
 }

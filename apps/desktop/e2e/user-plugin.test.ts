@@ -161,7 +161,7 @@ test("editing a plugin's UI half updates the window without a reload, and ivin p
       ),
     )
     await expect(window.getByText("The demo plugin was edited.")).toBeVisible()
-    await expect(draft).toHaveValue("a draft that must survive")
+    await expect(draft).toHaveText("a draft that must survive")
   } finally {
     await app.close()
   }
