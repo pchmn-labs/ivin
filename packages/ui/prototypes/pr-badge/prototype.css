@@ -1275,3 +1275,14 @@ body {
 .m-pr-link {
   cursor: pointer;
 }
+
+.m-state {
+  display: flex;
+  align-items: center;
+  height: var(--iv-text-md-lh);
+  margin-top: 0;
+}
+
+.m-pr-title {
+  line-height: var(--iv-text-md-lh);
+}
