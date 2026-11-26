@@ -14,7 +14,7 @@ export function PrCard({ session }: { session: Session }) {
         </Stack>
       ))}
       {errorsOf(prs).map((message) => (
-        <Stack as="li" key={message}>
+        <Stack as="li" key={message} padding={2}>
           <ErrorMessage message={message} />
         </Stack>
       ))}
