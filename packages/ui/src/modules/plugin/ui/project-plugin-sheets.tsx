@@ -74,7 +74,7 @@ function TrustSheet({
             ? "This project ships a plugin. It runs code in ivin, outside the agent's approvals."
             : "It runs code in ivin, outside the agent's approvals. Until you trust the new version, ivin keeps running the one you trusted before."}
         </Text>
-        {plugin.permissionsChanged && (
+        {plugin.permissionsChanged && !isNew && (
           <Text size="sm" tone="muted">
             Its declared permissions changed, so full trust does not cover it: only you can trust
             this version.

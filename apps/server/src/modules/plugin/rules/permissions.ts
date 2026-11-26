@@ -1,8 +1,6 @@
-export interface Permissions {
-  readonly harness: readonly string[]
-  readonly exec: readonly string[]
-  readonly fetch: readonly string[]
-}
+import type { PluginPermissions } from "@ivin/contracts/plugin"
+
+export type Permissions = PluginPermissions
 
 export type PermissionsReading =
   | { readonly kind: "valid"; readonly permissions: Permissions }

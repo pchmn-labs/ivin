@@ -7,6 +7,8 @@ export interface PermissionWords {
   readonly declared: ReadonlyArray<string>
 }
 
+const unique = (lines: ReadonlyArray<string>) => [...new Set(lines)]
+
 const hostWords = (host: string) =>
   host.startsWith("*.") ? `Connects to any host under ${host.slice(2)}` : `Connects to ${host}`
 
@@ -20,12 +22,12 @@ export const permissionWords = (
     reach: hasServer
       ? "Runs code on your machine with your rights"
       : "Cannot run commands or read files",
-    declared: [
+    declared: unique([
       ...(anyProgram ? ["Runs any program"] : []),
       ...(anyHost ? ["Connects to any host"] : []),
       ...permissions.harness.map(() => "Changes the environment of the agents ivin starts"),
       ...(anyProgram ? [] : permissions.exec.map((program) => `Runs ${program}`)),
       ...(anyHost ? [] : permissions.fetch.map(hostWords)),
-    ],
+    ]),
   }
 }

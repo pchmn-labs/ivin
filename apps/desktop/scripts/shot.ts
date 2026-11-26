@@ -73,12 +73,22 @@ export const formatTotal = (cents: number, currency = "EUR") =>
       version: "0.1.0",
       private: true,
       type: "module",
-      ivin: { id: "pr-checks", name: "pr-checks", ui: "src/ui.tsx" },
+      ivin: {
+        id: "pr-checks",
+        name: "pr-checks",
+        ui: "src/ui.tsx",
+        server: "src/server.ts",
+        permissions: { exec: ["gh"], fetch: ["api.github.com"] },
+      },
     }),
   )
   writeFileSync(
     join(dir, ".ivin/plugins/pr-checks/src/ui.tsx"),
     `import { defineUi } from "@ivin/plugin-api/ui"\nexport const activate = defineUi(() => {})\n`,
+  )
+  writeFileSync(
+    join(dir, ".ivin/plugins/pr-checks/src/server.ts"),
+    `import { defineServer } from "@ivin/plugin-api/server"\nexport const activate = defineServer(() => {})\n`,
   )
   git("add", ".")
   git("commit", "--quiet", "-m", "first")

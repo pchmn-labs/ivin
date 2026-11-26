@@ -52,7 +52,7 @@ function WaitingPlugin({ project, plugin }: { project: string; plugin: ProjectPl
           </Button>
         </span>
       </div>
-      {plugin.permissionsChanged && (
+      {plugin.permissionsChanged && !isNew && (
         <Text size="xs" tone="faint">
           Its declared permissions changed, so full trust does not cover it.
         </Text>

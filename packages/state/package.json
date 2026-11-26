@@ -10,6 +10,7 @@
     "./entity-list": "./src/entity-list.ts",
     "./fed-state": "./src/fed-state.ts",
     "./optimistic": "./src/optimistic.ts",
+    "./plugin-fetch-wire": "./src/plugin-fetch-wire.ts",
     "./strong-family": "./src/strong-family.ts"
   },
   "scripts": {

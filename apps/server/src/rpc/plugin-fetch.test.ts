@@ -1,8 +1,8 @@
-import { Effect } from "effect"
+import { Effect, Stream } from "effect"
 import { createServer, type Server } from "node:http"
 import type { AddressInfo } from "node:net"
 import { afterEach, expect, test } from "vitest"
-import { encodeFetchRequest } from "@ivin/contracts/plugin-fetch"
+import { encodeFetchRequest } from "@ivin/state/plugin-fetch-wire"
 import { packageJson, tempDir, withServer, writePlugin } from "./plugin-test-server.ts"
 
 const servers: Server[] = []
@@ -41,6 +41,8 @@ test("a UI half's ctx.fetch reaches a declared host, and is refused before any r
 
   const result = await withServer(home, (client) =>
     Effect.gen(function* () {
+      // The server knows a UI half's permissions once it sent the half to the window.
+      yield* client["plugin.list"]().pipe(Stream.take(2), Stream.runDrain)
       const fetch = (id: string, path: string) =>
         Effect.promise(() => encodeFetchRequest(`http://127.0.0.1:${declared.port}${path}`)).pipe(
           Effect.flatMap((request) => client["plugin.fetch"]({ id, request })),

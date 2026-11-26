@@ -6,11 +6,8 @@ import type {
   SpawnPatch,
   TranscriptEvent,
 } from "@ivin/plugin-api/server"
-import {
-  decodeFetchResponse,
-  encodeFetchRequest,
-  type PluginFetchResponse,
-} from "@ivin/contracts/plugin-fetch"
+import type { PluginFetchResponse } from "@ivin/contracts/plugin-fetch"
+import { decodeFetchResponse, encodeFetchRequest } from "@ivin/state/plugin-fetch-wire"
 import { execFile, type ChildProcess } from "node:child_process"
 
 export type CallServer = (method: string, args: Json) => Promise<Json>

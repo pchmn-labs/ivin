@@ -32,10 +32,16 @@ export const pluginFetch = (
   id: string,
   request: PluginFetchRequest,
 ) =>
-  new Promise<PluginFetchResponse>((resolve, reject) =>
+  new Promise<PluginFetchResponse>((resolve, reject) => {
+    // An atom nothing mounts is disposed at once, which would interrupt the request.
+    const unmount = registry.mount(pluginFetchAtom)
     registry.set(pluginFetchAtom, {
       id,
       request,
-      settle: (answer) => (answer instanceof Error ? reject(answer) : resolve(answer)),
-    }),
-  )
+      settle: (answer) => {
+        unmount()
+        if (answer instanceof Error) reject(answer)
+        else resolve(answer)
+      },
+    })
+  })

@@ -23,7 +23,7 @@
 .iv-plugin-review__permissions {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--iv-space-1);
   margin: 0;
   padding: 0;
   list-style: none;

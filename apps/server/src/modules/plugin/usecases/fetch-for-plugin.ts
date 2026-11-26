@@ -1,8 +1,5 @@
-import {
-  decodeFetchRequest,
-  encodeFetchResponse,
-  type PluginFetchRequest,
-} from "@ivin/contracts/plugin-fetch"
+import type { PluginFetchRequest } from "@ivin/contracts/plugin-fetch"
+import { decodeFetchRequest, encodeFetchResponse } from "@ivin/state/plugin-fetch-wire"
 import { Effect } from "effect"
 import type { Permissions } from "../rules/permissions.ts"
 import { checkPluginCall } from "./check-plugin-call.ts"
