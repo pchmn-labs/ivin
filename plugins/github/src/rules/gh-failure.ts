@@ -20,7 +20,7 @@ const firstLine = (text: string) =>
       .find((line) => line !== "") ?? ""
   ).slice(0, 160)
 
-// `rejected` is the message of an exec that rejected (program not found, killed on its time limit).
+// `rejected` is the message of an exec that never ran to an exit code (not found, killed on its time limit, refused).
 export const classifyGhFailure = (
   failure: { readonly rejected: string } | { readonly stderr: string },
 ): GhFailure => {
