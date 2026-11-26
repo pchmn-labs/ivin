@@ -1,11 +1,22 @@
 import { DateTime, Effect, Layer } from "effect"
+import { readFileSync } from "node:fs"
 import { Database } from "../../../shared/adapters/database.ts"
+import { isWorkspaceFile, workspaceFolders } from "../rules/workspace-file.ts"
 import { ProjectStore } from "../usecases/project-store.ts"
 
 interface OpenProjectRow {
   path: string
   name: string
   last_opened_at: number
+}
+
+const foldersOf = (path: string): readonly string[] | null => {
+  if (!isWorkspaceFile(path)) return [path]
+  try {
+    return workspaceFolders(readFileSync(path, "utf8"), path)
+  } catch {
+    return null
+  }
 }
 
 export const layerSqliteProjectStore = Layer.effect(ProjectStore)(
@@ -19,6 +30,7 @@ export const layerSqliteProjectStore = Layer.effect(ProjectStore)(
              ON CONFLICT (path) DO UPDATE SET name = excluded.name, last_opened_at = excluded.last_opened_at`,
           ).run(project.path, project.name, DateTime.toEpochMillis(project.lastOpenedAt))
         }),
+      folders: (path) => Effect.sync(() => foldersOf(path)),
       isKnown: (path) =>
         Effect.sync(
           () => db.prepare("SELECT 1 FROM projects WHERE path = ?").get(path) !== undefined,
@@ -38,6 +50,8 @@ export const layerSqliteProjectStore = Layer.effect(ProjectStore)(
             path: row.path,
             name: row.name,
             lastOpenedAt: DateTime.makeUnsafe(row.last_opened_at),
+            folders: foldersOf(row.path) ?? [],
+            workspace: isWorkspaceFile(row.path),
           })),
           selectedPath: selected?.selected_project_path ?? null,
         }

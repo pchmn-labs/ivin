@@ -34,6 +34,7 @@ import {
   LoginShellPath,
 } from "./shared/usecases/login-shell-path.ts"
 import { layerDatabase } from "./shared/adapters/database.ts"
+import { WorkingFolderRoot } from "./modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "./modules/transcript/usecases/image-folder.ts"
 
 interface MainPort {
@@ -172,6 +173,7 @@ const startup = Effect.gen(function* () {
         Layer.mergeAll(
           layerDatabase(path),
           Layer.succeed(ImageFolder)({ path: imageFolder }),
+          Layer.succeed(WorkingFolderRoot)({ path: join(ivinHome, "worktrees") }),
           layerHarnessAfterLoginShellPath(layerHarness),
           Layer.succeed(LoginShellPath)(loginShellPath),
           layerLogger,

@@ -8,7 +8,13 @@ import { serverClientLayerAtom } from "../../../core/server-client.ts"
 import { ProjectColumn } from "./project-column.tsx"
 
 const setup = async () => {
-  const project = { path: "/p", name: "p", lastOpenedAt: DateTime.makeUnsafe(0) }
+  const project = {
+    path: "/p",
+    name: "p",
+    lastOpenedAt: DateTime.makeUnsafe(0),
+    folders: ["/p"],
+    workspace: false,
+  }
   const server = makeFakeServer({ project })
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>

@@ -461,3 +461,20 @@ test("a failed discard shows git's message under the file's row", async () => {
   await discardDialog().getByRole("button", { name: "Discard changes" }).click()
   await expect.element(row("README.md")).not.toBeInTheDocument()
 })
+
+test("in a working folder of several repositories, the changes are grouped under each repository that has some", async () => {
+  const server = makeServer()
+  server.committedChanges.delete(project)
+  server.changes.set(project, {
+    kind: "listed",
+    repositories: ["api", "web", "docs"],
+    changes: [change("api/src/app.ts", "modified"), change("web/index.html", "added")],
+  })
+  await mount(server)
+  await expect.element(page.getByRole("list", { name: "Uncommitted changes in api" })).toBeVisible()
+  await expect.element(page.getByRole("list", { name: "Uncommitted changes in web" })).toBeVisible()
+  await expect
+    .element(page.getByRole("list", { name: "Uncommitted changes in docs" }))
+    .not.toBeInTheDocument()
+  await expect.element(changesTab()).toHaveTextContent("Changes2")
+})

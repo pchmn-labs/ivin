@@ -30,6 +30,7 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { WorkingFolderRoot } from "../modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 const turn: readonly HarnessOutput[] = [
@@ -707,6 +708,9 @@ test("a run started by one client is seen, interrupted and continued by another,
             Layer.mergeAll(
               Layer.succeed(Database)(db),
               Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+              Layer.succeed(WorkingFolderRoot)({
+                path: mkdtempSync(join(tmpdir(), "ivin-worktrees-")),
+              }),
               layerKeybindingsFileOf([]),
               layerSettingsFileOf([]),
               layerScripted([[running, said("Working")], [said("Noted")]], { sent, interrupted }),

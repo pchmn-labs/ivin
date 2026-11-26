@@ -22,6 +22,7 @@ real(
           sessionId: "s1",
           cwd,
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
+          extraDirectories: [],
           providerSessionId: null,
         })
         yield* harness.send({
@@ -52,6 +53,7 @@ real(
           sessionId: "s1",
           cwd,
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
+          extraDirectories: [],
           providerSessionId: null,
         })
         yield* harness.send({
@@ -94,6 +96,7 @@ real(
           sessionId: "s1",
           cwd,
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
+          extraDirectories: [],
           providerSessionId: null,
         })
         yield* harness.send({
@@ -126,6 +129,7 @@ real.each([
           sessionId: "s1",
           cwd,
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
+          extraDirectories: [],
           providerSessionId: null,
         })
         yield* harness.send({
@@ -162,6 +166,7 @@ test("a process that fails to start ends the stream with a HarnessError", async 
         sessionId: "s1",
         cwd: "/does/not/exist",
         options: { model: "haiku", effort: "low", permissionMode: "manual" },
+        extraDirectories: [],
         providerSessionId: null,
       })
       return yield* Stream.runCollect(harness.events)
@@ -184,6 +189,7 @@ test("answering a request that is not open fails with a HarnessError", async () 
           sessionId: "s1",
           cwd: dir,
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
+          extraDirectories: [],
           providerSessionId: null,
         })
         return yield* Effect.flip(harness.respond({ requestId: "nope", allow: true }))
@@ -207,6 +213,7 @@ setInterval(() => {}, 1000)`,
             sessionId: "s1",
             cwd: dir,
             options: { model: "haiku", effort: "low", permissionMode: "manual" },
+            extraDirectories: [],
             providerSessionId: null,
           })
           yield* harness.interrupt
@@ -241,6 +248,7 @@ setInterval(() => {}, 1000)`,
             sessionId: "s1",
             cwd: dir,
             options: { model: "haiku", effort: "low", permissionMode: "manual" },
+            extraDirectories: [],
             providerSessionId: null,
           })
           yield* harness.stopTask("b1a2")
@@ -275,6 +283,7 @@ setInterval(() => {}, 1000)`,
             sessionId: "s1",
             cwd: dir,
             options: { model: "haiku", effort: "low", permissionMode: "manual" },
+            extraDirectories: [],
             providerSessionId: null,
           })
           yield* Effect.promise(() => vi.waitFor(() => expect(existsSync(pidFile)).toBe(true)))
@@ -302,6 +311,7 @@ setInterval(() => {}, 1000)`,
             sessionId: "s1",
             cwd: dir,
             options: { model: "haiku", effort: "low", permissionMode: "manual" },
+            extraDirectories: [],
             providerSessionId: null,
           })
           yield* Effect.promise(() => vi.waitFor(() => expect(existsSync(pidFile)).toBe(true)))
@@ -324,6 +334,7 @@ test("start fails with plain words when claude is not on the PATH", async () => 
           sessionId: "s1",
           cwd: tmpdir(),
           options: { model: "haiku", effort: "low", permissionMode: "manual" },
+          extraDirectories: [],
           providerSessionId: null,
         })
       }).pipe(Effect.provide(layerClaude), Effect.scoped),
@@ -342,6 +353,7 @@ test("start names a project folder that does not exist", async () => {
         sessionId: "s1",
         cwd: "/does/not/exist",
         options: { model: "haiku", effort: "low", permissionMode: "manual" },
+        extraDirectories: [],
         providerSessionId: null,
       })
     }).pipe(Effect.provide(layerClaude), Effect.scoped),
@@ -362,6 +374,7 @@ setInterval(() => {}, 1000)`,
             sessionId: "s1",
             cwd: dir,
             options: { model: "haiku", effort: "low", permissionMode: "manual" },
+            extraDirectories: [],
             providerSessionId: null,
           })
           yield* Effect.promise(() =>
@@ -491,6 +504,7 @@ const runOnce = (cwd: string) =>
       sessionId: "s1",
       cwd,
       options: { model: "haiku", effort: "low", permissionMode: "manual" },
+      extraDirectories: [],
       providerSessionId: null,
     })
     yield* run.send({ id: "m1", text: "hi", images: [] })

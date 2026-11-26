@@ -17,7 +17,9 @@ const mountPanel = async (status: Partial<Status>, withSession: boolean | "tab-o
   const host: UiHost = {
     ...testUiHost,
     useProjects: () => ({
-      projects: [{ path: "/p", name: "p", lastOpenedAt: testDateTime(0) }],
+      projects: [
+        { path: "/p", name: "p", lastOpenedAt: testDateTime(0), folders: ["/p"], workspace: false },
+      ],
       selectedPath: "/p",
     }),
     useSessions: () => (withSession === true ? [session] : []),

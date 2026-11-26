@@ -1,6 +1,10 @@
 import { type Session, WorktreeNotCreated } from "@ivin/contracts/session"
 import type { HarnessEvent } from "@ivin/contracts/transcript"
 import { DateTime, Effect } from "effect"
+import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
+import { createWorkspaceWorkingFolder } from "../../worktree/usecases/create-workspace-working-folder.ts"
+import { ProjectStore } from "../../project/usecases/project-store.ts"
+import { checkoutStart } from "../../worktree/rules/workspace-folder.ts"
 import { createWorktree } from "../../worktree/usecases/create-worktree.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { listWorktreesOrNone } from "../../worktree/usecases/list-worktrees.ts"
@@ -23,7 +27,12 @@ const moveTo = (
   worktreesIgnored: boolean,
 ) =>
   Effect.gen(function* () {
-    yield* (yield* SessionStore).setWorkingFolder(session.id, folder.path, folder.branch)
+    yield* (yield* SessionStore).setWorkingFolder(
+      session.id,
+      folder.path,
+      folder.branch,
+      folder.inWorktree,
+    )
     yield* (yield* SessionRuns).record(session, {
       type: "working_folder",
       ...folder,
@@ -45,7 +54,12 @@ export const moveToNewWorktree = (session: Session, cause: Cause) =>
       )
 
     yield* setStatus("preparing_worktree")
-    const created = yield* createWorktree(session.projectPath, session.id).pipe(
+    const create = isWorkspaceFile(session.projectPath)
+      ? createWorkspaceWorkingFolder(session.projectPath, session.id).pipe(
+          Effect.map((made) => ({ ...made, worktreesIgnored: true })),
+        )
+      : createWorktree(session.projectPath, session.id)
+    const created = yield* create.pipe(
       Effect.tapError((error) =>
         // Git's own output goes to the transcript as written, like a harness error.
         (error._tag === "GitError"
@@ -77,6 +91,10 @@ export const moveToExistingWorktree = (session: Session, path: string, cause: Ca
 
 export const moveToCheckout = (session: Session, cause: Cause) =>
   Effect.gen(function* () {
-    const branch = yield* (yield* Git).currentBranch(session.projectPath)
-    yield* moveTo(session, { path: session.projectPath, inWorktree: false, branch }, cause, true)
+    const start = isWorkspaceFile(session.projectPath)
+      ? checkoutStart((yield* (yield* ProjectStore).folders(session.projectPath)) ?? [])
+      : null
+    const path = start?.cwd ?? session.projectPath
+    const branch = yield* (yield* Git).currentBranch(path)
+    yield* moveTo(session, { path, inWorktree: false, branch }, cause, true)
   })

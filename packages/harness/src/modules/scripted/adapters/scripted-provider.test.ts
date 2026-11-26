@@ -17,6 +17,7 @@ const startS1 = (provider: HarnessProvider["Service"]) =>
     sessionId: "s1",
     cwd: "/p",
     options: { model: "m", effort: "e", permissionMode: "p" },
+    extraDirectories: [],
     providerSessionId: null,
   })
 

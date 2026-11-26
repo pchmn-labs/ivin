@@ -11,6 +11,8 @@ export class HarnessError extends Data.TaggedError("HarnessError")<{
 export interface StartInput {
   readonly sessionId: string
   readonly cwd: string
+  // Folders besides `cwd` the agent may read and change, at their real paths.
+  readonly extraDirectories: readonly string[]
   readonly options: RunOptions
   readonly providerSessionId: string | null
 }

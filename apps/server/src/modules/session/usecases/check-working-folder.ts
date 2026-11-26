@@ -1,5 +1,7 @@
 import type { Session } from "@ivin/contracts/session"
 import { Effect } from "effect"
+import { isWorkspaceFile } from "../../project/rules/workspace-file.ts"
+import { WorkingFolders } from "../../worktree/usecases/working-folders.ts"
 import { linkedWorktrees } from "../../worktree/rules/linked-worktrees.ts"
 import { Git } from "../../worktree/usecases/git.ts"
 import { SessionFeed } from "./session-feed.ts"
@@ -7,11 +9,30 @@ import { SessionStore } from "./session-store.ts"
 
 const toCheck = (session: Session) => session.inWorktree && !session.workingFolderDeleted
 
+const markDeleted = (deleted: readonly Session[]) =>
+  Effect.gen(function* () {
+    const store = yield* SessionStore
+    const feed = yield* SessionFeed
+    for (const session of deleted) {
+      yield* store.markWorkingFolderDeleted(session.id)
+      yield* feed.publish(session.id)
+    }
+    return new Set(deleted.map((session) => session.id))
+  })
+
 // Sessions of one project, so one `git worktree list` answers for all of them.
 export const checkWorkingFolders = (projectPath: string, sessions: readonly Session[]) =>
   Effect.gen(function* () {
     const checked = sessions.filter(toCheck)
     if (checked.length === 0) return new Set<string>()
+    if (isWorkspaceFile(projectPath)) {
+      // No repository lists the folder: it is deleted when it is gone from the disk.
+      const files = yield* WorkingFolders
+      const gone: Session[] = []
+      for (const session of checked)
+        if (!(yield* files.exists(session.workingFolder))) gone.push(session)
+      return yield* markDeleted(gone)
+    }
     const entries = yield* (yield* Git).listWorktrees(projectPath).pipe(
       // The mark is only lifted by a pick, so a git failure must not set it.
       Effect.tapError((error) =>
@@ -21,14 +42,7 @@ export const checkWorkingFolders = (projectPath: string, sessions: readonly Sess
     )
     if (!entries) return new Set<string>()
     const listed = new Set(linkedWorktrees(projectPath, entries).map((w) => w.path))
-    const deleted = checked.filter((session) => !listed.has(session.workingFolder))
-    const store = yield* SessionStore
-    const feed = yield* SessionFeed
-    for (const session of deleted) {
-      yield* store.markWorkingFolderDeleted(session.id)
-      yield* feed.publish(session.id)
-    }
-    return new Set(deleted.map((session) => session.id))
+    return yield* markDeleted(checked.filter((session) => !listed.has(session.workingFolder)))
   })
 
 export const checkWorkingFolder = (session: Session) =>

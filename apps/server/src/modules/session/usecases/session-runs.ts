@@ -14,7 +14,9 @@ import {
 } from "@ivin/harness"
 import { Cause, Context, Duration, Effect, Layer, Semaphore } from "effect"
 import { guarded, logFailure } from "../../log/usecases/log-error.ts"
-import { ProjectTrust } from "../../project/usecases/project-trust.ts"
+import { sessionFolderTrusted } from "./session-trust.ts"
+import type { ProjectStore } from "../../project/usecases/project-store.ts"
+import type { ProjectTrust } from "../../project/usecases/project-trust.ts"
 import { CurrentSettings } from "../../setting/usecases/current-settings.ts"
 import type { ItemFeed } from "../../transcript/usecases/item-feed.ts"
 import type { TranscriptStore } from "../../transcript/usecases/transcript-store.ts"
@@ -81,11 +83,17 @@ export const layerSessionRunsWith = (
   Layer.effect(SessionRuns)(
     Effect.gen(function* () {
       const context = yield* Effect.context<
-        HarnessProvider | SessionStore | SessionFeed | TranscriptStore | ItemFeed | Git
+        | HarnessProvider
+        | SessionStore
+        | SessionFeed
+        | TranscriptStore
+        | ItemFeed
+        | Git
+        | ProjectStore
+        | ProjectTrust
       >()
       const sessions = yield* SessionStore
       const sessionFeed = yield* SessionFeed
-      const trust = yield* ProjectTrust
       const runs = new Map<string, AgentRun>()
       const layerScope = yield* Effect.scope
       const locks = new Map<string, Semaphore.Semaphore>()
@@ -209,7 +217,7 @@ export const layerSessionRunsWith = (
               if (!session || session.archivedAt !== null) {
                 return yield* new SessionNotFound({ sessionId: given.id })
               }
-              if (!(yield* trust.isTrusted(session.workingFolder)))
+              if (!(yield* sessionFolderTrusted(session).pipe(Effect.provideContext(context))))
                 return yield* new ProjectNotTrusted({ path: session.workingFolder })
               const working = runs.get(session.id)
               if (working?.busy()) {

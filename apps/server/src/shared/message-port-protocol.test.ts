@@ -10,6 +10,7 @@ import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.t
 import { mkdtempSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
+import { WorkingFolderRoot } from "../modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 
 test("serves the rpc group over a message port", async () => {
@@ -32,6 +33,11 @@ test("serves the rpc group over a message port", async () => {
           Layer.provide(layerDatabase(":memory:")),
           Layer.provide(
             Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+          ),
+          Layer.provide(
+            Layer.succeed(WorkingFolderRoot)({
+              path: mkdtempSync(join(tmpdir(), "ivin-worktrees-")),
+            }),
           ),
           Layer.provide(layerKeybindingsFileOf([])),
           Layer.provide(layerSettingsFileOf([])),

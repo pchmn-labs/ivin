@@ -10,6 +10,7 @@ import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.t
 import { layerFsSettingsFile } from "../modules/setting/adapters/fs-settings-file.ts"
 import { layerSettingsFileOf } from "../modules/setting/usecases/settings-file.ts"
 import { SkillInstallation } from "../modules/skill/usecases/skill-installation.ts"
+import { WorkingFolderRoot } from "../modules/project/usecases/working-folder-root.ts"
 import { ImageFolder } from "../modules/transcript/usecases/image-folder.ts"
 import { layerDatabase } from "../shared/adapters/database.ts"
 import { layerServices } from "./handlers.ts"
@@ -68,6 +69,7 @@ const layerCliServer = ({
       Layer.mergeAll(
         layerDatabase(":memory:"),
         Layer.succeed(ImageFolder)({ path: mkdtempSync(join(tmpdir(), "ivin-images-")) }),
+        Layer.succeed(WorkingFolderRoot)({ path: mkdtempSync(join(tmpdir(), "ivin-worktrees-")) }),
         layerScripted([]),
         ivinHome === undefined ? layerSettingsFileOf([settings]) : layerFsSettingsFile(ivinHome),
         layerKeybindingsFileOf([keybindings]),
