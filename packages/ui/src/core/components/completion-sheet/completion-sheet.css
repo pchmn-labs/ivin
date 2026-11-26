@@ -1,7 +1,8 @@
 .iv-completion-sheet {
   position: absolute;
   right: -1px;
-  bottom: 100%;
+  /* Measured from inside the field's border, which must stay visible under the sheet. */
+  bottom: calc(100% + 1px);
   left: -1px;
   z-index: 4;
   display: flex;
