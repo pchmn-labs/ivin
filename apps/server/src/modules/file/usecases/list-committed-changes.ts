@@ -113,11 +113,10 @@ export const listCommittedChanges = (sessionId: string) =>
     const listed = listings.flatMap(({ repository, listing }) =>
       listing.kind === "listed" ? [{ repository, listing }] : [],
     )
-    // A repository that cannot list its commits is left out while another can; with none, its reason shows.
     if (listed.length === 0) return listings[0]?.listing ?? ({ kind: "not_repository" } as const)
     return {
       kind: "listed",
-      base: [...new Set(listed.map(({ listing }) => listing.base))].join(", "),
+      base: [...new Set(listed.map(({ listing }) => listing.base))].join(" and "),
       changes: listed
         .flatMap(({ repository, listing }) =>
           listing.changes.map((change) => prefixChange(repository, change)),

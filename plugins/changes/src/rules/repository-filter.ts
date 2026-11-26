@@ -10,7 +10,6 @@ export interface RepositoryChip {
 
 const within = (repository: string, change: Change) => change.path.startsWith(`${repository}/`)
 
-// A repository with no change gets no chip, and a pick that lost its last change falls back to all.
 export const repositoryChips = (
   repositories: ReadonlyArray<string>,
   changes: ReadonlyArray<Change>,

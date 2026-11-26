@@ -477,7 +477,6 @@ export interface ChangeListProps {
   readonly onFocusRow?: (row: ChangeListRow | null) => void
 }
 
-// A row of single-choice filters, each with the count of what it leaves.
 export interface ChipsProps {
   readonly label: string
   readonly options: ReadonlyArray<{

@@ -420,6 +420,7 @@ Pick by what the user does; the sections below give each component's look.
 | sees a session's status | `SessionMark` | `StatusMark`, which shows no harness |
 | turns a setting on or off, applied at once | `Switch` | a checkbox, which reads as a choice to submit later |
 | switches one view between two or three ways of showing the same thing (an SVG's image and source) | `Segmented` | `Tabs`, which head a panel of their own |
+| narrows a list to one of several groups of its rows, each with its count (a repository's changes) | `Chips` above it | `Segmented`, a bordered box that does not wrap and has no counts |
 
 ### Buttons
 - **Shape:** 6px corners, a 1px border slot, 500 weight. Medium is 28px tall with 12px side padding; small is 24px tall with 8px padding and 12px text. Icon buttons are square.
@@ -441,6 +442,7 @@ Phosphor icons (`@phosphor-icons/core`) at regular weight (the question icon fil
 - **Style:** raised ground, strong hairline, 6px corners, 28px tall. The text area grows with its content up to 240px. Placeholders are faint.
 - **Focus:** the border turns to the focus ring colour.
 - **Disabled:** 45% opacity (`--iv-opacity-disabled`). A select matches a field with a muted chevron.
+- **Chips:** a row of 22px options with 6px corners, 4px apart, wrapping onto more lines, 8px in from the sides: muted 11px text and the option's count after it in faint tabular text; the hover wash on hover, and the active wash with the text colour on the chosen one. Pressing the chosen one keeps it.
 - **Segmented:** 2px of room inside a 6px-corner raised box with a hairline, holding a 22px option per value in muted 12px text, 4px corners; the hover wash on hover, and the active wash with the text colour on the chosen one. Click, Enter and Space choose an option; choosing the chosen one keeps it.
 - **Switch:** a 30 by 18px pill on the raised ground with a strong hairline, holding a 12px muted round thumb; on, the pill turns yew with no border and the thumb, in yew contrast, slides 12px right over 180ms on `--iv-ease-out` (no slide with reduced motion). Click and Space turn it over. It applies its value at once, so it carries no Save button.
 

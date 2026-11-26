@@ -24,7 +24,7 @@ import { AREA, COMMITTED, UNCOMMITTED } from "../rules/groups.ts"
 import { listError } from "../rules/list-error.ts"
 import { FOLDER_DELETED, emptyMessages } from "../rules/messages.ts"
 import type { OnScreen } from "../rules/on-screen.ts"
-import { inRepository, repositoryChips } from "../rules/repository-filter.ts"
+import { ALL, inRepository, repositoryChips } from "../rules/repository-filter.ts"
 import { DiscardDialog } from "./discard-dialog.tsx"
 import { ListingFailure } from "./listing-failure.tsx"
 
@@ -99,7 +99,10 @@ export function ChangesOf({ session, onScreen }: { session: Session; onScreen: O
             onDiscard: askOne,
             discardCommand: "changes.discard",
             discardAll: {
-              label: "Discard all uncommitted changes",
+              label:
+                picked === ALL
+                  ? "Discard all uncommitted changes"
+                  : `Discard all uncommitted changes in ${picked}`,
               onDiscard: askAll,
               command: "changes.discardAll",
             },

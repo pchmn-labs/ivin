@@ -267,3 +267,30 @@ test("the commits of each repository are listed under it, with a diff read there
   ])
   expect(diff).toMatchObject({ kind: "text", status: "added", added: 1 })
 })
+
+test("a repository that cannot list its commits is left out while another can", async () => {
+  const bare = `${apiApp}-origin.git`
+  git(root, "init", "--quiet", "--bare", "-b", "main", bare)
+  git(apiApp, "remote", "add", "origin", bare)
+  git(apiApp, "push", "--quiet", "origin", "main")
+  git(apiApp, "remote", "set-head", "origin", "main")
+  const committed = await withServer([], (client) =>
+    Effect.gen(function* () {
+      yield* openTrusted(client)
+      const session = yield* client["session.create"]({ projectPath: workspace })
+      const sent = yield* client["session.sendMessage"]({
+        sessionId: session.id,
+        messageId: "m1",
+        text: "go",
+        workingFolder: { kind: "new_worktree" },
+      })
+      commit(join(sent.workingFolder, "app"), "api.txt")
+      commit(join(sent.workingFolder, "app-2"), "web.txt")
+      return yield* client["file.listCommittedChanges"]({ sessionId: sent.id })
+    }),
+  )
+
+  expect(committed.kind === "listed" && committed.changes.map((c) => c.path)).toEqual([
+    "app/api.txt",
+  ])
+})
