@@ -3,7 +3,10 @@ import { CommandFailed, CommandNotFound, type HostCall } from "@ivin/contracts/p
 import { Duration, Effect, Option, Queue, Schema, Stream } from "effect"
 import { apiValues } from "../rules/api-values.ts"
 import { settingChanges } from "../rules/plugin-setting-changes.ts"
-import { type Permissions, type PluginCall, verdictFor } from "../rules/permissions.ts"
+import { PluginFetchRequest } from "@ivin/contracts/plugin-fetch"
+import type { Permissions, PluginCall } from "../rules/permissions.ts"
+import { checkPluginCall } from "./check-plugin-call.ts"
+import { fetchForPlugin } from "./fetch-for-plugin.ts"
 import { type SpawnOutcome, PluginBridge, type WatchedKind } from "./plugin-bridge.ts"
 import type { RunningPluginHost } from "./plugin-host.ts"
 import { PluginCallFailed, PluginServices } from "./plugin-services.ts"
@@ -218,12 +221,19 @@ export const serveHost = (
           )
         }
         case "permission.check":
-          return Effect.sync(() => {
-            const verdict = verdictFor(
-              plugins.permissions(id),
-              args["call"] as unknown as PluginCall,
-            )
-            return verdict.allowed ? null : verdict.missing
+          return checkPluginCall(
+            id,
+            plugins.permissions(id),
+            args["call"] as unknown as PluginCall,
+          ).pipe(Effect.as(null))
+        case "fetch":
+          return Option.match(Schema.decodeUnknownOption(PluginFetchRequest)(args["request"]), {
+            onNone: () => Effect.fail(fail("request is not a fetch request")),
+            onSome: (request) =>
+              fetchForPlugin(id, plugins.permissions(id), request) as Effect.Effect<
+                Json,
+                PluginCallFailed
+              >,
           })
         default:
           return Effect.fail(fail(`ctx has no call named ${method}`))

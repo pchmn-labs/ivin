@@ -204,7 +204,10 @@ const withActivated = <A>(
         half: "server",
       })
       const host = yield* launcher.launch
-      yield* serveHost(host, { order: () => [id], permissions: () => NO_PERMISSIONS })
+      yield* serveHost(host, {
+        order: () => [id],
+        permissions: () => ({ ...NO_PERMISSIONS, exec: ["*"] }),
+      })
       const lines: string[] = []
       yield* Effect.forkScoped(
         host.logs.pipe(Stream.runForEach(({ line }) => Effect.sync(() => void lines.push(line)))),

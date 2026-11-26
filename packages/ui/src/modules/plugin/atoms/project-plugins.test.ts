@@ -15,7 +15,8 @@ const plugin = (state: ProjectPlugin["state"], hash: string): ProjectPlugin => (
   files: [{ path: "server.ts", status: "M" }],
   diff: "",
   permissionsChanged: false,
-  permissions: [],
+  permissions: { harness: [], exec: [], fetch: [] },
+  hasServer: false,
 })
 
 const shop = (plugins: ProjectPlugin[]): ProjectPlugins => ({

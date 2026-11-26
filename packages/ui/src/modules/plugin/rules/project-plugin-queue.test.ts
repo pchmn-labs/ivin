@@ -10,7 +10,8 @@ const plugin = (id: string, state: ProjectPlugin["state"]): ProjectPlugin => ({
   files: [],
   diff: "",
   permissionsChanged: false,
-  permissions: [],
+  permissions: { harness: [], exec: [], fetch: [] },
+  hasServer: false,
 })
 
 const change = (id: string, seen: boolean): ProjectPluginChange => ({

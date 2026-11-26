@@ -22,7 +22,8 @@ const mount = async (fullTrust: boolean) => {
         files: [{ path: "server.ts", status: "M" }],
         diff: "",
         permissionsChanged: false,
-        permissions: [],
+        permissions: { harness: [], exec: [], fetch: [] },
+        hasServer: false,
       },
     ],
     changes: [

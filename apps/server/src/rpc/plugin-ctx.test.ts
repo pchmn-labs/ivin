@@ -2,6 +2,8 @@ import { CommandNotFound } from "@ivin/contracts/plugin"
 import type { StartInput } from "@ivin/harness"
 import { Effect, Fiber, type Schema, Stream } from "effect"
 import { mkdtempSync } from "node:fs"
+import { createServer } from "node:http"
+import type { AddressInfo } from "node:net"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { expect, test, vi } from "vitest"
@@ -93,6 +95,7 @@ test("a beforeSpawn handler's variable is in the agent's environment, and a hook
     `export const activate = (ctx) => {
   ctx.harness.beforeSpawn(() => ({ env: { FOO: "1", WHO: "envs" } }))
 }`,
+    { permissions: { harness: ["beforeSpawn"] } },
   )
   serverPlugin(
     home,
@@ -100,6 +103,7 @@ test("a beforeSpawn handler's variable is in the agent's environment, and a hook
     `export const activate = (ctx) => {
   ctx.harness.beforeSpawn(() => { throw new Error("bad hook") })
 }`,
+    { permissions: { harness: ["beforeSpawn"] } },
   )
   const starts: StartInput[] = []
   await withPluginServer(
@@ -120,6 +124,71 @@ test("a beforeSpawn handler's variable is in the agent's environment, and a hook
     { scripted: { starts }, turns: [[]] },
   )
   expect(starts[0]?.env).toEqual({ FOO: "1", WHO: "envs" })
+})
+
+test("ctx.exec, ctx.fetch and ctx.harness.beforeSpawn run when declared, and fail naming the permission when not", async () => {
+  const server = createServer((_, response) => response.end("pong"))
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve))
+  const url = `http://127.0.0.1:${(server.address() as AddressInfo).port}/`
+  const home = tempDir("home")
+  serverPlugin(
+    home,
+    "caller",
+    `export const activate = (ctx) => {
+  const settle = (call) => call.then((value) => ({ value }), (error) => ({ error: error.message }))
+  ctx.commands.register("caller.node", () => settle(ctx.exec(process.execPath, ["-e", "process.stdout.write('ran')"]).then((r) => r.stdout)))
+  ctx.commands.register("caller.git", () => settle(ctx.exec("git", ["--version"])))
+  ctx.commands.register("caller.fetch", (url) => settle(ctx.fetch(url).then((r) => r.text())))
+}`,
+    { permissions: { exec: [process.execPath], fetch: ["127.0.0.1"] } },
+  )
+  serverPlugin(
+    home,
+    "fetchless",
+    `export const activate = (ctx) => {
+  ctx.commands.register("fetchless.fetch", (url) => ctx.fetch(url).then((r) => r.text(), (error) => ({ error: error.message })))
+}`,
+  )
+  serverPlugin(
+    home,
+    "spawner",
+    `export const activate = (ctx) => {
+  ctx.harness.beforeSpawn(() => ({ env: { FOO: "1" } }))
+}`,
+  )
+  try {
+    const result = await withPluginServer(home, (client) =>
+      Effect.gen(function* () {
+        const node = yield* runWhenRegistered(client, "caller.node")
+        const git = yield* runWhenRegistered(client, "caller.git")
+        const fetched = yield* runWhenRegistered(client, "caller.fetch", url)
+        const refused = yield* runWhenRegistered(client, "fetchless.fetch", url)
+        // The refusal is logged before the half counts as active.
+        const spawner = yield* until(
+          client["plugin.status"](),
+          (status) => status.find((plugin) => plugin.id === "spawner")?.server === "active",
+        ).pipe(Effect.andThen(client["plugin.readLog"]({ id: "spawner" })))
+        return {
+          node,
+          git,
+          fetched,
+          refused,
+          spawner,
+          log: yield* client["plugin.readLog"]({ id: "caller" }),
+        }
+      }),
+    )
+    expect(result).toMatchObject({
+      node: { value: "ran" },
+      git: { error: expect.stringContaining("exec: git") },
+      fetched: { value: "pong" },
+      refused: { error: expect.stringContaining("fetch: 127.0.0.1") },
+      spawner: [expect.stringContaining("harness: beforeSpawn")],
+      log: [expect.stringContaining("exec: git")],
+    })
+  } finally {
+    server.close()
+  }
 })
 
 test("ctx.storage values survive a relaunch", async () => {

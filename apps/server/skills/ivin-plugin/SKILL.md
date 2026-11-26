@@ -34,7 +34,7 @@ src/server.ts   the server half, runs in the plugin host process
 }
 ```
 
-`ivin.id` and at least one of `ivin.ui` and `ivin.server` are required. A plugin with the id of a built-in plugin replaces it. Further `ivin` keys: `settings` (each setting has a `type` of `boolean`, `number` or `string`, a `default`, a `title` and a `description`; read and written with `ivin settings`, as `<id>.<key>`) and `views` (see "Views").
+`ivin.id` and at least one of `ivin.ui` and `ivin.server` are required. A plugin with the id of a built-in plugin replaces it. Further `ivin` keys: `settings` (each setting has a `type` of `boolean`, `number` or `string`, a `default`, a `title` and a `description`; read and written with `ivin settings`, as `<id>.<key>`) `views` (see "Views") and `permissions` (see "Permissions").
 
 Imports: relative files, `react`, `react-dom`, `@ivin/plugin-api/ui`, `@ivin/plugin-api/server` and `@ivin/plugin-api/editor` are the only ones that need nothing. Any other package goes under `dependencies` in `package.json`, then `ivin plugin lock <id>` writes the `pnpm-lock.yaml` ivin installs from; a plugin with dependencies loads only with a lockfile that matches them. Run it after each change to the dependencies. The plugin's own sources go in `src/`; put one component per file in `src/ui/`, one hook per file in `src/hooks/` and pure logic in `src/rules/`, and keep `ui.tsx` to `activate`.
 
@@ -81,7 +81,17 @@ export const activate = defineServer((ctx) => {
 })
 ```
 
-It runs in the plugin host, a process of its own: a plugin that loops or crashes takes the host down, not ivin, and ivin restarts the host without it (`ivin plugin list` shows it as `disabled`). `console` output and errors go to `ivin plugin logs <id>`. `ctx.signal` aborts when the plugin is deactivated, which a reload does before the new version's `activate` runs: anything started outside `ctx` (a timer, a socket) keeps running until you stop it on `abort`. At the moment `ctx` has only `signal`.
+It runs in the plugin host, a process of its own: a plugin that loops or crashes takes the host down, not ivin, and ivin restarts the host without it (`ivin plugin list` shows it as `disabled`). `console` output and errors go to `ivin plugin logs <id>`. `ctx.signal` aborts when the plugin is deactivated, which a reload does before the new version's `activate` runs: anything started outside `ctx` (a timer, a socket) keeps running until you stop it on `abort`. Read the declarations in `@ivin/plugin-api/server` for the rest of `ctx`.
+
+## Permissions
+
+`ctx.exec` and `ctx.harness.beforeSpawn` in the server half, and `ctx.fetch` in either half, fail unless `ivin.permissions` declares the call, with the missing permission in `ivin plugin logs <id>`:
+
+```json
+"permissions": { "harness": ["beforeSpawn"], "exec": ["gh", "git"], "fetch": ["api.github.com", "*.example.com"] }
+```
+
+`exec` names a program as passed to `ctx.exec` (a path matches only itself), `fetch` a host, both take `"*"` for any. The UI half reaches no other origin with the window's own `fetch`: use `ctx.fetch`. The user sees the permissions when asked to trust a project plugin, and is asked again when they change.
 
 ## When something fails
 

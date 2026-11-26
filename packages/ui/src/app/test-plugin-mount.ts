@@ -16,6 +16,7 @@ export const activatePlugin = (activate: (ctx: UiContext) => void, pluginId: str
     fileUrl: (path) => path,
     views: { register: () => undefined, open: async () => undefined },
     notify: () => undefined,
+    fetch: () => Promise.reject(new Error("No network in tests.")),
     sidebar: { showPanel: () => undefined },
   })
   return <N extends SlotName>(name: N) =>

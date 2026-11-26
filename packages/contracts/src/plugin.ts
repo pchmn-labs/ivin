@@ -1,5 +1,6 @@
 import { Schema } from "effect"
 import { Rpc, RpcGroup } from "effect/rpc"
+import { PluginFetchFailed, PluginFetchRequest, PluginFetchResponse } from "./plugin-fetch.ts"
 
 // The app's own instances, which a plugin's bundle reads from `HOST_MODULES_GLOBAL` on `globalThis`.
 export const HOST_MODULES = [
@@ -51,6 +52,14 @@ export const PluginFileChange = Schema.Struct({
 })
 export type PluginFileChange = typeof PluginFileChange.Type
 
+// The `ctx` calls a manifest declares under `ivin.permissions`.
+export const PluginPermissions = Schema.Struct({
+  harness: Schema.Array(Schema.String),
+  exec: Schema.Array(Schema.String),
+  fetch: Schema.Array(Schema.String),
+})
+export type PluginPermissions = typeof PluginPermissions.Type
+
 export const ProjectPluginState = Schema.Literals(["new", "changed", "trusted"])
 export type ProjectPluginState = typeof ProjectPluginState.Type
 
@@ -67,8 +76,9 @@ export const ProjectPlugin = Schema.Struct({
   diff: Schema.String,
   // The manifest's permissions differ from the trusted version's: full trust does not cover this change.
   permissionsChanged: Schema.Boolean,
-  // The permissions the manifest declares, as written.
-  permissions: Schema.Array(Schema.String),
+  permissions: PluginPermissions,
+  // A server half runs Node code, which its permissions do not limit.
+  hasServer: Schema.Boolean,
 })
 export type ProjectPlugin = typeof ProjectPlugin.Type
 
@@ -195,6 +205,12 @@ export const PluginRpcs = RpcGroup.make(
     payload: { command: Schema.String, args: Schema.Json },
     success: Schema.Json,
     error: Schema.Union([CommandNotFound, CommandFailed]),
+  }),
+  // A UI half's `ctx.fetch`, checked against its manifest's permissions.
+  Rpc.make("plugin.fetch", {
+    payload: { id: Schema.String, request: PluginFetchRequest },
+    success: PluginFetchResponse,
+    error: PluginFetchFailed,
   }),
   // Whether the window is on screen: `ctx.poll` pauses while it is not.
   Rpc.make("plugin.setWindowVisible", { payload: { visible: Schema.Boolean } }),

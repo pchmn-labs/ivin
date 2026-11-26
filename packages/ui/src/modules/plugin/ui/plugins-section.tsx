@@ -16,6 +16,7 @@ import { projectPluginsAtom } from "../atoms/project-plugins.ts"
 import { useSetFullTrust, useTrustProjectPlugin } from "../hooks/use-trust-project-plugin.ts"
 import { FULL_TRUST_WARNING } from "../rules/full-trust-copy.ts"
 import { unseenChanges } from "../rules/project-plugin-queue.ts"
+import { permissionWords } from "../rules/permission-words.ts"
 import { PluginReview } from "./plugin-review.tsx"
 import "./plugins-section.css"
 
@@ -61,7 +62,7 @@ function WaitingPlugin({ project, plugin }: { project: string; plugin: ProjectPl
           heading={isNew ? "Files it would run" : "What changed since you trusted it"}
           files={plugin.files}
           diff={plugin.diff}
-          permissions={plugin.permissions}
+          permissions={permissionWords(plugin.permissions, plugin.hasServer)}
         />
       )}
       {own.failure !== null && <ErrorMessage message={own.failure} onRetry={own.trust} />}

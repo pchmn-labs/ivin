@@ -16,7 +16,8 @@ const changed: ProjectPlugin = {
   files: [{ path: "server.ts", status: "M" }],
   diff: "@@ -1 +1 @@\n-old line\n+new line\n",
   permissionsChanged: false,
-  permissions: ["exec: gh"],
+  permissions: { harness: [], exec: ["gh"], fetch: [] },
+  hasServer: true,
 }
 
 const mount = async (plugin: ProjectPlugin = changed) => {
@@ -45,6 +46,7 @@ test("reviewing a changed plugin shows its diff, and trusting that version sends
 
   await page.getByRole("button", { name: "Review" }).click()
   await expect.element(page.getByText("+new line")).toBeVisible()
+  await expect.element(page.getByText("Runs gh")).toBeVisible()
   await page.getByRole("button", { name: "Trust this version" }).click()
 
   expect(server.pluginTrusts).toEqual([{ project: "/dev/shop", id: "pr-checks", hash: "abc" }])
