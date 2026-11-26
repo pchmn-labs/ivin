@@ -604,7 +604,6 @@ The Command line section has one row in the same layout: "`ivin` in your shell",
 ### Pending designs
 Decided but not built, because the data they need does not exist yet. Build them this way when it arrives.
 - **Letter project icons:** lettered project icons in place of the pixel creatures, chosen on the settings page.
-- **Plugin settings sections:** the `settings.section` slot, one section per plugin in the settings sidebar, after the built-in ones.
 - **"Allow <rule> for this session":** a third approval option, waiting for an approval answer richer than allow or deny.
 
 ## Do's and Don'ts
