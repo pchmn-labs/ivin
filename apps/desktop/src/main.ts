@@ -66,6 +66,9 @@ const pluginHostEntry = app.isPackaged
 const cliEntry = app.isPackaged
   ? join(process.resourcesPath, "cli/ivin.js")
   : join(import.meta.dirname, "../../cli/dist/ivin.js")
+const builtinPluginsFolder = app.isPackaged
+  ? join(process.resourcesPath, "builtin-plugins")
+  : join(import.meta.dirname, "../../server/dist/builtin-plugins")
 const pnpmFolder = app.isPackaged
   ? join(process.resourcesPath, "pnpm")
   : join(import.meta.dirname, "../../server/dist/pnpm")
@@ -309,7 +312,7 @@ void app.whenReady().then(() => {
   })
   const bundleFolder = join(ivinHome, "cache", "plugins")
   protocol.handle(PLUGIN_BUNDLE_SCHEME, async (request) => {
-    const file = pluginBundleFile(bundleFolder, request.url)
+    const file = pluginBundleFile(bundleFolder, builtinPluginsFolder, request.url)
     if (!file) return new Response(null, { status: 404 })
     const response = await net.fetch(pathToFileURL(file).toString())
     return new Response(response.body, {
@@ -334,6 +337,8 @@ void app.whenReady().then(() => {
     pnpmFolder,
     "--cli-command",
     cliCommand,
+    "--builtin-plugins",
+    builtinPluginsFolder,
     "--plugin-host",
     pluginHostEntry,
     "--plugin-host-runtime",

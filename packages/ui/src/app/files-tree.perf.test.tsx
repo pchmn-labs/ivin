@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import type { FolderEntry } from "@ivin/contracts/file"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
@@ -46,7 +47,7 @@ test("scrolling a 5,000-file tree keeps the frame rate while the disk and git st
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
       <div style={{ height: 800 }}>
-        <App />
+        <App plugins={builtinPlugins} />
       </div>
     </RegistryProvider>,
   )

@@ -26,13 +26,15 @@ const locationOf = (filename: string | undefined, error: unknown): ReadonlyArray
   return [filename, firstFrame].filter((location) => location !== undefined)
 }
 
-// Built-in plugins are merged into the app bundle when packaged, so only user bundles are found.
 export const pluginOfError = (
   filename: string | undefined,
   error: unknown,
   bundles: ReadonlyMap<string, string>,
 ): string | null => {
   for (const location of locationOf(filename, error))
-    for (const [bundle, id] of bundles) if (location.includes(pluginBundleUrl(bundle))) return id
+    for (const [bundle, id] of bundles) {
+      if (location.includes(pluginBundleUrl(bundle, false))) return id
+      if (location.includes(pluginBundleUrl(bundle, true))) return id
+    }
   return null
 }

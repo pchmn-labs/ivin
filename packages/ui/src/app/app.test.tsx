@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { DateTime } from "effect"
 import { expect, test, vi } from "vitest"
 import { page, userEvent } from "vitest/browser"
@@ -58,7 +59,7 @@ const mountApp = async (
   }
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
   )
   return server
@@ -375,7 +376,7 @@ test("a server that does not answer is reported in the window, without a raw err
   server.failNextCall("server.getVersion")
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
   )
   await expect
@@ -395,7 +396,7 @@ test("a restarting server is reported in the window", async () => {
         [serverStateAtom, { kind: "restarting" }],
       ]}
     >
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
   )
   await expect
@@ -415,7 +416,7 @@ test("a server that keeps stopping shows its log's path and a Restart button the
         [serverStateAtom, { kind: "gave-up", logPath: "/home/.ivin/logs/ivin.log" }],
       ]}
     >
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
   )
   await expect

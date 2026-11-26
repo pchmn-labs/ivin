@@ -9,7 +9,7 @@ import { serverClientLayerAtom } from "../core/server-client.ts"
 import { makeTestSession } from "../core/test-session.ts"
 import { SessionView } from "../modules/session/ui/session-view.tsx"
 import type { UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
-import { builtinPlugins } from "./builtin-plugins.ts"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { SidebarTabs } from "./sidebar-tabs.tsx"
 

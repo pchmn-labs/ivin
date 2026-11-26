@@ -8,7 +8,7 @@ import { makeFakeServer } from "../core/fake-server-client.ts"
 import { makeTestSession } from "../core/test-session.ts"
 import { serverStateAtom } from "../modules/server/atoms/server-state.ts"
 import { serverClientLayerAtom } from "../core/server-client.ts"
-import { builtinPlugins } from "./builtin-plugins.ts"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { PluginsProvider } from "./plugin-host.tsx"
 import { SidebarTabs } from "./sidebar-tabs.tsx"
 

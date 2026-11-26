@@ -1,4 +1,5 @@
 import { RegistryContext } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { DateTime, Layer } from "effect"
 import { AtomRegistry } from "effect/reactivity"
 import { expect, test } from "vitest"
@@ -47,7 +48,7 @@ const mountApp = async ({ failVersion = false } = {}) => {
   const registry = AtomRegistry.make({ initialValues: [[serverClientLayerAtom, server.layer]] })
   await render(
     <RegistryContext.Provider value={registry}>
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryContext.Provider>,
   )
   await expect.element(page.getByTestId("project-name")).toHaveTextContent("ivin")

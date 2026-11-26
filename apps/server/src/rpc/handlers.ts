@@ -35,6 +35,7 @@ import { layerSqlitePluginStorage } from "../modules/plugin/adapters/sqlite-plug
 import { layerPluginBridge, PluginBridge } from "../modules/plugin/usecases/plugin-bridge.ts"
 import { layerPluginServices } from "./plugin-services.ts"
 import { listPluginStatus } from "../modules/plugin/usecases/list-plugin-status.ts"
+import { listBuiltinPlugins } from "../modules/plugin/usecases/list-builtin-plugins.ts"
 import { listPlugins } from "../modules/plugin/usecases/list-plugins.ts"
 import { layerServerHalves } from "../modules/plugin/usecases/server-halves.ts"
 import { lockPlugin } from "../modules/plugin/usecases/lock-plugin.ts"
@@ -186,6 +187,7 @@ export const handlers = Rpcs.toLayer(
       "keybinding.watch": () => watchKeybindings,
       "log.writeError": (report) => writeError(report),
       "plugin.list": () => listPlugins,
+      "plugin.listBuiltin": () => listBuiltinPlugins,
       "plugin.reportFailure": ({ id, reason }) => reportPluginFailure(id, reason),
       "plugin.readLog": ({ id }) => readPluginLog(id),
       "plugin.status": () => listPluginStatus,

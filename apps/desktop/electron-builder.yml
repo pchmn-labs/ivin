@@ -9,7 +9,7 @@ files:
     filter: ["main.js", "preload.cjs"]
   - from: ../server/dist
     to: server
-    filter: ["**/*", "!pnpm/**", "!plugin-host.js"]
+    filter: ["**/*", "!pnpm/**", "!plugin-host.js", "!builtin-plugins/**"]
   - from: ../../packages/ui/dist
     to: renderer
   - package.json
@@ -22,6 +22,8 @@ extraResources:
     to: skills
   - from: ../server/dist/pnpm
     to: pnpm
+  - from: ../server/dist/builtin-plugins
+    to: builtin-plugins
   - from: ../../plugins
     to: plugins
     filter: ["**/*", "!**/*.ts", "!**/*.tsx"]

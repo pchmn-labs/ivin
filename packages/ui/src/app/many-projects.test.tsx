@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { defaultSettings } from "@ivin/contracts/setting"
 import { afterEach, expect, test } from "vitest"
 import { page } from "vitest/browser"
@@ -28,7 +29,7 @@ const mountMany = async (layout: "rail" | "strip") => {
   root.id = "root"
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
     { container: root },
   )

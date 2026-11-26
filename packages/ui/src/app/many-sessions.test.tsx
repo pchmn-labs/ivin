@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
 import { page } from "vitest/browser"
@@ -54,7 +55,7 @@ const mountMany = async (count: number) => {
   }
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
   )
   await expect.element(page.getByTestId("project-name")).toBeVisible()

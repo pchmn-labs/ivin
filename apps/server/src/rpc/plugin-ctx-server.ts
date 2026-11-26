@@ -5,6 +5,7 @@ import { Duration, Effect, Layer } from "effect"
 import { RpcTest } from "effect/rpc"
 import { join } from "node:path"
 import { layerChildPluginHost } from "../modules/plugin/adapters/child-plugin-host.ts"
+import { layerFsBuiltinPlugins } from "../modules/plugin/adapters/fs-builtin-plugins.ts"
 import { layerFsUserPlugins } from "../modules/plugin/adapters/fs-user-plugins.ts"
 import { runPluginHost } from "../modules/plugin/usecases/run-plugin-host.ts"
 import { layerKeybindingsFileOf } from "../modules/keybinding/usecases/keybindings-file.ts"
@@ -22,6 +23,8 @@ export const hostEntry = join(import.meta.dirname, "../plugin-host.ts")
 export interface PluginServerOptions {
   readonly database?: string
   readonly scripted?: Parameters<typeof layerScripted>[1]
+  // The folder of the app's prebuilt plugins.
+  readonly builtins?: string
   readonly turns?: readonly (readonly ScriptedElement[])[]
 }
 
@@ -29,7 +32,7 @@ export interface PluginServerOptions {
 export const withPluginServer = <A, E>(
   home: string,
   use: (client: Client) => Effect.Effect<A, E>,
-  { database = ":memory:", scripted, turns = [] }: PluginServerOptions = {},
+  { database = ":memory:", scripted, turns = [], builtins }: PluginServerOptions = {},
 ) => {
   const db = new DatabaseSync(database)
   Effect.runSync(runMigrations(db))
@@ -57,6 +60,9 @@ export const withPluginServer = <A, E>(
           Layer.provide(layerSettingsFileOf([])),
           Layer.provideMerge(layerFsUserPlugins(home)),
           Layer.provideMerge(layerChildPluginHost(process.execPath, hostEntry)),
+          Layer.provideMerge(
+            builtins === undefined ? Layer.empty : layerFsBuiltinPlugins(builtins),
+          ),
         ),
       ),
       Effect.scoped,

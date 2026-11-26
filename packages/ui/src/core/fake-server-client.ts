@@ -91,6 +91,7 @@ export interface FakeServer {
   readonly sessions: Map<string, Session>
   readonly errorReports: Array<ErrorReport>
   readonly userPlugins: Array<UserPlugin>
+  readonly builtinPlugins: Array<UserPlugin>
   // Streams one more plugin to `plugin.list`, as the server does once its dependencies install.
   readonly addUserPlugin: (plugin: UserPlugin) => void
   readonly pluginFailures: Array<PluginFailure>
@@ -300,6 +301,7 @@ export const makeFakeServer = (
   let holdTabList: Promise<void> | null = null
   const errorReports: Array<ErrorReport> = []
   const userPlugins: Array<UserPlugin> = []
+  const builtinPlugins: Array<UserPlugin> = []
   const laterPlugins = Effect.runSync(PubSub.unbounded<UserPlugin>())
   const pluginFailures: Array<PluginFailure> = []
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
@@ -507,6 +509,7 @@ export const makeFakeServer = (
           ),
         ),
       ),
+    "plugin.listBuiltin": () => Effect.sync(() => [...builtinPlugins]),
     "plugin.reportFailure": (failure: PluginFailure) =>
       Effect.sync(() => void pluginFailures.push(failure)),
     "plugin.lock": ({ id }) =>
@@ -1464,6 +1467,7 @@ export const makeFakeServer = (
     sessions,
     errorReports,
     userPlugins,
+    builtinPlugins,
     addUserPlugin: (plugin) => void Effect.runSync(PubSub.publish(laterPlugins, plugin)),
     pluginFailures,
     sentMessages,

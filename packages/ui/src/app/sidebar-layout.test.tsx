@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import { defaultSettings } from "@ivin/contracts/setting"
 import { DateTime } from "effect"
 import { expect, test } from "vitest"
@@ -55,7 +56,7 @@ const mountApp = async (options: { layout?: "rail" | "strip"; failVersion?: bool
   await page.viewport(1280, 800)
   await render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
   )
   await expect.element(projectName()).toHaveTextContent("ivin")

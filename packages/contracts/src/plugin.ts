@@ -80,6 +80,8 @@ export class CommandFailed extends Schema.TaggedError<CommandFailed>()("CommandF
 export const PluginRpcs = RpcGroup.make(
   // Each plugin as soon as it is compiled or failed: one whose dependencies install comes last.
   Rpc.make("plugin.list", { success: UserPlugin, stream: true }),
+  // The plugins prebuilt with the app, all at once: the window starts once they are active.
+  Rpc.make("plugin.listBuiltin", { success: Schema.Array(UserPlugin) }),
   Rpc.make("plugin.reportFailure", { payload: PluginFailure }),
   // Oldest first; empty when the plugin never failed.
   Rpc.make("plugin.readLog", {

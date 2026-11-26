@@ -1,6 +1,7 @@
 import { useAtomSet, useAtomValue } from "@effect/atom-react"
 import { AsyncResult } from "effect/reactivity"
 import { useEffect, useRef } from "react"
+import { listBuiltinPluginsAtom } from "../../plugin/atoms/list-builtin-plugins.ts"
 import { listPluginsAtom } from "../../plugin/atoms/list-plugins.ts"
 import { reportPluginFailureAtom } from "../../plugin/atoms/report-plugin-failure.ts"
 import { writeErrorAtom } from "../atoms/write-error.ts"
@@ -10,13 +11,16 @@ export const useReportUncaughtErrors = () => {
   const writeError = useAtomSet(writeErrorAtom)
   const reportPlugin = useAtomSet(reportPluginFailureAtom)
   const listed = useAtomValue(listPluginsAtom)
+  const builtin = useAtomValue(listBuiltinPluginsAtom)
   const bundles = useRef(new Map<string, string>())
   bundles.current = new Map(
-    AsyncResult.isSuccess(listed)
-      ? listed.value.flatMap((plugin) =>
-          plugin._tag === "compiled" ? [[plugin.bundle, plugin.id]] : [],
-        )
-      : [],
+    [listed, builtin].flatMap((result) =>
+      AsyncResult.isSuccess(result)
+        ? result.value.flatMap((plugin) =>
+            plugin._tag === "compiled" ? [[plugin.bundle, plugin.id] as const] : [],
+          )
+        : [],
+    ),
   )
 
   useEffect(() => {

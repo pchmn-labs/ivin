@@ -1,4 +1,5 @@
 import { RegistryProvider } from "@effect/atom-react"
+import { builtinPlugins } from "../core/test-builtin-plugins.ts"
 import type { FolderEntry } from "@ivin/contracts/file"
 import { DateTime } from "effect"
 import { afterEach, beforeEach, expect, test } from "vitest"
@@ -66,7 +67,7 @@ const makeServer = () => {
 const mount = (server: FakeServer) =>
   render(
     <RegistryProvider initialValues={[[serverClientLayerAtom, server.layer]]}>
-      <App />
+      <App plugins={builtinPlugins} />
     </RegistryProvider>,
   )
 

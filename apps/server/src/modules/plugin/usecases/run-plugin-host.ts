@@ -1,6 +1,7 @@
 import { Duration, Effect, Ref, Stream } from "effect"
 import { readManifest } from "../rules/manifest.ts"
 import type { Permissions } from "../rules/permissions.ts"
+import { BuiltinPlugins } from "./builtin-plugins.ts"
 import { PluginHost, type RunningPluginHost } from "./plugin-host.ts"
 import { reportPluginFailure } from "./report-plugin-failure.ts"
 import { serveHost } from "./serve-host.ts"
@@ -32,10 +33,30 @@ const seconds = (input: Duration.Input) => Duration.toSeconds(Duration.fromInput
 const compileHalves = Effect.gen(function* () {
   const plugins = yield* UserPlugins
   const halves = yield* ServerHalves
-  if (plugins === null) return []
+  const builtins = yield* BuiltinPlugins
   const compiled: ServerHalf[] = []
   const seen = new Set<string>()
-  for (const folder of yield* plugins.folders) {
+  const userFolders = plugins === null ? [] : yield* plugins.folders
+  const userIds = new Set(
+    userFolders.flatMap((folder) => {
+      const reading = readManifest(folder.manifest)
+      return reading.kind === "valid" ? [reading.manifest.id] : []
+    }),
+  )
+  // Loaded first, and replaced as a whole by a user plugin with the same id.
+  for (const builtin of builtins?.plugins ?? []) {
+    const reading = readManifest(builtin.manifest)
+    if (reading.kind === "invalid" || builtin.server === null || userIds.has(reading.manifest.id)) {
+      continue
+    }
+    compiled.push({
+      id: reading.manifest.id,
+      file: builtins!.bundlePath(builtin.server),
+      permissions: reading.manifest.permissions,
+    })
+  }
+  if (plugins === null) return compiled
+  for (const folder of userFolders) {
     const reading = readManifest(folder.manifest)
     if (reading.kind === "invalid" || reading.manifest.server === null) continue
     const { id, server, permissions } = reading.manifest
