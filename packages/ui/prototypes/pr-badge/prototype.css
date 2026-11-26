@@ -1286,3 +1286,10 @@ body {
 .m-pr-title {
   line-height: var(--iv-text-md-lh);
 }
+
+/* Round 10: the corner mark says whether it can merge, so the ground is the same for all */
+
+.t-tile,
+.t-tile[data-mergeable] {
+  background: color-mix(in srgb, var(--iv-text-muted) 12%, transparent);
+}
