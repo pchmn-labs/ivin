@@ -20,6 +20,7 @@ import { Text } from "../core/components/text/text.tsx"
 import { Tooltip } from "../core/components/tooltip/tooltip.tsx"
 import { Tree } from "../core/components/tree/tree.tsx"
 import { QuickPick } from "../core/components/quick-pick/quick-pick.tsx"
+import { Chips } from "../core/components/chips/chips.tsx"
 import { SearchField } from "../core/components/search-field/search-field.tsx"
 import { ListRow } from "../core/components/list-row/list-row.tsx"
 import { ListSection } from "../core/components/list-section/list-section.tsx"
@@ -73,6 +74,7 @@ export const hostComponents = {
   Tree,
   ChangeList,
   SearchField,
+  Chips,
   QuickPick,
   TextField: HostTextField,
   Slot: HostSlot,

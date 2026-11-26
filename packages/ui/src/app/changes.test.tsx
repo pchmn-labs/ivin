@@ -462,19 +462,33 @@ test("a failed discard shows git's message under the file's row", async () => {
   await expect.element(row("README.md")).not.toBeInTheDocument()
 })
 
-test("in a working folder of several repositories, the changes are grouped under each repository that has some", async () => {
+test("in a working folder of several repositories, a chip per repository with changes narrows both groups to it", async () => {
   const server = makeServer()
-  server.committedChanges.delete(project)
   server.changes.set(project, {
     kind: "listed",
     repositories: ["api", "web", "docs"],
     changes: [change("api/src/app.ts", "modified"), change("web/index.html", "added")],
   })
+  server.committedChanges.set(project, {
+    kind: "listed",
+    base: "origin/main",
+    changes: [change("api/src/db.ts", "modified"), change("web/api.ts", "added")],
+  })
   await mount(server)
-  await expect.element(page.getByRole("list", { name: "Uncommitted changes in api" })).toBeVisible()
-  await expect.element(page.getByRole("list", { name: "Uncommitted changes in web" })).toBeVisible()
-  await expect
-    .element(page.getByRole("list", { name: "Uncommitted changes in docs" }))
-    .not.toBeInTheDocument()
-  await expect.element(changesTab()).toHaveTextContent("Changes2")
+  await expect.element(changesTab()).toHaveTextContent("Changes4")
+  await expect.element(page.getByRole("button", { name: "api 2" })).toBeVisible()
+  await expect.element(page.getByRole("button", { name: "web 2" })).toBeVisible()
+  await expect.element(page.getByRole("button", { name: /^docs/ })).not.toBeInTheDocument()
+  await expect.element(row("app.ts")).toBeVisible()
+  await expect.element(row("index.html")).toBeVisible()
+
+  await page.getByRole("button", { name: "web 2" }).click()
+  await expect.element(row("index.html")).toBeVisible()
+  await expect.element(committedRow("api.ts")).toBeVisible()
+  await expect.element(row("app.ts")).not.toBeInTheDocument()
+  await expect.element(committedRow("db.ts")).not.toBeInTheDocument()
+
+  await page.getByRole("button", { name: "All 4" }).click()
+  await expect.element(row("app.ts")).toBeVisible()
+  await expect.element(committedRow("db.ts")).toBeVisible()
 })

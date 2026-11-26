@@ -477,6 +477,18 @@ export interface ChangeListProps {
   readonly onFocusRow?: (row: ChangeListRow | null) => void
 }
 
+// A row of single-choice filters, each with the count of what it leaves.
+export interface ChipsProps {
+  readonly label: string
+  readonly options: ReadonlyArray<{
+    readonly value: string
+    readonly label: string
+    readonly count: number
+  }>
+  readonly value: string
+  readonly onChange: (value: string) => void
+}
+
 export interface SearchFieldProps {
   readonly label: string
   readonly value: string
@@ -682,6 +694,7 @@ export interface HostComponents {
   readonly Tree: ComponentType<TreeProps>
   readonly ChangeList: ComponentType<ChangeListProps>
   readonly SearchField: ComponentType<SearchFieldProps>
+  readonly Chips: ComponentType<ChipsProps>
   readonly QuickPick: ComponentType<QuickPickProps>
   readonly TextField: ComponentType<TextFieldProps>
   readonly Slot: ComponentType<SlotComponentProps>
@@ -732,6 +745,7 @@ export const MessageText = hostComponent((c) => c.MessageText)
 export const ProjectMark = hostComponent((c) => c.ProjectMark)
 export const Tree = hostComponent((c) => c.Tree)
 export const SearchField = hostComponent((c) => c.SearchField)
+export const Chips = hostComponent((c) => c.Chips)
 export const QuickPick = hostComponent((c) => c.QuickPick)
 export const TextField = hostComponent((c) => c.TextField)
 export const SessionLocation = hostComponent((c) => c.SessionLocation)
