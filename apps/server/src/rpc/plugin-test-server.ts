@@ -10,6 +10,7 @@ import {
 } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
+import type { DatabaseSync } from "node:sqlite"
 import { pathToFileURL } from "node:url"
 import * as React from "react"
 import * as jsxRuntime from "react/jsx-runtime"
@@ -25,12 +26,17 @@ export const tempDir = (prefix: string) => mkdtempSync(join(tmpdir(), `ivin-${pr
 export const withServer = <A, E>(
   home: string,
   use: (client: Client) => Effect.Effect<A, E, PluginReloads | Scope.Scope>,
+  { db, safe = false }: { db?: DatabaseSync; safe?: boolean } = {},
 ) =>
   Effect.runPromise(
     makeClient().pipe(
       Effect.flatMap(use),
       // Merged, so a test can run a use case on the instances the handlers use.
-      Effect.provide(serverLayer().pipe(Layer.provideMerge(layerFsUserPlugins(home)))),
+      Effect.provide(
+        serverLayer(db === undefined ? {} : { db }).pipe(
+          Layer.provideMerge(layerFsUserPlugins(home, undefined, undefined, { safe })),
+        ),
+      ),
       Effect.scoped,
     ),
   )

@@ -3,9 +3,12 @@ import {
   CHECK_FOR_UPDATES,
   DEV_BUILD_ARGUMENT,
   GET_SERVER_STATE,
+  GET_STARTUP_NOTICE,
   GET_UPDATE_STATE,
+  LAUNCH_SETTLED,
   OPEN_SETTINGS_FILE,
   PICK_FOLDER,
+  PLUGIN_ACTIVITY,
   RESTART_SERVER,
   RESTART_TO_UPDATE,
   RPC_PORT_REPLY,
@@ -40,6 +43,10 @@ contextBridge.exposeInMainWorld("ivin", {
     ipcRenderer.on(SERVER_STATE, relay)
     return () => ipcRenderer.removeListener(SERVER_STATE, relay)
   },
+  getStartupNotice: (): Promise<unknown> => ipcRenderer.invoke(GET_STARTUP_NOTICE),
+  reportPluginActivity: (event: { id: string; phase: "activating" | "activated" }): void =>
+    ipcRenderer.send(PLUGIN_ACTIVITY, event),
+  reportSettled: (): void => ipcRenderer.send(LAUNCH_SETTLED),
   getUpdateState: (): Promise<unknown> => ipcRenderer.invoke(GET_UPDATE_STATE),
   checkForUpdates: (): Promise<unknown> => ipcRenderer.invoke(CHECK_FOR_UPDATES),
   restartToUpdate: (): Promise<void> => ipcRenderer.invoke(RESTART_TO_UPDATE),

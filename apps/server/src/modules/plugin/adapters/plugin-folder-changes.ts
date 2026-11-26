@@ -9,7 +9,18 @@ const isIgnored = (path: string) =>
   path.split(/[/\\]/).some((part) => part.startsWith(".") || part === "node_modules")
 
 // A burst of writes to one plugin's folder is one change, sent once it has been quiet for SETTLE_MS.
-export const pluginFolderChanges = (pluginsFolder: string): Stream.Stream<string> =>
+// `create` makes the folder when it is missing; a project's is never made, and is not watched while missing.
+export const pluginFolderChanges = (pluginsFolder: string, create = true): Stream.Stream<string> =>
+  Stream.unwrap(
+    Effect.promise(() =>
+      stat(pluginsFolder).then(
+        (s) => s.isDirectory(),
+        () => create,
+      ),
+    ).pipe(Effect.map((watched) => (watched ? watchChanges(pluginsFolder, create) : Stream.empty))),
+  )
+
+const watchChanges = (pluginsFolder: string, create: boolean): Stream.Stream<string> =>
   Stream.callback<string>((queue) =>
     Effect.gen(function* () {
       const watchers = new Map<string, FSWatcher>()
@@ -48,7 +59,7 @@ export const pluginFolderChanges = (pluginsFolder: string): Stream.Stream<string
       yield* Effect.acquireRelease(
         Effect.tryPromise(async () => {
           // Created here so a plugin made later (`ivin plugin new`) is watched too.
-          await mkdir(pluginsFolder, { recursive: true, mode: 0o700 })
+          if (create) await mkdir(pluginsFolder, { recursive: true, mode: 0o700 })
           for (const name of await readdir(pluginsFolder).catch(() => [])) {
             if (
               !name.startsWith(".") &&

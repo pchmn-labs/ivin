@@ -1,7 +1,9 @@
 import { PluginNotLocked } from "@ivin/contracts/plugin"
 import { Effect, Layer } from "effect"
+import { createHash } from "node:crypto"
 import {
   appendFile,
+  copyFile,
   mkdir,
   readdir,
   readFile,
@@ -11,6 +13,7 @@ import {
   writeFile,
 } from "node:fs/promises"
 import { dirname, join, resolve, sep } from "node:path"
+import type { PluginTree, TreeFile } from "../rules/plugin-diff.ts"
 import { pluginTemplate } from "../rules/plugin-template.ts"
 import {
   PluginNotChecked,
@@ -23,7 +26,8 @@ import { pluginFolderChanges } from "./plugin-folder-changes.ts"
 import { pluginTypePaths } from "./plugin-types.ts"
 import { checkTypes } from "./ts-check.ts"
 import { makePluginDependencies } from "./plugin-dependencies.ts"
-import { bundle, hashOf } from "./plugin-bundler.ts"
+import { bundle, contentHashOf, filesOf, hashOf } from "./plugin-bundler.ts"
+import { layerFsPluginSwitches } from "./fs-plugin-switches.ts"
 import { installedPnpmFolder } from "./pnpm.ts"
 
 const isSafeName = (name: string) => name !== "" && !name.startsWith(".") && !/[/\\\0]/.test(name)
@@ -42,27 +46,79 @@ const isFile = (path: string) =>
 
 const messageOf = (error: unknown) => (error instanceof Error ? error.message : String(error))
 
+const foldersIn = async (root: string) => {
+  const names = await readdir(root).catch(() => [])
+  const folders: PluginFolder[] = []
+  for (const name of names.filter(isSafeName).sort()) {
+    const path = join(root, name)
+    // Followed, so a plugin can be a link to the folder its author works in.
+    if (await isFolder(path)) {
+      folders.push({ name, path, manifest: await readText(join(path, "package.json")) })
+    }
+  }
+  return folders
+}
+
+const isBinary = (bytes: Buffer) => bytes.includes(0)
+
+const readTree = async (path: string) => {
+  if (!(await isFolder(path))) return null
+  const folder = await realpath(path)
+  const files = new Map<string, TreeFile>()
+  for (const file of await filesOf(folder)) {
+    const bytes = await readFile(join(folder, file)).catch(() => null)
+    if (bytes === null) continue
+    files.set(file, {
+      text: isBinary(bytes) ? null : bytes.toString("utf8"),
+      digest: createHash("sha256").update(bytes).digest("hex"),
+    })
+  }
+  return { hash: await contentHashOf(folder), files: files as PluginTree }
+}
+
 // `pnpmFolder` is the pnpm and `toolsFolder` the type checker and types the desktop app ships; the tests run the ones in node_modules.
-export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string, toolsFolder?: string) => {
+// `safe` loads no user or project plugin and ignores the list of disabled plugins.
+export const layerFsUserPlugins = (
+  ivinHome: string,
+  pnpmFolder?: string,
+  toolsFolder?: string,
+  { safe = false }: { readonly safe?: boolean } = {},
+) => {
+  const trustFolder = join(ivinHome, "cache", "plugin-trust")
   const dependencies = makePluginDependencies(ivinHome, pnpmFolder ?? installedPnpmFolder())
   const pluginsFolder = join(ivinHome, "plugins")
   const cacheFolder = join(ivinHome, "cache", "plugins")
   const logFolder = join(ivinHome, "logs", "plugins")
   const logFile = (id: string) => (isSafeName(id) ? join(logFolder, `${id}.log`) : null)
 
-  return Layer.succeed(UserPlugins)({
-    folders: Effect.promise(async () => {
-      const names = await readdir(pluginsFolder).catch(() => [])
-      const folders: PluginFolder[] = []
-      for (const name of names.filter(isSafeName).sort()) {
-        const path = join(pluginsFolder, name)
-        // Followed, so a plugin can be a link to the folder its author works in.
-        if (await isFolder(path))
-          folders.push({ name, path, manifest: await readText(join(path, "package.json")) })
-      }
-      return folders
-    }),
+  const userPlugins = Layer.succeed(UserPlugins)({
+    folders: Effect.promise(() => foldersIn(pluginsFolder)),
     changes: pluginFolderChanges(pluginsFolder),
+    foldersIn: (root) => Effect.promise(() => foldersIn(root)),
+    projectChanges: (project) => pluginFolderChanges(join(project, ".ivin", "plugins"), false),
+    readTree: (path) => Effect.promise(() => readTree(path)),
+    keepTrusted: (hash, path) =>
+      Effect.promise(async () => {
+        const target = join(trustFolder, hash)
+        if (await isFolder(target)) return target
+        const folder = await realpath(path)
+        // Built beside the target and renamed into place, so a copy found there is complete.
+        const partial = `${target}.${process.pid}.partial`
+        for (const file of await filesOf(folder)) {
+          await mkdir(dirname(join(partial, file)), { recursive: true, mode: 0o700 })
+          await copyFile(join(folder, file), join(partial, file))
+        }
+        await mkdir(partial, { recursive: true, mode: 0o700 })
+        await rename(partial, target).catch(async (error: NodeJS.ErrnoException) => {
+          if (!(await isFolder(target))) throw error
+        })
+        return target
+      }),
+    trustedFolder: (hash) =>
+      Effect.promise(async () => {
+        const target = join(trustFolder, hash)
+        return (await isFolder(target)) ? target : null
+      }),
     bundlePath: (name) => join(cacheFolder, name),
     check: (path) =>
       Effect.tryPromise({
@@ -147,4 +203,5 @@ export const layerFsUserPlugins = (ivinHome: string, pnpmFolder?: string, toolsF
         return text === null ? [] : text.split("\n").filter((line) => line !== "")
       }),
   })
+  return Layer.mergeAll(userPlugins, layerFsPluginSwitches(ivinHome, safe))
 }

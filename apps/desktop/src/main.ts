@@ -11,7 +11,7 @@ import {
   utilityProcess,
   type UtilityProcess,
 } from "electron"
-import { readFileSync } from "node:fs"
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
 import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import { delimiter, dirname, isAbsolute, join } from "node:path"
@@ -21,9 +21,12 @@ import {
   CHECK_FOR_UPDATES,
   DEV_BUILD_ARGUMENT,
   GET_SERVER_STATE,
+  GET_STARTUP_NOTICE,
   GET_UPDATE_STATE,
+  LAUNCH_SETTLED,
   OPEN_SETTINGS_FILE,
   PICK_FOLDER,
+  PLUGIN_ACTIVITY,
   RESTART_SERVER,
   RESTART_TO_UPDATE,
   RPC_PORT_REPLY,
@@ -33,10 +36,18 @@ import {
   UPDATE_STATE,
 } from "./channels.ts"
 import { writeCliCommand } from "./cli-command.ts"
+import {
+  launchModeFrom,
+  parseLaunchRecord,
+  SAFE_ARGUMENT,
+  type LaunchMode,
+  type LaunchRecord,
+} from "./launch-mode.ts"
 import { linkTarget } from "./link-target.ts"
 import { IMAGE_SCHEME, imageFile } from "./image-protocol.ts"
 import { PLUGIN_SCHEME, pluginFile } from "./plugin-protocol.ts"
 import { PLUGIN_BUNDLE_SCHEME, pluginBundleFile } from "./plugin-bundle-protocol.ts"
+import { mergeDisabledPlugins, pluginsToBlame, type PluginActivity } from "./plugin-blame.ts"
 import { createRestartPolicy } from "./restart-policy.ts"
 import { automaticCheckFrom, betaFrom } from "./update-settings.ts"
 import { createUpdater, startSwap } from "./updater.ts"
@@ -119,6 +130,67 @@ const openOutside = (url: string) => {
   if (linkTarget(url, appPage) === "browser") void shell.openExternal(url)
 }
 
+type StartupNotice =
+  | { readonly _tag: "safeForced" }
+  | { readonly _tag: "safeAfterCrash" }
+  | { readonly _tag: "reloadedWithout"; readonly plugins: readonly string[] }
+
+let launchMode: LaunchMode = { kind: "normal" }
+let launchRecord: LaunchRecord = { startedAt: 0, settled: false, quit: false }
+// Safe mode lasts the whole launch, so its notice shows on every load; a reload's shows once.
+let nextLoadNotice: StartupNotice | null = null
+let currentNotice: StartupNotice | null = null
+let activity: PluginActivity[] = []
+const unresponsiveReloads = createRestartPolicy()
+
+const launchFile = () => join(ivinHome, "launch.json")
+const disabledPluginsFile = () => join(ivinHome, "disabled-plugins.json")
+
+const readFileOrNull = (file: string) => {
+  try {
+    return readFileSync(file, "utf8")
+  } catch {
+    return null
+  }
+}
+
+const writeAtomically = (file: string, text: string) => {
+  try {
+    mkdirSync(ivinHome, { recursive: true, mode: 0o700 })
+    const temporary = `${file}.${process.pid}.tmp`
+    writeFileSync(temporary, text)
+    renameSync(temporary, file)
+  } catch (error) {
+    console.error(`could not write ${file}`, error)
+  }
+}
+
+const saveLaunchRecord = (patch: Partial<LaunchRecord>) => {
+  launchRecord = { ...launchRecord, ...patch }
+  writeAtomically(launchFile(), `${JSON.stringify(launchRecord)}\n`)
+}
+
+const safeNotice = (mode: LaunchMode): StartupNotice | null =>
+  mode.kind === "normal"
+    ? null
+    : mode.reason === "forced"
+      ? { _tag: "safeForced" }
+      : { _tag: "safeAfterCrash" }
+
+const reloadWithout = (window: BrowserWindow) => {
+  if (launchMode.kind === "safe") return
+  const blamed = pluginsToBlame(activity, Date.now())
+  if (unresponsiveReloads(Date.now(), true) === "give-up") return
+  if (blamed.length > 0) {
+    writeAtomically(
+      disabledPluginsFile(),
+      `${JSON.stringify(mergeDisabledPlugins(readFileOrNull(disabledPluginsFile()), blamed))}\n`,
+    )
+    nextLoadNotice = { _tag: "reloadedWithout", plugins: blamed }
+  }
+  window.webContents.reload()
+}
+
 const createWindow = async () => {
   const window = new BrowserWindow({
     width: 960,
@@ -143,6 +215,13 @@ const createWindow = async () => {
     openOutside(url)
     return { action: "deny" }
   })
+  window.webContents.on("did-start-navigation", (details) => {
+    if (!details.isMainFrame || details.isSameDocument) return
+    currentNotice = nextLoadNotice ?? safeNotice(launchMode)
+    nextLoadNotice = null
+    activity = []
+  })
+  window.on("unresponsive", () => reloadWithout(window))
   window.webContents.on("will-navigate", (event) => {
     if (linkTarget(event.url, appPage) === "app") return
     event.preventDefault()
@@ -168,6 +247,17 @@ ipcMain.on(RPC_PORT_REQUEST, (event, id: unknown) => {
   event.sender.postMessage(RPC_PORT_REPLY, id, [port2])
 })
 
+ipcMain.handle(GET_STARTUP_NOTICE, () => currentNotice)
+ipcMain.on(PLUGIN_ACTIVITY, (_event, value: { id?: unknown; phase?: unknown }) => {
+  if (typeof value?.id !== "string") return
+  if (value.phase !== "activating" && value.phase !== "activated") return
+  activity.push({ at: Date.now(), id: value.id, phase: value.phase })
+  if (activity.length > 500) activity.splice(0, activity.length - 500)
+})
+ipcMain.on(LAUNCH_SETTLED, () => {
+  if (!launchRecord.settled) saveLaunchRecord({ settled: true })
+})
+
 ipcMain.handle(PICK_FOLDER, async (event) => {
   const window = BrowserWindow.fromWebContents(event.sender)
   // Only macOS picks a folder or a file in one dialog; elsewhere it would lose the folders.
@@ -190,6 +280,8 @@ let serverStopped = false
 let quitting = false
 app.on("before-quit", () => {
   quitting = true
+  // A second instance quits at once and must not overwrite the first one's record.
+  if (launchRecord.startedAt > 0) saveLaunchRecord({ quit: true })
 })
 app.on("will-quit", (event) => {
   const stopping = server
@@ -332,7 +424,13 @@ void app.whenReady().then(() => {
   })
   const cliFolder = join(app.getPath("userData"), "bin")
   const cliCommand = writeCliCommand(cliFolder, process.execPath, cliEntry)
+  launchMode = launchModeFrom(
+    parseLaunchRecord(readFileOrNull(launchFile())),
+    process.argv.slice(1),
+  )
+  saveLaunchRecord({ startedAt: Date.now(), settled: false, quit: false })
   const serverArgs = [
+    ...(launchMode.kind === "safe" ? [SAFE_ARGUMENT] : []),
     "--database",
     join(app.getPath("userData"), "ivin.db"),
     "--log",

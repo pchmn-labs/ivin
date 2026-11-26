@@ -27,6 +27,15 @@ declare global {
       readonly checkForUpdates: () => Promise<UpdateState>
       readonly restartToUpdate: () => Promise<void>
       readonly onUpdateState: (listener: (state: UpdateState) => void) => () => void
+      // A `StartupNotice` from @ivin/contracts/plugin, or null when the window started as usual.
+      readonly getStartupNotice: () => Promise<unknown>
+      // Lets the desktop app name the plugin a window that stops answering was running.
+      readonly reportPluginActivity: (activity: {
+        readonly id: string
+        readonly phase: "activating" | "activated"
+      }) => void
+      // The window rendered with every initial plugin active.
+      readonly reportSettled: () => void
     }
   }
 }

@@ -95,6 +95,7 @@ import { contractSession } from "../modules/session/rules/plugin-session.ts"
 import { hostComponents } from "./host-components.ts"
 import { showSidebarTab } from "./sidebar.ts"
 import { activatePlugin, type UiPluginEntry } from "../modules/plugin/atoms/activate-plugin.ts"
+import { reportPluginActivity, reportSettled } from "../modules/plugin/adapters/desktop-plugin.ts"
 import { useBuiltinPlugins } from "../modules/plugin/hooks/use-builtin-plugins.ts"
 import { importPluginBundle, type ImportBundle } from "../modules/plugin/adapters/plugin-bundle.ts"
 import { useUserPlugins } from "../modules/plugin/hooks/use-user-plugins.ts"
@@ -429,6 +430,16 @@ const host: UiHost = {
   components: hostComponents,
 }
 
+const activateReported = (...args: Parameters<typeof activatePlugin>) => {
+  const id = args[1].manifest.id
+  reportPluginActivity(id, "activating")
+  try {
+    return activatePlugin(...args)
+  } finally {
+    reportPluginActivity(id, "activated")
+  }
+}
+
 export function PluginsProvider({
   plugins: given,
   importBundle = importPluginBundle,
@@ -474,15 +485,22 @@ export function PluginsProvider({
             // Back in the same pass, so the replaced built-in plugin never leaves the screen.
             const builtIn = plugins.find((p) => p.manifest.id === plugin.manifest.id)
             if (builtIn !== undefined && !current.has(builtIn))
-              current.set(builtIn, activatePlugin(registry, builtIn, showPanel))
+              current.set(builtIn, activateReported(registry, builtIn, showPanel))
           }
         : undefined
-      const deactivate = activatePlugin(registry, plugin, showPanel, onFailure)
+      const deactivate = activateReported(registry, plugin, showPanel, onFailure)
       // Deactivating a failed plugin would remove its replaced built-in plugin's contributions, which share its id.
       if (!failed) current.set(plugin, deactivate)
     }
     if (builtins.ready) setActive(true)
   }, [registry, all, plugins, userPlugins.plugins, dropFailedPlugin, builtins.ready])
+  const settled = useRef(false)
+  useEffect(() => {
+    if (!active || settled.current) return
+    settled.current = true
+    // After the paint that shows the window.
+    requestAnimationFrame(() => reportSettled())
+  }, [active])
   useEffect(
     () => () => {
       deactivations.current.forEach((deactivate) => deactivate())

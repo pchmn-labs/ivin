@@ -25,6 +25,7 @@ test("the app's sections come first, then one per plugin with settings, then the
     "agents",
     "images",
     "updates",
+    "plugins",
     "plugin:prs",
     "commandLine",
   ])

@@ -13,6 +13,7 @@ import { countOf } from "../rules/count-of.ts"
 import { settingsProblemAtom } from "../atoms/settings.ts"
 import { ignoredPluginSettingMessage } from "../rules/setting-message.ts"
 import type { PageSetting } from "../rules/settings-page-sections.ts"
+import { PluginsSection } from "../../plugin/ui/plugins-section.tsx"
 import { CommandLineSection } from "./command-line-section.tsx"
 import { ImagesSection } from "./images-section.tsx"
 import { SettingsFileProblem } from "./settings-file-problem.tsx"
@@ -217,6 +218,8 @@ export function SettingsPage() {
               <CommandLineSection />
             ) : section.key === "images" ? (
               <ImagesSection />
+            ) : section.key === "plugins" ? (
+              <PluginsSection />
             ) : (
               section.settings.map((setting) => (
                 <SettingRow key={setting.path} setting={setting} disabled={problem !== null} />

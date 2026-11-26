@@ -24,6 +24,13 @@ const images: PageSection = {
   settings: [],
 }
 
+const projectPlugins: PageSection = {
+  key: "plugins",
+  title: "Plugins",
+  description: "The plugins your trusted projects ship, and which of their changes run.",
+  settings: [],
+}
+
 const commandLine: PageSection = {
   key: "commandLine",
   title: "Command line",
@@ -59,6 +66,7 @@ export const settingsPageSections = (
     ...settingSections.filter((section) => section.key !== "updates"),
     images,
     ...settingSections.filter((section) => section.key === "updates"),
+    projectPlugins,
     ...[...plugins].map(([pluginId, { name, settings }]) => ({
       key: `plugin:${pluginId}`,
       title: name,

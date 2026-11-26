@@ -43,6 +43,15 @@ import { createPlugin } from "../modules/plugin/usecases/create-plugin.ts"
 import { lockPlugin } from "../modules/plugin/usecases/lock-plugin.ts"
 import { layerPluginReloads } from "../modules/plugin/usecases/plugin-reloads.ts"
 import { reloadPlugin } from "../modules/plugin/usecases/reload-plugin.ts"
+import { layerSqliteProjectPluginTrust } from "../modules/plugin/adapters/sqlite-project-plugin-trust.ts"
+import { layerProjectPluginUpdates } from "../modules/plugin/usecases/project-plugin-updates.ts"
+import { setPluginEnabled } from "../modules/plugin/usecases/set-plugin-enabled.ts"
+import {
+  markProjectChangesSeen,
+  setProjectFullTrust,
+  trustProjectPlugin,
+  watchProjectPlugins,
+} from "../modules/plugin/usecases/trust-project-plugin.ts"
 import { readPluginLog } from "../modules/plugin/usecases/read-plugin-log.ts"
 import { reportPluginFailure } from "../modules/plugin/usecases/report-plugin-failure.ts"
 import { watchKeybindings } from "../modules/keybinding/usecases/watch-keybindings.ts"
@@ -82,6 +91,7 @@ import { taskOutput } from "../modules/session/usecases/task-output.ts"
 import { watchSessions } from "../modules/session/usecases/watch-sessions.ts"
 import { layerWorktreeCleanup } from "../modules/session/usecases/worktree-cleanup.ts"
 import { layerPluginSettingDeclarations } from "./plugin-setting-declarations.ts"
+import { layerPluginProjects } from "./plugin-projects.ts"
 import { layerCurrentSettings } from "../modules/setting/usecases/current-settings.ts"
 import { getSetting } from "../modules/setting/usecases/get-setting.ts"
 import { setSetting } from "../modules/setting/usecases/set-setting.ts"
@@ -127,12 +137,14 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
     layerServerHalves,
     layerPluginServices,
     layerPluginReloads,
+    layerProjectPluginUpdates,
   ).pipe(
     Layer.provideMerge(Layer.mergeAll(layerWorktreeCleanup, layerImageCompression)),
     Layer.provideMerge(Layer.mergeAll(layerSessionTabs, layerSessionsWithTab)),
     Layer.provideMerge(sessionRuns),
     Layer.provideMerge(layerCurrentSettings),
     Layer.provideMerge(layerPluginSettingDeclarations),
+    Layer.provideMerge(layerPluginProjects),
     Layer.provideMerge(layerSessionFeed),
     Layer.provideMerge(layerOriginFetch),
     Layer.provideMerge(Layer.mergeAll(layerChangeFeed, layerCommittedListings)),
@@ -154,6 +166,7 @@ export const layerServicesWith = (sessionRuns: typeof layerSessionRuns) =>
         layerAnnotationFeed,
         layerPluginBridge,
         layerSqlitePluginStorage,
+        layerSqliteProjectPluginTrust,
       ),
     ),
     Layer.provideMerge(layerFsProjectTrust),
@@ -198,6 +211,11 @@ export const handlers = Rpcs.toLayer(
       "plugin.reportFailure": ({ id, reason }) => reportPluginFailure(id, reason),
       "plugin.readLog": ({ id }) => readPluginLog(id),
       "plugin.status": () => listPluginStatus,
+      "plugin.setEnabled": ({ id, enabled }) => setPluginEnabled(id, enabled),
+      "plugin.projectPlugins": () => watchProjectPlugins,
+      "plugin.trust": ({ project, id, hash }) => trustProjectPlugin(project, id, hash),
+      "plugin.setFullTrust": ({ project, enabled }) => setProjectFullTrust(project, enabled),
+      "plugin.markChangesSeen": ({ project }) => markProjectChangesSeen(project),
       "plugin.lock": ({ id }) => lockPlugin(id),
       "plugin.run": ({ command, args }) =>
         Effect.flatMap(PluginBridge, (bridge) => bridge.runCommand(command, args)),

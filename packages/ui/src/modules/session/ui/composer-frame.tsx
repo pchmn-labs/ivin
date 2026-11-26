@@ -1,4 +1,5 @@
 import type { ComposerFrameProps } from "@ivin/plugin-api/ui"
+import { ProjectPluginSheets } from "../../plugin/ui/project-plugin-sheets.tsx"
 import "./composer-frame.css"
 
 export function ComposerFrame({
@@ -17,7 +18,10 @@ export function ComposerFrame({
           {alert}
         </div>
       )}
-      {sheets === undefined ? null : <div className="iv-composer__sheets">{sheets}</div>}
+      <div className="iv-composer__sheets">
+        <ProjectPluginSheets />
+        {sheets}
+      </div>
       {children}
       {announce === undefined ? null : (
         <span className="iv-visually-hidden" role="status" data-testid="composer-session-status">

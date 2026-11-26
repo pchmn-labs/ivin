@@ -67,6 +67,7 @@ const {
     "plugin-host": pluginHostPath,
     "plugin-host-runtime": pluginHostRuntime,
     "builtin-plugins": builtinPluginsPath,
+    safe: safeMode,
   },
 } = parseArgs({
   options: {
@@ -81,6 +82,7 @@ const {
     "plugin-host": { type: "string" },
     "plugin-host-runtime": { type: "string" },
     "builtin-plugins": { type: "string" },
+    safe: { type: "boolean" },
   },
   strict: false,
 })
@@ -190,6 +192,7 @@ const startup = Effect.gen(function* () {
             ivinHome,
             pnpmFolder,
             typeof pluginToolsPath === "string" ? pluginToolsPath : undefined,
+            { safe: safeMode === true },
           ),
           typeof builtinPluginsPath === "string"
             ? layerFsBuiltinPlugins(builtinPluginsPath)

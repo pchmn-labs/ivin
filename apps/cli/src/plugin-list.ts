@@ -7,7 +7,7 @@ export const pluginList: Command = {
   summary: "List the plugins and whether each half is active, failed or disabled",
   usage: "ivin plugin list",
   description:
-    "Prints one line per plugin in ~/.ivin/plugins/, with the state of its UI half and of its server half: active, failed, disabled (the plugin host stopped running it, or there is none), or none when the plugin has no such half. `ivin plugin logs <id>` says why a half failed or was disabled.",
+    "Prints one line per plugin in ~/.ivin/plugins/, with the state of its UI half and of its server half: active, failed, disabled (turned off with `ivin plugin disable`, the plugin host stopped running it, or there is none), or none when the plugin has no such half. `ivin plugin logs <id>` says why a half failed or was disabled.",
   options: {},
   maxArguments: 0,
   run: () =>

@@ -1,9 +1,11 @@
 import { Duration, Effect, Queue, Ref, Stream } from "effect"
 import { readManifest } from "../rules/manifest.ts"
 import { NO_PERMISSIONS, type Permissions } from "../rules/permissions.ts"
-import { BuiltinPlugins } from "./builtin-plugins.ts"
+import { BuiltinPlugins, type BuiltinPlugin } from "./builtin-plugins.ts"
 import { PluginHost, type RunningPluginHost } from "./plugin-host.ts"
-import { PluginReloads, type ReloadRequest } from "./plugin-reloads.ts"
+import { PluginReloads, builtinKey, builtinKeyId, type ReloadRequest } from "./plugin-reloads.ts"
+import { disabledPlugins } from "./plugin-switches.ts"
+import { pluginFolders } from "./project-plugins.ts"
 import { reportPluginFailure } from "./report-plugin-failure.ts"
 import { serveHost } from "./serve-host.ts"
 import { ServerHalves } from "./server-halves.ts"
@@ -46,7 +48,10 @@ type Compiled =
     }
   | { readonly kind: "failed"; readonly id: string; readonly reason: string }
 
-const compileHalf = (folder: PluginFolder): Effect.Effect<Compiled> =>
+const compileHalf = (
+  folder: PluginFolder,
+  disabled: ReadonlySet<string>,
+): Effect.Effect<Compiled> =>
   Effect.gen(function* () {
     const plugins = yield* UserPlugins
     if (plugins === null) return { kind: "none" } as const
@@ -55,6 +60,7 @@ const compileHalf = (folder: PluginFolder): Effect.Effect<Compiled> =>
       return { kind: "none" } as const
     }
     const { id, server, permissions } = reading.manifest
+    if (disabled.has(id)) return { kind: "none" } as const
     return yield* plugins.compile({ id, path: folder.path, entry: server, half: "server" }).pipe(
       Effect.map((file): Compiled => ({
         kind: "compiled",
@@ -91,13 +97,46 @@ interface Change {
   readonly start: ServerHalf | null
 }
 
+const builtinHalf = (
+  builtin: BuiltinPlugin | undefined,
+  bundlePath: (name: string) => string,
+  disabled: ReadonlySet<string>,
+  registry: Registry,
+  key: string,
+): Compiled => {
+  if (builtin?.server == null) return { kind: "none" }
+  const reading = readManifest(builtin.manifest)
+  if (reading.kind === "invalid" || disabled.has(reading.manifest.id)) return { kind: "none" }
+  const { id, permissions } = reading.manifest
+  // A plugin with this id from a folder replaces the built-in one.
+  const heldByFolder = [...registry.idOfFolder].some(([name, held]) => held === id && name !== key)
+  return heldByFolder
+    ? { kind: "none" }
+    : { kind: "compiled", id, file: bundlePath(builtin.server), permissions }
+}
+
 const resolve = (registry: Registry, { folder: folderName, force }: ReloadRequest) =>
   Effect.gen(function* () {
-    const plugins = yield* UserPlugins
-    const folder =
-      plugins === null ? undefined : (yield* plugins.folders).find((f) => f.name === folderName)
+    const disabled = yield* disabledPlugins
+    const folder = (yield* pluginFolders).find((f) => f.name === folderName)
     const known = registry.idOfFolder.get(folderName) ?? null
-    const compiled: Compiled = folder === undefined ? { kind: "none" } : yield* compileHalf(folder)
+    const builtinId = builtinKeyId(folderName)
+    const builtins = yield* BuiltinPlugins
+    const compiled: Compiled =
+      folder !== undefined
+        ? yield* compileHalf(folder, disabled)
+        : builtinId !== null && builtins !== null
+          ? builtinHalf(
+              builtins.plugins.find((plugin) => {
+                const reading = readManifest(plugin.manifest)
+                return reading.kind === "valid" && reading.manifest.id === builtinId
+              }),
+              builtins.bundlePath,
+              disabled,
+              registry,
+              folderName,
+            )
+          : { kind: "none" }
     if (compiled.kind === "failed") {
       // The version that runs keeps running.
       yield* reportPluginFailure(compiled.id, compiled.reason)
@@ -212,7 +251,8 @@ export const runPluginHost = (timings: PluginHostTimings = defaultPluginHostTimi
     yield* Effect.forkScoped(
       requests.pipe(Stream.runForEach((request) => Queue.offer(pending, request))),
     )
-    const userFolders = plugins === null ? [] : yield* plugins.folders
+    const disabled = yield* disabledPlugins
+    const userFolders = plugins === null ? [] : yield* pluginFolders
     const userIds = new Set(
       userFolders.flatMap((folder) => {
         const reading = readManifest(folder.manifest)
@@ -223,9 +263,10 @@ export const runPluginHost = (timings: PluginHostTimings = defaultPluginHostTimi
     for (const builtin of builtins?.plugins ?? []) {
       const reading = readManifest(builtin.manifest)
       if (reading.kind === "invalid" || builtin.server === null) continue
-      if (userIds.has(reading.manifest.id)) continue
+      if (userIds.has(reading.manifest.id) || disabled.has(reading.manifest.id)) continue
       registry.files.set(reading.manifest.id, builtins!.bundlePath(builtin.server))
       registry.permissions.set(reading.manifest.id, reading.manifest.permissions)
+      registry.idOfFolder.set(builtinKey(reading.manifest.id), reading.manifest.id)
     }
     const seen = new Set<string>()
     for (const folder of userFolders) {
@@ -235,7 +276,7 @@ export const runPluginHost = (timings: PluginHostTimings = defaultPluginHostTimi
         if (seen.has(reading.manifest.id)) continue
         seen.add(reading.manifest.id)
       }
-      const compiled = yield* compileHalf(folder)
+      const compiled = yield* compileHalf(folder, disabled)
       if (compiled.kind === "compiled") {
         registry.files.set(compiled.id, compiled.file)
         registry.permissions.set(compiled.id, compiled.permissions)

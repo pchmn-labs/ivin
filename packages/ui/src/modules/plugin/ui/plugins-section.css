@@ -1,0 +1,58 @@
+.iv-plugins-section__project {
+  flex-direction: column;
+  gap: var(--iv-space-3);
+}
+
+.iv-plugins-section__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--iv-space-4);
+}
+
+.iv-plugins-section__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-2);
+}
+
+.iv-plugins-section__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.iv-plugins-section__waiting {
+  display: flex;
+  flex-direction: column;
+  gap: var(--iv-space-2);
+  padding: var(--iv-space-3);
+  border: 1px dashed var(--iv-attention-outline);
+  border-radius: var(--iv-radius-lg);
+  background: var(--iv-attention-subtle);
+}
+
+.iv-plugins-section__line {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--iv-space-2) var(--iv-space-3);
+  min-width: 0;
+}
+
+.iv-plugins-section__buttons {
+  display: flex;
+  gap: var(--iv-space-1);
+  margin-left: auto;
+}
+
+.iv-plugins-section__unread {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--iv-attention);
+}

@@ -1,7 +1,7 @@
 import { RegistryContext } from "@effect/atom-react"
 import { HOST_MODULES_GLOBAL } from "@ivin/contracts/plugin"
 import { defineUi } from "@ivin/plugin-api/ui"
-import { expect, test } from "vitest"
+import { afterEach, expect, test } from "vitest"
 import { page } from "vitest/browser"
 import { render } from "vitest-browser-react"
 import { makeTestRegistry } from "../core/test-registry.ts"
@@ -272,4 +272,42 @@ test("a user plugin whose activate throws leaves the built-in in place, logged o
   expect(builtInActivations).toBe(2)
   expect(wasAbsent).toBe(false)
   await expect.element(page.getByText("built-in changes")).toBeVisible()
+})
+
+test("a plugin the server removes leaves the window, and the built-in plugin it replaced comes back", async () => {
+  const { server } = await renderWith(
+    [textPlugin("notes", "built in"), textPlugin("other", "other built in")],
+    importFromSource({ "n.js": textBundle("from the user"), "o.js": textBundle("only user") }),
+    (server) =>
+      server.userPlugins.push(
+        { _tag: "compiled", id: "notes", name: "Notes", bundle: "n.js", views: [] },
+        { _tag: "compiled", id: "extra", name: "Extra", bundle: "o.js", views: [] },
+      ),
+  )
+  await expect.element(page.getByText("from the user")).toBeVisible()
+  await expect.element(page.getByText("only user")).toBeVisible()
+
+  server.addUserPlugin({ _tag: "removed", id: "notes" })
+  server.addUserPlugin({ _tag: "removed", id: "extra" })
+
+  await expect.element(page.getByText("built in", { exact: true })).toBeVisible()
+  await expect.element(page.getByText("from the user")).not.toBeInTheDocument()
+  await expect.element(page.getByText("only user")).not.toBeInTheDocument()
+})
+
+afterEach(() => Reflect.deleteProperty(window, "ivin"))
+
+test("the desktop app is told when each plugin starts and ends its activation, and once the window has settled", async () => {
+  const told: Array<string> = []
+  Object.assign(window, {
+    ivin: {
+      reportPluginActivity: ({ id, phase }: { id: string; phase: string }) =>
+        told.push(`${id} ${phase}`),
+      reportSettled: () => told.push("settled"),
+    },
+  })
+
+  await renderWith([textPlugin("notes", "built in")], importFromSource({}), () => {})
+
+  await expect.poll(() => told).toEqual(["notes activating", "notes activated", "settled"])
 })

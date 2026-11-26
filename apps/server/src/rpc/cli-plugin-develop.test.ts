@@ -87,3 +87,25 @@ test("ivin plugin check, reload and new refuse what they cannot act on", async (
   expect(run.missing.code).toBe(2)
   expect(run.missing.stderr).toContain("ivin plugin reload needs a plugin id")
 })
+
+test("ivin plugin disable and enable turn a plugin off and on, and plugin list shows it disabled", async () => {
+  const run = await withCliServer(
+    async (socketPath) => {
+      const env = { IVIN_SOCKET: socketPath }
+      await runCli(["plugin", "new", "demo"], env)
+      return {
+        disabled: await runCli(["plugin", "disable", "demo", "--json"], env),
+        listed: await runCli(["plugin", "list"], env),
+        enabled: await runCli(["plugin", "enable", "demo"], env),
+        unknown: await runCli(["plugin", "disable", "nope"], env),
+      }
+    },
+    { ivinHome: tempDir("home") },
+  )
+
+  expect(JSON.parse(run.disabled.stdout)).toMatchObject({ plugin: { id: "demo", enabled: false } })
+  expect(run.listed.stdout).toContain("ui: disabled  server: disabled")
+  expect(run.enabled.stdout).toContain("Enabled plugin demo")
+  expect(run.unknown.code).toBe(1)
+  expect(run.unknown.stderr).toContain("No plugin in ~/.ivin/plugins has the id nope")
+})

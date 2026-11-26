@@ -30,8 +30,10 @@ import type { UserKeybindings } from "@ivin/contracts/keybinding"
 import type { ErrorReport } from "@ivin/contracts/log"
 import {
   CommandNotFound,
+  PluginContentChanged,
   PluginNotFound,
   type PluginFailure,
+  type ProjectPlugins,
   type UserPlugin,
 } from "@ivin/contracts/plugin"
 import type { OpenProjects, Project } from "@ivin/contracts/project"
@@ -95,6 +97,12 @@ export interface FakeServer {
   // Streams one more plugin to `plugin.list`, as the server does once its dependencies install.
   readonly addUserPlugin: (plugin: UserPlugin) => void
   readonly pluginFailures: Array<PluginFailure>
+  // What `plugin.projectPlugins` streams; `plugin.trust`, `setFullTrust` and `markChangesSeen` change it as the server would.
+  readonly projectPlugins: Array<ProjectPlugins>
+  // Streams `projectPlugins` again, as after a change to a project's plugin files.
+  readonly publishProjectPlugins: () => void
+  readonly pluginTrusts: Array<{ project: string; id: string; hash: string }>
+  readonly pluginEnabled: Map<string, boolean>
   // Adds an item to a transcript as the server would, and streams it to watchers.
   readonly pushItem: (item: TranscriptItem) => void
   // Streams any change (a delta, say) to watchers without storing it.
@@ -309,6 +317,17 @@ export const makeFakeServer = (
   const builtinPlugins: Array<UserPlugin> = []
   const laterPlugins = Effect.runSync(PubSub.unbounded<UserPlugin>())
   const pluginFailures: Array<PluginFailure> = []
+  const projectPlugins: Array<ProjectPlugins> = []
+  const projectPluginChanges = Effect.runSync(PubSub.unbounded<ReadonlyArray<ProjectPlugins>>())
+  const publishProjectPlugins = () =>
+    Effect.runSync(PubSub.publish(projectPluginChanges, [...projectPlugins]))
+  const changeProject = (project: string, change: (state: ProjectPlugins) => ProjectPlugins) => {
+    const at = projectPlugins.findIndex((state) => state.project === project)
+    if (at !== -1) projectPlugins[at] = change(projectPlugins[at]!)
+    publishProjectPlugins()
+  }
+  const pluginTrusts: Array<{ project: string; id: string; hash: string }> = []
+  const pluginEnabled = new Map<string, boolean>()
   const folders = new Map<string, ReadonlyArray<FolderEntry>>()
   const gitStatus = new Map<string, ReadonlyArray<GitStatusEntry>>()
   const changes = new Map<string, ChangeList | { readonly gitMessage: string }>()
@@ -537,6 +556,56 @@ export const makeFakeServer = (
         ? Effect.succeed([])
         : Effect.fail(new PluginNotFound({ id })),
     "plugin.create": ({ id }) => Effect.succeed(`~/.ivin/plugins/${id}`),
+    "plugin.setEnabled": ({ id, enabled }) =>
+      Effect.sync(() => void pluginEnabled.set(id, enabled)),
+    "plugin.projectPlugins": () =>
+      Stream.unwrap(
+        Effect.map(PubSub.subscribe(projectPluginChanges), (subscription) =>
+          Stream.make([...projectPlugins]).pipe(
+            Stream.concat(Stream.fromSubscription(subscription)),
+          ),
+        ),
+      ),
+    "plugin.trust": ({ project, id, hash }) =>
+      Effect.suspend((): Effect.Effect<void, PluginNotFound | PluginContentChanged> => {
+        const plugin = projectPlugins
+          .find((state) => state.project === project)
+          ?.plugins.find((candidate) => candidate.id === id)
+        if (plugin === undefined) return Effect.fail(new PluginNotFound({ id }))
+        if (plugin.hash !== hash) return Effect.fail(new PluginContentChanged({ id }))
+        pluginTrusts.push({ project, id, hash })
+        changeProject(project, (state) => ({
+          ...state,
+          plugins: state.plugins.map((candidate) =>
+            candidate.id === id
+              ? { ...candidate, state: "trusted" as const, files: [], diff: "" }
+              : candidate,
+          ),
+        }))
+        return Effect.void
+      }),
+    "plugin.setFullTrust": ({ project, enabled }) =>
+      Effect.sync(() =>
+        changeProject(project, (state) => ({
+          ...state,
+          fullTrust: enabled,
+          // Full trust takes the files on disk, but never a change to the permissions.
+          plugins: enabled
+            ? state.plugins.map((plugin) =>
+                plugin.permissionsChanged
+                  ? plugin
+                  : { ...plugin, state: "trusted" as const, files: [], diff: "" },
+              )
+            : state.plugins,
+        })),
+      ),
+    "plugin.markChangesSeen": ({ project }) =>
+      Effect.sync(() =>
+        changeProject(project, (state) => ({
+          ...state,
+          changes: state.changes.map((change) => ({ ...change, seen: true })),
+        })),
+      ),
     "keybinding.watch": () =>
       Stream.unwrap(
         Effect.map(PubSub.subscribe(keybindingChanges), (subscription) =>
@@ -1494,6 +1563,10 @@ export const makeFakeServer = (
     builtinPlugins,
     addUserPlugin: (plugin) => void Effect.runSync(PubSub.publish(laterPlugins, plugin)),
     pluginFailures,
+    projectPlugins,
+    publishProjectPlugins,
+    pluginTrusts,
+    pluginEnabled,
     sentMessages,
     pickedFolders,
     worktrees,

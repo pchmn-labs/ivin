@@ -1,0 +1,19 @@
+.iv-startup-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--iv-space-2);
+  padding: var(--iv-space-2) var(--iv-space-4);
+  color: var(--iv-text-muted);
+}
+
+.iv-startup-notice .iv-icon {
+  flex: none;
+  margin-top: var(--iv-space-1);
+}
+
+.iv-startup-notice .iv-text {
+  flex: 1;
+  min-width: 0;
+  padding-block: var(--iv-space-1);
+  overflow-wrap: anywhere;
+}
